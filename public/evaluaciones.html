@@ -1,0 +1,1203 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<script>
+  window.google = {
+    script: {
+      run: (() => {
+        let currentSuccess = null;
+        let currentFailure = null;
+        
+        const runObj = new Proxy({}, {
+          get: function(target, prop) {
+            if (prop === 'withSuccessHandler') {
+               return function(handler) {
+                   currentSuccess = handler;
+                   return runObj;
+               }
+            }
+            if (prop === 'withFailureHandler') {
+               return function(handler) {
+                   currentFailure = handler;
+                   return runObj;
+               }
+            }
+            // Real RPC call
+            return function(...args) {
+               const onSuccess = currentSuccess;
+               const onFailure = currentFailure;
+               currentSuccess = null;
+               currentFailure = null;
+               
+               fetch('/api/rpc/' + prop, {
+                   method: 'POST',
+                   headers: {'Content-Type': 'application/json'},
+                   body: JSON.stringify({ args })
+               }).then(async res => {
+                   let data;
+                   try { data = await res.json(); } catch(e) { data = { error: 'Invalid JSON' }; }
+                   
+                   if (!res.ok) {
+                       if (onFailure) onFailure(new Error(data.error || 'Error del servidor'));
+                   } else {
+                       if (onSuccess) onSuccess(data.result);
+                   }
+               }).catch(err => {
+                   if (onFailure) onFailure(err);
+               });
+            }
+          }
+        });
+        return runObj;
+      })()
+    }
+  };
+</script>
+
+
+
+  <meta charset="UTF-8">
+  <title>Agenda Escolar v2</title>
+  
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+  
+  <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+  <script src="https://cdn.jsdelivr.net/npm/fullcalendar@6.1.8/index.global.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js"></script>
+  
+  <style>
+    :root {
+      --bg-color: #f8f9fa;
+      --card-shadow: 0 4px 12px rgba(0,0,0,0.05);
+    }
+    body {
+      font-family: 'Inter', sans-serif;
+      background-color: var(--bg-color);
+      padding: 20px;
+      color: #333;
+    }
+    
+    .header-bar {
+      background: white;
+      padding: 15px 25px;
+      border-radius: 12px;
+      margin-bottom: 20px;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      box-shadow: var(--card-shadow);
+      border: 1px solid #eef0f2;
+    }
+
+    #calendar {
+      background: white;
+      padding: 25px;
+      border-radius: 12px;
+      box-shadow: var(--card-shadow);
+      border: 1px solid #eef0f2;
+    }
+    
+    .fc .fc-toolbar-title {
+      font-weight: 700;
+      font-size: 1.5rem;
+      color: #2b3440;
+    }
+    
+    .fc-event {
+      border: none !important;
+      border-radius: 6px;
+      cursor: pointer;
+      transition: transform 0.1s;
+      padding: 3px 5px;
+    }
+    .fc-event:hover {
+      transform: translateY(-2px);
+      z-index: 5;
+    }
+
+    .swal2-popup {
+      font-family: 'Inter', sans-serif !important;
+      border-radius: 16px !important;
+    }
+    .swal2-confirm, .swal2-cancel {
+      border-radius: 8px !important;
+      font-weight: 600 !important;
+    }
+
+    /* Loader */
+    #loader {
+      position: fixed;
+      top: 0; left: 0; width: 100%; height: 100%;
+      background: rgba(255,255,255,0.9);
+      display: flex; flex-direction: column;
+      justify-content: center; align-items: center;
+      z-index: 9999;
+      font-weight: bold;
+    }
+  </style>
+</head>
+<body>
+
+  <div id="loader">
+    <div class="spinner-border text-primary mb-3" role="status" style="width: 3rem; height: 3rem;"></div>
+    <h4>Cargando Agenda...</h4>
+  </div>
+
+  <div class="header-bar flex-wrap gap-3">
+    <div>
+      <h4 class="mb-0 fw-bold text-primary">Agenda Escolar</h4>
+      <small class="text-muted" id="user-info">Cargando usuario...</small>
+    </div>
+    
+    <!-- Filtros -->
+    <div class="d-flex gap-2 flex-grow-1" style="max-width: 600px;">
+      <select id="filterCurso" class="form-select form-select-sm" onchange="aplicarFiltros()">
+        <option value="">Todos los cursos</option>
+      </select>
+      <select id="filterAsig" class="form-select form-select-sm" onchange="aplicarFiltros()">
+        <option value="">Todas las asignaturas</option>
+      </select>
+      <select id="filterProf" class="form-select form-select-sm" onchange="aplicarFiltros()">
+        <option value="">Todos los profesores</option>
+      </select>
+    </div>
+
+    <div class="d-flex align-items-center gap-2">
+      <span class="badge bg-light text-secondary border p-2">[+] Clic en casilla para agendar</span>
+      <button class="btn btn-outline-danger btn-sm fw-semibold" onclick="abrirModalExportarPDF()">
+        <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" fill="currentColor" class="bi bi-file-pdf me-1" viewBox="0 0 16 16">
+          <path fill-rule="evenodd" d="M14 4.5V14a2 2 0 0 1-2 2h-1v-1h1a1 1 0 0 0 1-1V4.5h-2A1.5 1.5 0 0 1 9.5 3V1H4a1 1 0 0 0-1 1v9H2V2a2 2 0 0 1 2-2h5.5zM1.6 11.85H0v3.999h.791v-1.342h.803q.43 0 .732-.173.305-.175.463-.474a1.4 1.4 0 0 0 .161-.677q0-.375-.158-.677a1.18 1.18 0 0 0-.46-.477q-.3-.18-.732-.179m.545 1.333a.8.8 0 0 1-.085.38.57.57 0 0 1-.238.241.8.8 0 0 1-.375.082H.788V12.48h.66q.327 0 .512.181.185.183.185.522zm1.217-1.333v3.999h1.46q.602 0 .998-.237a1.45 1.45 0 0 0 .595-.689q.196-.45.196-1.084 0-.63-.196-1.075a1.43 1.43 0 0 0-.589-.68q-.396-.234-1.005-.234zm.791.645h.563q.371 0 .609.152a.9.9 0 0 1 .354.454q.118.302.118.753a2.3 2.3 0 0 1-.068.592 1.1 1.1 0 0 1-.196.422.8.8 0 0 1-.334.252 1.3 1.3 0 0 1-.483.082h-.563zm3.743 1.763v1.591h-.79V11.85h2.548v.653H7.896v1.117h1.606v.638z"/>
+        </svg> Exportar PDF
+      </button>
+    </div>
+  </div>
+
+  <!-- Panel de Administrador (Oculto por defecto) -->
+  <div id="adminPanel" class="card border-0 shadow-sm mb-4 d-none">
+    <div class="card-body d-flex gap-2 align-items-center bg-white rounded-3 border flex-wrap">
+      <span class="fw-bold text-dark me-2">[Admin] Panel Admin:</span>
+      <button class="btn btn-outline-danger btn-sm fw-semibold" onclick="abrirModalExportarPDF()">Exportar PDF</button>
+      <button class="btn btn-outline-success btn-sm fw-semibold" onclick="alert('Exportacion a Excel en construccion')">Exportar Excel</button>
+      <button class="btn btn-warning btn-sm fw-bold ms-2" onclick="abrirModalAuditoria()">Auditor&iacute;a Art. 51</button>
+      <button class="btn btn-outline-secondary btn-sm fw-semibold ms-auto" onclick="alert('Limpieza de DB en construccion')">Administrar DB</button>
+      <button class="btn btn-dark btn-sm fw-bold ms-2" onclick="ejecutarCargaAutomaticaFront()" id="btnCargaAuto">&#129302; Carga Autom&aacute;tica</button>
+      <div class="form-check form-switch ms-3 d-flex align-items-center">
+        <input class="form-check-input mt-0 me-2" type="checkbox" id="switchSistema" onchange="toggleSistema(this)">
+        <label class="form-check-label fw-bold small text-nowrap" for="switchSistema">Sistema Abierto</label>
+      </div>
+      <button class="btn btn-primary btn-sm fw-bold ms-2" onclick="abrirModalProfesores()">Profesores</button>
+      <div class="form-check form-switch ms-3 d-flex align-items-center text-danger">
+        <input class="form-check-input mt-0 me-2" type="checkbox" id="switchModoBloqueo" onchange="toggleModoBloqueo(this)">
+        <label class="form-check-label fw-bold small text-nowrap" for="switchModoBloqueo">Modo Bloqueo</label>
+      </div>
+    </div>
+  </div>
+
+  <div id="calendar"></div>
+
+  <!-- MODAL DE AGENDAMIENTO -->
+  <div class="modal fade" id="modalAgenda" tabindex="-1">
+    <div class="modal-dialog modal-dialog-centered">
+      <form id="formAgenda" class="modal-content border-0 shadow-lg">
+        <div class="modal-header bg-primary text-white border-0">
+          <h5 class="modal-title fw-semibold">Agendar: <span id="txtFecha"></span></h5>
+          <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+        </div>
+        <div class="modal-body bg-light">
+          <input type="hidden" id="inFecha">
+
+              <div class="mb-3">
+                <label class="fw-medium">Curso</label>
+                <select class="form-select" id="inCurso" required onchange="actualizarAsignaturas()">
+                   <option value="">-- Selecciona --</option>
+                </select>
+              </div>
+              <div class="mb-3">
+                <label class="fw-medium">Asignatura</label>
+                <select class="form-select" id="inAsig" required>
+                   <option value="">Selecciona un curso primero</option>
+                </select>
+              </div>
+
+          
+          
+            
+            <div class="mb-3">
+              <label class="fw-medium">Tipo de Evaluación</label>
+                <select class="form-select" id="inTipo" required>
+                  <option value="">-- Selecciona --</option>
+                  <option value="📝 Prueba">📝 Prueba</option>
+                  <option value="🗣️ Exposición Oral">🗣️ Exposición Oral</option>
+                  <option value="🛠️ Trabajo">🛠️ Trabajo</option>
+                  <option value="🔄 Ev. de Proceso">🔄 Ev. de Proceso</option>
+                  <option value="📚 Quiz">📚 Quiz</option>
+                </select>
+            </div>
+
+            <div class="mb-3">
+              <label class="fw-medium">¿Requiere recurso especial?</label>
+              <select class="form-select" id="inRecurso">
+                <option value="Ninguno">No, ninguno</option>
+                <option value="Laboratorio de Computación">Laboratorio de Computación</option>
+                <option value="Laboratorio Móvil 1">Laboratorio Móvil 1</option>
+                <option value="Laboratorio Móvil 2">Laboratorio Móvil 2</option>
+                <option value="Laboratorio de Ciencias">Laboratorio de Ciencias</option>
+                <option value="Auditorio">Auditorio</option>
+              </select>
+            </div>
+            <div class="mb-3">
+              <label class="fw-medium">Contenidos / Detalles <small class="text-muted">(Opcional)</small></label>
+            <textarea id="inDetalles" class="form-control" rows="3" placeholder="Ej: Unidad 1. Traer materiales..."></textarea>
+          </div>
+        </div>
+        <div class="modal-footer border-0 bg-light">
+          <button type="submit" class="btn btn-primary w-100 fw-semibold" id="btnGuardar">Agendar Evaluaci&oacute;n</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <!-- MODAL DE EXPORTACIÓN PDF -->
+  <div class="modal fade" id="modalExportarPDF" tabindex="-1">
+    <div class="modal-dialog modal-dialog-centered">
+      <div class="modal-content shadow-lg border-0">
+        <div class="modal-header bg-danger text-white border-0">
+          <h5 class="modal-title fw-bold">Exportar Calendarios PDF</h5>
+          <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+        </div>
+        <div class="modal-body p-4">
+          <p class="text-muted mb-4">Se descargar&aacute; un archivo PDF independiente por cada curso existente. Selecciona el periodo a exportar:</p>
+          <div class="d-grid gap-3">
+            <button class="btn btn-outline-danger py-3 fw-bold" onclick="iniciarExportacionMasiva(1)">
+              1&deg; Semestre (Marzo a Junio)
+            </button>
+            <button class="btn btn-outline-danger py-3 fw-bold" onclick="iniciarExportacionMasiva(2)">
+              2&deg; Semestre (Julio a Diciembre)
+            </button>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- MODAL DE AUDITORIA ART 51 -->
+  <div class="modal fade" id="modalAuditoria" tabindex="-1">
+    <div class="modal-dialog modal-xl modal-dialog-scrollable">
+      <div class="modal-content shadow-lg border-0">
+        <div class="modal-header bg-warning text-dark border-0">
+          <h5 class="modal-title fw-bold">Auditor&iacute;a Art. 51 (Calificaciones M&iacute;nimas)</h5>
+          <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+        </div>
+        <div class="modal-body p-4 bg-light">
+          <div class="d-flex justify-content-between mb-3 align-items-center">
+            <p class="mb-0 text-muted">Seleccione el semestre a auditar. El sistema calcular&aacute; las horas semanales autom&aacute;ticamente.</p>
+            <div class="btn-group">
+              <button class="btn btn-outline-dark fw-bold" onclick="cargarAuditoria(1)">1&deg; Semestre</button>
+              <button class="btn btn-outline-dark fw-bold" onclick="cargarAuditoria(2)">2&deg; Semestre</button>
+            </div>
+          </div>
+          
+          <div id="auditoriaLoader" class="text-center d-none py-5">
+            <div class="spinner-border text-warning mb-2" role="status"></div>
+            <p class="fw-bold">Escaneando horarios y cruzando datos...</p>
+          </div>
+
+          <div class="table-responsive bg-white rounded shadow-sm border d-none" id="auditoriaContenedor">
+            <table class="table table-hover table-bordered mb-0 text-center" style="font-size: 13px;">
+              <thead class="table-light align-middle">
+                <tr>
+                  <th>Curso</th>
+                  <th>Asignatura</th>
+                  <th>Profesor</th>
+                  <th>Horas<br>Semana</th>
+                  <th>M&iacute;nimo<br>Requerido</th>
+                  <th>Evaluaciones<br>Agendadas</th>
+                  <th>Estado</th>
+                </tr>
+              </thead>
+              <tbody id="auditoriaTablaCuerpo">
+                <!-- Data inyectada por JS -->
+              </tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- MODAL DE DETALLES -->
+  <div class="modal fade" id="modalDetalles" tabindex="-1">
+    <div class="modal-dialog modal-dialog-centered">
+      <div class="modal-content shadow-lg border-0">
+        <div class="modal-header bg-secondary text-white border-0">
+          <h5 class="modal-title fw-bold" id="detallesTitulo">Detalles de Evaluaci&oacute;n</h5>
+          <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+        </div>
+        <div class="modal-body p-4">
+          <ul class="list-group list-group-flush">
+            <li class="list-group-item d-flex justify-content-between align-items-center px-0">
+              <span class="text-muted small text-uppercase fw-bold">Profesor</span>
+              <span class="fw-medium" id="detProfesor"></span>
+            </li>
+            <li class="list-group-item d-flex justify-content-between align-items-center px-0">
+              <span class="text-muted small text-uppercase fw-bold">Tipo</span>
+              <span class="badge bg-secondary" id="detTipo"></span>
+            </li>
+            <li class="list-group-item px-0">
+              <span class="text-muted small text-uppercase fw-bold d-block mb-1">Contenidos</span>
+              <p class="mb-0 text-dark" id="detInfo" style="white-space: pre-wrap;"></p>
+            </li>
+          </ul>
+        </div>
+        <div class="modal-footer bg-light border-0 justify-content-between">
+          <div>
+            <button type="button" class="btn btn-outline-danger fw-bold shadow-sm" id="btnEliminarEval" onclick="confirmarEliminacion()" style="display: none;">🗑️ Eliminar</button>
+            <button type="button" class="btn btn-primary fw-bold shadow-sm ms-2" id="btnEditarEval" onclick="prepararEdicion()" style="display: none;">✏️ Editar</button>
+          </div>
+          <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cerrar</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- MODAL GESTION PROFESORES -->
+  <div class="modal fade" id="modalProfesores" tabindex="-1">
+    <div class="modal-dialog modal-dialog-scrollable">
+      <div class="modal-content shadow-lg border-0">
+        <div class="modal-header bg-dark text-white border-0">
+          <h5 class="modal-title fw-bold">Gesti&oacute;n de Profesores</h5>
+          <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+        </div>
+        <div class="modal-body p-0">
+          <ul class="list-group list-group-flush" id="listaProfesores">
+            <!-- Rellenado por JS -->
+          </ul>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- MODAL BLOQUEO RAPIDO -->
+  <div class="modal fade" id="modalBloqueo" tabindex="-1">
+    <div class="modal-dialog modal-dialog-centered">
+      <div class="modal-content border-danger shadow-lg">
+        <div class="modal-header bg-danger text-white border-0">
+          <h5 class="modal-title fw-bold">Bloquear D&iacute;a para Curso</h5>
+          <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+        </div>
+        <div class="modal-body p-4">
+          <form id="formBloqueo">
+            <p class="text-muted small">Esto a&ntilde;adir&aacute; una prueba fantasma (bloqueo) que ignorar&aacute; topes diarios e impedir&aacute; agendar ese d&iacute;a para el curso seleccionado.</p>
+            <div class="mb-3">
+              <label class="form-label fw-bold">Curso a bloquear</label>
+              <select class="form-select border-2" id="inCursoBloqueo" required></select>
+            </div>
+            <div class="mb-3">
+              <label class="form-label fw-bold">Motivo (Opcional)</label>
+              <input type="text" class="form-control" id="inMotivoBloqueo" placeholder="Ej: Salida pedag&oacute;gica, Actividad especial">
+            </div>
+            <div class="d-grid mt-4">
+              <button type="submit" class="btn btn-danger fw-bold shadow-sm" id="btnGuardarBloqueo">Aplicar Bloqueo</button>
+            </div>
+          </form>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    let calendar;
+    let configuracionGlobal = {};
+    let todosLosEventos = []; // Para filtrado local
+    let primeraCarga = true;
+    let diaSemanaGlobal = ''; // Guarda el día clickeado
+    let evaluacionSeleccionada = null;
+    let modoEdicion = false;
+    let datosEdicionAntiguos = null;
+    let modoBloqueoActivo = false;
+
+    document.addEventListener('DOMContentLoaded', function() {
+      // 1. Obtener Configuración Inicial
+      google.script.run
+        .withSuccessHandler(function(config) {
+          configuracionGlobal = config;
+          document.getElementById('user-info').innerText = `${config.usuario.nombre} (${config.usuario.rol})`;
+          
+          if (config.usuario.permisos && config.usuario.permisos.esAdminGeneral) {
+            document.getElementById('adminPanel').classList.remove('d-none');
+            document.getElementById('switchSistema').checked = config.sistemaAbierto;
+          } else {
+            if (!config.sistemaAbierto) {
+              Swal.fire('Sistema Cerrado', 'El agendamiento est\u00E1 inhabilitado temporalmente.', 'warning');
+            }
+            if (config.profesoresBloqueados && config.profesoresBloqueados.includes(config.usuario.nombre.toLowerCase().trim())) {
+              Swal.fire('Permisos Revocados', 'No tienes permisos para agendar. Contacta a coordinaci\u00F3n.', 'error');
+            }
+          }
+
+          llenarSelectorCursos();
+          llenarSelectorCursosBloqueo();
+          llenarFiltrosGlobales();
+          inicializarCalendario();
+        })
+        .withFailureHandler(mostrarError)
+        .getConfigFrontend();
+    });
+
+    function llenarFiltrosGlobales() {
+      const fCurso = document.getElementById('filterCurso');
+      const fAsig = document.getElementById('filterAsig');
+      const fProf = document.getElementById('filterProf');
+
+      configuracionGlobal.filtrosGlobales.cursos.forEach(c => fCurso.innerHTML += `<option value="${c}">${c}</option>`);
+      configuracionGlobal.filtrosGlobales.asignaturas.forEach(a => fAsig.innerHTML += `<option value="${a}">${a}</option>`);
+      
+      // Mostrar profesores en mayúscula para mantener consistencia visual
+      configuracionGlobal.filtrosGlobales.profesores.forEach(p => {
+        if(p && p.trim() !== '') {
+          fProf.innerHTML += `<option value="${p}">${p.toUpperCase()}</option>`;
+        }
+      });
+    }
+
+    function llenarSelectorCursos() {
+      const select = document.getElementById('inCurso');
+      select.innerHTML = '<option value="">-- Selecciona un curso --</option>';
+      configuracionGlobal.cursos.forEach(c => {
+        select.innerHTML += `<option value="${c}">${c}</option>`;
+      });
+    }
+
+    function actualizarAsignaturas() {
+      const vCurso = document.getElementById('inCurso').value;
+      const selectAsig = document.getElementById('inAsig');
+      
+      selectAsig.innerHTML = '<option value="">-- Selecciona Asignatura --</option>';
+      
+      if (vCurso && configuracionGlobal.asignaturasDict[vCurso]) {
+        const asignaturasDelDia = configuracionGlobal.asignaturasDict[vCurso][diaSemanaGlobal];
+        
+        if (asignaturasDelDia && asignaturasDelDia.length > 0) {
+          asignaturasDelDia.forEach(a => {
+            selectAsig.innerHTML += `<option value="${a}">${a}</option>`;
+          });
+        } else {
+          selectAsig.innerHTML = '<option value="">(No haces clases este d\u00EDa en este curso)</option>';
+        }
+      }
+    }
+
+    function inicializarCalendario() {
+      const calendarEl = document.getElementById('calendar');
+      calendar = new FullCalendar.Calendar(calendarEl, {
+        initialView: 'dayGridMonth',
+        locale: 'es',
+        hiddenDays: [0, 6], // Oculta domingo(0) y sábado(6)
+        headerToolbar: {
+          left: 'prev,next today',
+          center: 'title',
+          right: 'dayGridMonth,timeGridWeek'
+        },
+        buttonText: { today: 'Hoy', month: 'Mes', week: 'Semana' },
+        selectable: true,
+        height: 'auto',
+        
+        events: function(info, successCallback, failureCallback) {
+          if (primeraCarga) {
+            google.script.run
+              .withSuccessHandler(function(eventos) {
+                todosLosEventos = eventos;
+                primeraCarga = false;
+                successCallback(filtrarEventosLocales());
+                document.getElementById('loader').style.display = 'none';
+              })
+              .withFailureHandler(function(error) {
+                mostrarError(error);
+                failureCallback(error);
+                document.getElementById('loader').style.display = 'none';
+              })
+              .getEventosCalendario();
+          } else {
+            successCallback(filtrarEventosLocales());
+          }
+        },
+
+        dateClick: function(info) {
+          if (modoBloqueoActivo) {
+            diaSemanaGlobal = info.dateStr;
+            const modal = new bootstrap.Modal(document.getElementById('modalBloqueo'));
+            modal.show();
+          } else {
+            abrirModalAgenda(info.dateStr);
+          }
+        },
+
+        eventClick: function(info) {
+          if (info.event.extendedProps.esBloqueo) {
+            Swal.fire("D\u00EDa Bloqueado", info.event.title, "info");
+            return;
+          }
+          mostrarDetalles(info.event);
+        }
+      });
+      calendar.render();
+    }
+
+    function aplicarFiltros() {
+      if (calendar) {
+        calendar.refetchEvents(); // Volverá a llamar a 'events' y usará filtrarEventosLocales()
+      }
+    }
+
+    function filtrarEventosLocales() {
+      const vCurso = document.getElementById('filterCurso').value;
+      const vAsig = document.getElementById('filterAsig').value;
+      const vProf = document.getElementById('filterProf').value;
+
+      return todosLosEventos.filter(e => {
+        // Los bloqueos (feriados, etc) siempre se muestran
+        if (e.extendedProps && e.extendedProps.esBloqueo) {
+              if (!vCurso) return true; // Si no hay filtro de curso, muestra todos los bloqueos
+              if (e.extendedProps.curso === 'TODOS') return true; // Bloqueo global se muestra siempre
+              if (e.extendedProps.curso === vCurso) return true; // Coincide con el curso filtrado
+              return false; // Es un bloqueo de otro curso
+          }
+
+        if (vCurso && e.extendedProps.curso !== vCurso) return false;
+        if (vAsig && e.extendedProps.asignatura !== vAsig) return false;
+        
+        // El profesor puede coincidir con el nombre o el email (Ignorando mayúsculas, tildes y espacios extras)
+        if (vProf) {
+           const normalize = (str) => str.normalize("NFD").replace(/[\u0300-\u036f]/g, "").toLowerCase().trim();
+           const pNombre = normalize(e.extendedProps.profesor || '');
+           const pEmail = normalize(e.extendedProps.profesorEmail || '');
+           const vProfNorm = normalize(vProf);
+           
+           // Si ni el nombre ni el email coinciden (e incluso verificamos si el nombre contiene el vProfNorm por si acaso)
+           if (pNombre !== vProfNorm && pEmail !== vProfNorm && !pNombre.includes(vProfNorm)) {
+             return false;
+           }
+        }
+
+        return true;
+      });
+    }
+
+    function abrirModalAgenda(fechaStr) {
+      const userEsAdmin = (configuracionGlobal.usuario.permisos && (configuracionGlobal.usuario.permisos.esAdminGeneral || configuracionGlobal.usuario.permisos.puedeAgendarSinRestricciones));
+        if (!userEsAdmin) {
+        if (!configuracionGlobal.sistemaAbierto) {
+          Swal.fire('Sistema Cerrado', 'El agendamiento est\u00E1 inhabilitado temporalmente.', 'warning');
+          return;
+        }
+        if (configuracionGlobal.profesoresBloqueados.includes(configuracionGlobal.usuario.nombre.toLowerCase().trim())) {
+          Swal.fire('Permisos Revocados', 'Tus permisos para agendar est\u00E1n bloqueados. Contacta a coordinaci\u00F3n.', 'error');
+          return;
+        }
+      }
+      
+      document.getElementById('inFecha').value = fechaStr;
+      
+      // Determinar día de la semana
+      const partesFecha = fechaStr.split('-'); // [YYYY, MM, DD]
+      const fechaObj = new Date(partesFecha[0], partesFecha[1] - 1, partesFecha[2]);
+      const dias = ['DOMINGO', 'LUNES', 'MARTES', 'MIERCOLES', 'JUEVES', 'VIERNES', 'SABADO'];
+      diaSemanaGlobal = dias[fechaObj.getDay()];
+      
+      // Formatear fecha para el título (Ej: 15/10/2023)
+      const partes = fechaStr.split('-');
+      document.getElementById('txtFecha').innerText = `${partes[2]}/${partes[1]}/${partes[0]}`;
+      
+      const selectAsig = document.getElementById('inAsig');
+      selectAsig.innerHTML = '<option value="">Selecciona un curso primero</option>';
+      document.getElementById('inCurso').value = '';
+      document.getElementById('inDetalles').value = '';
+      
+      const modal = new bootstrap.Modal(document.getElementById('modalAgenda'));
+      modal.show();
+    }
+
+    // El submit está manejado al final del archivo
+
+    function mostrarDetalles(evento) {
+      document.getElementById('detallesTitulo').innerText = evento.title;
+      document.getElementById('detProfesor').innerText = evento.extendedProps.profesor || 'Desconocido';
+      document.getElementById('detTipo').innerText = evento.extendedProps.tipo || 'General';
+      document.getElementById('detInfo').innerText = evento.extendedProps.detalles || 'Sin detalles adicionales.';
+      
+      evaluacionSeleccionada = {
+        fechaStr: evento.startStr.split('T')[0],
+        curso: evento.extendedProps.curso,
+        asignatura: evento.extendedProps.asignatura,
+        profesorEmail: evento.extendedProps.profesorEmail || evento.extendedProps.profesor || '',
+        tipo: evento.extendedProps.tipo,
+        detalles: evento.extendedProps.detalles
+      };
+
+      const btnEliminar = document.getElementById('btnEliminarEval');
+      const btnEditar = document.getElementById('btnEditarEval');
+      
+      const esAdmin = (configuracionGlobal.usuario.permisos && configuracionGlobal.usuario.permisos.esAdminGeneral) || configuracionGlobal.usuario.permisos.puedeAgendarSinRestricciones;
+      
+      const profEmailObj = evento.extendedProps.profesorEmail || '';
+      const profNameObj = evento.extendedProps.profesor || '';
+      
+      const esMioEmail = (profEmailObj && profEmailObj.toLowerCase() === configuracionGlobal.usuario.email.toLowerCase());
+      const esMioNombre = (profNameObj && profNameObj.toLowerCase() === configuracionGlobal.usuario.nombre.toLowerCase());
+      
+      const esMio = (esMioEmail || esMioNombre);
+
+      if (esAdmin || esMio) {
+        btnEliminar.style.display = 'inline-block';
+        btnEditar.style.display = 'inline-block';
+      } else {
+        btnEliminar.style.display = 'none';
+        btnEditar.style.display = 'none';
+      }
+
+      const modal = new bootstrap.Modal(document.getElementById('modalDetalles'));
+      modal.show();
+    }
+
+    function mostrarError(error) {
+      Swal.fire({
+        icon: 'error',
+        title: 'Error',
+        text: error.message || error
+      });
+      document.getElementById('loader').style.display = 'none';
+    }
+    // ============================================
+    // LÓGICA DE EXPORTACIÓN A PDF
+    // ============================================
+
+    function abrirModalExportarPDF() {
+      new bootstrap.Modal(document.getElementById('modalExportarPDF')).show();
+    }
+
+    async function iniciarExportacionMasiva(semestre) {
+      bootstrap.Modal.getInstance(document.getElementById('modalExportarPDF')).hide();
+      
+      let cursos = configuracionGlobal.filtrosGlobales.cursos;
+      
+      const vCurso = document.getElementById('filterCurso').value;
+      const vAsig = document.getElementById('filterAsig').value;
+      const vProf = document.getElementById('filterProf').value;
+
+      // Limitar los cursos a procesar según los filtros
+      if (vCurso) {
+        cursos = [vCurso];
+      } else if (vProf || vAsig) {
+        const cursosConEventos = new Set();
+        todosLosEventos.forEach(e => {
+          if (e.extendedProps.esBloqueo) return;
+          if (vAsig && e.extendedProps.asignatura !== vAsig) return;
+          if (vProf) {
+            const normalize = (str) => str.normalize("NFD").replace(/[\u0300-\u036f]/g, "").toLowerCase().trim();
+            const pName = e.extendedProps.profesor || '';
+            const pEmail = e.extendedProps.profesorEmail || '';
+            const v = normalize(vProf);
+            if (!normalize(pName).includes(v) && !normalize(pEmail).includes(v)) return;
+          }
+          cursosConEventos.add(e.extendedProps.curso);
+        });
+        cursos = Array.from(cursosConEventos).sort();
+      }
+
+      if (!cursos || cursos.length === 0) {
+        Swal.fire('Error', 'No hay cursos disponibles para exportar.', 'error');
+        return;
+      }
+
+      Swal.fire({
+        title: 'Generando PDFs...',
+        text: 'Iniciando proceso masivo. Por favor, no cierres esta ventana.',
+        allowOutsideClick: false,
+        didOpen: () => { Swal.showLoading(); }
+      });
+
+      const anioActual = new Date().getFullYear();
+      let meses = semestre === 1 ? [2, 3, 4, 5] : [6, 7, 8, 9, 10, 11]; // 0-indexed: Marzo=2, Junio=5, Julio=6, Dic=11
+      const nombresMeses = ['Enero','Febrero','Marzo','Abril','Mayo','Junio','Julio','Agosto','Septiembre','Octubre','Noviembre','Diciembre'];
+
+      for (let i = 0; i < cursos.length; i++) {
+        const cursoActual = cursos[i];
+        
+        // Actualizar UI para no parecer congelado
+        Swal.update({
+          title: 'Exportando ' + (i+1) + '/' + cursos.length,
+          text: 'Procesando: ' + cursoActual
+        });
+        
+        // Forzar pequeño render para que se actualice la alerta antes del lag de dibujo
+        await new Promise(r => setTimeout(r, 50));
+
+        const contenedorPDF = document.createElement('div');
+        contenedorPDF.style.width = '1050px';
+        contenedorPDF.style.padding = '0';
+        contenedorPDF.style.fontFamily = 'Arial, sans-serif';
+        contenedorPDF.style.background = 'white';
+
+        let htmlContent = '';
+        
+        meses.forEach((mesActual, index) => {
+          if (index > 0) {
+            htmlContent += `<div style="page-break-before: always; border-top: 1px solid transparent;"></div>`;
+          }
+          
+          htmlContent += `
+            <div style="padding: 30px 40px; box-sizing: border-box; width: 1050px;">
+              <div style="text-align: center; margin-bottom: 25px;">
+                <h2 style="margin:0; color:#2b3440; font-size:28px; text-transform:uppercase; font-weight:900;">${nombresMeses[mesActual]} ${anioActual} - ${cursoActual}</h2>
+              </div>
+              <table style="width: 100%; border-collapse: collapse; table-layout: fixed; font-size: 11px; background: white;">
+                <thead>
+                  <tr style="background-color: #f4f6f8; color: #333; font-size: 13px;">
+                    <th style="border: 1px solid #ccc; padding: 12px; width: 20%;">LUNES</th>
+                    <th style="border: 1px solid #ccc; padding: 12px; width: 20%;">MARTES</th>
+                    <th style="border: 1px solid #ccc; padding: 12px; width: 20%;">MI&Eacute;RCOLES</th>
+                    <th style="border: 1px solid #ccc; padding: 12px; width: 20%;">JUEVES</th>
+                    <th style="border: 1px solid #ccc; padding: 12px; width: 20%;">VIERNES</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  <tr>
+          `;
+
+          let primerDia = new Date(anioActual, mesActual, 1).getDay(); 
+          let celdasAgregadas = 0; 
+          let diaSemanaOffset = primerDia === 0 ? 7 : primerDia; 
+          
+          if (diaSemanaOffset <= 5) { 
+            for(let d = 1; d < diaSemanaOffset; d++) { 
+              htmlContent += `<td style="border: 1px solid #ccc; background-color: #fcfcfc;"></td>`; 
+              celdasAgregadas++; 
+            } 
+          }
+          
+          let ultimoDia = new Date(anioActual, mesActual + 1, 0).getDate();
+
+          for (let dia = 1; dia <= ultimoDia; dia++) {
+            let fechaIter = new Date(anioActual, mesActual, dia); 
+            let ds = fechaIter.getDay(); 
+            if (ds === 0 || ds === 6) continue; // Saltar fines de semana
+            
+            let mStr = String(mesActual+1).padStart(2,'0');
+            let dStr = String(dia).padStart(2,'0');
+            let fechaStr = `${anioActual}-${mStr}-${dStr}`;
+            
+            // Buscar eventos respetando filtros
+            let evsDia = todosLosEventos.filter(e => {
+              if (!e.start.startsWith(fechaStr)) return false;
+              if (e.extendedProps.esBloqueo) return true;
+              if (e.extendedProps.curso !== cursoActual) return false;
+              
+              if (vAsig && e.extendedProps.asignatura !== vAsig) return false;
+              if (vProf) {
+                const normalize = (str) => str.normalize("NFD").replace(/[\u0300-\u036f]/g, "").toLowerCase().trim();
+                const pName = e.extendedProps.profesor || '';
+                const pEmail = e.extendedProps.profesorEmail || '';
+                const v = normalize(vProf);
+                if (!normalize(pName).includes(v) && !normalize(pEmail).includes(v)) return false;
+              }
+              return true;
+            });
+
+            htmlContent += `<td style="border: 1px solid #ccc; padding: 5px; vertical-align: top; height: 100px;">
+                              <div style="font-weight: bold; margin-bottom: 5px; text-align: right; color: #555; font-size: 14px;">${dia}</div>`;
+            
+            evsDia.forEach(ev => {
+              if (ev.extendedProps.esBloqueo) {
+                htmlContent += `<div style="background-color: ${ev.backgroundColor}; color: white; padding: 5px; border-radius: 4px; margin-bottom: 4px; font-size: 11px; font-weight: bold;">
+                                  ${ev.title.replace('[BLOQUEADO] ', '').replace('[ATENCION] ', '')}
+                                </div>`;
+              } else {
+                let colorFondo = ev.backgroundColor || '#4361ee';
+                let detallesHtml = '';
+                
+                if (ev.extendedProps.detalles && ev.extendedProps.detalles.trim() !== '') {
+                  // Limpiamos los saltos de línea para que se vea continuo
+                  let textoDetalle = ev.extendedProps.detalles.replace(/\n/g, ' ');
+                  detallesHtml = `<div style="font-size: 9.5px; opacity: 0.95; margin-top: 4px; border-top: 1px solid rgba(255,255,255,0.4); padding-top: 3px; font-style: italic;">${textoDetalle}</div>`;
+                }
+
+                htmlContent += `<div style="background-color: ${colorFondo}; color: white; padding: 5px; border-radius: 4px; margin-bottom: 4px; font-size: 11px; line-height: 1.2;">
+                                  <div style="font-weight: bold;">${ev.extendedProps.asignatura}</div>
+                                  <div style="opacity: 0.9;">(${ev.extendedProps.tipo})</div>
+                                  ${detallesHtml}
+                                </div>`;
+              }
+            });
+
+            htmlContent += `</td>`; 
+            celdasAgregadas++;
+            
+            if (celdasAgregadas % 5 === 0 && dia < ultimoDia) {
+              htmlContent += `</tr><tr>`;
+            }
+          }
+          
+          while (celdasAgregadas % 5 !== 0) { 
+            htmlContent += `<td style="border: 1px solid #ccc; background-color: #fcfcfc;"></td>`; 
+            celdasAgregadas++; 
+          }
+          
+          htmlContent += `</tr></tbody></table></div>`; 
+        });
+
+        contenedorPDF.innerHTML = htmlContent; 
+        document.body.appendChild(contenedorPDF);
+        
+        let nombreSeguro = cursoActual.replace(/[^a-zA-Z0-9\s]/g, '').trim().replace(/\s+/g, '_');
+        let nombreArchivo = `Calendario_${nombreSeguro}_${semestre}_Semestre.pdf`;
+
+        const opt = { 
+          margin: 0.2, 
+          filename: nombreArchivo, 
+          image: { type: 'jpeg', quality: 1 }, 
+          html2canvas: { scale: 2, useCORS: true }, 
+          jsPDF: { unit: 'in', format: 'a4', orientation: 'landscape' }, 
+          pagebreak: { mode: 'css' } 
+        };
+        
+        await html2pdf().set(opt).from(contenedorPDF).save();
+        contenedorPDF.remove();
+      }
+
+      Swal.fire('\u00C9xito', 'Se descargaron los calendarios de todos los cursos correctamente.', 'success');
+    }
+
+    // ============================================
+    // LÓGICA DE AUDITORÍA ART 51
+    // ============================================
+
+    function abrirModalAuditoria() {
+      // Limpiar tabla previa
+      document.getElementById('auditoriaContenedor').classList.add('d-none');
+      document.getElementById('auditoriaTablaCuerpo').innerHTML = '';
+      new bootstrap.Modal(document.getElementById('modalAuditoria')).show();
+    }
+
+    function cargarAuditoria(semestre) {
+      document.getElementById('auditoriaContenedor').classList.add('d-none');
+      document.getElementById('auditoriaLoader').classList.remove('d-none');
+      
+      google.script.run
+        .withSuccessHandler(renderizarTablaAuditoria)
+        .withFailureHandler(function(error) {
+          document.getElementById('auditoriaLoader').classList.add('d-none');
+          mostrarError(error);
+        })
+        .getAuditoriaArt51(semestre);
+    }
+
+    function renderizarTablaAuditoria(datos) {
+      document.getElementById('auditoriaLoader').classList.add('d-none');
+      const tbody = document.getElementById('auditoriaTablaCuerpo');
+      let html = '';
+      
+      if(datos.length === 0) {
+        html = '<tr><td colspan="7" class="text-muted p-4">No se encontraron horarios registrados.</td></tr>';
+      } else {
+        datos.forEach(d => {
+          let badgeEstado = '';
+          if (d.estado === 'CUMPLE') badgeEstado = '<span class="badge bg-success">CUMPLE</span>';
+          else if (d.estado === 'CUMPLE (EXCEDE)') badgeEstado = '<span class="badge bg-info text-dark">EXCEDE</span>';
+          else badgeEstado = `<span class="badge bg-danger">${d.estado}</span>`;
+
+          let filaPeligro = d.estado.startsWith('FALTAN') ? 'class="table-danger"' : '';
+
+          html += `
+            <tr ${filaPeligro}>
+              <td class="fw-bold">${d.curso}</td>
+              <td>${d.asignatura}</td>
+              <td class="text-muted">${d.profesor || 'N/A'}</td>
+              <td class="fw-bold text-primary">${d.horas}</td>
+              <td class="fw-bold text-secondary">${d.minimo}</td>
+              <td class="fw-bold">${d.agendadas}</td>
+              <td>${badgeEstado}</td>
+            </tr>
+          `;
+        });
+      }
+      
+      tbody.innerHTML = html;
+      document.getElementById('auditoriaContenedor').classList.remove('d-none');
+    }
+
+    // ============================================
+    // LOGICA DE EDICION, ELIMINACION Y CARGA MASIVA
+    // ============================================
+
+    function confirmarEliminacion() {
+      if (!evaluacionSeleccionada) return;
+      Swal.fire({
+        title: '¿Eliminar evaluación?',
+        text: "Se borrará del calendario. Esta acción no se puede deshacer.",
+        icon: 'warning',
+        showCancelButton: true,
+        confirmButtonColor: '#d33',
+        cancelButtonColor: '#6c757d',
+        confirmButtonText: 'Sí, eliminar',
+        cancelButtonText: 'Cancelar'
+      }).then((result) => {
+        if (result.isConfirmed) {
+          const btn = document.getElementById('btnEliminarEval');
+          btn.disabled = true;
+          btn.innerText = "Borrando...";
+          
+          google.script.run
+            .withSuccessHandler(function(msj) {
+              const modalEl = document.getElementById('modalDetalles');
+              const modal = bootstrap.Modal.getInstance(modalEl) || new bootstrap.Modal(modalEl);
+              modal.hide();
+              
+              primeraCarga = true;
+              calendar.refetchEvents();
+              btn.disabled = false;
+              btn.innerText = "🗑️ Eliminar";
+              Swal.fire("Eliminada", msj, "success");
+            })
+            .withFailureHandler(function(err) {
+              btn.disabled = false;
+              btn.innerText = "🗑️ Eliminar";
+              mostrarError(err);
+            })
+            .eliminarEvaluacionBackend(evaluacionSeleccionada);
+        }
+      });
+    }
+
+    function prepararEdicion() {
+      if (!evaluacionSeleccionada) return;
+      modoEdicion = true;
+      datosEdicionAntiguos = { ...evaluacionSeleccionada };
+      
+      const modalEl = document.getElementById('modalDetalles');
+      const modalDet = bootstrap.Modal.getInstance(modalEl) || new bootstrap.Modal(modalEl);
+      modalDet.hide();
+
+      abrirModalAgenda(evaluacionSeleccionada.fechaStr);
+      
+      // Esperar a que los combos se llenen y seleccionar valores
+      setTimeout(() => {
+        document.getElementById('inCurso').value = evaluacionSeleccionada.curso;
+        actualizarAsignaturas();
+        setTimeout(() => {
+          document.getElementById('inAsig').value = evaluacionSeleccionada.asignatura;
+          document.getElementById('inTipo').value = evaluacionSeleccionada.tipo;
+            if(evaluacionSeleccionada.recurso) document.getElementById('inRecurso').value = evaluacionSeleccionada.recurso;
+          document.getElementById('inDetalles').value = evaluacionSeleccionada.detalles || "";
+        }, 100);
+      }, 100);
+    }
+
+    // Modificar el submit de formAgenda para que distinga Edición de Nuevo Agendamiento
+    document.getElementById('formAgenda').onsubmit = function(e) {
+      e.preventDefault();
+      
+      const btn = e.target.querySelector('button[type="submit"]');
+      btn.disabled = true;
+      btn.innerText = "Procesando...";
+
+      const datosNuevos = {
+        fecha: document.getElementById('inFecha').value,
+        curso: document.getElementById('inCurso').value,
+        asignatura: document.getElementById('inAsig').value,
+        tipo: document.getElementById('inTipo').value,
+          recurso: document.getElementById('inRecurso').value,
+        detalles: document.getElementById('inDetalles').value
+      };
+
+      if (modoEdicion) {
+        google.script.run
+          .withSuccessHandler(function(msj) {
+            const modalEl = document.getElementById('modalAgenda');
+            const modal = bootstrap.Modal.getInstance(modalEl) || new bootstrap.Modal(modalEl);
+            modal.hide();
+            
+            primeraCarga = true;
+            calendar.refetchEvents();
+            btn.disabled = false;
+            btn.innerText = "Agendar";
+            Swal.fire("Actualizado!", msj, "success");
+            modoEdicion = false;
+            datosEdicionAntiguos = null;
+          })
+          .withFailureHandler(function(err) {
+            btn.disabled = false;
+            btn.innerText = "Agendar";
+            mostrarError(err);
+          })
+          .editarEvaluacion(datosEdicionAntiguos, datosNuevos);
+      } else {
+        google.script.run
+          .withSuccessHandler(function(msj) {
+            const modalEl = document.getElementById('modalAgenda');
+            const modal = bootstrap.Modal.getInstance(modalEl) || new bootstrap.Modal(modalEl);
+            modal.hide();
+            
+            primeraCarga = true;
+            calendar.refetchEvents();
+            btn.disabled = false;
+            btn.innerText = "Agendar";
+            Swal.fire("Agendado!", msj, "success");
+          })
+          .withFailureHandler(function(err) {
+            btn.disabled = false;
+            btn.innerText = "Agendar";
+            mostrarError(err);
+          })
+          .agendarEvaluacion(datosNuevos);
+      }
+    };
+
+    function ejecutarCargaAutomaticaFront() {
+      Swal.fire({
+        title: 'Carga Autom\u00E1tica',
+        text: 'El sistema leer\u00E1 la pesta\u00F1a "Carga_Automatica" y agendar\u00E1 inteligentemente en bloques de 90min sin romper los topes. \u00BFIniciar?',
+        icon: 'question',
+        showCancelButton: true,
+        confirmButtonColor: '#28a745',
+        cancelButtonColor: '#6c757d',
+        confirmButtonText: 'S\u00ED, iniciar carga'
+      }).then((result) => {
+        if (result.isConfirmed) {
+          const btn = document.getElementById('btnCargaAuto');
+          btn.disabled = true;
+          Swal.fire({
+            title: 'Calculando huecos y topes...',
+            text: 'Esto puede demorar unos segundos.',
+            allowOutsideClick: false,
+            didOpen: () => { Swal.showLoading(); }
+          });
+          
+          google.script.run
+            .withSuccessHandler(function(msj) {
+              btn.disabled = false;
+              primeraCarga = true;
+              calendar.refetchEvents();
+              Swal.fire("Resumen", msj, msj.includes("No se gener") ? "warning" : "success");
+            })
+            .withFailureHandler(function(err) {
+              btn.disabled = false;
+              mostrarError(err);
+            })
+            .ejecutarCargaAutomaticaBackend();
+        }
+      });
+    }
+
+    // ============================================
+    // LOGICA DE PANEL ADMIN (MODO BLOQUEO Y SISTEMA)
+    // ============================================
+
+    function toggleSistema(checkbox) {
+      const abierto = checkbox.checked;
+      checkbox.disabled = true;
+      google.script.run
+        .withSuccessHandler(function(res) {
+          checkbox.disabled = false;
+          configuracionGlobal.sistemaAbierto = res;
+        })
+        .withFailureHandler(function(err) {
+          checkbox.disabled = false;
+          checkbox.checked = !abierto;
+          mostrarError(err);
+        })
+        .cambiarEstadoSistema(abierto);
+    }
+
+    function toggleModoBloqueo(checkbox) {
+      modoBloqueoActivo = checkbox.checked;
+    }
+
+    function abrirModalProfesores() {
+      const ul = document.getElementById('listaProfesores');
+      ul.innerHTML = '<li class="list-group-item text-center"><div class="spinner-border text-primary"></div></li>';
+      new bootstrap.Modal(document.getElementById('modalProfesores')).show();
+      
+      setTimeout(() => {
+        ul.innerHTML = '';
+        const bloqueados = configuracionGlobal.profesoresBloqueados || [];
+        const todos = configuracionGlobal.filtrosGlobales.profesores || [];
+        todos.forEach(p => {
+          const isBlocked = bloqueados.includes(p.toLowerCase());
+          const li = document.createElement('li');
+          li.className = 'list-group-item d-flex justify-content-between align-items-center';
+          li.innerHTML = `
+            <span class="fw-medium">${p}</span>
+            <div class="form-check form-switch">
+              <input class="form-check-input mt-0" type="checkbox" onchange="toggleProfesor(this, '${p}')" ${isBlocked ? '' : 'checked'}>
+            </div>
+          `;
+          ul.appendChild(li);
+        });
+      }, 300);
+    }
+
+    function toggleProfesor(checkbox, nombreProf) {
+      const bloquear = !checkbox.checked;
+      checkbox.disabled = true;
+      google.script.run
+        .withSuccessHandler(function(res) {
+          checkbox.disabled = false;
+          configuracionGlobal.profesoresBloqueados = res;
+        })
+        .withFailureHandler(function(err) {
+          checkbox.disabled = false;
+          checkbox.checked = !checkbox.checked;
+          mostrarError(err);
+        })
+        .alternarBloqueoProfesor(nombreProf, bloquear);
+    }
+
+    function llenarSelectorCursosBloqueo() {
+      const sel = document.getElementById('inCursoBloqueo');
+      sel.innerHTML = '<option value="" disabled selected>Selecciona un curso</option>';
+      const cursos = configuracionGlobal.filtrosGlobales.cursos || [];
+      cursos.forEach(c => {
+        sel.innerHTML += `<option value="${c}">${c}</option>`;
+      });
+    }
+
+    document.getElementById('formBloqueo').onsubmit = function(e) {
+      e.preventDefault();
+      const btn = document.getElementById('btnGuardarBloqueo');
+      const datos = {
+        fecha: diaSemanaGlobal,
+        curso: document.getElementById('inCursoBloqueo').value,
+        asignatura: "ADMIN",
+        tipo: "⛔ BLOQUEO",
+        detalles: document.getElementById('inMotivoBloqueo').value
+      };
+      
+      btn.disabled = true;
+      btn.innerText = "Bloqueando...";
+      
+      google.script.run
+        .withSuccessHandler(function(msj) {
+          const modalEl = document.getElementById('modalBloqueo');
+          const modal = bootstrap.Modal.getInstance(modalEl) || new bootstrap.Modal(modalEl);
+          modal.hide();
+          primeraCarga = true;
+          calendar.refetchEvents();
+          btn.disabled = false;
+          btn.innerText = "Aplicar Bloqueo";
+          document.getElementById('formBloqueo').reset();
+        })
+        .withFailureHandler(function(err) {
+          btn.disabled = false;
+          btn.innerText = "Aplicar Bloqueo";
+          mostrarError(err);
+        })
+        .agendarEvaluacion(datos);
+    };
+
+  </script>
+</body>
+</html>

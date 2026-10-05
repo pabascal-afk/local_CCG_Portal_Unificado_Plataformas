@@ -1,0 +1,433 @@
+﻿require('dotenv').config();
+const express = require('express');
+const session = require('express-session');
+const passport = require('passport');
+const GoogleStrategy = require('passport-google-oauth20').Strategy;
+const sqlite3 = require('sqlite3').verbose();
+const path = require('path');
+const nodemailer = require('nodemailer');
+const transporter = nodemailer.createTransport({
+    service: 'gmail',
+    auth: {
+        user: process.env.SMTP_USER,
+        pass: process.env.SMTP_PASS
+    }
+});
+
+async function enviarCorreoConfirmacion(reserva, profesorEmail) {
+    if (!process.env.SMTP_USER || !process.env.SMTP_PASS) {
+        console.log('[MAIL MOCK] Correo de confirmación no enviado porque faltan SMTP_USER o SMTP_PASS en .env. Datos:', reserva);
+        return;
+    }
+    const html = `
+        <h2>Reserva de Recurso Confirmada</h2>
+        <p>Hola, tu reserva se ha ingresado exitosamente en el sistema.</p>
+        <ul>
+            <li><b>Recurso:</b> ${reserva.recurso}</li>
+            <li><b>Fecha:</b> ${reserva.fecha}</li>
+            <li><b>Bloques:</b> ${reserva.bloques}</li>
+            <li><b>Motivo:</b> ${reserva.motivo}</li>
+        </ul>
+        <p>Gracias por usar la plataforma unificada.</p>
+    `;
+    try {
+        await transporter.sendMail({
+            from: '"Sistema Colegio" <' + process.env.SMTP_USER + '>',
+            to: profesorEmail,
+            subject: 'Confirmación de Reserva - ' + reserva.recurso,
+            html: html
+        });
+        console.log('Correo enviado a:', profesorEmail);
+    } catch(e) {
+        console.error('Error enviando correo:', e);
+    }
+}
+
+const cors = require('cors');
+
+const app = express();
+const PORT = process.env.PORT || 9000;
+
+// Configurar DB
+const dbPath = path.join(__dirname, 'db', 'colegio.db');
+const db = new sqlite3.Database(dbPath);
+
+app.use(cors());
+app.use(express.json());
+app.use(express.urlencoded({ extended: true }));
+
+// Archivos estáticos del frontend
+app.use(express.static(path.join(__dirname, '../public')));
+
+// Sesiones
+app.use(session({
+  secret: process.env.SESSION_SECRET || 'colegio_secreto_super_seguro_123',
+  resave: false,
+  saveUninitialized: false
+}));
+
+// Configurar Passport (Google OAuth)
+app.use(passport.initialize());
+app.use(passport.session());
+
+if (process.env.GOOGLE_CLIENT_ID && process.env.GOOGLE_CLIENT_SECRET) {
+  passport.use(new GoogleStrategy({
+      clientID: process.env.GOOGLE_CLIENT_ID,
+      clientSecret: process.env.GOOGLE_CLIENT_SECRET,
+      callbackURL: `/auth/google/callback`
+    },
+    function(accessToken, refreshToken, profile, cb) {
+      const email = profile.emails[0].value.toLowerCase();
+      db.get("SELECT * FROM usuarios WHERE email = ?", [email], (err, row) => {
+        if (err) return cb(err);
+        if (!row) {
+          // Usuario no registrado en la BD, se rechaza
+          return cb(null, false, { message: 'Usuario no autorizado.' });
+        }
+        return cb(null, row); // Retorna el usuario de la BD
+      });
+    }
+  ));
+}
+
+passport.serializeUser((user, done) => done(null, user.id));
+passport.deserializeUser((id, done) => {
+  db.get("SELECT * FROM usuarios WHERE id = ?", [id], (err, row) => {
+    done(err, row);
+  });
+});
+
+// Middleware de protección
+function isAuthenticated(req, res, next) {
+  if (req.isAuthenticated()) return next();
+  res.status(401).json({ error: 'No autenticado' });
+}
+
+// Rutas de Auth
+app.get('/auth/google', passport.authenticate('google', { scope: ['profile', 'email'] }));
+
+app.get('/auth/google/callback', 
+  passport.authenticate('google', { failureRedirect: '/login.html' }),
+  function(req, res) {
+    res.redirect('/');
+  });
+
+app.get('/api/auth/me', (req, res) => {
+  if (req.isAuthenticated()) {
+    res.json(req.user);
+  } else {
+    // Para modo desarrollo sin Google OAuth (solo si no hay client ID)
+    if (!process.env.GOOGLE_CLIENT_ID) {
+       res.json({ email: 'admin@colegio.edu', nombre: 'Admin (Dev)', rol: 'Administrador' });
+    } else {
+       res.status(401).json({ error: 'No autenticado' });
+    }
+  }
+});
+
+app.get('/api/auth/logout', (req, res) => {
+  req.logout(() => {
+    res.redirect('/login.html');
+  });
+});
+
+app.post('/api/auth/local', (req, res) => {
+    // 1. Verify Local Origin
+    const ip = req.ip || req.connection.remoteAddress;
+    const isLocal = ip === '::1' || ip === '127.0.0.1' || ip.includes('::ffff:127.0.0.1') || 
+                    ip.includes('192.168.') || ip.includes('10.');
+                    
+    if (!isLocal) {
+        return res.status(403).json({ error: 'Acceso denegado. Este método solo está permitido dentro de la red local física del colegio.' });
+    }
+    
+    // 2. Validate and Authenticate User
+    const { email, pin } = req.body;
+    db.get("SELECT * FROM usuarios WHERE email = ?", [email.toLowerCase()], (err, row) => {
+        if (err || !row) return res.status(404).json({ error: 'No se encontró un usuario con ese correo en la base de datos local.' });
+        
+        if (!row.pin) {
+            return res.status(401).json({ error: 'Este usuario no tiene un PIN configurado. Ingresa primero con Google para configurarlo.' });
+        }
+        
+        if (row.pin !== pin) {
+            return res.status(401).json({ error: 'PIN local incorrecto.' });
+        }
+        
+        req.login(row, (err) => {
+            if (err) return res.status(500).json({ error: 'Error interno de sesión.' });
+            return res.json({ success: true, redirect: '/' });
+        });
+    });
+});
+
+
+
+// ==========================================
+// API REST - REEMPLAZO DE APPS SCRIPT
+// ==========================================
+
+// --- Usuarios ---
+app.get('/api/usuarios', (req, res) => {
+  db.all("SELECT * FROM usuarios", (err, rows) => {
+    if (err) return res.status(500).json({error: err.message});
+    res.json(rows);
+  });
+});
+
+app.post('/api/usuarios', (req, res) => {
+  const { email, nombre, rol } = req.body;
+  db.run("INSERT INTO usuarios (email, nombre, rol) VALUES (?, ?, ?) ON CONFLICT(email) DO UPDATE SET nombre=excluded.nombre, rol=excluded.rol", [email, nombre, rol], function(err) {
+    if (err) return res.status(500).json({error: err.message});
+    res.json({ message: 'Usuario guardado' });
+  });
+});
+
+app.delete('/api/usuarios/:email', (req, res) => {
+  db.run("DELETE FROM usuarios WHERE email = ?", [req.params.email], function(err) {
+    if (err) return res.status(500).json({error: err.message});
+    res.json({ message: 'Usuario eliminado' });
+  });
+});
+
+
+// --- Recursos Config ---
+
+app.get('/api/recursos/config', (req, res) => {
+  db.all("SELECT * FROM recursos_config WHERE activo = 1", (err, rows) => {
+    if (err) return res.status(500).json({error: err.message});
+    res.json(rows);
+  });
+});
+
+app.post('/api/recursos/config', (req, res) => {
+  const { nombre, responsable, duracion_bloque, horario_inicio, horario_fin, disponibilidad } = req.body;
+  const dispStr = disponibilidad ? JSON.stringify(disponibilidad) : '{}';
+  db.run("INSERT INTO recursos_config (nombre, responsable, duracion_bloque, horario_inicio, horario_fin, disponibilidad) VALUES (?, ?, ?, ?, ?, ?)",
+    [nombre, responsable, duracion_bloque || 45, horario_inicio || '08:00', horario_fin || '18:00', dispStr], function(err) {
+    if (err) return res.status(500).json({error: err.message});
+    res.json({ message: 'Recurso creado', id: this.lastID });
+  });
+});
+
+app.put('/api/recursos/config/:id', (req, res) => {
+  const { disponibilidad, bloques_agrupados, horarios_exactos, bloqueos_fechas } = req.body;
+  db.run("UPDATE recursos_config SET disponibilidad = COALESCE(?, disponibilidad), bloques_agrupados = COALESCE(?, bloques_agrupados), horarios_exactos = ?, bloqueos_fechas = COALESCE(?, bloqueos_fechas) WHERE id = ?", 
+      [disponibilidad ? JSON.stringify(disponibilidad) : null, bloques_agrupados ? JSON.stringify(bloques_agrupados) : null, horarios_exactos !== undefined ? horarios_exactos : null, bloqueos_fechas ? JSON.stringify(bloqueos_fechas) : null, req.params.id], function(err) {
+    if (err) return res.status(500).json({error: err.message});
+    res.json({ message: 'Configuración actualizada' });
+  });
+});
+
+
+app.delete('/api/recursos/config/:id', (req, res) => {
+  db.run("DELETE FROM recursos_config WHERE id = ?", [req.params.id], function(err) {
+    if (err) return res.status(500).json({error: err.message});
+    res.json({ message: 'Recurso eliminado correctamente' });
+  });
+});
+
+// --- Reservas ---
+app.get('/api/reservas', (req, res) => {
+  db.all("SELECT * FROM reservas WHERE estado != 'Cancelada'", (err, rows) => {
+    if (err) return res.status(500).json({error: err.message});
+    res.json(rows);
+  });
+});
+
+app.post('/api/reservas', (req, res) => {
+    const { fecha, bloques, recurso, motivo } = req.body;
+    const profesor_email = req.isAuthenticated() ? req.user.email : 'dev@colegio.edu';
+    
+    db.all("SELECT * FROM reservas WHERE fecha = ? AND recurso = ? AND estado != 'Cancelada'", [fecha, recurso], (err, rows) => {
+        if (err) return res.status(500).json({error: err.message});
+        
+        for (let row of rows) {
+            const dbBloques = row.bloques.split(',');
+            for (let b of bloques) {
+                if (dbBloques.includes(b.toString())) {
+                    return res.status(400).json({error: `El bloque ${b} ya está reservado.`});
+                }
+            }
+        }
+        
+        db.all("SELECT * FROM eventos WHERE fecha = ? AND (bloques = 'TODOS' OR bloques IS NOT NULL)", [fecha], (err, evRows) => {
+            if (err) return res.status(500).json({error: err.message});
+            
+            for (let ev of evRows) {
+                // Si el evento tiene recurso asignado y no es el que estamos pidiendo, no bloquea
+                if (ev.recurso && ev.recurso !== recurso) continue;
+
+                if (ev.bloques === 'TODOS' || ev.bloques === '') {
+                     return res.status(400).json({error: `Día bloqueado por evento institucional: ${ev.titulo}`});
+                }
+                const evB = ev.bloques.split(',');
+                for (let b of bloques) {
+                    if (evB.includes(b.toString())) {
+                        return res.status(400).json({error: `El bloque ${b} está bloqueado por el evento: ${ev.titulo}`});
+                    }
+                }
+            }
+            
+            const id = Math.random().toString(36).substr(2, 9);
+            db.run("INSERT INTO reservas (id, fecha, bloques, recurso, motivo, profesor_email) VALUES (?, ?, ?, ?, ?, ?)", 
+              [id, fecha, bloques.join(','), recurso, motivo, profesor_email], function(err) {
+              if (err) return res.status(500).json({error: err.message});
+              
+                  // Chequear preferencias_mail
+                  db.get("SELECT preferencias_mail FROM usuarios WHERE email = ?", [profesor_email], (err, row) => {
+                      let mandarEmail = true;
+                      if (row && row.preferencias_mail) {
+                          try { mandarEmail = JSON.parse(row.preferencias_mail).nueva_reserva !== false; } catch(e){}
+                      }
+                      if (mandarEmail) {
+                          // enviarCorreoConfirmacion({ recurso, fecha, bloques: bloques.join(','), motivo }, profesor_email);
+                      }
+                  });
+                  res.json({ message: 'Reserva guardada', id });
+            });
+        });
+    });
+});
+
+app.delete('/api/reservas/:id', (req, res) => {
+  db.run("UPDATE reservas SET estado = 'Cancelada' WHERE id = ?", [req.params.id], function(err) {
+    if (err) return res.status(500).json({error: err.message});
+    res.json({ message: 'Reserva cancelada' });
+  });
+});
+
+
+
+// --- DASHBOARD API ---
+app.get('/api/dashboard/me', (req, res) => {
+    const userEmail = req.isAuthenticated() ? req.user.email : 'dev@colegio.edu';
+    // Mapeo simple: tomamos todo antes del @ o un nombre genérico
+    const baseName = userEmail.split('@')[0];
+
+    const data = {
+        evaluaciones: [],
+        reservas: [],
+        eventos: [],
+        avisos: []
+    };
+
+    // 1. Avisos
+    db.all("SELECT * FROM avisos_muro ORDER BY id DESC LIMIT 10", (err, avisos) => {
+        if (!err) data.avisos = avisos;
+        
+        // 2. Reservas
+        db.all("SELECT * FROM reservas WHERE estado != 'Cancelada' AND profesor_email = ? AND fecha >= date('now') ORDER BY fecha ASC", [userEmail], (err, reservas) => {
+            if (!err) data.reservas = reservas;
+
+            // 3. Evaluaciones (Buscamos coincidencias básicas por nombre)
+            db.all("SELECT * FROM horarios WHERE eval1 IS NOT NULL OR eval2 IS NOT NULL OR eval3 IS NOT NULL", (err, evals) => {
+                if (!err) {
+                    // Filter matching professor (case insensitive basic match)
+                    data.evaluaciones = evals.filter(e => e.profesor && e.profesor.toLowerCase().includes(baseName.toLowerCase().replace('.', ' ')));
+                }
+
+                res.json(data);
+            });
+        });
+    });
+});
+
+app.post('/api/avisos', (req, res) => {
+    const { titulo, mensaje, importancia } = req.body;
+    const autor = req.isAuthenticated() ? req.user.email : 'Admin';
+    db.run("INSERT INTO avisos_muro (titulo, mensaje, autor, importancia) VALUES (?, ?, ?, ?)", [titulo, mensaje, autor, importancia || 'Normal'], function(err) {
+        if (err) return res.status(500).json({error: err.message});
+        res.json({ message: 'Aviso publicado', id: this.lastID });
+    });
+});
+
+app.delete('/api/avisos/:id', (req, res) => {
+    db.run("DELETE FROM avisos_muro WHERE id = ?", [req.params.id], function(err) {
+        if (err) return res.status(500).json({error: err.message});
+        res.json({ message: 'Aviso borrado' });
+    });
+});
+
+app.put('/api/perfil/preferencias', (req, res) => {
+    const email = req.isAuthenticated() ? req.user.email : 'dev@colegio.edu';
+    const { preferencias, pin } = req.body;
+    
+    db.run("UPDATE usuarios SET preferencias_mail = ? WHERE email = ?", [JSON.stringify(preferencias), email], function(err) {
+        if (err) return res.status(500).json({error: err.message});
+        
+        if (pin !== undefined) {
+            db.run("UPDATE usuarios SET pin = ? WHERE email = ?", [pin, email], function(err) {
+                if (err) return res.status(500).json({error: err.message});
+                res.json({ message: 'Preferencias guardadas' });
+            });
+        } else {
+            res.json({ message: 'Preferencias guardadas' });
+        }
+    });
+});
+
+app.get('/api/perfil/preferencias', (req, res) => {
+    const email = req.isAuthenticated() ? req.user.email : 'dev@colegio.edu';
+    db.get("SELECT preferencias_mail, pin FROM usuarios WHERE email = ?", [email], (err, row) => {
+        if (err || !row || !row.preferencias_mail) return res.json({ nueva_reserva: true, edicion_admin: true, nuevo_aviso: false, recordatorio_eval: true });
+        try {
+            
+            const p = JSON.parse(row.preferencias_mail);
+            p.pin_actual = row.pin || '';
+            res.json(p);
+        } catch(e) {
+            res.json({ nueva_reserva: true, edicion_admin: true, nuevo_aviso: false, recordatorio_eval: true });
+        }
+    });
+});
+
+
+// Importar rutas de evaluaciones
+const evaluacionesRouter = require('./api/evaluaciones');
+app.use('/api/evaluaciones', evaluacionesRouter);
+
+
+// Importar RPC router para polyfill de Google Apps Script
+const rpcRouter = require('./api/rpc');
+app.use('/api/rpc', rpcRouter);
+
+
+// --- Roles Config ---
+app.get('/api/roles', (req, res) => {
+    db.all("SELECT * FROM roles_config", (err, rows) => {
+        if (err) return res.status(500).json({error: err.message});
+        res.json(rows);
+    });
+});
+
+app.post('/api/roles', (req, res) => {
+    const { nombre, permisos } = req.body;
+    db.run("INSERT INTO roles_config (nombre, permisos) VALUES (?, ?)", [nombre, JSON.stringify(permisos)], function(err) {
+        if (err) return res.status(500).json({error: err.message});
+        res.json({ message: 'Rol creado', id: this.lastID });
+    });
+});
+
+app.put('/api/roles/:id', (req, res) => {
+    const { nombre, permisos } = req.body;
+    db.run("UPDATE roles_config SET nombre = ?, permisos = ? WHERE id = ?", [nombre, JSON.stringify(permisos), req.params.id], function(err) {
+        if (err) return res.status(500).json({error: err.message});
+        res.json({ message: 'Rol actualizado' });
+    });
+});
+
+app.delete('/api/roles/:id', (req, res) => {
+    db.run("DELETE FROM roles_config WHERE id = ?", [req.params.id], function(err) {
+        if (err) return res.status(500).json({error: err.message});
+        res.json({ message: 'Rol eliminado' });
+    });
+});
+
+// Iniciar Servidor
+const { initTray } = require('./tray');
+  app.listen(PORT, () => {
+    try { initTray(PORT); } catch(e) { console.error('Tray failed', e); }
+  console.log(`Servidor Node.js corriendo en http://localhost:${PORT}`);
+});
+

@@ -1,0 +1,333 @@
+<!DOCTYPE html>
+<html>
+<head>
+<script>
+  window.google = {
+    script: {
+      run: (() => {
+        let currentSuccess = null;
+        let currentFailure = null;
+        
+        const runObj = new Proxy({}, {
+          get: function(target, prop) {
+            if (prop === 'withSuccessHandler') {
+               return function(handler) {
+                   currentSuccess = handler;
+                   return runObj;
+               }
+            }
+            if (prop === 'withFailureHandler') {
+               return function(handler) {
+                   currentFailure = handler;
+                   return runObj;
+               }
+            }
+            // Real RPC call
+            return function(...args) {
+               const onSuccess = currentSuccess;
+               const onFailure = currentFailure;
+               currentSuccess = null;
+               currentFailure = null;
+               
+               fetch('/api/rpc/' + prop, {
+                   method: 'POST',
+                   headers: {'Content-Type': 'application/json'},
+                   body: JSON.stringify({ args })
+               }).then(async res => {
+                   let data;
+                   try { data = await res.json(); } catch(e) { data = { error: 'Invalid JSON' }; }
+                   
+                   if (!res.ok) {
+                       if (onFailure) onFailure(new Error(data.error || 'Error del servidor'));
+                   } else {
+                       if (onSuccess) onSuccess(data.result);
+                   }
+               }).catch(err => {
+                   if (onFailure) onFailure(err);
+               });
+            }
+          }
+        });
+        return runObj;
+      })()
+    }
+  };
+</script>
+
+
+
+  <base target="_top">
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+  <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+  <style>
+    body { background-color: #f8f9fa; font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; }
+    .header-panel { background: #2c3e50; color: white; padding: 2rem 0; margin-bottom: 2rem; border-bottom: 4px solid #18bc9c; }
+    
+    .table-horario table {
+      table-layout: fixed; 
+      width: 100%;
+    }
+
+    .col-bloque {
+      width: 8%;
+      background-color: #f8f9fa;
+      font-weight: bold;
+      font-size: 0.85rem;
+    }
+
+    .col-dia {
+      width: 18.4%;
+    }
+
+    .tag {
+      display: block; 
+      padding: 4px; border-radius: 12px;
+      font-weight: 600; font-size: 0.75rem; margin-bottom: 4px;
+      border: 1px solid rgba(0,0,0,0.1); cursor: pointer;
+      white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+      transition: opacity 0.2s;
+      text-align: center;
+      user-select: none;
+    }
+    .tag:hover { opacity: 0.7; }
+    .tag-profesor { 
+      background-color: #f8f9fa; 
+      color: #455a64; 
+      font-size: 0.65rem; 
+      font-weight: normal; 
+      display: inline-block;
+      width: auto;
+      padding: 2px 6px;
+      margin-bottom: 0;
+    }
+
+    .table-horario { background: white; border-radius: 8px; box-shadow: 0 4px 15px rgba(0,0,0,0.1); }
+    .empty-cell { background: #fdfdfd; }
+  </style>
+</head>
+<body>
+
+<div class="header-panel text-center">
+  <h1>Coordinación Pedagógica</h1>
+  <p>Gestión de Horarios Escolares 2026</p>
+</div>
+
+<div class="container-fluid px-4">
+  <div class="row mb-4">
+    <div class="col-md-12">
+      <div class="bg-white p-3 rounded shadow-sm d-flex flex-wrap gap-3 align-items-center">
+        <div class="flex-grow-1">
+          <select id="selectCurso" class="form-select" onchange="renderizar()"><option value="">Todos los Cursos</option></select>
+        </div>
+        <div class="flex-grow-1">
+          <select id="selectProfesor" class="form-select" onchange="renderizar()"><option value="">Todos los Profesores</option></select>
+        </div>
+        <div class="flex-grow-1">
+          <select id="selectAsignatura" class="form-select" onchange="renderizar()"><option value="">Todas las Asignaturas</option></select>
+        </div>
+        <div>
+          <button class="btn btn-outline-secondary w-100" onclick="resetFiltros()">Limpiar</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div id="loading" class="text-center"><div class="spinner-border text-primary" role="status"></div></div>
+  <div id="visorGrid" class="mt-4"></div>
+</div>
+
+<div class="modal fade" id="editorModal" tabindex="-1">
+  <div class="modal-dialog">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h5 class="modal-title" id="modalTitle">Editar Registro</h5>
+        <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+      </div>
+      <div class="modal-body">
+        <label class="form-label" id="labelNuevoValor">Seleccionar nuevo valor:</label>
+        <select class="form-select mb-3" id="selectNuevoValor"></select>
+        
+        <div class="form-check">
+          <input class="form-check-input" type="checkbox" id="checkMasivo">
+          <label class="form-check-label text-danger" for="checkMasivo">
+            Reemplazar en <strong>todos</strong> los cursos y días (Edición Masiva)
+          </label>
+        </div>
+      </div>
+      <div class="modal-footer">
+        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button>
+        <button type="button" class="btn btn-primary" onclick="guardarEdicion()">Guardar Cambios</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script>
+  let DB_HORARIOS = [];
+  let editorContexto = {};
+  let colorAsignaturas = {}; // Nuevo diccionario para guardar colores únicos
+  const modalEl = new bootstrap.Modal(document.getElementById('editorModal'));
+
+  let clickTimer = null;
+  function clickTag(tipo, valor) {
+    clearTimeout(clickTimer);
+    clickTimer = setTimeout(() => {
+      if(tipo === 'Asignatura') document.getElementById('selectAsignatura').value = valor;
+      if(tipo === 'Profesor') document.getElementById('selectProfesor').value = valor;
+      renderizar();
+    }, 300);
+  }
+
+  function dblClickTag(columna, valorActual, curso, dia, bloque) {
+    clearTimeout(clickTimer);
+    abrirEditor(columna, valorActual, curso, dia, bloque);
+  }
+
+  // Retorna el color guardado en el diccionario
+  function getSubjectColor(asignatura) {
+    return colorAsignaturas[asignatura] || '#e9ecef'; // Gris por defecto en caso de error
+  }
+
+  window.onload = () => {
+    google.script.run.withSuccessHandler(data => {
+      DB_HORARIOS = data;
+      poblarFiltrosBase();
+      document.getElementById('loading').style.display = 'none';
+      if (!data || data.length === 0) {
+        document.getElementById('visorGrid').innerHTML = '<div class="alert alert-warning text-center">No se encontraron datos en la hoja de cálculo. Verifica que tenga las cabeceras: Curso, Día, Bloque.</div>';
+        return;
+      }
+      renderizar();
+    }).withFailureHandler(error => {
+      document.getElementById('loading').style.display = 'none';
+      document.getElementById('visorGrid').innerHTML = '<div class="alert alert-danger text-center">Error al cargar datos: ' + error.message + '</div>';
+    }).getHorariosData();
+  };
+
+  function poblarFiltrosBase() {
+    const cursos = [...new Set(DB_HORARIOS.map(h => h.Curso))].sort();
+    
+    let todosProfes = [];
+    DB_HORARIOS.forEach(h => {
+        if(h.Profesor) todosProfes.push(h.Profesor);
+        if(h.ProfesoresExtra) todosProfes.push(...h.ProfesoresExtra);
+    });
+    const profes = [...new Set(todosProfes)].sort();
+    
+    const asignaturas = [...new Set(DB_HORARIOS.map(h => h.Asignatura))].sort(); 
+    
+    // Generador de colores únicos y pastel usando el Ángulo Dorado
+    asignaturas.forEach((asig, index) => {
+      const hue = Math.floor((index * 137.508) % 360);
+      // 70% de saturación y 85% de luminosidad aseguran un tono pastel
+      colorAsignaturas[asig] = `hsl(${hue}, 70%, 85%)`; 
+    });
+
+    cursos.forEach(c => document.getElementById('selectCurso').add(new Option(c, c)));
+    profes.forEach(p => document.getElementById('selectProfesor').add(new Option(p, p)));
+    asignaturas.forEach(a => document.getElementById('selectAsignatura').add(new Option(a, a)));
+  }
+
+  function renderizar() {
+    const cFiltro = document.getElementById('selectCurso').value;
+    const pFiltro = document.getElementById('selectProfesor').value;
+    const aFiltro = document.getElementById('selectAsignatura').value; // Se lee el filtro de asignatura
+    
+    // Se actualiza la lógica para considerar la asignatura y los profesores adicionales
+    const filtrados = DB_HORARIOS.filter(h => 
+      (!cFiltro || h.Curso === cFiltro) && 
+      (!pFiltro || h.Profesor === pFiltro || (h.ProfesoresExtra && h.ProfesoresExtra.includes(pFiltro))) &&
+      (!aFiltro || h.Asignatura === aFiltro)
+    );
+    
+    const dias = ['Lunes', 'Martes', 'Miércoles', 'Jueves', 'Viernes'];
+    const bloques = [1, 2, 3, 4, 5, 6, 7, 8, 9, 10];
+
+    let html = `
+      <div class="table-responsive table-horario">
+        <table class="table table-bordered mb-0 text-center align-middle">
+          <thead class="table-dark">
+            <tr>
+              <th class="col-bloque">Bloque</th>
+              ${dias.map(d => `<th class="col-dia">${d}</th>`).join('')}
+            </tr>
+          </thead>
+          <tbody>
+    `;
+
+    bloques.forEach(b => {
+      html += `<tr><td class="col-bloque">${b}</td>`;
+      dias.forEach(d => {
+        const clases = filtrados.filter(h => (h.Día ? String(h.Día).toLowerCase().trim() : '').startsWith(d.substring(0,2).toLowerCase()) && parseInt(h.Bloque) === b);
+        if (clases.length > 0) {
+          html += `<td>${clases.map(c => `
+              <div class="mb-1">
+                <span class="tag text-dark" style="background-color: ${getSubjectColor(c.Asignatura)}" 
+                      onclick="clickTag('Asignatura', '${c.Asignatura}')"
+                      ${c.ProfesoresExtra ? 'title="Clic para filtrar"' : `title="Clic para filtrar | Doble clic para editar" ondblclick="dblClickTag('Asignatura', '${c.Asignatura}', '${c.Curso}', '${c.Día || c.Dia || ''}', ${b})"`}>${c.Asignatura} (${c.Curso})</span>
+                <div class="d-flex flex-wrap justify-content-center gap-1 mt-1">
+                  <span class="tag tag-profesor" 
+                        onclick="clickTag('Profesor', '${c.Profesor}')"
+                        ${c.ProfesoresExtra ? 'title="Clic para filtrar"' : `title="Clic para filtrar | Doble clic para editar" ondblclick="dblClickTag('Profesor', '${c.Profesor}', '${c.Curso}', '${c.Día || c.Dia || ''}', ${b})"`}>${c.Profesor}</span>
+                  ${c.ProfesoresExtra ? c.ProfesoresExtra.map(p => `<span class="tag tag-profesor" onclick="clickTag('Profesor', '${p}')" title="Clic para filtrar">${p}</span>`).join('') : ''}
+                </div>
+              </div>
+            `).join('')}</td>`;
+        } else {
+          html += `<td class="empty-cell"></td>`;
+        }
+      });
+      html += `</tr>`;
+    });
+    document.getElementById('visorGrid').innerHTML = html + '</tbody></table></div>';
+  }
+
+  function abrirEditor(columna, valorActual, curso, dia, bloque) {
+    editorContexto = { columna, valorActual, curso, dia, bloque };
+    document.getElementById('modalTitle').innerText = `Editar ${columna}`;
+    document.getElementById('labelNuevoValor').innerText = `Valor actual: ${valorActual}`;
+    document.getElementById('checkMasivo').checked = false;
+
+    const selectObj = document.getElementById('selectNuevoValor');
+    selectObj.innerHTML = '';
+    const opcionesUnicas = [...new Set(DB_HORARIOS.map(h => h[columna]))].sort();
+    opcionesUnicas.forEach(opt => selectObj.add(new Option(opt, opt)));
+    selectObj.value = valorActual;
+
+    modalEl.show();
+  }
+
+  function guardarEdicion() {
+    const nuevoValor = document.getElementById('selectNuevoValor').value;
+    const esMasivo = document.getElementById('checkMasivo').checked;
+    const { columna, valorActual, curso, dia, bloque } = editorContexto;
+
+    // Actualizar cache local
+    DB_HORARIOS.forEach(h => {
+      if (esMasivo) {
+        if (h[columna] === valorActual) h[columna] = nuevoValor;
+      } else {
+        if (h.Curso === curso && h.Día === dia && parseInt(h.Bloque) === bloque) h[columna] = nuevoValor;
+      }
+    });
+
+    // Enviar a Google Sheets (Asíncrono)
+    if (esMasivo) {
+      google.script.run.actualizarRegistroMasivo(columna, valorActual, nuevoValor);
+    } else {
+      google.script.run.actualizarRegistroUnico(curso, dia, bloque, columna, nuevoValor);
+    }
+
+    renderizar();
+    modalEl.hide();
+  }
+
+  function resetFiltros() {
+    document.getElementById('selectCurso').value = "";
+    document.getElementById('selectProfesor').value = "";
+    document.getElementById('selectAsignatura').value = ""; // Limpia también la asignatura
+    renderizar();
+  }
+</script>
+</body>
+</html>

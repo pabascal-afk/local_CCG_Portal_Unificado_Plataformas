@@ -1,0 +1,1781 @@
+/**
+ * ============================================================================
+ * 1. CONFIGURACIÓN Y RENDERIZADO DE LA WEB APP
+ * ============================================================================
+ */
+
+function doGet() {
+  return HtmlService.createTemplateFromFile('Index')
+      .evaluate()
+      .setTitle('Calendarizar Evaluaciones')
+      .addMetaTag('viewport', 'width=device-width, initial-scale=1')
+      .setXFrameOptionsMode(HtmlService.XFrameOptionsMode.ALLOWALL);
+}
+
+function GET_HEX_COLOR(cellReference) {
+  var sheet = SpreadsheetApp.getActiveSheet();
+  var range = sheet.getRange(cellReference);
+  return range.getBackground();
+}
+
+function configurarBaseDeDatos() {
+  const ss = SpreadsheetApp.getActiveSpreadsheet();
+  const estructuras = [
+    { nombre: "Evaluaciones", columnas: ["Timestamp", "Fecha", "Curso", "Asignatura", "Tipo", "Profesor", "Detalles"] },
+    { nombre: "Config_Cursos", columnas: ["Curso", "Max_Escritas_Semana", "Max_Total_Semana", "Max_Por_Dia", "Max_Otras_Dia"] },
+    // 👇 AQUÍ AJUSTAMOS LAS 4 COLUMNAS DE HORAS
+    { nombre: "Config_Asignaturas", columnas: ["Asignatura", "Color_Hex", "Ignorar_Limites", "", "", "", "Hrs_1er_Ciclo", "Hrs_2do_Ciclo", "Hrs_Media_1", "Hrs_Media_2"] },
+    { nombre: "Config_Bloques", columnas: ["Nombre_Bloque", "Tipo", "Inicio", "Fin"] }, 
+    { nombre: "Periodos_Evaluacion", columnas: ["Nombre_Periodo", "Fecha_Inicio", "Fecha_Fin", "Color_Fondo_Hex"] },
+    { nombre: "Carga_Automatica", columnas: ["Asignatura", "Fecha_Inicio", "Fecha_Fin", "Tipo", "Activo"] },
+    { nombre: "horarios_cursos", columnas: ["Curso", "Día", "Rango Horario", "Rango Horario.1", "Asignatura 1", "Asignatura 2", "Profesor"] },
+    { nombre: "Usuarios_Autorizados", columnas: ["Email", "Rol"] },
+    { nombre: "Config_General", columnas: ["Parametro", "Valor", "", "", "", "", "Fechas_Bloqueadas"] },
+    { nombre: "db_materias_por_curso", columnas: ["Curso", "Asignatura_Excluida"] } 
+  ];
+  
+  estructuras.forEach(pestaña => {
+    let sheet = ss.getSheetByName(pestaña.nombre);
+    if (!sheet) {
+      sheet = ss.insertSheet(pestaña.nombre);
+      sheet.getRange(1, 1, 1, pestaña.columnas.length).setValues([pestaña.columnas]).setFontWeight("bold");
+      sheet.setFrozenRows(1);
+      if (pestaña.nombre === "Config_General") {
+        sheet.appendRow(["Dias_Anticipacion", 7]);
+        sheet.appendRow(["Sistema_Abierto", "SI"]); 
+      }
+    } else {
+      sheet.getRange(1, 1, 1, pestaña.columnas.length).setValues([pestaña.columnas]).setFontWeight("bold");
+    }
+  });
+  return "Base de datos configurada.";
+}
+
+/**
+ * ============================================================================
+ * 2. SISTEMA DE ROLES Y PERMISOS
+ * ============================================================================
+ */
+
+function verificarPermisos() {
+  const email = Session.getActiveUser().getEmail().toLowerCase();
+  if (!email) throw new Error("No se pudo identificar tu cuenta de Google.");
+  
+  const sheet = SpreadsheetApp.getActiveSpreadsheet().getSheetByName('Usuarios_Autorizados');
+  if (!sheet) throw new Error("Falta la pestaña 'Usuarios_Autorizados' en el Excel.");
+  
+  const data = sheet.getDataRange().getValues().slice(1);
+  let rolAsignado = null;
+
+  for (let i = 0; i < data.length; i++) {
+    if (data[i][0].toString().trim().toLowerCase() === email) {
+      rolAsignado = data[i][1] ? data[i][1].toString().trim() : 'Profesor';
+      break;
+    }
+  }
+
+  if (!rolAsignado) throw new Error(`Acceso denegado: El correo ${email} no tiene permisos de acceso.`);
+  return { email: email, rol: rolAsignado }; 
+}
+
+function getEstadoUsuario() {
+  const email = Session.getActiveUser().getEmail().toLowerCase();
+  
+  const sheetGen = SpreadsheetApp.getActiveSpreadsheet().getSheetByName('Config_General');
+  let abierto = true;
+  if (sheetGen) {
+    const data = sheetGen.getDataRange().getValues();
+    const filaAbierto = data.find(r => r[0] === 'Sistema_Abierto');
+    if (filaAbierto && filaAbierto[1].toString().trim().toUpperCase() === 'NO') abierto = false;
+  }
+
+  try {
+    const usuario = verificarPermisos();
+    return { autorizado: true, email: usuario.email, rol: usuario.rol, sistemaAbierto: abierto };
+  } catch(e) {
+    return { autorizado: false, email: email, rol: 'Ninguno', sistemaAbierto: abierto };
+  }
+}
+
+/**
+ * ============================================================================
+ * 3. COMUNICACIÓN CON EL FRONTEND (CALENDARIO)
+ * ============================================================================
+ */
+
+function getDataConfig() {
+  const ss = SpreadsheetApp.getActiveSpreadsheet();
+  const cursos = ss.getSheetByName('Config_Cursos').getDataRange().getValues().slice(1).map(r => r[0]).filter(String);
+  
+  const asignaturas = ss.getSheetByName('Config_Asignaturas').getDataRange().getValues().slice(1).map(r => ({
+    nombre: r[0], color: r[1], hrs1: r[6], hrs2: r[7], hrsM1: r[8], hrsM2: r[9]
+  })).filter(a => a.nombre);
+  
+  let bloques = [];
+  const sheetBloques = ss.getSheetByName('Config_Bloques');
+  if (sheetBloques) {
+    bloques = sheetBloques.getDataRange().getDisplayValues().slice(1).map(r => ({
+      nombre: r[0], tipo: r[1].toString().trim().toLowerCase() === 'recreo' ? 'recreo' : 'clase',
+      inicio: r[2], fin: r[3]
+    })).filter(b => b.inicio && b.fin);
+  }
+
+  let materiasExcluidas = [];
+  const sheetExcluidas = ss.getSheetByName('db_materias_por_curso');
+  if (sheetExcluidas) {
+    materiasExcluidas = sheetExcluidas.getDataRange().getValues().slice(1).map(r => ({
+      curso: r[0].toString().trim().toUpperCase(),
+      asignatura: r[1].toString().trim().toUpperCase()
+    })).filter(ex => ex.curso && ex.asignatura);
+  }
+
+  // Lectura de parámetros dinámicos del Artículo 42
+  let art42 = { h1_min: 2, h1_max: 4, h2_min: 3, h2_max: 5, h3_min: 4, h3_max: 7 };
+  const sheetGen = ss.getSheetByName('Config_General');
+  if (sheetGen) {
+    sheetGen.getDataRange().getValues().forEach(r => {
+      if(r[0] === 'Art42_Min_1a2_Hrs') art42.h1_min = parseInt(r[1]) || 2;
+      if(r[0] === 'Art42_Max_1a2_Hrs') art42.h1_max = parseInt(r[1]) || 4;
+      if(r[0] === 'Art42_Min_3a4_Hrs') art42.h2_min = parseInt(r[1]) || 3;
+      if(r[0] === 'Art42_Max_3a4_Hrs') art42.h2_max = parseInt(r[1]) || 5;
+      if(r[0] === 'Art42_Min_5_Hrs') art42.h3_min = parseInt(r[1]) || 4;
+      if(r[0] === 'Art42_Max_5_Hrs') art42.h3_max = parseInt(r[1]) || 7;
+    });
+  }
+
+  return { cursos, asignaturas, bloques, materiasExcluidas, art42 };
+}
+
+
+function excluirMateriasBackend(lista) {
+  const usuario = verificarPermisos();
+  if (usuario.rol.toLowerCase() !== 'admin' && usuario.rol.toLowerCase() !== 'administrador') throw new Error("Solo administradores.");
+  
+  const sheet = SpreadsheetApp.getActiveSpreadsheet().getSheetByName('db_materias_por_curso');
+  if (!sheet) throw new Error("Ejecuta configurarBaseDeDatos() primero para crear la pestaña.");
+  
+  const nuevasFilas = lista.map(item => [item.curso, item.asignatura]);
+  sheet.getRange(sheet.getLastRow() + 1, 1, nuevasFilas.length, 2).setValues(nuevasFilas);
+  return "Asignaturas excluidas correctamente.";
+}
+
+function restaurarMateriasBackend() {
+  const usuario = verificarPermisos();
+  if (usuario.rol.toLowerCase() !== 'admin' && usuario.rol.toLowerCase() !== 'administrador') throw new Error("Solo administradores.");
+  
+  const sheet = SpreadsheetApp.getActiveSpreadsheet().getSheetByName('db_materias_por_curso');
+  if (sheet && sheet.getLastRow() > 1) sheet.deleteRows(2, sheet.getLastRow() - 1);
+  return "Todas las exclusiones han sido borradas.";
+}
+
+// ACTUALIZACIÓN: Ahora soporta filtros múltiples (Arrays) para la exportación PDF
+function obtenerEventosCalendario(filtroCursos, filtroAsigs) {
+  const ss = SpreadsheetApp.getActiveSpreadsheet();
+  const tz = ss.getSpreadsheetTimeZone();
+  let todosLosEventos = [];
+
+  // Adaptación de filtros (Strings a Arrays si es necesario)
+  let cursosPermitidos = [];
+  if (filtroCursos) cursosPermitidos = Array.isArray(filtroCursos) ? filtroCursos : [filtroCursos];
+  
+  let asigsPermitidas = [];
+  if (filtroAsigs) asigsPermitidas = Array.isArray(filtroAsigs) ? filtroAsigs : [filtroAsigs];
+
+  const sheetPeriodos = ss.getSheetByName('Periodos_Evaluacion');
+  if (sheetPeriodos) {
+    sheetPeriodos.getDataRange().getValues().slice(1).forEach(fila => {
+      if (fila[1] && fila[2]) {
+        const fInicio = new Date(fila[1]); const fFin = new Date(fila[2]); fFin.setDate(fFin.getDate() + 1); 
+        todosLosEventos.push({
+          title: fila[0], start: Utilities.formatDate(fInicio, tz, "yyyy-MM-dd"), end: Utilities.formatDate(fFin, tz, "yyyy-MM-dd"),
+          display: 'background', backgroundColor: fila[3] || '#fff3cd'
+        });
+      }
+    });
+  }
+
+  const sheetGen = ss.getSheetByName('Config_General');
+  if (sheetGen) {
+    sheetGen.getDataRange().getValues().slice(1).forEach(fila => {
+      if (fila[6]) { 
+        const fechaObj = new Date(fila[6]);
+        if (!isNaN(fechaObj)) {
+          todosLosEventos.push({
+            title: '🚫 Día Bloqueado', start: Utilities.formatDate(fechaObj, tz, "yyyy-MM-dd"),
+            allDay: true, backgroundColor: '#dc3545', borderColor: '#dc3545', extendedProps: { bloqueado: true }
+          });
+        }
+      }
+    });
+  }
+
+  const sheetEval = ss.getSheetByName('Evaluaciones');
+  if (sheetEval) {
+    const configAsignaturas = ss.getSheetByName('Config_Asignaturas').getDataRange().getValues().slice(1);
+    const colores = {}; configAsignaturas.forEach(r => colores[r[0]] = r[1]);
+
+    const eventosEvaluaciones = sheetEval.getDataRange().getValues().slice(1).filter(fila => {
+        if(!fila[1]) return false; 
+        
+        // VALIDACIÓN DE FILTROS MÚLTIPLES
+        const cumpleCurso = cursosPermitidos.length === 0 || cursosPermitidos.includes(fila[2].toString().trim());
+        const cumpleAsig = asigsPermitidas.length === 0 || asigsPermitidas.includes(fila[3].toString().trim());
+        
+        return cumpleCurso && cumpleAsig;
+      }).map(fila => {
+        const fechaStr = Utilities.formatDate(new Date(fila[1]), tz, "yyyy-MM-dd");
+        let titulo = `${fila[2]} - ${fila[3]}`;
+        if (fila[6] && fila[6].toString().includes("⏱️")) titulo += ` | ${fila[6].toString().split(" | ")[0]}`;
+        return {
+          title: titulo, start: fechaStr, backgroundColor: colores[fila[3]] || '#3788d8',
+          extendedProps: { profesor: fila[5], tipo: fila[4], detalles: fila[6], curso: fila[2], asignatura: fila[3] }
+        };
+      });
+    todosLosEventos = todosLosEventos.concat(eventosEvaluaciones);
+  }
+  return todosLosEventos;
+}
+
+/**
+ * ============================================================================
+ * 4. AGENDAMIENTO Y ELIMINACIÓN MANUAL 
+ * ============================================================================
+ */
+
+function agendarDesdeCalendario(datos) {
+  const ss = SpreadsheetApp.getActiveSpreadsheet();
+  const timezone = ss.getSpreadsheetTimeZone();
+  const usuario = verificarPermisos(); 
+  const emailProfesor = usuario.email;
+  
+  const configGen = ss.getSheetByName('Config_General');
+  let diasAnticipacion = 0;
+  if (configGen) {
+    const dataGen = configGen.getDataRange().getValues();
+    const filaAbierto = dataGen.find(r => r[0] === 'Sistema_Abierto');
+    if (filaAbierto && filaAbierto[1].toString().trim().toUpperCase() === 'NO') {
+      throw new Error("El periodo de agendamiento se encuentra cerrado temporalmente por administración.");
+    }
+    const filaAnt = dataGen.find(r => r[0] === 'Dias_Anticipacion');
+    if (filaAnt && !isNaN(filaAnt[1])) diasAnticipacion = parseInt(filaAnt[1]);
+
+    for (let r of dataGen.slice(1)) {
+      if (r[6]) {
+        const fechaBloqueada = Utilities.formatDate(new Date(r[6]), timezone, "yyyy-MM-dd");
+        if (fechaBloqueada === datos.fecha) {
+          throw new Error("No se puede agendar en esta fecha. El día se encuentra bloqueado por administración.");
+        }
+      }
+    }
+  }
+
+  if (diasAnticipacion > 0) {
+    const hoy = new Date(); hoy.setHours(0,0,0,0);
+    const fechaCita = new Date(datos.fecha + "T00:00:00");
+    const diffDias = Math.floor((fechaCita.getTime() - hoy.getTime()) / (1000 * 3600 * 24));
+    if (diffDias < diasAnticipacion) throw new Error(`Debes agendar con al menos ${diasAnticipacion} días de anticipación.`);
+  }
+
+  const fechaNueva = new Date(datos.fecha + "T12:00:00"); 
+  if (fechaNueva.getDay() === 0 || fechaNueva.getDay() === 6) throw new Error("No se agendan evaluaciones los fines de semana.");
+
+  const dataCursos = ss.getSheetByName('Config_Cursos').getDataRange().getValues();
+  let maxEscritasSemana = 2, maxTotalSemana = 4, maxEscritasDia = 2, maxOtrasDia = 2; 
+  const cursoBuscado = datos.curso.toString().trim(); 
+
+  // OBTENER ASIGNATURAS EXENTAS
+  const asignaturasExentas = [];
+  const configAsig = ss.getSheetByName('Config_Asignaturas').getDataRange().getValues().slice(1);
+  configAsig.forEach(r => {
+    if (r[2] && r[2].toString().trim().toUpperCase() === 'SI') asignaturasExentas.push(r[0].toString().trim());
+  });
+  const esExenta = asignaturasExentas.includes(datos.asignatura.toString().trim());
+
+  for (let i = 1; i < dataCursos.length; i++) {
+    if (dataCursos[i][0].toString().trim() === cursoBuscado) {
+      maxEscritasSemana = parseInt(dataCursos[i][1]) || maxEscritasSemana;
+      maxTotalSemana = parseInt(dataCursos[i][2]) || maxTotalSemana;
+      maxEscritasDia = parseInt(dataCursos[i][3]) || maxEscritasDia;
+      maxOtrasDia = parseInt(dataCursos[i][4]) || maxEscritasDia; 
+      break;
+    }
+  }
+
+  const evaluaciones = ss.getSheetByName('Evaluaciones').getDataRange().getValues().slice(1);
+  let conteoDiaEscritas = 0, conteoDiaOtras = 0, conteoSemanaTotal = 0, conteoSemanaEscritas = 0;
+
+  const getWeek = (d) => {
+    const date = new Date(d.getTime()); date.setHours(0,0,0,0); date.setDate(date.getDate() + 4 - (date.getDay() || 7));
+    return Math.ceil((((date - new Date(date.getFullYear(),0,1)) / 8.64e7) + 1)/7);
+  };
+  const numSemanaNueva = getWeek(fechaNueva); const añoNuevo = fechaNueva.getFullYear();
+
+  evaluaciones.forEach(fila => {
+    if (fila[2] && fila[2].toString().trim() === cursoBuscado && fila[1]) { 
+      
+      // IGNORAR MATERIAS EXENTAS EN EL CONTEO
+      if (asignaturasExentas.includes(fila[3].toString().trim())) return; 
+
+      const fechaFilaObj = new Date(fila[1]);
+      if (getWeek(fechaFilaObj) === numSemanaNueva && fechaFilaObj.getFullYear() === añoNuevo) {
+        conteoSemanaTotal++;
+        if (fila[4] === 'Escrita') conteoSemanaEscritas++;
+      }
+      if (Utilities.formatDate(fechaFilaObj, timezone, "yyyy-MM-dd") === datos.fecha) {
+        if (fila[4] === 'Escrita') conteoDiaEscritas++; else conteoDiaOtras++;
+      }
+    }
+  });
+
+  if (!esExenta) {
+    if (datos.tipo === 'Escrita' && conteoDiaEscritas >= maxEscritasDia) throw new Error(`Límite diario de pruebas escritas superado (${maxEscritasDia}).`);
+    if (datos.tipo !== 'Escrita' && conteoDiaOtras >= maxOtrasDia) throw new Error(`Límite diario de trabajos superado (${maxOtrasDia}).`);
+    if (conteoSemanaTotal >= maxTotalSemana) throw new Error(`Límite semanal alcanzado para ${datos.curso}.`);
+    if (datos.tipo === 'Escrita' && conteoSemanaEscritas >= maxEscritasSemana) throw new Error(`Límite de pruebas escritas semanales alcanzado.`);
+  }
+
+  ss.getSheetByName('Evaluaciones').appendRow([new Date(), datos.fecha, datos.curso, datos.asignatura, datos.tipo, emailProfesor, datos.detalles || "Ingreso Manual"]);
+  return "Evaluación agendada exitosamente.";
+}
+
+function eliminarEvaluacionBackend(datos) {
+  const usuario = verificarPermisos();
+  const esAdmin = (usuario.rol.toLowerCase() === 'admin' || usuario.rol.toLowerCase() === 'administrador');
+  
+  if (!esAdmin && usuario.email.toLowerCase() !== datos.profesor.toLowerCase()) {
+    throw new Error("Solo el autor original o un Administrador puede eliminar esta evaluación.");
+  }
+
+  const sheet = SpreadsheetApp.getActiveSpreadsheet().getSheetByName('Evaluaciones');
+  const data = sheet.getDataRange().getValues();
+  const tz = SpreadsheetApp.getActiveSpreadsheet().getSpreadsheetTimeZone();
+  
+  let eliminada = false;
+  for (let i = data.length - 1; i >= 1; i--) {
+    const fila = data[i];
+    if (!fila[1]) continue;
+    const fechaStr = Utilities.formatDate(new Date(fila[1]), tz, "yyyy-MM-dd");
+    
+    if (fechaStr === datos.fecha && fila[2].toString().trim() === datos.curso.trim() && fila[3].toString().trim() === datos.asignatura.trim() && fila[5].toString().trim().toLowerCase() === datos.profesor.toLowerCase()) {
+        sheet.deleteRow(i + 1); 
+        eliminada = true;
+        break; 
+    }
+  }
+  if (!eliminada) throw new Error("No se encontró la evaluación o ya fue eliminada.");
+  return "La evaluación ha sido eliminada correctamente.";
+}
+
+function editarEvaluacionBackend(datosAntiguos, datosNuevos) {
+  const usuario = verificarPermisos();
+  const esAdmin = (usuario.rol.toLowerCase() === 'admin' || usuario.rol.toLowerCase() === 'administrador');
+  const sheet = SpreadsheetApp.getActiveSpreadsheet().getSheetByName('Evaluaciones');
+  const data = sheet.getDataRange().getValues();
+
+  for (let i = 1; i < data.length; i++) {
+    let r = data[i];
+    let fStr = r[1] instanceof Date ? Utilities.formatDate(r[1], Session.getScriptTimeZone(), "yyyy-MM-dd") : r[1].toString().split('T')[0];
+    
+    if (fStr === datosAntiguos.fecha && r[2] === datosAntiguos.curso && r[3] === datosAntiguos.asignatura) {
+      if (!esAdmin && r[5].toLowerCase() !== usuario.email.toLowerCase()) {
+        throw new Error("No tienes permiso para editar esta evaluación.");
+      }
+      sheet.getRange(i + 1, 2).setValue(datosNuevos.fecha);
+      sheet.getRange(i + 1, 3).setValue(datosNuevos.curso);
+      sheet.getRange(i + 1, 4).setValue(datosNuevos.asignatura);
+      sheet.getRange(i + 1, 5).setValue(datosNuevos.tipo);
+      sheet.getRange(i + 1, 7).setValue(datosNuevos.detalles);
+      return "Evaluación actualizada correctamente.";
+    }
+  }
+  throw new Error("No se encontró la evaluación original.");
+}
+
+
+function reclamarAutoriaBackend(datosEvaluacion) {
+  const usuario = verificarPermisos(); // Usa la función que ya tienes para obtener al usuario
+  const sheet = SpreadsheetApp.getActiveSpreadsheet().getSheetByName('Evaluaciones');
+  const data = sheet.getDataRange().getValues();
+
+  for (let i = 1; i < data.length; i++) {
+    let r = data[i];
+    let fStr = r[1] instanceof Date ? Utilities.formatDate(r[1], Session.getScriptTimeZone(), "yyyy-MM-dd") : r[1].toString().split('T')[0];
+    
+    // Verifica que coincida la evaluación y que el dueño original sea UTP
+    if (fStr === datosEvaluacion.fecha && r[2] === datosEvaluacion.curso && r[3] === datosEvaluacion.asignatura && r[5].toString().toUpperCase() === 'COORDINACION PEDAGOGICA') {
+      sheet.getRange(i + 1, 6).setValue(usuario.email); // Reemplaza el profesor por el email actual (Columna F)
+      return "La evaluación ha sido transferida a tu usuario exitosamente.";
+    }
+  }
+  throw new Error("No se pudo transferir. Es posible que la evaluación ya no exista o ya tenga otro dueño.");
+}
+
+/**
+ * ============================================================================
+ * 5. GESTIÓN DE HORARIOS DESDE LA WEB (SÓLO ADMINS)
+ * ============================================================================
+ */
+
+function obtenerHorarioCurso(cursoBuscado) {
+  const sheet = SpreadsheetApp.getActiveSpreadsheet().getSheetByName('horarios_cursos');
+  if (!sheet) return [];
+  return sheet.getDataRange().getDisplayValues().slice(1).filter(r => r[0].toString().trim() === cursoBuscado);
+}
+
+function guardarHorarioCurso(curso, filasHorario) {
+  const usuario = verificarPermisos(); 
+  if (usuario.rol.toLowerCase() !== 'admin' && usuario.rol.toLowerCase() !== 'administrador') {
+    throw new Error("Acceso denegado: Solo los administradores pueden modificar la estructura de horarios.");
+  }
+
+  const sheet = SpreadsheetApp.getActiveSpreadsheet().getSheetByName('horarios_cursos');
+  const datos = sheet.getDataRange().getValues();
+  for (let i = datos.length - 1; i >= 1; i--) {
+    if (datos[i][0].toString().trim() === curso) sheet.deleteRow(i + 1);
+  }
+  
+  if (filasHorario && filasHorario.length > 0) {
+    const nuevosDatos = filasHorario.map(fila => [curso, fila.dia, fila.inicio, fila.fin, fila.asig1, fila.asig2, fila.profesor]);
+    sheet.getRange(sheet.getLastRow() + 1, 1, nuevosDatos.length, nuevosDatos[0].length).setValues(nuevosDatos);
+  }
+  return `Horario de ${curso} guardado exitosamente.`;
+}
+
+/**
+ * ============================================================================
+ * 6. CARGA MASIVA AUTOMÁTICA (SÓLO ADMINS)
+ * ============================================================================
+ */
+
+function onOpen() {
+  SpreadsheetApp.getUi().createMenu('🤖 Automatización Escolar')
+    .addItem('Ejecutar Carga Automática', 'abrirDialogoCarga')
+    .addItem('Activar Recordatorios por Correo', 'instalarTriggerRecordatorios') // <--- NUEVA LÍNEA
+    .addToUi();
+}
+
+function abrirDialogoCarga() {
+  const html = `<!DOCTYPE html><html><head><link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet"><style>body{padding:20px;}</style></head><body>
+      <h5 class="mb-3 text-primary fw-bold">Opciones</h5>
+      <div class="form-check form-switch mb-4"><input class="form-check-input" type="checkbox" id="chkCortas" checked><label class="form-check-label text-secondary" for="chkCortas">Permitir en bloques compartidos (45m).</label></div>
+      <button class="btn btn-primary w-100 fw-bold" onclick="ejecutar()">🚀 Iniciar Carga</button><div id="msg" class="mt-3 text-center small"></div>
+      <script>function ejecutar(){ document.querySelector('button').disabled=true; document.getElementById('msg').innerText="Calculando..."; google.script.run.withSuccessHandler(function(){google.script.host.close();}).withFailureHandler(function(err){document.getElementById('msg').innerHTML="<span class='text-danger'>"+err.message+"</span>";}).ejecutarCargaAutomaticaBackend(document.getElementById('chkCortas').checked); }</script></body></html>`;
+  SpreadsheetApp.getUi().showModalDialog(HtmlService.createHtmlOutput(html).setWidth(400).setHeight(250), 'Carga Automática');
+}
+
+function ejecutarCargaAutomaticaBackend(permitirCortas) {
+  const usuario = verificarPermisos(); 
+  if (usuario.rol.toLowerCase() !== 'admin' && usuario.rol.toLowerCase() !== 'administrador') {
+    throw new Error("Acceso denegado: Solo los administradores pueden ejecutar cargas masivas automáticas.");
+  }
+
+  const ss = SpreadsheetApp.getActiveSpreadsheet(); const ui = SpreadsheetApp.getUi(); const tz = ss.getSpreadsheetTimeZone();
+  const sheetCarga = ss.getSheetByName('Carga_Automatica'); const sheetHorarios = ss.getSheetByName('horarios_cursos');
+  const sheetEval = ss.getSheetByName('Evaluaciones'); const sheetCursos = ss.getSheetByName('Config_Cursos');
+  const sheetGen = ss.getSheetByName('Config_General');
+  
+  if (!sheetHorarios || !sheetCarga) throw new Error("Faltan pestañas necesarias.");
+
+  const fechasBloqueadas = new Set();
+  if (sheetGen) {
+    sheetGen.getDataRange().getValues().slice(1).forEach(r => {
+      if (r[6]) {
+        const d = new Date(r[6]);
+        if (!isNaN(d)) fechasBloqueadas.add(Utilities.formatDate(d, tz, "yyyy-MM-dd"));
+      }
+    });
+  }
+
+  // OBTENER ASIGNATURAS EXENTAS PARA LA CARGA AUTOMÁTICA
+  const asignaturasExentas = [];
+  const sheetAsigConf = ss.getSheetByName('Config_Asignaturas');
+  if (sheetAsigConf) {
+    sheetAsigConf.getDataRange().getValues().slice(1).forEach(r => {
+      if (r[2] && r[2].toString().trim().toUpperCase() === 'SI') asignaturasExentas.push(r[0].toString().trim());
+    });
+  }
+
+  const datosHorarios = sheetHorarios.getDataRange().getValues().slice(1);
+  const mapaHorarios = {};
+  
+  datosHorarios.forEach(fila => {
+    const curso = fila[0].toString().trim(); const dia = fila[1].toString().trim().toUpperCase();
+    const inicio = fila[2]; const fin = fila[3];    
+    const asig1 = fila[4] ? fila[4].toString().trim().toUpperCase() : ""; 
+    const asig2 = fila[5] ? fila[5].toString().trim().toUpperCase() : ""; 
+    const esCorta = (asig1 !== "" && asig2 !== ""); 
+    
+    if (!mapaHorarios[curso]) mapaHorarios[curso] = {};
+    if (asig1) { if (!mapaHorarios[curso][asig1]) mapaHorarios[curso][asig1] = []; mapaHorarios[curso][asig1].push({ dia, inicio, fin, esCorta }); }
+    if (asig2) { if (!mapaHorarios[curso][asig2]) mapaHorarios[curso][asig2] = []; mapaHorarios[curso][asig2].push({ dia, inicio, fin, esCorta }); }
+  });
+
+  const limitesCursos = {};
+  sheetCursos.getDataRange().getValues().slice(1).forEach(r => { limitesCursos[r[0].toString().trim()] = { maxEscritas: r[1], maxTotal: r[2], maxDia: r[3], maxOtras: r[4] }; });
+  
+  const evaluacionesExistentes = sheetEval.getDataRange().getValues().slice(1);
+  const reglas = sheetCarga.getDataRange().getValues().slice(1).filter(r => r[4] && r[4].toString().trim().toLowerCase() === 'si'); 
+    
+  let nuevasEvaluaciones = []; let logErrores = [];
+  const mapaDiasNumeros = { 1: "LUNES", 2: "MARTES", 3: "MIERCOLES", 4: "JUEVES", 5: "VIERNES" };
+
+  reglas.forEach(regla => {
+    const asigRegla = regla[0].toString().trim().toUpperCase(); const fInicio = new Date(regla[1]); const fFin = new Date(regla[2]); const tipo = regla[3].toString().trim();
+    if (isNaN(fInicio) || isNaN(fFin)) return;
+    fInicio.setHours(0,0,0,0); fFin.setHours(23,59,59,999);
+
+    for (const curso in mapaHorarios) {
+      if (mapaHorarios[curso][asigRegla]) {
+        const bloquesClase = mapaHorarios[curso][asigRegla]; 
+        let agendado = false; let iterador = new Date(fInicio.getTime()); let limite = new Date(fInicio.getTime()); limite.setDate(limite.getDate() + 120); 
+        
+        while (!agendado && iterador <= limite) {
+          const fechaStrIter = Utilities.formatDate(iterador, tz, "yyyy-MM-dd");
+          
+          if (fechasBloqueadas.has(fechaStrIter)) {
+            iterador.setDate(iterador.getDate() + 1);
+            continue;
+          }
+
+          const diaTxt = mapaDiasNumeros[iterador.getDay()];
+          const bloquesHoy = bloquesClase.filter(b => b.dia === diaTxt);
+
+          if (diaTxt && bloquesHoy.length > 0) {
+            let bElegido = null;
+            for (let b of bloquesHoy) { if (!permitirCortas && b.esCorta) continue; bElegido = b; break; }
+            
+            // PASAMOS LAS ASIGNATURAS EXENTAS AL VERIFICADOR
+            if (bElegido && !verificarTopesEnMemoria(curso, iterador, tipo, limitesCursos, evaluacionesExistentes, nuevasEvaluaciones, asigRegla, asignaturasExentas)) {
+                let msj = `${calcularDuracion(bElegido.inicio, bElegido.fin, tz, bElegido.esCorta)} | Auto`;
+                if (iterador > fFin) msj += " (Fuera Rango)";
+                nuevasEvaluaciones.push([new Date(), fechaStrIter, curso, asigRegla, tipo, "SISTEMA AUTOMÁTICO", msj]);
+                agendado = true; break; 
+            }
+          }
+          iterador.setDate(iterador.getDate() + 1);
+        }
+        if (!agendado) logErrores.push(`Sin cupo para ${asigRegla} en ${curso}.`);
+      }
+    }
+  });
+
+  if (nuevasEvaluaciones.length > 0) {
+    sheetEval.getRange(sheetEval.getLastRow() + 1, 1, nuevasEvaluaciones.length, nuevasEvaluaciones[0].length).setValues(nuevasEvaluaciones);
+    ui.alert(`✅ Carga finalizada.\nAgendadas: ${nuevasEvaluaciones.length}.\n\n` + (logErrores.length > 0 ? `Alertas:\n${logErrores.slice(0,5).join('\n')}` : ""));
+  } else { ui.alert(`No se generó nada.\n` + logErrores.join('\n')); }
+}
+
+function calcularDuracion(iObj, fObj, tz, esCorta) {
+  try {
+    let sI = "??", sF = "??";
+    if (iObj instanceof Date) { sI = Utilities.formatDate(iObj, tz, "HH:mm"); sF = Utilities.formatDate(fObj, tz, "HH:mm"); } 
+    else { sI = iObj.substring(0,5); sF = fObj.substring(0,5); }
+    let m = esCorta ? 45 : 90;
+    return `⏱️ ${sI}-${sF} (${m}m)` + (esCorta ? " ❗" : "");
+  } catch (e) { return "⏱️ Hora no definida"; }
+}
+
+// NUEVA FIRMA CON 2 VARIABLES EXTRA
+function verificarTopesEnMemoria(curso, fObj, tipo, lim, hist, nuevas, asignaturaActual, exentas) {
+  // Si la materia actual es exenta, se aprueba inmediatamente el espacio
+  if (exentas && exentas.includes(asignaturaActual)) return false;
+
+  const mD = lim[curso] ? lim[curso].maxDia : 2; 
+  const mO = lim[curso] ? (lim[curso].maxOtras !== undefined ? lim[curso].maxOtras : mD) : 2; 
+  const mE = lim[curso] ? lim[curso].maxEscritas : 2; const mT = lim[curso] ? lim[curso].maxTotal : 4;
+  const gw = (d) => { const x = new Date(d); x.setHours(0,0,0,0); x.setDate(x.getDate() + 4 - (x.getDay()||7)); return Math.ceil((((x - new Date(x.getFullYear(),0,1))/8.64e7)+1)/7); };
+  const sO = gw(fObj); const aO = fObj.getFullYear(); const fS = fObj.toISOString().split('T')[0];
+  let cDE = 0, cDO = 0, cST = 0, cSE = 0;
+
+  hist.concat(nuevas).forEach(f => {
+    if (f[2] && f[2].toString().trim() === curso && f[1]) {
+      
+      // IGNORAR MATERIAS EXENTAS EN EL CONTEO HISTÓRICO
+      if (exentas && exentas.includes(f[3].toString().trim())) return;
+
+      const fe = new Date(f[1]); const feS = fe.toISOString().split('T')[0];
+      if (feS === fS) { if (f[4] === 'Escrita') cDE++; else cDO++; }
+      if (gw(fe) === sO && fe.getFullYear() === aO) { cST++; if (f[4] === 'Escrita') cSE++; }
+    }
+  });
+  return (tipo === 'Escrita' && cDE >= mD) || (tipo !== 'Escrita' && cDO >= mO) || (cST >= mT) || (tipo === 'Escrita' && cSE >= mE); 
+}
+
+/**
+ * ============================================================================
+ * 7. SISTEMA DE NOTIFICACIONES Y RECORDATORIOS (NUEVO)
+ * ============================================================================
+ */
+
+function instalarTriggerRecordatorios() {
+  const ui = SpreadsheetApp.getUi();
+  const emailActual = verificarPermisos().email; // Verifica permisos básicos
+  
+  // Limpiamos triggers anteriores para evitar envíos duplicados
+  const triggers = ScriptApp.getProjectTriggers();
+  triggers.forEach(t => {
+    if (t.getHandlerFunction() === 'enviarRecordatoriosEvaluaciones') {
+      ScriptApp.deleteTrigger(t);
+    }
+  });
+  
+  // Instalamos el reloj interno: Corre todos los días entre 08:00 y 09:00 AM
+  ScriptApp.newTrigger('enviarRecordatoriosEvaluaciones')
+    .timeBased()
+    .everyDays(1)
+    .atHour(8)
+    .create();
+    
+  ui.alert("✅ Sistema de Recordatorios Activado\n\nEl servidor revisará la agenda todos los días a las 08:00 AM y enviará los correos a los profesores correspondientes.");
+}
+
+function enviarRecordatoriosEvaluaciones() {
+  const hoy = new Date();
+  const diaSemana = hoy.getDay();
+  
+  // Bloqueo extra por seguridad: No ejecutar sábados (6) ni domingos (0)
+  if (diaSemana === 0 || diaSemana === 6) return;
+
+  const ss = SpreadsheetApp.getActiveSpreadsheet();
+  const sheetEval = ss.getSheetByName('Evaluaciones');
+  if (!sheetEval) return;
+  
+  const datos = sheetEval.getDataRange().getValues().slice(1);
+  const tz = ss.getSpreadsheetTimeZone();
+  
+  // Calculamos la fecha que será en exactamente 14 días más
+  const fechaObjetivo = new Date(hoy.getTime());
+  fechaObjetivo.setDate(hoy.getDate() + 14);
+  const fechaObjetivoStr = Utilities.formatDate(fechaObjetivo, tz, "yyyy-MM-dd");
+
+  datos.forEach(fila => {
+    // Fila[1]=Fecha, Fila[5]=Profesor (Email)
+    if (!fila[1] || !fila[5]) return; 
+    
+    const fechaEval = new Date(fila[1]);
+    const fechaEvalStr = Utilities.formatDate(fechaEval, tz, "yyyy-MM-dd");
+    
+    // Si la evaluación es en exactamente 14 días...
+    if (fechaEvalStr === fechaObjetivoStr) {
+      const curso = fila[2];
+      const asignatura = fila[3];
+      const tipo = fila[4];
+      const emailProfesor = fila[5];
+      
+      // Calculamos la fecha de entrega límite (7 días antes de la prueba)
+      const fechaLimite = new Date(fechaEval.getTime());
+      fechaLimite.setDate(fechaEval.getDate() - 7);
+      
+      const fechaLimiteStr = Utilities.formatDate(fechaLimite, tz, "dd/MM/yyyy");
+      const fechaAmigable = Utilities.formatDate(fechaEval, tz, "dd/MM/yyyy");
+
+      const asunto = `⏳ Recordatorio: Entrega de instrumento de evaluación - ${curso} ${asignatura}`;
+      const mensaje = `Hola,\n\nEste es un recordatorio automático del sistema de Agenda Escolar.\n\n` +
+                      `Tienes una evaluación de tipo "${tipo}" agendada en ${curso} para la asignatura de ${asignatura} el día ${fechaAmigable}.\n\n` +
+                      `Te recordamos que debes entregar el instrumento de evaluación a tu coordinador con al menos 7 días de anticipación, es decir, a más tardar el ${fechaLimiteStr}.\n\n` +
+                      `Saludos cordiales,\nSistema de Agenda Escolar.`;
+      
+      try {
+        MailApp.sendEmail({
+          to: emailProfesor,
+          subject: asunto,
+          body: mensaje
+        });
+      } catch(e) {
+        console.error(`No se pudo enviar correo a ${emailProfesor}: ${e.message}`);
+      }
+    }
+  });
+}
+
+/**
+ * ============================================================================
+ * 8. MÓDULO DE REPORTES Y ESTADÍSTICAS
+ * ============================================================================
+ */
+function obtenerDatosReporte() {
+  const sheet = SpreadsheetApp.getActiveSpreadsheet().getSheetByName('Evaluaciones');
+  if (!sheet) return [];
+  
+  const data = sheet.getDataRange().getValues().slice(1);
+  
+  // Filtramos solo las filas que tengan fecha válida y mapeamos los datos
+  return data.filter(r => r[1]).map(r => ({
+    curso: r[2].toString().trim() || "Sin Curso",
+    asignatura: r[3].toString().trim() || "Sin Asig.",
+    tipo: r[4].toString().trim() || "Sin Tipo",
+    profesor: r[5].toString().trim() || "Sin Prof."
+  }));
+}
+
+
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <title>Agenda y Gestor de Horarios</title>
+  
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+  
+  <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+  <script src="https://cdn.jsdelivr.net/npm/fullcalendar@6.1.8/index.global.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/xlsx-js-style@1.2.0/dist/xlsx.bundle.js"></script>
+  
+  <style>
+    :root { --bg-color: #f4f6f8; --card-shadow: 0 4px 12px rgba(0,0,0,0.05); }
+    body { font-family: 'Inter', sans-serif; background-color: var(--bg-color); padding: 20px; color: #333; }
+    
+    .filter-bar { background: white; padding: 15px 20px; border-radius: 12px; margin-bottom: 20px; display: flex; gap: 15px; align-items: center; box-shadow: var(--card-shadow); border: 1px solid #eef0f2; flex-wrap: wrap; }
+    #calendar { background: white; padding: 25px; border-radius: 12px; box-shadow: var(--card-shadow); border: 1px solid #eef0f2; }
+    
+    .fc-dayGridMonth-view .fc-daygrid-day-frame { min-height: 35px !important; }
+    .fc-daygrid-day-events { min-height: 0 !important; margin-bottom: 0 !important; }
+    .fc-daygrid-body-unbalanced .fc-daygrid-day-events { min-height: 0 !important; }
+    .fc .fc-toolbar-title { font-weight: 700; font-size: 1.5rem; color: #2b3440; }
+    
+    .fc-event { border: none !important; border-radius: 6px; cursor: pointer; transition: transform 0.1s; }
+    .fc-event:hover { transform: translateY(-2px); z-index: 5; }
+    
+    .event-custom-content { padding: 4px; color: white; text-shadow: 0 1px 2px rgba(0,0,0,0.3); line-height: 1.2;}
+    .evt-curso { font-weight: 700; font-size: 0.85rem; display: block; }
+    .evt-asig { font-size: 0.75rem; font-weight: 500; display: block; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;}
+    .evt-hora { font-size: 0.7rem; margin-top: 4px; display: inline-block; background: rgba(0,0,0,0.2); padding: 2px 5px; border-radius: 4px; }
+    .evt-alerta { font-size: 0.7rem; background: #dc3545; padding: 2px 5px; border-radius: 4px; margin-left: 3px; font-weight: bold;}
+    .evt-detalle { font-size: 0.65rem; display: block; margin-top: 3px; opacity: 0.9; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; font-style: italic; border-top: 1px solid rgba(255,255,255,0.2); padding-top: 2px;}
+    .evento-bloqueado { padding: 4px; color: white; text-align: center; font-weight: 700; font-size: 0.85rem; letter-spacing: 0.5px;}
+
+    .celda-builder { padding: 6px !important; min-width: 140px; vertical-align: top; background: white;}
+    .celda-builder select, .celda-builder input { font-size: 0.75rem; padding: 4px; border-color: #e2e8f0;}
+    .bloque-recreo { background-color: #f8f9fa; color: #6c757d; font-weight: bold; text-align: center; letter-spacing: 2px;}
+    .btn-asig2 { font-size: 0.65rem; padding: 2px 6px; }
+
+    .swal2-popup { font-family: 'Inter', sans-serif !important; border-radius: 16px !important; }
+    .swal2-confirm, .swal2-cancel { border-radius: 8px !important; font-weight: 600 !important; }
+
+    .chk-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(150px, 1fr)); gap: 8px; max-height: 150px; overflow-y: auto; padding: 10px; border: 1px solid #e2e8f0; border-radius: 8px; background: white;}
+    
+    .tag-filtro { cursor: pointer; user-select: none; padding: 5px 12px; border-radius: 15px; font-size: 0.75rem; font-weight: 600; border: 1px solid #ced4da; background: white; color: #6c757d; transition: all 0.2s ease; display: inline-block; margin-bottom: 4px;}
+    .tag-filtro:hover { background: #e9ecef; border-color: #adb5bd; }
+    .tag-filtro.active { background: #4361ee; color: white; border-color: #4361ee; box-shadow: 0 2px 4px rgba(67, 97, 238, 0.2); }
+    .tags-container { max-height: 120px; overflow-y: auto; padding: 8px; border: 1px dashed #dee2e6; border-radius: 8px; background: #fdfdfd; display: flex; flex-wrap: wrap; gap: 6px; }
+  </style>
+</head>
+<body>
+
+  <div class="filter-bar">
+    <div>
+      <label class="small fw-bold text-uppercase">Filtro Rápido Curso</label>
+      <select id="filtroCurso" class="form-select form-select-sm" onchange="actualizarCalendario()"><option value="">Todos</option></select>
+    </div>
+    <div>
+      <label class="small fw-bold text-uppercase">Filtro Rápido Asignatura</label>
+      <select id="filtroAsig" class="form-select form-select-sm" onchange="actualizarCalendario()"><option value="">Todas</option></select>
+    </div>
+    <div class="ms-auto d-flex align-items-center gap-2 flex-wrap">
+      <span class="badge bg-light text-secondary border p-2">📅 Clic casilla = Agendar</span>
+      <button class="btn btn-outline-info fw-bold shadow-sm ms-2" onclick="abrirModalReportes()">📊 Reportes y Auditoría</button>
+      <button class="btn btn-outline-danger fw-bold shadow-sm ms-2" onclick="abrirModalExportar()">📄 Exportar Datos</button>
+      <button id="btnGestionarHorarios" class="btn btn-outline-primary fw-bold shadow-sm" onclick="abrirModalHorarios()" style="display: none;">🛠️ Constructor de Horarios</button>
+    </div>
+  </div>
+
+  <div id="calendar"></div>
+
+  <div class="modal fade" id="modalEvento" tabindex="-1">
+    <div class="modal-dialog modal-dialog-centered">
+      <form id="formAgenda" class="modal-content border-0 shadow-lg">
+        <div class="modal-header bg-primary text-white border-0">
+          <h5 class="modal-title fw-semibold">Agendar: <span id="txtFecha"></span></h5>
+          <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+        </div>
+        <div class="modal-body bg-light">
+          <input type="hidden" id="inFecha">
+          <div class="mb-3"><label class="fw-medium">Curso</label><select id="inCurso" class="form-select" required></select></div>
+          <div class="mb-3"><label class="fw-medium">Asignatura</label><select id="inAsig" class="form-select" required></select></div>
+          <div class="mb-3"><label class="fw-medium">Tipo</label><select id="inTipo" class="form-select"><option value="Escrita">Prueba Escrita</option><option value="Trabajo">Trabajo Práctico / Proceso</option></select></div>
+          <div class="mb-3">
+            <label class="fw-medium">Contenidos / Detalles <small class="text-muted">(Opcional)</small></label>
+            <textarea id="inDetalles" class="form-control" rows="2" placeholder="Ej: Unidad 1 y 2. Traer materiales..."></textarea>
+          </div>
+          <div class="modal-footer"><button type="submit" class="btn btn-primary w-100 fw-semibold">Confirmar</button></div>
+        </div>
+        
+      </form>
+    </div>
+  </div>
+
+  <div class="modal fade" id="modalDetalles" tabindex="-1">
+    <div class="modal-dialog modal-dialog-centered">
+      <div class="modal-content shadow-lg border-0">
+        <div class="modal-header border-0 text-white" id="detHeader" style="background-color: #6c757d;">
+          <h5 class="modal-title fw-bold" id="detallesTitulo">Detalles</h5>
+          <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+        </div>
+        <div class="modal-body p-4">
+          <ul class="list-group list-group-flush">
+            <li class="list-group-item d-flex justify-content-between align-items-center px-0"><span class="text-muted small text-uppercase fw-bold">Profesor</span><span class="fw-medium" id="detProfesor"></span></li>
+            <li class="list-group-item d-flex justify-content-between align-items-center px-0"><span class="text-muted small text-uppercase fw-bold">Tipo</span><span class="badge bg-secondary" id="detTipo"></span></li>
+            <li class="list-group-item px-0"><span class="text-muted small text-uppercase fw-bold d-block mb-1">Contenidos</span><p class="mb-0 text-dark" id="detInfo" style="white-space: pre-wrap;"></p></li>
+          </ul>
+        </div>
+        <div class="modal-footer bg-light border-0 justify-content-between">
+          <div>
+            <button type="button" class="btn btn-outline-danger fw-bold" id="btnEliminarEval" onclick="confirmarEliminacion()" style="display: none;">🗑️ Eliminar</button>
+            <button type="button" class="btn btn-primary fw-bold ms-2" id="btnEditarEval" onclick="prepararEdicion()" style="display: none;">✏️ Editar</button>
+            <button type="button" class="btn btn-warning fw-bold ms-2 text-dark" id="btnApropiarseEval" onclick="iniciarApropiacion()" style="display: none;">🙋‍♂️ Apropiarse</button>
+          </div>
+          <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cerrar</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="modal fade" id="modalHorarios" tabindex="-1">
+    <div class="modal-dialog modal-xl modal-dialog-scrollable">
+      <div class="modal-content shadow-lg border-0 bg-light">
+        <div class="modal-header bg-dark text-white border-0"><h5 class="modal-title fw-bold">🛠️ Constructor Visual de Horarios</h5><button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button></div>
+        <div class="modal-body">
+          <div class="row mb-3 align-items-end bg-white p-3 rounded shadow-sm">
+            <div class="col-md-5">
+              <label class="fw-bold small text-uppercase text-primary">Selecciona Curso</label>
+              <select id="selCursoHorario" class="form-select border-primary fw-bold" onchange="cargarHorarioBuilder()"><option value="">-- Elija un curso --</option></select>
+            </div>
+            <div class="col-md-7 text-end"><button class="btn btn-primary px-4 fw-bold shadow-sm" onclick="guardarHorarioBuilder()" id="btnGuardarHorario">💾 Guardar Cambios</button></div>
+          </div>
+          <div class="table-responsive bg-white shadow-sm rounded">
+            <div id="contenedorBuilderGrid" class="p-2 text-center text-muted">Selecciona un curso arriba.</div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="modal fade" id="modalExportar" tabindex="-1">
+    <div class="modal-dialog modal-lg modal-dialog-scrollable">
+      <div class="modal-content shadow-lg border-0 bg-light">
+        <div class="modal-header bg-danger text-white border-0">
+          <h5 class="modal-title fw-bold">📄 Opciones de Exportación</h5>
+          <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+        </div>
+        <div class="modal-body">
+          <p class="text-muted small mb-4">Selecciona los parámetros. El archivo se generará con los filtros aplicados.</p>
+          <div class="row">
+            <div class="col-md-6 mb-3">
+              <div class="d-flex justify-content-between align-items-center mb-1"><label class="fw-bold text-uppercase small text-primary">📚 Cursos a incluir</label><a href="#" class="small text-decoration-none" onclick="marcarTodos('chkCursos', true)">Todos</a></div>
+              <div class="chk-grid" id="contExportCursos"></div>
+            </div>
+            <div class="col-md-6 mb-3">
+              <div class="d-flex justify-content-between align-items-center mb-1"><label class="fw-bold text-uppercase small text-success">📝 Asignaturas a incluir</label><a href="#" class="small text-decoration-none text-success" onclick="marcarTodos('chkAsigs', true)">Todas</a></div>
+              <div class="chk-grid" id="contExportAsigs"></div>
+            </div>
+          </div>
+          <hr>
+          <label class="fw-bold text-uppercase small mb-2">Formato del Documento</label>
+          <div class="d-flex flex-column gap-2 mb-3">
+            <div class="form-check"><input class="form-check-input" type="radio" name="formatoExport" id="fmtCal" value="calendario" checked onchange="document.getElementById('rangoGridSelector').style.display='block'"><label class="form-check-label fw-medium" for="fmtCal">📅 Vista Cuadrícula PDF (Aplica filtros)</label></div>
+            <div class="form-check"><input class="form-check-input" type="radio" name="formatoExport" id="fmtLista" value="lista" onchange="document.getElementById('rangoGridSelector').style.display='none'"><label class="form-check-label fw-medium" for="fmtLista">📋 Vista Reporte Detallado PDF (Aplica filtros)</label></div>
+            <div class="form-check"><input class="form-check-input" type="radio" name="formatoExport" id="fmtExcel" value="excel" onchange="document.getElementById('rangoGridSelector').style.display='block'"><label class="form-check-label fw-medium text-success" for="fmtExcel">📊 Vista Cuadrícula Excel (Aplica filtros)</label></div>
+            <div class="form-check mt-3 border-top pt-2"><input class="form-check-input" type="radio" name="formatoExport" id="fmtPdfSem" value="pdf_semestral" onchange="document.getElementById('rangoGridSelector').style.display='none'"><label class="form-check-label fw-bold text-danger" for="fmtPdfSem">📚 Calendario Semestral Institucional (PDF MASIVO)</label></div>
+            <div class="form-check"><input class="form-check-input" type="radio" name="formatoExport" id="fmtExcelSem" value="excel_semestral" onchange="document.getElementById('rangoGridSelector').style.display='none'"><label class="form-check-label fw-bold text-success" for="fmtExcelSem">📚 Calendario Semestral Institucional (EXCEL MASIVO)</label></div>
+          </div>
+          <div id="rangoGridSelector" class="bg-white border rounded p-3 mt-2 shadow-sm">
+            <label class="fw-bold text-uppercase small mb-1 text-secondary">Rango de Meses</label>
+            <select id="rangoExport" class="form-select form-select-sm border-secondary">
+              <option value="dayGridMonth">Solo el mes en pantalla</option>
+              <option value="trimestre">Próximos 3 Meses (Trimestre)</option>
+              <option value="semestre">Próximos 6 Meses (Semestre)</option>
+            </select>
+          </div>
+        </div>
+        <div class="modal-footer bg-white border-0">
+          <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button>
+          <button type="button" class="btn btn-danger px-4 fw-bold" onclick="ejecutarExportacion()">Generar Archivo</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="modal fade" id="modalReportes" tabindex="-1">
+    <div class="modal-dialog modal-xl modal-dialog-scrollable">
+      <div class="modal-content shadow-lg border-0 bg-light">
+        <div class="modal-header bg-info text-white border-0">
+          <h5 class="modal-title fw-bold text-dark">📊 Reportes, Filtros y Auditoría de Reglamento</h5>
+          <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+        </div>
+        <div class="modal-body p-4">
+          
+          <div class="bg-white p-3 rounded border shadow-sm mb-4">
+             <h6 class="fw-bold text-secondary small text-uppercase border-bottom pb-2 mb-3">🛠️ Panel de Filtros Interactivos (Tags)</h6>
+             <div class="row g-3">
+                 <div class="col-md-6">
+                     <div class="d-flex justify-content-between mb-1"><strong class="small text-dark">📚 Cursos:</strong> <span><a href="#" class="small text-decoration-none" onclick="toggleTodosTags('curso', true)">Todos</a> | <a href="#" class="small text-decoration-none text-danger" onclick="toggleTodosTags('curso', false)">Ninguno</a></span></div>
+                     <div id="tagsCursos" class="tags-container"></div>
+                 </div>
+                 <div class="col-md-6">
+                     <div class="d-flex justify-content-between mb-1"><strong class="small text-dark">📝 Asignaturas:</strong> <span><a href="#" class="small text-decoration-none" onclick="toggleTodosTags('asignatura', true)">Todas</a> | <a href="#" class="small text-decoration-none text-danger" onclick="toggleTodosTags('asignatura', false)">Ninguna</a></span></div>
+                     <div id="tagsAsignaturas" class="tags-container"></div>
+                 </div>
+                 <div class="col-md-6">
+                     <div class="d-flex justify-content-between mb-1"><strong class="small text-dark">👨‍🏫 Profesores:</strong> <span><a href="#" class="small text-decoration-none" onclick="toggleTodosTags('profesor', true)">Todos</a> | <a href="#" class="small text-decoration-none text-danger" onclick="toggleTodosTags('profesor', false)">Ninguno</a></span></div>
+                     <div id="tagsProfesores" class="tags-container"></div>
+                 </div>
+                 <div class="col-md-6">
+                     <div class="d-flex justify-content-between mb-1"><strong class="small text-dark">🏷️ Tipo de Evaluación:</strong> <span><a href="#" class="small text-decoration-none" onclick="toggleTodosTags('tipo', true)">Todos</a> | <a href="#" class="small text-decoration-none text-danger" onclick="toggleTodosTags('tipo', false)">Ninguno</a></span></div>
+                     <div id="tagsTipos" class="tags-container"></div>
+                 </div>
+             </div>
+          </div>
+
+          <div class="d-flex align-items-center mb-4 gap-3 bg-white p-3 rounded border shadow-sm flex-wrap">
+            <label class="fw-bold text-uppercase small text-secondary mb-0">Visualizar vista:</label>
+            <select id="selTipoReporte" class="form-select form-select-sm border-info fw-bold text-info" onchange="procesarGrafico()" style="max-width: 350px;">
+              <optgroup label="Auditoría UTP">
+                <option value="auditoria">⚖️ Auditoría de Reglamento (Art. 42)</option>
+              </optgroup>
+              <optgroup label="Agrupaciones Simples">
+                <option value="curso">Por Curso</option>
+                <option value="asignatura">Por Asignatura</option>
+                <option value="profesor">Por Profesor</option>
+                <option value="tipo">Por Tipo de Evaluación</option>
+              </optgroup>
+              <optgroup label="Cruce de Datos (Tablas Dinámicas)">
+                <option value="curso_asignatura">Curso vs Asignatura</option>
+                <option value="curso_tipo">Curso vs Tipo de Evaluación</option>
+              </optgroup>
+            </select>
+
+            <div class="form-check form-switch ms-auto" id="contSoloAlertas" style="display:none;">
+              <input class="form-check-input" type="checkbox" id="chkSoloAlertas" onchange="procesarGrafico()">
+              <label class="form-check-label text-danger fw-bold" for="chkSoloAlertas">🚨 Mostrar solo Alertas</label>
+            </div>
+          </div>
+          
+          <div id="areaReporteVisual" class="bg-white rounded border shadow-sm p-4">
+              <div class="text-center mb-4" id="contenedorCanvas">
+                 <canvas id="miGraficoReporte" style="max-height: 400px; min-height: 300px;"></canvas>
+              </div>
+              <div id="contenedorTablaReporte" class="overflow-auto" style="max-height: 450px;"></div>
+          </div>
+
+        </div>
+        <div class="modal-footer bg-light border-0 d-flex justify-content-between">
+          <div>
+              <button type="button" class="btn btn-outline-danger fw-bold shadow-sm" onclick="exportarReportePDF()">📄 PDF de vista</button>
+              <button type="button" class="btn btn-outline-success fw-bold shadow-sm ms-2" onclick="exportarReporteExcel()">📊 Excel de vista</button>
+              <button type="button" id="btnExcluirMaterias" class="btn btn-warning fw-bold shadow-sm ms-2" style="display:none;" onclick="ejecutarExclusionMaterias()">🚫 Excluir Seleccionadas</button>
+              <button type="button" id="btnRestaurarMaterias" class="btn btn-secondary fw-bold shadow-sm ms-2" style="display:none;" onclick="ejecutarRestaurarMaterias()">♻️ Restaurar Todas</button>
+          </div>
+          <button type="button" class="btn btn-dark px-4 fw-bold shadow-sm" data-bs-dismiss="modal">Cerrar Panel</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    let calendar; 
+    let usuarioAutorizado = false, usuarioEmail = "", usuarioRol = "", sistemaAbierto = true;
+    let evaluacionSeleccionada = null; 
+    let modoEdicion = false;
+    let datosEdicionAntiguos = null;
+    let configuracionGlobal = { cursos: [], asignaturas: [], bloques: [] }; 
+    let modoExportacionMultiple = false; 
+    let modalAgendar, modalDetalles, modalHorarios, modalExportar, modalReportes;
+    
+    let datosReporteRaw = [];
+    let chartInstancia = null;
+    let filtrosReporte = { curso: new Set(), asignatura: new Set(), profesor: new Set(), tipo: new Set() };
+    let materiasExcluidasGlobal = [];
+
+    function mostrarMensaje(titulo, mensaje, tipo) { Swal.fire({ title: titulo, text: mensaje, icon: tipo, confirmButtonColor: '#4361ee', confirmButtonText: 'Entendido' }); }
+
+    document.addEventListener('DOMContentLoaded', function() {
+      modalAgendar = new bootstrap.Modal(document.getElementById('modalEvento'));
+      modalDetalles = new bootstrap.Modal(document.getElementById('modalDetalles'));
+      modalHorarios = new bootstrap.Modal(document.getElementById('modalHorarios'));
+      modalExportar = new bootstrap.Modal(document.getElementById('modalExportar'));
+      modalReportes = new bootstrap.Modal(document.getElementById('modalReportes'));
+
+      document.getElementById('inCurso').addEventListener('change', actualizarAsignaturasAgenda);
+
+      google.script.run.withSuccessHandler(estado => {
+        usuarioAutorizado = estado.autorizado; usuarioEmail = estado.email.toLowerCase(); usuarioRol = estado.rol; sistemaAbierto = estado.sistemaAbierto;
+        if (usuarioAutorizado && (usuarioRol.toLowerCase() === 'admin' || usuarioRol.toLowerCase() === 'administrador')) {
+          document.getElementById('btnGestionarHorarios').style.display = 'block';
+        }
+      }).getEstadoUsuario();
+
+      google.script.run.withSuccessHandler(config => {
+        configuracionGlobal = config; 
+        materiasExcluidasGlobal = (config.materiasExcluidas || []).map(ex => ({
+             curso: ex.curso.trim().toUpperCase(),
+             asignatura: ex.asignatura.trim().toUpperCase()
+        }));
+
+        const fCurso = document.getElementById('filtroCurso'), inCurso = document.getElementById('inCurso');
+        const fAsig = document.getElementById('filtroAsig');
+        
+        const cExp = document.getElementById('contExportCursos');
+        config.cursos.forEach(c => { 
+          fCurso.add(new Option(c, c)); inCurso.add(new Option(c, c)); 
+          cExp.innerHTML += `<div class="form-check"><input class="form-check-input chkCursos" type="checkbox" value="${c}" id="chk_c_${c}"><label class="form-check-label small" for="chk_c_${c}">${c}</label></div>`;
+        });
+        
+        const aExp = document.getElementById('contExportAsigs');
+        config.asignaturas.forEach(a => { 
+          fAsig.add(new Option(a.nombre, a.nombre)); 
+          aExp.innerHTML += `<div class="form-check"><input class="form-check-input chkAsigs" type="checkbox" value="${a.nombre}" id="chk_a_${a.nombre}"><label class="form-check-label small" for="chk_a_${a.nombre}">${a.nombre}</label></div>`;
+        });
+
+        actualizarAsignaturasAgenda();
+      }).getDataConfig();
+
+      const calendarEl = document.getElementById('calendar');
+      calendar = new FullCalendar.Calendar(calendarEl, {
+        initialView: 'dayGridMonth', locale: 'es', weekends: false, contentHeight: 'auto', fixedWeekCount: false, 
+        headerToolbar: { left: 'prev,next today', center: 'title', right: 'dayGridMonth,timeGridWeek' },
+        events: function(info, success) {
+          const cVal = document.getElementById('filtroCurso').value; const cA = cVal ? [cVal] : []; 
+          const aVal = document.getElementById('filtroAsig').value; const aA = aVal ? [aVal] : []; 
+          google.script.run.withSuccessHandler(res => { success(res); }).obtenerEventosCalendario(cA, aA);
+        },
+        eventContent: function(arg) {
+          if (arg.event.display === 'background') return;
+          if (arg.event.extendedProps.bloqueado) return { html: `<div class="evento-bloqueado">${arg.event.title}</div>` };
+          let txt = arg.event.title; let c = "", a = "", t = "", esc = false;
+          if (txt.includes(" | ")) { let p = txt.split(" | "); txt = p[0]; t = p[1]; if(t.includes("❗")){esc=true; t=t.replace("❗","").trim();} }
+          let pt = txt.split(" - "); c = pt[0]||""; a = pt[1]||txt;
+          let html = `<div class="event-custom-content"><span class="evt-curso">${c}</span><span class="evt-asig">${a}</span>`;
+          if (t) { html += `<span class="evt-hora">${t}</span>`; if (esc) html += `<span class="evt-alerta">¡Corta!</span>`; }
+          let det = arg.event.extendedProps.detalles;
+          if (det && det !== "Ingreso Manual" && !det.includes("⏱️") && !det.includes("SISTEMA AUTOMÁTICO")) { html += `<span class="evt-detalle">${det}</span>`; }
+          return { html: html + `</div>` };
+        },
+        dateClick: function(info) {
+          if (!sistemaAbierto) { mostrarMensaje("Sistema Cerrado", "La dirección ha cerrado el agendamiento.", "warning"); return; }
+          if (!usuarioAutorizado) { mostrarMensaje("Acceso Denegado", "No tienes permisos.", "error"); return; }
+          const eventosDia = calendar.getEvents().filter(e => e.startStr === info.dateStr && e.extendedProps.bloqueado);
+          if (eventosDia.length > 0) { mostrarMensaje("Fecha Bloqueada", "No se puede agendar.", "warning"); return; }
+          
+          modoEdicion = false;
+          document.getElementById('inFecha').value = info.dateStr; document.getElementById('txtFecha').innerText = info.dateStr; document.getElementById('inDetalles').value = "";
+          
+          const fC = document.getElementById('filtroCurso').value;
+          document.getElementById('inCurso').value = fC !== "" ? fC : document.getElementById('inCurso').options[0].value;
+          actualizarAsignaturasAgenda();
+          const fA = document.getElementById('filtroAsig').value;
+          document.getElementById('inAsig').value = fA !== "" ? fA : document.getElementById('inAsig').options[0].value;
+          modalAgendar.show();
+        },
+        eventClick: function(info) {
+          if (info.event.display === 'background' || info.event.extendedProps.bloqueado) return; 
+          document.getElementById('detallesTitulo').innerText = info.event.title.split(" | ")[0]; document.getElementById('detHeader').style.backgroundColor = info.event.backgroundColor;
+          const props = info.event.extendedProps;
+          document.getElementById('detProfesor').innerText = props.profesor || "No registrado"; document.getElementById('detTipo').innerText = props.tipo || "-"; document.getElementById('detInfo').innerText = props.detalles || "Sin detalles adicionales.";
+          
+          const btnEliminar = document.getElementById('btnEliminarEval');
+          const btnEditar = document.getElementById('btnEditarEval');
+          const btnApropiarse = document.getElementById('btnApropiarseEval');
+          
+          const esAdmin = (usuarioRol.toLowerCase() === 'admin' || usuarioRol.toLowerCase() === 'administrador');
+          const esMio = (props.profesor && props.profesor.toLowerCase() === usuarioEmail);
+          const esUTP = (props.profesor && props.profesor.toUpperCase() === 'COORDINACION PEDAGOGICA');
+          
+          evaluacionSeleccionada = { fecha: info.event.startStr, curso: props.curso, asignatura: props.asignatura, profesor: props.profesor, tipo: props.tipo, detalles: props.detalles };
+
+          if (esMio || esAdmin) { 
+            btnEliminar.style.display = 'inline-block'; btnEditar.style.display = 'inline-block'; 
+          } else { 
+            btnEliminar.style.display = 'none'; btnEditar.style.display = 'none'; 
+          }
+
+          if (!esMio && esUTP) { btnApropiarse.style.display = 'inline-block'; } 
+          else { btnApropiarse.style.display = 'none'; }
+
+          modalDetalles.show();
+        }
+      });
+      calendar.render();
+    });
+
+    function actualizarAsignaturasAgenda() {
+      const cursoSel = document.getElementById('inCurso').value;
+      if (!cursoSel) return;
+      const cLim = cursoSel.trim().toUpperCase();
+
+      const inAsig = document.getElementById('inAsig');
+      const asigActual = inAsig.value; 
+      
+      inAsig.innerHTML = '';
+      configuracionGlobal.asignaturas.forEach(a => {
+          const aLim = a.nombre.trim().toUpperCase();
+          const isExcluded = materiasExcluidasGlobal.some(ex => ex.curso === cLim && ex.asignatura === aLim);
+          if (!isExcluded) { inAsig.add(new Option(a.nombre, a.nombre)); }
+      });
+      if(Array.from(inAsig.options).some(opt => opt.value === asigActual)) { inAsig.value = asigActual; }
+    }
+
+    function actualizarCalendario() { calendar.refetchEvents(); }
+
+    function prepararEdicion() {
+      modoEdicion = true;
+      datosEdicionAntiguos = { ...evaluacionSeleccionada };
+      
+      document.getElementById('inFecha').value = evaluacionSeleccionada.fecha;
+      document.getElementById('txtFecha').innerText = evaluacionSeleccionada.fecha + " (Edición)";
+      
+      document.getElementById('inCurso').value = evaluacionSeleccionada.curso;
+      actualizarAsignaturasAgenda();
+      document.getElementById('inAsig').value = evaluacionSeleccionada.asignatura;
+      document.getElementById('inTipo').value = evaluacionSeleccionada.tipo;
+      document.getElementById('inDetalles').value = evaluacionSeleccionada.detalles || "";
+      
+      modalDetalles.hide();
+      modalAgendar.show();
+    }
+
+    document.getElementById('formAgenda').onsubmit = function(e) {
+      e.preventDefault(); const btn = e.target.querySelector('button'); btn.disabled = true; btn.innerText = "Procesando...";
+      const datosNuevos = { fecha: document.getElementById('inFecha').value, curso: document.getElementById('inCurso').value, asignatura: document.getElementById('inAsig').value, tipo: document.getElementById('inTipo').value, detalles: document.getElementById('inDetalles').value };
+      
+      if (modoEdicion) {
+        google.script.run.withSuccessHandler(msj => { 
+            modalAgendar.hide(); actualizarCalendario(); btn.disabled = false; btn.innerText = "Confirmar"; mostrarMensaje("¡Actualizado!", msj, "success"); modoEdicion = false;
+        }).withFailureHandler(err => { 
+            btn.disabled = false; btn.innerText = "Confirmar"; mostrarMensaje("Error", err.message, "error"); 
+        }).editarEvaluacionBackend(datosEdicionAntiguos, datosNuevos);
+      } else {
+        google.script.run.withSuccessHandler(msj => { 
+            modalAgendar.hide(); actualizarCalendario(); btn.disabled = false; btn.innerText = "Confirmar"; mostrarMensaje("¡Listo!", msj, "success"); 
+        }).withFailureHandler(err => { 
+            btn.disabled = false; btn.innerText = "Confirmar"; mostrarMensaje("Atención", err.message.replace("Error en la función protegida: Error: ", ""), "warning"); 
+        }).agendarDesdeCalendario(datosNuevos);
+      }
+    };
+
+    function confirmarEliminacion() {
+      Swal.fire({ title: '¿Eliminar evaluación?', text: "Se borrará del calendario. Esta acción no se puede deshacer.", icon: 'warning', showCancelButton: true, confirmButtonColor: '#d33', cancelButtonColor: '#6c757d', confirmButtonText: 'Sí, eliminar', cancelButtonText: 'Cancelar'
+      }).then((result) => {
+        if (result.isConfirmed) {
+          const btn = document.getElementById('btnEliminarEval'); btn.disabled = true; btn.innerText = "Borrando...";
+          google.script.run.withSuccessHandler(msj => { modalDetalles.hide(); actualizarCalendario(); btn.disabled = false; btn.innerText = "🗑️ Eliminar"; mostrarMensaje("Eliminada", msj, "success"); }).withFailureHandler(err => { btn.disabled = false; btn.innerText = "🗑️ Eliminar"; mostrarMensaje("Error", err.message, "error"); }).eliminarEvaluacionBackend(evaluacionSeleccionada);
+        }
+      });
+    }
+
+    function iniciarApropiacion() {
+      Swal.fire({
+          title: '¿Desea transferir la autoría de la evaluación a su usuario?',
+          icon: 'question', showCancelButton: true, confirmButtonColor: '#3085d6', cancelButtonColor: '#6c757d', confirmButtonText: 'Sí', cancelButtonText: 'No'
+      }).then((result) => {
+          if (result.isConfirmed) {
+              Swal.fire({
+                  title: '¿Está seguro?',
+                  icon: 'warning', showCancelButton: true, confirmButtonColor: '#28a745', cancelButtonColor: '#d33', confirmButtonText: 'Sí', cancelButtonText: 'No'
+              }).then((result2) => {
+                  if (result2.isConfirmed) {
+                      const btn = document.getElementById('btnApropiarseEval');
+                      btn.disabled = true; btn.innerText = "Procesando...";
+                      
+                      google.script.run.withSuccessHandler(msj => {
+                          modalDetalles.hide(); actualizarCalendario();
+                          btn.disabled = false; btn.innerText = "🙋‍♂️ Apropiarse";
+                          mostrarMensaje("Éxito", msj, "success");
+                      }).withFailureHandler(err => {
+                          btn.disabled = false; btn.innerText = "🙋‍♂️ Apropiarse";
+                          mostrarMensaje("Error", err.message, "error");
+                      }).reclamarAutoriaBackend(evaluacionSeleccionada);
+                  }
+              });
+          }
+      });
+    }
+
+    // =========================================================================
+    // EXPORTACIÓN DE ARCHIVOS GENERALES
+    // =========================================================================
+    function abrirModalExportar() { modalExportar.show(); }
+    function marcarTodos(claseCheckbox, marcar) { document.querySelectorAll('.' + claseCheckbox).forEach(chk => chk.checked = marcar); }
+    
+    function ejecutarExportacion() {
+      const expCursosSel = Array.from(document.querySelectorAll('.chkCursos:checked')).map(c => c.value);
+      const expAsigsSel = Array.from(document.querySelectorAll('.chkAsigs:checked')).map(c => c.value);
+      const formato = document.querySelector('input[name="formatoExport"]:checked').value;
+      const rangoSeleccionado = document.getElementById('rangoExport').value;
+
+      if (!formato.includes('semestral') && (expCursosSel.length === 0 || expAsigsSel.length === 0)) { Swal.fire('Atención', 'Debes seleccionar al menos un curso y una asignatura.', 'warning'); return; }
+      
+      modalExportar.hide(); modoExportacionMultiple = true; 
+      Swal.fire({ title: formato.includes('excel') ? 'Generando Excel...' : 'Generando PDF...', text: formato.includes('semestral') ? 'Construyendo reporte masivo...' : 'Estructurando documento...', allowOutsideClick: false, didOpen: () => { Swal.showLoading(); } });
+
+      const txtCursos = expCursosSel.length === document.querySelectorAll('.chkCursos').length ? 'Todos los cursos' : expCursosSel.join(', ');
+      const txtAsigs = expAsigsSel.length === document.querySelectorAll('.chkAsigs').length ? 'Todas las asignaturas' : expAsigsSel.join(', ');
+
+      if (formato === 'pdf_semestral') {
+        const todosLosCursos = (configuracionGlobal && configuracionGlobal.cursos && configuracionGlobal.cursos.length > 0) ? configuracionGlobal.cursos : Array.from(document.querySelectorAll('.chkCursos')).map(c => c.value);
+        const todasLasAsignaturas = (configuracionGlobal && configuracionGlobal.asignaturas && configuracionGlobal.asignaturas.length > 0) ? configuracionGlobal.asignaturas.map(a => a.nombre) : Array.from(document.querySelectorAll('.chkAsigs')).map(c => c.value);
+        if (!todosLosCursos || todosLosCursos.length === 0) { Swal.fire('Error', 'No hay cursos registrados.', 'error'); return; }
+
+        google.script.run.withSuccessHandler(async (eventosCrudos) => {
+          let evs = eventosCrudos.filter(e => !e.display && !e.extendedProps.bloqueado);
+          const barraFiltros = document.querySelector('.filter-bar'); const elementoCal = document.getElementById('calendar'); const originalBodyPadding = document.body.style.padding;
+          barraFiltros.style.display = 'none'; elementoCal.style.display = 'none'; document.body.style.padding = '0'; window.scrollTo(0, 0);
+
+          const nombresMeses = ["Enero", "Febrero", "Marzo", "Abril", "Mayo", "Junio", "Julio", "Agosto", "Septiembre", "Octubre", "Noviembre", "Diciembre"];
+
+          for (let i = 0; i < todosLosCursos.length; i++) {
+              const cursoActual = todosLosCursos[i];
+              Swal.update({ title: 'Procesamiento Masivo PDF', text: `Exportando curso: ${cursoActual} (${i + 1} de ${todosLosCursos.length}).` });
+
+              const contenedorPDF = document.createElement('div');
+              contenedorPDF.style.width = '1050px'; contenedorPDF.style.margin = '0 auto'; contenedorPDF.style.padding = '0'; contenedorPDF.style.fontFamily = 'Arial, sans-serif'; contenedorPDF.style.background = 'white';
+
+              let htmlContent = ''; let isFirstPage = true;
+              let iteradorMeses = new Date(calendar.getDate()); iteradorMeses.setDate(1);
+
+              for (let m = 0; m < 6; m++) {
+                  let mesActual = iteradorMeses.getMonth(); let anioActual = iteradorMeses.getFullYear();
+                  if (!isFirstPage) { htmlContent += `<div style="page-break-before: always; border-top: 1px solid transparent;"></div>`; }
+                  isFirstPage = false;
+                  
+                  htmlContent += `<div style="padding: 20px 30px; box-sizing: border-box; width: 1050px;"><div style="text-align: center; margin-bottom: 20px;"><h2 style="margin:0; color:#2b3440; font-size:26px; text-transform:uppercase; font-weight:900;">${nombresMeses[mesActual]} ${anioActual} - ${cursoActual}</h2><p style="margin:5px 0 0 0; color:#6c757d; font-size:14px;"><b>Asignaturas:</b> Todas</p></div><table style="width: 100%; border-collapse: collapse; table-layout: fixed; font-size: 11px; background: white;"><thead><tr style="background-color: #f4f6f8; color: #333;"><th style="border: 1px solid #ddd; padding: 10px; width: 20%;">LUNES</th><th style="border: 1px solid #ddd; padding: 10px; width: 20%;">MARTES</th><th style="border: 1px solid #ddd; padding: 10px; width: 20%;">MIÉRCOLES</th><th style="border: 1px solid #ddd; padding: 10px; width: 20%;">JUEVES</th><th style="border: 1px solid #ddd; padding: 10px; width: 20%;">VIERNES</th></tr></thead><tbody><tr>`;
+
+                  let primerDia = new Date(anioActual, mesActual, 1).getDay(); let celdasAgregadas = 0; let diaSemanaOffset = primerDia === 0 ? 7 : primerDia; 
+                  if (diaSemanaOffset <= 5) { for(let i = 1; i < diaSemanaOffset; i++) { htmlContent += `<td style="border: 1px solid #ddd; background-color: #fafafa;"></td>`; celdasAgregadas++; } }
+                  let ultimoDia = new Date(anioActual, mesActual + 1, 0).getDate();
+
+                  for (let dia = 1; dia <= ultimoDia; dia++) {
+                      let fechaIter = new Date(anioActual, mesActual, dia); let ds = fechaIter.getDay(); if (ds === 0 || ds === 6) continue; 
+                      let fechaStr = `${anioActual}-${String(mesActual+1).padStart(2,'0')}-${String(dia).padStart(2,'0')}`;
+                      let evsDia = evs.filter(e => e.start.startsWith(fechaStr) && e.extendedProps.curso === cursoActual);
+
+                      htmlContent += `<td style="border: 1px solid #ddd; padding: 4px; vertical-align: top; height: 40px;"><div style="font-weight: bold; margin-bottom: 2px; text-align: right; color: #555; font-size: 12px;">${dia}</div>`;
+                      evsDia.forEach(ev => {
+                          let det = ev.extendedProps.detalles && ev.extendedProps.detalles !== "Ingreso Manual" && !ev.extendedProps.detalles.includes("SISTEMA AUTOMÁTICO") ? ev.extendedProps.detalles.replace(/\n/g, ' ') : "";
+                          let detalleDiv = det ? `<div style="font-size: 8.5px; opacity: 0.95; margin-top: 3px; border-top: 1px solid rgba(255,255,255,0.3); padding-top: 2px; font-style: italic;">Detalle: ${det}</div>` : "";
+                          htmlContent += `<div style="background-color: ${ev.backgroundColor || '#4361ee'}; color: white; padding: 4px; border-radius: 4px; margin-bottom: 4px; font-size: 10px; line-height: 1.2;"><div>${ev.extendedProps.asignatura} <span style="opacity: 0.9;">(${ev.extendedProps.tipo})</span></div>${detalleDiv}</div>`;
+                      });
+                      htmlContent += `</td>`; celdasAgregadas++;
+                      if (celdasAgregadas % 5 === 0 && dia < ultimoDia) htmlContent += `</tr><tr>`;
+                  }
+                  while (celdasAgregadas % 5 !== 0) { htmlContent += `<td style="border: 1px solid #ddd; background-color: #fafafa;"></td>`; celdasAgregadas++; }
+                  htmlContent += `</tr></tbody></table></div>`; iteradorMeses.setMonth(iteradorMeses.getMonth() + 1);
+              }
+
+              contenedorPDF.innerHTML = htmlContent; document.body.appendChild(contenedorPDF);
+              const nombreArchivoLimpio = cursoActual.replace(/[^a-z0-9\s-]/gi, '').trim().replace(/\s+/g, '_');
+              const opt = { margin: 0.2, filename: `Calendario_${nombreArchivoLimpio}_Semestre.pdf`, image: { type: 'jpeg', quality: 1 }, html2canvas: { scale: 2, useCORS: true, letterRendering: true }, jsPDF: { unit: 'in', format: 'a4', orientation: 'landscape' }, pagebreak: { mode: 'css' } };
+
+              await new Promise(resolve => { html2pdf().set(opt).from(contenedorPDF).save().then(() => { contenedorPDF.remove(); resolve(); }); });
+              await new Promise(r => setTimeout(r, 1000));
+          }
+
+          barraFiltros.style.display = 'flex'; elementoCal.style.display = 'block'; document.body.style.padding = originalBodyPadding; calendar.refetchEvents();
+          Swal.fire('¡Impecable!', 'Se han descargado los PDFs de todos los cursos uno por uno.', 'success');
+        }).obtenerEventosCalendario(todosLosCursos, todasLasAsignaturas);
+
+      } else if (formato === 'calendario') {
+        google.script.run.withSuccessHandler(eventosCrudos => {
+          let evs = eventosCrudos.filter(e => !e.display && !e.extendedProps.bloqueado);
+          const barraFiltros = document.querySelector('.filter-bar'); const elementoCal = document.getElementById('calendar'); const originalBodyPadding = document.body.style.padding;
+          barraFiltros.style.display = 'none'; elementoCal.style.display = 'none'; document.body.style.padding = '0'; window.scrollTo(0, 0);
+
+          const contenedorPDF = document.createElement('div'); contenedorPDF.style.width = '1050px'; contenedorPDF.style.margin = '0 auto'; contenedorPDF.style.padding = '0'; contenedorPDF.style.fontFamily = 'Arial, sans-serif'; contenedorPDF.style.background = 'white'; contenedorPDF.style.boxShadow = '0 4px 12px rgba(0,0,0,0.1)';
+          document.body.appendChild(contenedorPDF);
+
+          let htmlContent = ''; let numMeses = rangoSeleccionado === 'semestre' ? 6 : (rangoSeleccionado === 'trimestre' ? 3 : 1); let mesInicio = calendar.getDate().getMonth(); let anioInicio = calendar.getDate().getFullYear(); const nombresMeses = ["Enero", "Febrero", "Marzo", "Abril", "Mayo", "Junio", "Julio", "Agosto", "Septiembre", "Octubre", "Noviembre", "Diciembre"];
+
+          for (let m = 0; m < numMeses; m++) {
+              let d = new Date(anioInicio, mesInicio + m, 1); let mesActual = d.getMonth(); let anioActual = d.getFullYear();
+              if (m > 0) { htmlContent += `<div class="html2pdf__page-break" style="page-break-before: always; border-top: 2px dashed #ccc; margin: 20px 0;"></div>`; }
+              
+              htmlContent += `<div style="padding: 20px 30px; box-sizing: border-box; width: 1050px;"><div style="text-align: center; margin-bottom: 20px;"><h2 style="margin:0; color:#2b3440; font-size:26px; text-transform:uppercase; font-weight:900;">${nombresMeses[mesActual]} ${anioActual}</h2><p style="margin:5px 0 0 0; color:#6c757d; font-size:14px;"><b>Cursos:</b> ${txtCursos} | <b>Asignaturas:</b> ${txtAsigs}</p></div><table style="width: 100%; border-collapse: collapse; table-layout: fixed; font-size: 11px; background: white;"><thead><tr style="background-color: #f4f6f8; color: #333;"><th style="border: 1px solid #ddd; padding: 10px; width: 20%;">LUNES</th><th style="border: 1px solid #ddd; padding: 10px; width: 20%;">MARTES</th><th style="border: 1px solid #ddd; padding: 10px; width: 20%;">MIÉRCOLES</th><th style="border: 1px solid #ddd; padding: 10px; width: 20%;">JUEVES</th><th style="border: 1px solid #ddd; padding: 10px; width: 20%;">VIERNES</th></tr></thead><tbody><tr>`;
+
+              let primerDia = new Date(anioActual, mesActual, 1).getDay(); let celdasAgregadas = 0; let diaSemanaOffset = primerDia === 0 ? 7 : primerDia; 
+              if (diaSemanaOffset <= 5) { for(let i = 1; i < diaSemanaOffset; i++) { htmlContent += `<td style="border: 1px solid #ddd; background-color: #fafafa;"></td>`; celdasAgregadas++; } }
+              let ultimoDia = new Date(anioActual, mesActual + 1, 0).getDate();
+
+              for (let dia = 1; dia <= ultimoDia; dia++) {
+                  let fechaIter = new Date(anioActual, mesActual, dia); let ds = fechaIter.getDay(); if (ds === 0 || ds === 6) continue; 
+                  let fechaStr = `${anioActual}-${String(mesActual+1).padStart(2,'0')}-${String(dia).padStart(2,'0')}`;
+                  let evsDia = evs.filter(e => e.start.startsWith(fechaStr) && expCursosSel.includes(e.extendedProps.curso) && expAsigsSel.includes(e.extendedProps.asignatura));
+
+                  htmlContent += `<td style="border: 1px solid #ddd; padding: 4px; vertical-align: top; height: 40px;"><div style="font-weight: bold; margin-bottom: 2px; text-align: right; color: #555; font-size: 12px;">${dia}</div>`;
+                  evsDia.forEach(ev => {
+                      let det = ev.extendedProps.detalles && ev.extendedProps.detalles !== "Ingreso Manual" && !ev.extendedProps.detalles.includes("SISTEMA AUTOMÁTICO") ? ev.extendedProps.detalles.replace(/\n/g, ' ') : "";
+                      let detalleDiv = det ? `<div style="font-size: 8.5px; opacity: 0.95; margin-top: 3px; border-top: 1px solid rgba(255,255,255,0.3); padding-top: 2px; font-style: italic;">Detalle: ${det}</div>` : "";
+                      htmlContent += `<div style="background-color: ${ev.backgroundColor || '#4361ee'}; color: white; padding: 4px; border-radius: 4px; margin-bottom: 4px; font-size: 10px; line-height: 1.2;"><div style="font-weight: bold; margin-bottom: 1px;">${ev.extendedProps.curso}</div><div>${ev.extendedProps.asignatura} <span style="opacity: 0.9;">(${ev.extendedProps.tipo})</span></div>${detalleDiv}</div>`;
+                  });
+                  htmlContent += `</td>`; celdasAgregadas++;
+                  if (celdasAgregadas % 5 === 0 && dia < ultimoDia) { htmlContent += `</tr><tr>`; }
+              }
+              while (celdasAgregadas % 5 !== 0) { htmlContent += `<td style="border: 1px solid #ddd; background-color: #fafafa;"></td>`; celdasAgregadas++; }
+              htmlContent += `</tr></tbody></table></div>`;
+          }
+          
+          contenedorPDF.innerHTML = htmlContent;
+
+          Swal.fire({
+              title: '¿La pre-visualización cargó bien?', text: 'Revisa el documento atrás. Si se ve correcto, presiona "Descargar PDF".', icon: 'info', showCancelButton: true, confirmButtonColor: '#28a745', cancelButtonColor: '#dc3545', confirmButtonText: 'Sí, Descargar PDF', cancelButtonText: 'Cancelar', allowOutsideClick: false
+          }).then((result) => {
+              if (result.isConfirmed) {
+                  Swal.fire({ title: 'Procesando Archivo...', allowOutsideClick: false, didOpen: () => { Swal.showLoading(); } });
+                  const opt = { margin: 0.2, filename: `Calendario_Evaluaciones_${new Date().getTime()}.pdf`, image: { type: 'jpeg', quality: 1 }, html2canvas: { scale: 2, useCORS: true }, jsPDF: { unit: 'in', format: 'a4', orientation: 'landscape' }, pagebreak: { mode: ['css', 'legacy'] } };
+                  html2pdf().set(opt).from(contenedorPDF).save().then(() => { contenedorPDF.remove(); barraFiltros.style.display = 'flex'; elementoCal.style.display = 'block'; document.body.style.padding = originalBodyPadding; calendar.refetchEvents(); Swal.fire('¡Impecable!', 'El PDF ha sido generado.', 'success'); });
+              } else { contenedorPDF.remove(); barraFiltros.style.display = 'flex'; elementoCal.style.display = 'block'; document.body.style.padding = originalBodyPadding; }
+          });
+        }).obtenerEventosCalendario(expCursosSel, expAsigsSel);
+
+      } else if (formato === 'excel_semestral') {
+        const todosLosCursos = (configuracionGlobal && configuracionGlobal.cursos && configuracionGlobal.cursos.length > 0) ? configuracionGlobal.cursos : Array.from(document.querySelectorAll('.chkCursos')).map(c => c.value);
+        const todasLasAsignaturas = (configuracionGlobal && configuracionGlobal.asignaturas && configuracionGlobal.asignaturas.length > 0) ? configuracionGlobal.asignaturas.map(a => a.nombre) : Array.from(document.querySelectorAll('.chkAsigs')).map(c => c.value);
+        if (!todosLosCursos || todosLosCursos.length === 0) { Swal.fire('Error', 'No hay cursos registrados en el sistema.', 'error'); return; }
+
+        setTimeout(() => {
+          google.script.run.withSuccessHandler(eventosCrudos => {
+            let evs = eventosCrudos.filter(e => !e.display && !e.extendedProps.bloqueado);
+            const wb = XLSX.utils.book_new();
+            const borderBase = { top: {style:'thin', color:{rgb:"CCCCCC"}}, bottom: {style:'thin', color:{rgb:"CCCCCC"}}, left: {style:'thin', color:{rgb:"CCCCCC"}}, right: {style:'thin', color:{rgb:"CCCCCC"}} };
+            const styleTitulo = { font: { sz: 16, bold: true, color: {rgb:"FFFFFF"} }, fill: { fgColor: {rgb:"2B3440"} }, alignment: { horizontal: "center", vertical: "center" } };
+            const styleDias = { font: { sz: 11, bold: true, color: {rgb:"333333"} }, fill: { fgColor: {rgb:"E9ECEF"} }, alignment: { horizontal: "center", vertical: "center" }, border: borderBase };
+            const styleCeldaVacia = { fill: { fgColor: {rgb:"F8F9FA"} }, border: borderBase };
+            const styleCeldaNormal = { font: { sz: 10 }, alignment: { vertical: "top", wrapText: true }, fill: { fgColor: {rgb:"FFFFFF"} }, border: borderBase };
+            const styleCeldaConEventos = { font: { sz: 10, color: {rgb:"052C65"}, bold: true }, alignment: { vertical: "top", wrapText: true }, fill: { fgColor: {rgb:"CFF4FC"} }, border: borderBase }; 
+            const diasSemana = ["LUNES", "MARTES", "MIÉRCOLES", "JUEVES", "VIERNES"];
+            const nombresMeses = ["Enero", "Febrero", "Marzo", "Abril", "Mayo", "Junio", "Julio", "Agosto", "Septiembre", "Octubre", "Noviembre", "Diciembre"];
+            let hojasGeneradas = 0;
+
+            todosLosCursos.forEach(cursoActual => {
+                const evsCurso = evs.filter(e => e.extendedProps.curso === cursoActual);
+                const eventosPorFecha = {};
+                evsCurso.forEach(e => { const fechaStr = e.start.split('T')[0]; if (!eventosPorFecha[fechaStr]) eventosPorFecha[fechaStr] = []; eventosPorFecha[fechaStr].push(e); });
+
+                const matrizDatos = []; const merges = []; let rIndex = 0; 
+                let iterador = new Date(calendar.getDate()); iterador.setDate(1); const fin = new Date(iterador.getFullYear(), iterador.getMonth() + 6, 0); 
+                let mesActual = -1; let semanaActual = [];
+
+                while (iterador <= fin) {
+                  if (iterador.getDay() === 0 || iterador.getDay() === 6) { iterador.setDate(iterador.getDate() + 1); continue; }
+                  if (iterador.getMonth() !== mesActual) {
+                    if (semanaActual.length > 0) { while(semanaActual.length < 5) semanaActual.push({ v: "", s: styleCeldaVacia }); matrizDatos.push(semanaActual); rIndex++; semanaActual = []; }
+                    mesActual = iterador.getMonth();
+                    if (rIndex > 0) { matrizDatos.push([{v:"", s: {}}, {v:"", s: {}}, {v:"", s: {}}, {v:"", s: {}}, {v:"", s: {}}]); rIndex++; }
+                    matrizDatos.push([{ v: `${nombresMeses[mesActual].toUpperCase()} ${iterador.getFullYear()} - ${cursoActual}`, s: styleTitulo }, { v: "", s: styleTitulo }, { v: "", s: styleTitulo }, { v: "", s: styleTitulo }, { v: "", s: styleTitulo }]);
+                    merges.push({ s: { r: rIndex, c: 0 }, e: { r: rIndex, c: 4 } }); rIndex++;
+                    matrizDatos.push(diasSemana.map(d => ({ v: d, s: styleDias }))); rIndex++;
+                    const diaSemana = iterador.getDay(); for (let i = 1; i < diaSemana; i++) { semanaActual.push({ v: "", s: styleCeldaVacia }); }
+                  }
+
+                  const year = iterador.getFullYear(); const month = String(iterador.getMonth() + 1).padStart(2, '0'); const day = String(iterador.getDate()).padStart(2, '0'); const localISOTime = `${year}-${month}-${day}`;
+                  let textoCelda = `${iterador.getDate()}`; let estiloActual = styleCeldaNormal;
+
+                  if (eventosPorFecha[localISOTime]) {
+                     eventosPorFecha[localISOTime].forEach(ev => {
+                       let det = ev.extendedProps.detalles && ev.extendedProps.detalles !== "Ingreso Manual" && !ev.extendedProps.detalles.includes("SISTEMA AUTOMÁTICO") ? ev.extendedProps.detalles.replace(/\n/g, ' ') : "Sin detalles";
+                       textoCelda += `\n\uF06E ${ev.extendedProps.asignatura} (${ev.extendedProps.tipo})\n   └ Detalle: ${det}`;
+                     });
+                     estiloActual = styleCeldaConEventos;
+                  }
+                  semanaActual.push({ v: textoCelda, s: estiloActual });
+                  if (semanaActual.length === 5) { matrizDatos.push(semanaActual); rIndex++; semanaActual = []; }
+                  iterador.setDate(iterador.getDate() + 1);
+                }
+
+                if (semanaActual.length > 0) { while(semanaActual.length < 5) semanaActual.push({ v: "", s: styleCeldaVacia }); matrizDatos.push(semanaActual); }
+                if (matrizDatos.length === 0) return;
+                const ws = XLSX.utils.aoa_to_sheet(matrizDatos); if (merges.length > 0) ws['!merges'] = merges;
+                const rowHeights = matrizDatos.map((row) => {
+                  let maxLines = 1; row.forEach(cell => { if (cell && cell.v && typeof cell.v === 'string') { const lines = cell.v.split('\n').length; if (lines > maxLines) maxLines = lines; } });
+                  const esNegrita = row[0] && row[0].s && row[0].s.font && row[0].s.font.bold; return { hpt: (maxLines === 1 && !esNegrita) ? 35 : (maxLines * 15) + 15 };
+                });
+                ws['!rows'] = rowHeights; ws['!cols'] = [{ wch: 30 }, { wch: 30 }, { wch: 30 }, { wch: 30 }, { wch: 30 }];
+                let nombrePestana = cursoActual.replace(/[\\\/\?\*\[\]:]/g, '').substring(0, 27) || "Curso"; let sheetName = nombrePestana; let counter = 1;
+                while (wb.SheetNames.includes(sheetName)) { sheetName = `${nombrePestana}_${counter}`; counter++; }
+                XLSX.utils.book_append_sheet(wb, ws, sheetName); hojasGeneradas++;
+            });
+            if (hojasGeneradas === 0) { Swal.fire('Sin datos', 'No se generaron hojas.', 'info'); return; }
+            XLSX.writeFile(wb, `Calendario_Semestral_Institucional_${new Date().getTime()}.xlsx`);
+            Swal.fire('¡Listo!', 'El calendario Semestral se ha descargado.', 'success');
+          }).obtenerEventosCalendario(todosLosCursos, todasLasAsignaturas);
+        }, 300);
+
+      } else if (formato === 'excel') {
+        setTimeout(() => {
+          google.script.run.withSuccessHandler(eventosCrudos => {
+            let evs = eventosCrudos.filter(e => !e.display && !e.extendedProps.bloqueado);
+            const eventosPorFecha = {};
+            evs.forEach(e => { const fechaStr = e.start.split('T')[0]; if (!eventosPorFecha[fechaStr]) eventosPorFecha[fechaStr] = []; eventosPorFecha[fechaStr].push(e); });
+
+            const matrizDatos = []; const merges = []; let rIndex = 0; 
+            const diasSemana = ["LUNES", "MARTES", "MIÉRCOLES", "JUEVES", "VIERNES"]; const nombresMeses = ["Enero", "Febrero", "Marzo", "Abril", "Mayo", "Junio", "Julio", "Agosto", "Septiembre", "Octubre", "Noviembre", "Diciembre"];
+            const borderBase = { top: {style:'thin', color:{rgb:"CCCCCC"}}, bottom: {style:'thin', color:{rgb:"CCCCCC"}}, left: {style:'thin', color:{rgb:"CCCCCC"}}, right: {style:'thin', color:{rgb:"CCCCCC"}} };
+            const styleTitulo = { font: { sz: 16, bold: true, color: {rgb:"FFFFFF"} }, fill: { fgColor: {rgb:"2B3440"} }, alignment: { horizontal: "center", vertical: "center" } };
+            const styleDias = { font: { sz: 11, bold: true, color: {rgb:"333333"} }, fill: { fgColor: {rgb:"E9ECEF"} }, alignment: { horizontal: "center", vertical: "center" }, border: borderBase };
+            const styleCeldaVacia = { fill: { fgColor: {rgb:"F8F9FA"} }, border: borderBase };
+            const styleCeldaNormal = { font: { sz: 10 }, alignment: { vertical: "top", wrapText: true }, fill: { fgColor: {rgb:"FFFFFF"} }, border: borderBase };
+            const styleCeldaConEventos = { font: { sz: 10, color: {rgb:"052C65"}, bold: true }, alignment: { vertical: "top", wrapText: true }, fill: { fgColor: {rgb:"CFF4FC"} }, border: borderBase }; 
+
+            let iterador = new Date(calendar.getDate()); let numMeses = rangoSeleccionado === 'semestre' ? 6 : (rangoSeleccionado === 'trimestre' ? 3 : 1);
+            let iteradorMeses = new Date(iterador.getFullYear(), iterador.getMonth() + numMeses, 0); const fin = iteradorMeses; iterador.setDate(1);
+            let mesActual = -1; let semanaActual = [];
+
+            while (iterador <= fin) {
+              if (iterador.getDay() === 0 || iterador.getDay() === 6) { iterador.setDate(iterador.getDate() + 1); continue; }
+              if (iterador.getMonth() !== mesActual) {
+                if (semanaActual.length > 0) { while(semanaActual.length < 5) semanaActual.push({ v: "", s: styleCeldaVacia }); matrizDatos.push(semanaActual); rIndex++; semanaActual = []; }
+                mesActual = iterador.getMonth();
+                if (rIndex > 0) { matrizDatos.push([{v:"", s: {}}, {v:"", s: {}}, {v:"", s: {}}, {v:"", s: {}}, {v:"", s: {}}]); rIndex++; }
+                matrizDatos.push([{ v: `${nombresMeses[mesActual].toUpperCase()} ${iterador.getFullYear()}`, s: styleTitulo }, { v: "", s: styleTitulo }, { v: "", s: styleTitulo }, { v: "", s: styleTitulo }, { v: "", s: styleTitulo }]);
+                merges.push({ s: { r: rIndex, c: 0 }, e: { r: rIndex, c: 4 } }); rIndex++;
+                matrizDatos.push(diasSemana.map(d => ({ v: d, s: styleDias }))); rIndex++;
+                const diaSemana = iterador.getDay(); for (let i = 1; i < diaSemana; i++) { semanaActual.push({ v: "", s: styleCeldaVacia }); }
+              }
+              const year = iterador.getFullYear(); const month = String(iterador.getMonth() + 1).padStart(2, '0'); const day = String(iterador.getDate()).padStart(2, '0'); const localISOTime = `${year}-${month}-${day}`;
+              let textoCelda = `${iterador.getDate()}`; let estiloActual = styleCeldaNormal;
+
+              if (eventosPorFecha[localISOTime]) {
+                 eventosPorFecha[localISOTime].forEach(ev => {
+                   let det = ev.extendedProps.detalles && ev.extendedProps.detalles !== "Ingreso Manual" && !ev.extendedProps.detalles.includes("SISTEMA AUTOMÁTICO") ? ev.extendedProps.detalles.replace(/\n/g, ' ') : "Sin detalles";
+                   textoCelda += `\n\uF06E ${ev.extendedProps.curso}: ${ev.extendedProps.asignatura} (${ev.extendedProps.tipo})\n   └ Detalle: ${det}`;
+                 });
+                 estiloActual = styleCeldaConEventos;
+              }
+              semanaActual.push({ v: textoCelda, s: estiloActual });
+              if (semanaActual.length === 5) { matrizDatos.push(semanaActual); rIndex++; semanaActual = []; }
+              iterador.setDate(iterador.getDate() + 1);
+            }
+
+            if (semanaActual.length > 0) { while(semanaActual.length < 5) semanaActual.push({ v: "", s: styleCeldaVacia }); matrizDatos.push(semanaActual); }
+            if (matrizDatos.length === 0) { Swal.fire('Sin datos', 'No hay datos.', 'info'); modoExportacionMultiple = false; calendar.refetchEvents(); return; }
+
+            const ws = XLSX.utils.aoa_to_sheet(matrizDatos); if (merges.length > 0) ws['!merges'] = merges;
+            const rowHeights = matrizDatos.map((row) => {
+              let maxLines = 1; row.forEach(cell => { if (cell && cell.v && typeof cell.v === 'string') { const lines = cell.v.split('\n').length; if (lines > maxLines) maxLines = lines; } });
+              const esNegrita = row[0] && row[0].s && row[0].s.font && row[0].s.font.bold; return { hpt: (maxLines === 1 && !esNegrita) ? 35 : (maxLines * 15) + 15 };
+            });
+            ws['!rows'] = rowHeights; ws['!cols'] = [{ wch: 30 }, { wch: 30 }, { wch: 30 }, { wch: 30 }, { wch: 30 }];
+            const wb = XLSX.utils.book_new(); XLSX.utils.book_append_sheet(wb, ws, "Calendario_General");
+            XLSX.writeFile(wb, `Calendario_Excel_Filtros_${new Date().getTime()}.xlsx`);
+            modoExportacionMultiple = false; calendar.refetchEvents(); Swal.fire('¡Listo!', 'Excel descargado.', 'success');
+          }).obtenerEventosCalendario(expCursosSel, expAsigsSel);
+        }, 300);
+
+      } else {
+        google.script.run.withSuccessHandler(eventosCrudos => {
+          let evs = eventosCrudos.filter(e => !e.display && !e.extendedProps.bloqueado); evs.sort((a,b) => new Date(a.start) - new Date(b.start));
+          const barraFiltros = document.querySelector('.filter-bar'); const elementoCal = document.getElementById('calendar'); const originalBodyPadding = document.body.style.padding;
+          barraFiltros.style.display = 'none'; elementoCal.style.display = 'none'; document.body.style.padding = '0'; window.scrollTo(0, 0); 
+          const contenedorPDF = document.createElement('div'); contenedorPDF.style.width = '750px'; contenedorPDF.style.margin = '0 auto'; contenedorPDF.style.padding = '30px'; contenedorPDF.style.background = 'white'; contenedorPDF.style.fontFamily = 'Arial, sans-serif'; contenedorPDF.style.color = '#333'; contenedorPDF.style.boxShadow = '0 4px 12px rgba(0,0,0,0.1)'; document.body.appendChild(contenedorPDF);
+          let htmlContent = `<div style="border-bottom: 2px solid #2b3440; padding-bottom: 10px; margin-bottom: 20px; text-align: center;"><h2 style="color: #2b3440; margin: 0; font-size: 24px;">Reporte Detallado de Evaluaciones</h2><p style="color: #6c757d; font-size: 13px; margin: 8px 0 0 0;"><b>Cursos:</b> ${txtCursos} <br><b>Asignaturas:</b> ${txtAsigs} <br><small>Generado el: ${new Date().toLocaleDateString('es-CL')}</small></p></div><table style="width: 100%; border-collapse: collapse; font-size: 13px;"><thead><tr style="background-color: #f4f6f8; border-bottom: 2px solid #ddd; text-align: left;"><th style="padding: 8px;">Fecha</th><th style="padding: 8px;">Curso</th><th style="padding: 8px;">Asignatura</th><th style="padding: 8px;">Tipo</th><th style="padding: 8px;">Profesor</th></tr></thead><tbody>`;
+          if(evs.length === 0) { htmlContent += `<tr><td colspan="5" style="text-align: center; padding: 20px;">No hay evaluaciones registradas con estos filtros.</td></tr>`; } else { evs.forEach(e => { let partes = e.start.split('-'); let fAmigable = `${partes[2]}-${partes[1]}-${partes[0]}`; htmlContent += `<tr style="border-bottom: 1px solid #eee;"><td style="padding: 8px; font-weight: bold;">${fAmigable}</td><td style="padding: 8px;">${e.extendedProps.curso}</td><td style="padding: 8px; font-weight: 600; color: ${e.backgroundColor}">${e.extendedProps.asignatura}</td><td style="padding: 8px;">${e.extendedProps.tipo}</td><td style="padding: 8px; color: #555;">${e.extendedProps.profesor}</td></tr>`; }); }
+          htmlContent += `</tbody></table>`; contenedorPDF.innerHTML = htmlContent;
+
+          Swal.fire({
+              title: '¿La pre-visualización cargó bien?', text: 'Revisa la lista atrás. Si se ve correcta, presiona "Descargar PDF".', icon: 'info', showCancelButton: true, confirmButtonColor: '#28a745', cancelButtonColor: '#dc3545', confirmButtonText: 'Sí, Descargar PDF', cancelButtonText: 'Cancelar', allowOutsideClick: false
+          }).then((result) => {
+              if (result.isConfirmed) {
+                  Swal.fire({ title: 'Procesando Archivo...', allowOutsideClick: false, didOpen: () => { Swal.showLoading(); } });
+                  const opt = { margin: 0.2, filename: `Reporte_Evaluaciones_${new Date().getTime()}.pdf`, image: { type: 'jpeg', quality: 1 }, html2canvas: { scale: 2, useCORS: true }, jsPDF: { unit: 'in', format: 'a4', orientation: 'portrait' } };
+                  html2pdf().set(opt).from(contenedorPDF).save().then(() => { contenedorPDF.remove(); barraFiltros.style.display = 'flex'; elementoCal.style.display = 'block'; document.body.style.padding = originalBodyPadding; modoExportacionMultiple = false; calendar.refetchEvents(); Swal.fire('¡Listo!', 'El reporte en PDF ha sido descargado perfectamente.', 'success'); });
+              } else { contenedorPDF.remove(); barraFiltros.style.display = 'flex'; elementoCal.style.display = 'block'; document.body.style.padding = originalBodyPadding; modoExportacionMultiple = false; }
+          });
+        }).obtenerEventosCalendario(expCursosSel, expAsigsSel);
+      }
+    }
+
+    // =========================================================================
+    // EXPORTACIÓN DE REPORTES ESPECÍFICOS Y AUDITORÍA
+    // =========================================================================
+    function exportarReportePDF() {
+      const elemento = document.getElementById('areaReporteVisual');
+      if(document.getElementById('contenedorTablaReporte').innerText.includes('No hay datos')) { Swal.fire('Atención', 'No hay datos para exportar', 'warning'); return; }
+      
+      Swal.fire({ title: 'Generando PDF...', allowOutsideClick: false, didOpen: () => { Swal.showLoading(); } });
+      
+      const tablaContenedor = document.getElementById('contenedorTablaReporte');
+      const originalMaxHeight = tablaContenedor.style.maxHeight; const originalOverflow = tablaContenedor.style.overflow;
+      tablaContenedor.style.maxHeight = 'none'; tablaContenedor.style.overflow = 'visible';
+      
+      const tituloTemp = document.createElement('h3'); tituloTemp.innerText = 'Reporte/Auditoría Institucional'; tituloTemp.style.textAlign = 'center'; tituloTemp.style.marginBottom = '20px'; tituloTemp.style.fontFamily = 'Arial, sans-serif'; tituloTemp.style.color = '#2b3440';
+      elemento.insertBefore(tituloTemp, elemento.firstChild);
+
+      const opt = { margin: 0.3, filename: `Reporte_Analitico_${new Date().getTime()}.pdf`, image: { type: 'jpeg', quality: 1 }, html2canvas: { scale: 2, useCORS: true }, jsPDF: { unit: 'in', format: 'a4', orientation: 'portrait' } };
+      setTimeout(() => {
+          html2pdf().set(opt).from(elemento).save().then(() => {
+              tituloTemp.remove(); tablaContenedor.style.maxHeight = originalMaxHeight; tablaContenedor.style.overflow = originalOverflow; Swal.fire('¡Listo!', 'El PDF ha sido descargado.', 'success');
+          });
+      }, 500);
+    }
+
+    function exportarReporteExcel() {
+      const tabla = document.querySelector('#contenedorTablaReporte table');
+      if (!tabla || document.getElementById('contenedorTablaReporte').innerText.includes('No hay datos')) { Swal.fire('Atención', 'No hay datos en la tabla para exportar.', 'warning'); return; }
+      const wb = XLSX.utils.book_new(); const ws = XLSX.utils.table_to_sheet(tabla);
+      const cols = []; for(let i=0; i<15; i++) cols.push({wch: 22}); ws['!cols'] = cols;
+      XLSX.utils.book_append_sheet(wb, ws, "Analitica"); XLSX.writeFile(wb, `Reporte_Analitico_${new Date().getTime()}.xlsx`);
+    }
+
+    // =========================================================================
+    // FUNCIONALIDAD DE EXCLUSIÓN Y RESTAURACIÓN DE ASIGNATURAS (SÓLO ADMIN)
+    // =========================================================================
+    function ejecutarExclusionMaterias() {
+      const checkboxes = document.querySelectorAll('.chk-excluir:checked');
+      if (checkboxes.length === 0) { Swal.fire('Atención', 'No has seleccionado ninguna asignatura para excluir.', 'warning'); return; }
+
+      const listaExcluir = Array.from(checkboxes).map(chk => ({ curso: chk.getAttribute('data-curso').trim().toUpperCase(), asignatura: chk.getAttribute('data-asig').trim().toUpperCase() }));
+
+      Swal.fire({
+          title: '¿Excluir estas asignaturas?',
+          text: `Se excluirán ${listaExcluir.length} asignaturas. Ya no aparecerán en la agenda ni en esta auditoría.`,
+          icon: 'warning', showCancelButton: true, confirmButtonColor: '#d33', cancelButtonColor: '#6c757d', confirmButtonText: 'Sí, excluir'
+      }).then((result) => {
+          if (result.isConfirmed) {
+              const btn = document.getElementById('btnExcluirMaterias');
+              btn.disabled = true; btn.innerText = "Procesando...";
+              
+              google.script.run.withSuccessHandler(msj => {
+                  btn.disabled = false; btn.innerText = "🚫 Excluir Seleccionadas";
+                  listaExcluir.forEach(item => materiasExcluidasGlobal.push(item));
+                  actualizarAsignaturasAgenda(); 
+                  procesarGrafico(); 
+                  Swal.fire('Excluidas', msj, 'success');
+              }).withFailureHandler(err => {
+                  btn.disabled = false; btn.innerText = "🚫 Excluir Seleccionadas";
+                  Swal.fire('Error', err.message, 'error');
+              }).excluirMateriasBackend(listaExcluir);
+          }
+      });
+    }
+
+    function ejecutarRestaurarMaterias() {
+      Swal.fire({
+          title: '¿Restaurar todas las exclusiones?',
+          text: 'Todas las materias volverán a aparecer en todos los cursos correspondientes.',
+          icon: 'warning', showCancelButton: true, confirmButtonColor: '#28a745', cancelButtonColor: '#6c757d', confirmButtonText: 'Sí, restaurar'
+      }).then((result) => {
+          if (result.isConfirmed) {
+              const btn = document.getElementById('btnRestaurarMaterias');
+              btn.disabled = true; btn.innerText = "Procesando...";
+              
+              google.script.run.withSuccessHandler(msj => {
+                  btn.disabled = false; btn.innerText = "♻️ Restaurar Todas";
+                  materiasExcluidasGlobal = [];
+                  actualizarAsignaturasAgenda(); 
+                  procesarGrafico(); 
+                  Swal.fire('Restauradas', msj, 'success');
+              }).withFailureHandler(err => {
+                  btn.disabled = false; btn.innerText = "♻️ Restaurar Todas";
+                  Swal.fire('Error', err.message, 'error');
+              }).restaurarMateriasBackend();
+          }
+      });
+    }
+
+    // =========================================================================
+    // INTELIGENCIA DE CICLOS Y AUDITORÍA (ART. 42)
+    // =========================================================================
+    function obtenerHorasPorCiclo(cursoStr, asigInfo) {
+        if (!asigInfo) return 0;
+        const c = cursoStr.toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, ""); 
+        
+        if (c.includes("1") && c.includes("medio") || c.includes("i ") && c.includes("medio") || c.includes("primero medio") || 
+            c.includes("2") && c.includes("medio") || c.includes("ii ") && c.includes("medio") || c.includes("segundo medio")) {
+            return parseInt(asigInfo.hrsM1) || 0;
+        }
+        if (c.includes("3") && c.includes("medio") || c.includes("iii") && c.includes("medio") || c.includes("tercero medio") || 
+            c.includes("4") && c.includes("medio") || c.includes("iv") && c.includes("medio") || c.includes("cuarto medio")) {
+            return parseInt(asigInfo.hrsM2) || 0;
+        }
+        if ((c.includes("5") || c.includes("6") || c.includes("7") || c.includes("8") || 
+             c.includes("quinto") || c.includes("sexto") || c.includes("septimo") || c.includes("octavo")) && c.includes("basico")) {
+            return parseInt(asigInfo.hrs2) || 0;
+        }
+        if ((c.includes("1") || c.includes("2") || c.includes("3") || c.includes("4") || 
+             c.includes("primero") || c.includes("segundo") || c.includes("tercero") || c.includes("cuarto")) && c.includes("basico")) {
+            return parseInt(asigInfo.hrs1) || 0;
+        }
+        return parseInt(asigInfo.hrs1) || 0;
+    }
+
+    function abrirModalReportes() { 
+        document.getElementById('selTipoReporte').value = 'auditoria'; 
+        document.getElementById('contenedorTablaReporte').innerHTML = '<div class="text-center text-primary my-4"><div class="spinner-border" role="status"></div><p class="mt-2">Cargando base de datos...</p></div>'; 
+        modalReportes.show(); 
+        
+        google.script.run.withSuccessHandler(datos => { 
+            datosReporteRaw = datos; 
+            inicializarTagsReporte();
+            procesarGrafico(); 
+        }).obtenerDatosReporte(); 
+    }
+
+    function inicializarTagsReporte() {
+        const cursos = [...new Set(datosReporteRaw.map(d => d.curso).filter(Boolean))].sort();
+        const asigs = [...new Set(datosReporteRaw.map(d => d.asignatura).filter(Boolean))].sort();
+        const profs = [...new Set(datosReporteRaw.map(d => d.profesor).filter(Boolean))].sort();
+        const tipos = [...new Set(datosReporteRaw.map(d => d.tipo).filter(Boolean))].sort();
+
+        filtrosReporte.curso = new Set(cursos); filtrosReporte.asignatura = new Set(asigs); filtrosReporte.profesor = new Set(profs); filtrosReporte.tipo = new Set(tipos);
+
+        renderTags('tagsCursos', 'curso', cursos); renderTags('tagsAsignaturas', 'asignatura', asigs); renderTags('tagsProfesores', 'profesor', profs); renderTags('tagsTipos', 'tipo', tipos);
+    }
+
+    function renderTags(containerId, categoria, items) {
+        const container = document.getElementById(containerId);
+        container.innerHTML = items.map(item => `<span class="tag-filtro tag-${categoria} active" onclick="toggleTagReporte(this, '${categoria}', '${item}')">${item}</span>`).join('');
+    }
+
+    function toggleTagReporte(element, categoria, valor) {
+        if (filtrosReporte[categoria].has(valor)) { filtrosReporte[categoria].delete(valor); element.classList.remove('active');
+        } else { filtrosReporte[categoria].add(valor); element.classList.add('active'); }
+        procesarGrafico();
+    }
+
+    function toggleTodosTags(categoria, marcar) {
+        const items = [...new Set(datosReporteRaw.map(d => d[categoria]).filter(Boolean))].sort();
+        if (marcar) { items.forEach(item => filtrosReporte[categoria].add(item)); } else { filtrosReporte[categoria].clear(); }
+        document.querySelectorAll(`.tag-${categoria}`).forEach(tag => { if (marcar) tag.classList.add('active'); else tag.classList.remove('active'); });
+        procesarGrafico();
+    }
+
+    function procesarGrafico() {
+      const tipoAgrupacion = document.getElementById('selTipoReporte').value; 
+      const esCruce2D = tipoAgrupacion.includes('_'); 
+      const esAuditoria = tipoAgrupacion === 'auditoria';
+      const esAdmin = (usuarioRol.toLowerCase() === 'admin' || usuarioRol.toLowerCase() === 'administrador');
+
+      const datosFiltrados = datosReporteRaw.filter(d => {
+          const cOk = !d.curso || filtrosReporte.curso.has(d.curso);
+          const aOk = !d.asignatura || filtrosReporte.asignatura.has(d.asignatura);
+          const pOk = !d.profesor || filtrosReporte.profesor.has(d.profesor);
+          const tOk = !d.tipo || filtrosReporte.tipo.has(d.tipo);
+          return cOk && aOk && pOk && tOk;
+      });
+      
+      if (chartInstancia) chartInstancia.destroy();
+      
+      const canvasContainer = document.getElementById('contenedorCanvas');
+      const contSoloAlertas = document.getElementById('contSoloAlertas');
+      
+      if (esAuditoria) { 
+          canvasContainer.style.display = 'none'; 
+          contSoloAlertas.style.display = 'block';
+      } else { 
+          canvasContainer.style.display = 'block'; 
+          contSoloAlertas.style.display = 'none';
+          document.getElementById('chkSoloAlertas').checked = false;
+      }
+
+      if (datosFiltrados.length === 0 && !esAuditoria) { document.getElementById('contenedorTablaReporte').innerHTML = '<p class="text-center text-danger my-4">No hay datos para mostrar con los filtros actuales.</p>'; return; }
+
+      if (esAuditoria) {
+          
+          if (esAdmin) {
+              document.getElementById('btnExcluirMaterias').style.display = 'inline-block';
+              document.getElementById('btnRestaurarMaterias').style.display = 'inline-block';
+          } else {
+              document.getElementById('btnExcluirMaterias').style.display = 'none';
+              document.getElementById('btnRestaurarMaterias').style.display = 'none';
+          }
+
+          const cursosEval = filtrosReporte.curso.size > 0 ? Array.from(filtrosReporte.curso) : configuracionGlobal.cursos;
+          const asigsEval = filtrosReporte.asignatura.size > 0 ? Array.from(filtrosReporte.asignatura) : configuracionGlobal.asignaturas.map(a => a.nombre);
+          const soloAlertas = document.getElementById('chkSoloAlertas').checked;
+
+          let htmlTabla = `<table class="table table-hover table-bordered table-sm mb-0" style="font-size: 13px;"><thead class="table-dark"><tr><th>Curso</th><th>Asignatura</th><th class="text-center" title="Horas Semanales">Hrs.</th><th class="text-center" title="Pruebas Escritas">Escritas</th><th class="text-center" title="Trabajos Prácticos">Trabajos</th><th class="text-center">Total</th><th class="text-center">Estado Art. 42</th>${esAdmin ? '<th class="text-center" style="width: 80px;">Excluir</th>' : ''}</tr></thead><tbody>`;
+
+          cursosEval.forEach(c => {
+              asigsEval.forEach(a => {
+                  
+                  const cLim = c.toString().trim().toUpperCase();
+                  const aLim = a.toString().trim().toUpperCase();
+                  const isExcluded = materiasExcluidasGlobal.some(ex => ex.curso === cLim && ex.asignatura === aLim);
+                  if (isExcluded) return; 
+
+                  const evsAgendadas = datosFiltrados.filter(d => d.curso === c && d.asignatura === a);
+                  const agendadas = evsAgendadas.length;
+                  const escritas = evsAgendadas.filter(d => d.tipo === 'Escrita').length;
+                  const trabajos = agendadas - escritas;
+                  
+                  const asigInfo = configuracionGlobal.asignaturas.find(asg => asg.nombre === a);
+                  const horas = obtenerHorasPorCiclo(c, asigInfo);
+                  const art42 = configuracionGlobal.art42 || { h1_min: 2, h1_max: 4, h2_min: 3, h2_max: 5, h3_min: 4, h3_max: 7 };
+
+                  let min = 0, max = 0;
+                  if (horas >= 1 && horas <= 2) { min = art42.h1_min; max = art42.h1_max; 
+                  } else if (horas >= 3 && horas <= 4) { min = art42.h2_min; max = art42.h2_max; 
+                  } else if (horas >= 5) { min = art42.h3_min; max = art42.h3_max; }
+
+                  if (horas === 0 && agendadas === 0) return; 
+
+                  const cumple = (agendadas >= min && agendadas <= max);
+                  
+                  if (soloAlertas && (horas === 0 || cumple)) return; 
+
+                  let badge = ""; let rowColor = "";
+                  if (horas === 0) { badge = `<span class="badge bg-secondary">Sin config. de hrs</span>`;
+                  } else if (agendadas < min) { badge = `<span class="badge bg-danger">❌ Faltan ${min - agendadas} notas (Mín: ${min})</span>`; rowColor = "table-danger";
+                  } else if (agendadas > max) { badge = `<span class="badge bg-warning text-dark">⚠️ Sobran ${agendadas - max} notas (Máx: ${max})</span>`; rowColor = "table-warning";
+                  } else { badge = `<span class="badge bg-success">✅ Cumple (${min} a ${max})</span>`; }
+
+                  let chkHTML = esAdmin ? `<td class="text-center"><input class="form-check-input chk-excluir" type="checkbox" data-curso="${c}" data-asig="${a}"></td>` : '';
+
+                  htmlTabla += `<tr class="${rowColor}"><td class="fw-bold">${c}</td><td>${a}</td><td class="text-center">${horas || '-'}</td><td class="text-center text-primary fw-bold">${escritas}</td><td class="text-center text-success fw-bold">${trabajos}</td><td class="text-center fw-bold fs-6">${agendadas}</td><td class="text-center">${badge}</td>${chkHTML}</tr>`;
+              });
+          });
+
+          if(htmlTabla.endsWith('<tbody>')) { htmlTabla += `<tr><td colspan="${esAdmin ? 8 : 7}" class="text-center py-3 text-muted">No hay ${soloAlertas ? "alertas" : "combinaciones"} para mostrar.</td></tr>`; }
+          htmlTabla += `</tbody></table>`; document.getElementById('contenedorTablaReporte').innerHTML = htmlTabla;
+
+      } else if (!esCruce2D) {
+        
+        document.getElementById('btnExcluirMaterias').style.display = 'none';
+        document.getElementById('btnRestaurarMaterias').style.display = 'none';
+
+        const conteo = {}; 
+        datosFiltrados.forEach(dato => { const llave = dato[tipoAgrupacion]; if (llave) conteo[llave] = (conteo[llave] || 0) + 1; });
+        const etiquetas = Object.keys(conteo).sort((a,b) => conteo[b] - conteo[a]); 
+        const valores = etiquetas.map(l => conteo[l]);
+
+        let htmlTabla = `<table class="table table-hover table-striped table-sm mb-0"><thead class="table-light"><tr><th class="text-uppercase text-secondary small">Categoría (${tipoAgrupacion})</th><th class="text-uppercase text-secondary small text-center" style="width:120px;">Cantidad</th></tr></thead><tbody>`;
+        etiquetas.forEach((eti, idx) => { htmlTabla += `<tr><td class="fw-medium">${eti}</td><td class="text-center fw-bold text-info">${valores[idx]}</td></tr>`; });
+        document.getElementById('contenedorTablaReporte').innerHTML = htmlTabla + `</tbody></table>`;
+        
+        const ctx = document.getElementById('miGraficoReporte').getContext('2d');
+        chartInstancia = new Chart(ctx, { type: 'bar', data: { labels: etiquetas, datasets: [{ label: 'N° de Evaluaciones', data: valores, backgroundColor: '#4361ee', borderRadius: 4 }] }, options: { responsive: true, maintainAspectRatio: false, plugins: { legend: { display: false } }, scales: { y: { beginAtZero: true, ticks: { stepSize: 1 } } } } });
+      } else {
+        
+        document.getElementById('btnExcluirMaterias').style.display = 'none';
+        document.getElementById('btnRestaurarMaterias').style.display = 'none';
+
+        const partes = tipoAgrupacion.split('_'); const ejeX = partes[0]; const ejeLeyenda = partes[1]; 
+        const etiquetasX = [...new Set(datosFiltrados.map(d => d[ejeX]).filter(Boolean))].sort(); 
+        const etiquetasLeyenda = [...new Set(datosFiltrados.map(d => d[ejeLeyenda]).filter(Boolean))].sort();
+        
+        const matriz = {}; etiquetasX.forEach(x => { matriz[x] = {}; etiquetasLeyenda.forEach(l => matriz[x][l] = 0); });
+        datosFiltrados.forEach(dato => { const valX = dato[ejeX]; const valL = dato[ejeLeyenda]; if (valX && valL) matriz[valX][valL]++; });
+        
+        const paletaColores = ['#4361ee', '#f72585', '#0dcaf0', '#198754', '#ffc107', '#fd7e14', '#7209b7', '#20c997', '#6f42c1', '#d63384'];
+        const datasetsArray = etiquetasLeyenda.map((leyenda, idx) => { return { label: leyenda, data: etiquetasX.map(x => matriz[x][leyenda]), backgroundColor: paletaColores[idx % paletaColores.length], borderRadius: 2 }; });
+        
+        const ctx = document.getElementById('miGraficoReporte').getContext('2d');
+        chartInstancia = new Chart(ctx, { type: 'bar', data: { labels: etiquetasX, datasets: datasetsArray }, options: { responsive: true, maintainAspectRatio: false, plugins: { legend: { display: true, position: 'top' } }, scales: { x: { stacked: true }, y: { stacked: true, beginAtZero: true, ticks: { stepSize: 1 } } } } });
+        
+        let htmlTabla = `<table class="table table-hover table-striped table-bordered table-sm mb-0 text-nowrap"><thead class="table-light"><tr><th class="text-uppercase text-secondary small">${ejeX}</th>`;
+        etiquetasLeyenda.forEach(l => htmlTabla += `<th class="text-uppercase text-secondary small text-center">${l}</th>`); htmlTabla += `<th class="text-uppercase text-secondary small text-center bg-light">Total</th></tr></thead><tbody>`;
+        
+        etiquetasX.forEach(x => { htmlTabla += `<tr><td class="fw-medium">${x}</td>`; let sumaFila = 0; etiquetasLeyenda.forEach(l => { const val = matriz[x][l]; sumaFila += val; htmlTabla += `<td class="text-center">${val > 0 ? val : '<span class="text-muted opacity-50">-</span>'}</td>`; }); htmlTabla += `<td class="text-center fw-bold bg-light text-primary">${sumaFila}</td></tr>`; });
+        htmlTabla += `</tbody></table>`; 
+        document.getElementById('contenedorTablaReporte').innerHTML = htmlTabla;
+      }
+    }
+  </script>
+</body>
+</html>
+
+

@@ -1,0 +1,166 @@
+// --- Code.gs DEFINITIVO (LECTURA CENTRALIZADA EN CONFIGURACION) ---
+
+function doGet() {
+  return HtmlService.createHtmlOutputFromFile('Index')
+      .setTitle('Calendario Academico CCG') 
+      .setXFrameOptionsMode(HtmlService.XFrameOptionsMode.ALLOWALL)
+      .addMetaTag('viewport', 'width=device-width, initial-scale=1');
+}
+
+// --- SEGURIDAD Y USUARIO ---
+
+function obtenerUsuarioActual() {
+  try {
+    return Session.getActiveUser().getEmail();
+  } catch (e) {
+    return "usuario_desconocido";
+  }
+}
+
+function esAdministrador() {
+  try {
+    const email = obtenerUsuarioActual();
+    const sheet = SpreadsheetApp.getActiveSpreadsheet().getSheetByName('Configuracion');
+    
+    if (!sheet) return false; // Si no existe, no hay admin
+    
+    // Leemos ADMINS en Columna D (D2 en adelante)
+    const lastRow = Math.max(sheet.getLastRow(), 2); 
+    const data = sheet.getRange("D2:D" + lastRow).getValues().flat();
+    
+    const admins = data
+      .filter(e => e && e.toString().trim() !== "")
+      .map(e => e.toString().trim().toLowerCase());
+      
+    return admins.includes(email.toLowerCase());
+    
+  } catch (e) {
+    Logger.log("Error auth: " + e.toString());
+    return false;
+  }
+}
+
+// --- LEER DATOS ---
+
+function obtenerDatosCompletos() {
+  try {
+    const ss = SpreadsheetApp.getActiveSpreadsheet();
+    const sheetDatos = ss.getSheetByName('DatosWeb');
+    const sheetConfig = ss.getSheetByName('Configuracion'); // <--- AQUI ESTÁ EL CAMBIO
+
+    if (!sheetDatos) throw new Error("Falta la hoja 'DatosWeb'");
+
+    // 1. Obtener Eventos
+    const lastRowDatos = sheetDatos.getLastRow();
+    const datos = lastRowDatos > 0 ? sheetDatos.getRange(1, 1, lastRowDatos, 5).getValues() : [];
+    
+    // 2. Obtener Mapa de Colores desde 'Configuracion' (Columna A y B)
+    let mapaColores = {};
+    if (sheetConfig) {
+      const lastRowConfig = Math.max(sheetConfig.getLastRow(), 2);
+      // Leemos A2:B (Categoría, Color)
+      const datosConfig = sheetConfig.getRange("A2:B" + lastRowConfig).getValues();
+      
+      datosConfig.forEach(r => { 
+        if(r[0] && r[1]) { // Si hay nombre y color
+          mapaColores[r[0]] = r[1]; 
+        }
+      });
+    }
+
+    // 3. Procesar Eventos
+    const eventos = [];
+    for (let i = 1; i < datos.length; i++) {
+      const fila = datos[i];
+      if(fila && fila[0]) {
+         const fecha = new Date(fila[0]);
+         if (!isNaN(fecha.getTime())) { 
+             eventos.push({
+               id: i + 1,
+               dia: fecha.getDate(),
+               mes: fecha.getMonth(),
+               anio: fecha.getFullYear(),
+               texto: fila[1] ? String(fila[1]) : "",
+               tipo: fila[2] ? String(fila[2]) : "General",
+               bloquea: fila[3] ? String(fila[3]).trim().toLowerCase() : "",
+               bloques: fila[4] ? String(fila[4]).trim() : (fila[3] ? "TODOS" : ""),
+               // Asignar color según el mapa, o gris si no existe
+               color: mapaColores[fila[2]] || '#95a5a6'
+             });
+         }
+      }
+    }
+
+    return {
+      eventos: eventos,
+      colores: mapaColores,
+      esAdmin: verificarPermisoEvento('convivencia escolar') // simplificacion para UI,
+      usuario: obtenerUsuarioActual()
+    };
+
+  } catch (e) {
+    return { error: true, msg: "Error Servidor: " + e.toString() };
+  }
+}
+
+// --- ESCRITURA DE DATOS ---
+
+function procesarEvento(datos) {
+  if (!esAdministrador()) throw new Error("⛔ Sin permisos de administrador.");
+  
+  const ss = SpreadsheetApp.getActiveSpreadsheet();
+  const sheetDatos = ss.getSheetByName('DatosWeb');
+  const sheetConfig = ss.getSheetByName('Configuracion');
+  
+  // 1. Si el usuario creó una NUEVA CATEGORÍA en el formulario
+  if(datos.tipo === 'otra' && datos.tipoNuevo) {
+      if(sheetConfig) {
+        // Agregamos la nueva categoría al final de Configuración (Cols A y B)
+        // appendRow agrega en la primera fila vacía disponible de TODA la hoja
+        sheetConfig.appendRow([datos.tipoNuevo, datos.colorNuevo]);
+        datos.tipo = datos.tipoNuevo; // Actualizamos el tipo para guardarlo en el evento
+      }
+  }
+  
+  // 2. Guardar o Editar el Evento
+  // Validamos formato de fecha para asegurar que Excel la reconozca
+  const fechaGuardar = new Date(datos.fecha + "T12:00:00"); // Forzar mediodía para evitar problemas de zona horaria
+
+  const valorBloquea = datos.bloquea ? "Sí" : "";
+  const valorBloques = datos.bloquea ? (datos.bloques || "TODOS") : "";
+
+  if(datos.idEditar) {
+      const row = parseInt(datos.idEditar);
+      sheetDatos.getRange(row, 1, 1, 5).setValues([[fechaGuardar, datos.texto, datos.tipo, valorBloquea, valorBloques]]);
+  } else {
+      sheetDatos.appendRow([fechaGuardar, datos.texto, datos.tipo, valorBloquea, valorBloques]);
+  }
+  SpreadsheetApp.flush();
+}
+
+function borrarEvento(id) {
+  if (!esAdministrador()) throw new Error("⛔ Sin permisos.");
+  const sheet = SpreadsheetApp.getActiveSpreadsheet().getSheetByName('DatosWeb');
+  sheet.deleteRow(id);
+  SpreadsheetApp.flush();
+}
+
+function unificarEventos(ids) {
+  if (!esAdministrador()) throw new Error("⛔ Sin permisos.");
+  
+  const sheet = SpreadsheetApp.getActiveSpreadsheet().getSheetByName('DatosWeb');
+  ids.sort((a, b) => a - b);
+  
+  const idMaestro = ids[0];
+  const idsDestino = ids.slice(1);
+  
+  // Copiamos Texto (Col 2), Tipo (Col 3), Bloquea (Col 4) y Bloques (Col 5) del maestro
+  const datosMaestro = sheet.getRange(idMaestro, 2, 1, 4).getValues()[0]; 
+  
+  idsDestino.forEach(fila => {
+    sheet.getRange(fila, 2, 1, 4).setValues([datosMaestro]);
+  });
+  
+  SpreadsheetApp.flush();
+  return { exito: true };
+}

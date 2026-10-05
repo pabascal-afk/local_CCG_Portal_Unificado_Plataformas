@@ -1,0 +1,26 @@
+{
+  "name": "unified-plataform",
+  "version": "1.0.0",
+  "description": "",
+  "main": "fix_encoding.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "type": "commonjs",
+  "dependencies": {
+    "cors": "^2.8.6",
+    "dotenv": "^18.0.5",
+    "express": "^5.2.1",
+    "express-session": "^1.19.0",
+    "localtunnel": "^2.0.2",
+    "nodemailer": "^10.0.13",
+    "passport": "^0.7.0",
+    "passport-google-oauth20": "^2.0.0",
+    "sqlite3": "^6.0.1",
+    "systray2": "^2.1.4",
+    "xlsx": "^0.18.5"
+  }
+}

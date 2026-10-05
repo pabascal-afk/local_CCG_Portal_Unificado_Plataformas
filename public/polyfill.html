@@ -1,0 +1,52 @@
+﻿<script>
+  window.google = {
+    script: {
+      run: (() => {
+        let currentSuccess = null;
+        let currentFailure = null;
+        
+        const runObj = new Proxy({}, {
+          get: function(target, prop) {
+            if (prop === 'withSuccessHandler') {
+               return function(handler) {
+                   currentSuccess = handler;
+                   return runObj;
+               }
+            }
+            if (prop === 'withFailureHandler') {
+               return function(handler) {
+                   currentFailure = handler;
+                   return runObj;
+               }
+            }
+            // Real RPC call
+            return function(...args) {
+               const onSuccess = currentSuccess;
+               const onFailure = currentFailure;
+               currentSuccess = null;
+               currentFailure = null;
+               
+               fetch('/api/rpc/' + prop, {
+                   method: 'POST',
+                   headers: {'Content-Type': 'application/json'},
+                   body: JSON.stringify({ args })
+               }).then(async res => {
+                   let data;
+                   try { data = await res.json(); } catch(e) { data = { error: 'Invalid JSON' }; }
+                   
+                   if (!res.ok) {
+                       if (onFailure) onFailure(new Error(data.error || 'Error del servidor'));
+                   } else {
+                       if (onSuccess) onSuccess(data.result);
+                   }
+               }).catch(err => {
+                   if (onFailure) onFailure(err);
+               });
+            }
+          }
+        });
+        return runObj;
+      })()
+    }
+  };
+</script>

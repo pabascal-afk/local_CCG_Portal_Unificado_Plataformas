@@ -1,0 +1,203 @@
+﻿<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <title>Portal Unificado</title>
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.10.5/font/bootstrap-icons.css">
+  <style>
+    body, html { height: 100%; margin: 0; overflow: hidden; font-family: 'Inter', sans-serif; }
+    #sidebar { width: 250px; background-color: #2c3e50; color: white; height: 100vh; float: left; display: flex; flex-direction: column; }
+    #content { height: 100vh; overflow: hidden; background-color: #f8f9fa; }
+    iframe { width: 100%; height: 100%; border: none; }
+    .nav-link { color: #cbd5e1; padding: 15px 20px; border-radius: 0; transition: all 0.3s; display: block; }
+    .nav-link:hover, .nav-link.active { color: white; background-color: #34495e; }
+    .nav-link i { margin-right: 10px; }
+    .brand { padding: 20px; font-size: 1.2rem; font-weight: bold; border-bottom: 1px solid #34495e; margin-bottom: 10px; }
+    .d-none { display: none !important; }
+  </style>
+</head>
+<body>
+
+  <div id="sidebar">
+    <div class="brand">
+      <i class="bi bi-diagram-3-fill"></i> Portal Colegio
+    </div>
+    <ul class="nav flex-column mb-auto">
+      <li class="nav-item">
+        <a href="#" class="nav-link" onclick="loadApp('dashboard', this)" id="nav-dashboard">
+          <i class="bi bi-grid-1x2"></i> Inicio / Muro
+        </a>
+      </li>
+      <li class="nav-item">
+        <a href="#" class="nav-link active" onclick="loadApp('evaluaciones', this)" id="nav-evaluaciones">
+          <i class="bi bi-journal-check"></i> Calendario Pruebas
+        </a>
+      </li>
+      <li class="nav-item">
+        <a href="#" class="nav-link" onclick="loadApp('calendario', this)" id="nav-calendario">
+          <i class="bi bi-calendar-event"></i> Calendario Académico
+        </a>
+      </li>
+      <li class="nav-item">
+        <a href="#" class="nav-link" onclick="loadApp('horarios', this)" id="nav-horarios">
+          <i class="bi bi-clock-history"></i> Visor de Horarios
+        </a>
+      </li>
+      <li class="nav-item">
+        <a href="#" class="nav-link" onclick="loadApp('recursos', this)" id="nav-recursos">
+          <i class="bi bi-building"></i> Reserva de Recursos
+        </a>
+      </li>
+      <li class="nav-item d-none" id="nav-usuarios-container">
+        <a href="#" class="nav-link" onclick="loadApp('usuarios', this)" id="nav-usuarios">
+          <i class="bi bi-people"></i> Gestión de Usuarios
+        </a>
+      </li>
+    </ul>
+    <div class="p-3 text-center text-secondary" style="font-size: 0.8rem;" id="info-usuario-container">
+      <div id="info-usuario" class="mb-2 text-white">Cargando usuario...</div>
+      <button class="btn btn-sm btn-outline-light w-100" onclick="abrirPerfil()"><i class="bi bi-gear"></i> Mi Perfil</button>
+    </div>
+  </div>
+
+  <div id="content">
+    <iframe id="appFrame" src=""></iframe>
+  </div>
+
+  <script>
+    let urls = {};
+    let contexto = {};
+    
+    document.addEventListener('DOMContentLoaded', function() {
+      // 1. Cargar contexto del usuario (Rol)
+      
+      fetch('/api/auth/me')
+        .then(res => res.json())
+        .then(ctx => {
+          contexto = ctx;
+          document.getElementById('info-usuario').innerText = ctx.email + '\n' + ctx.rol;
+          
+          const rolNormalizado = ctx.rol.toLowerCase();
+          if (rolNormalizado === 'administrador' || rolNormalizado === 'admin' || rolNormalizado === 'directivo general') {
+            document.getElementById('nav-usuarios-container').classList.remove('d-none');
+          }
+          
+          // URLs estáticas en Node.js
+          urls = {
+            dashboard: "/dashboard.html",
+            evaluaciones: "/evaluaciones.html",
+            calendario: "/calendario.html",
+            horarios: "/horarios.html",
+            recursos: "/recursos.html",
+            usuarios: "/usuarios.html"
+          };
+          fetch('/api/perfil/preferencias').then(r=>r.json()).then(pref => {
+               const defaultTab = pref.default_tab || 'dashboard';
+               const navBtn = document.getElementById('nav-' + defaultTab);
+               if (navBtn) navBtn.click();
+               else document.getElementById('nav-dashboard').click();
+            });
+        }).catch(err => {
+          // Si no está autenticado, redirigir al login (o Auth de Google)
+          window.location.href = '/login.html';
+        });
+
+    });
+
+    function loadApp(appName, element) {
+      if (!urls[appName]) return;
+      document.getElementById('appFrame').src = urls[appName];
+      document.querySelectorAll('.nav-link').forEach(el => el.classList.remove('active'));
+      element.classList.add('active');
+    }
+  </script>
+
+  <!-- Modal Perfil Preferencias -->
+  <div class="modal fade" id="modalPerfil" tabindex="-1">
+    <div class="modal-dialog">
+      <div class="modal-content">
+        <div class="modal-header">
+          <h5 class="modal-title fw-bold"><i class="bi bi-person-gear"></i> Mi Perfil y Preferencias</h5>
+          <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+        </div>
+        <div class="modal-body">
+          <h6 class="fw-bold mb-3 mt-3"><i class="bi bi-shield-lock"></i> Acceso de Emergencia (Sin Internet)</h6>
+            <div class="mb-4">
+              <label class="form-label small">PIN Maestro Local</label>
+              <input type="password" id="inputPinLocal" class="form-control form-control-sm" placeholder="1234">
+              <small class="text-muted">Con este PIN podrás ingresar desde cualquier red local si falla Google.</small>
+            </div>
+            <h6 class="fw-bold mb-3 mt-1"><i class="bi bi-pin-angle"></i> Pestaña de Inicio</h6>
+            <div class="mb-4">
+              <select class="form-select" id="selectPrefTab">
+                 <option value="dashboard">Inicio / Muro</option>
+                 <option value="evaluaciones">Calendario de Pruebas</option>
+                 <option value="calendario">Calendario Académico</option>
+                 <option value="horarios">Visor de Horarios</option>
+                 <option value="recursos">Reserva de Recursos</option>
+              </select>
+              <small class="text-muted">Esta pestaña se abrirá automáticamente al iniciar sesión.</small>
+            </div>
+            
+            <h6 class="fw-bold mb-3">Notificaciones por Correo</h6>
+          <div class="form-check mb-2">
+            <input class="form-check-input" type="checkbox" id="chkPrefReserva">
+            <label class="form-check-label small">Enviarme confirmación al guardar una Reserva de Recursos</label>
+          </div>
+          <div class="form-check mb-2">
+            <input class="form-check-input" type="checkbox" id="chkPrefEdicion">
+            <label class="form-check-label small">Avisarme si un Admin edita/cancela mis reservas</label>
+          </div>
+          <div class="form-check mb-2">
+            <input class="form-check-input" type="checkbox" id="chkPrefRecordatorio">
+            <label class="form-check-label small">Recordatorio 24hrs antes de una evaluación</label>
+          </div>
+          <div class="form-check mb-4">
+            <input class="form-check-input" type="checkbox" id="chkPrefAviso">
+            <label class="form-check-label small">Notificarme por correo de Avisos de Alta Importancia</label>
+          </div>
+          <button class="btn btn-primary w-100" onclick="guardarPreferencias()">Guardar Configuración</button>
+        </div>
+      </div>
+    </div>
+  </div>
+  <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+
+
+  <script>
+    let modalPerfilObj;
+    function abrirPerfil() {
+        if(!modalPerfilObj) modalPerfilObj = new bootstrap.Modal(document.getElementById('modalPerfil'));
+        fetch('/api/perfil/preferencias').then(r=>r.json()).then(data => {
+            document.getElementById('chkPrefReserva').checked = data.nueva_reserva;
+            document.getElementById('chkPrefEdicion').checked = data.edicion_admin;
+            document.getElementById('chkPrefRecordatorio').checked = data.recordatorio_eval;
+            document.getElementById('chkPrefAviso').checked = data.nuevo_aviso;
+            document.getElementById('selectPrefTab').value = data.default_tab || 'dashboard';
+            document.getElementById('inputPinLocal').value = data.pin_actual || '';
+            modalPerfilObj.show();
+        });
+    }
+
+    function guardarPreferencias() {
+        const pref = {
+            nueva_reserva: document.getElementById('chkPrefReserva').checked,
+            edicion_admin: document.getElementById('chkPrefEdicion').checked,
+            recordatorio_eval: document.getElementById('chkPrefRecordatorio').checked,
+            nuevo_aviso: document.getElementById('chkPrefAviso').checked,
+            default_tab: document.getElementById('selectPrefTab').value
+        };
+        fetch('/api/perfil/preferencias', {
+            method: 'PUT',
+            headers: {'Content-Type': 'application/json'},
+            body: JSON.stringify({preferencias: pref})
+        }).then(r=>r.json()).then(data => {
+            modalPerfilObj.hide();
+            Swal.fire('Guardado', data.message, 'success');
+        });
+    }
+  </script>
+</body>
+</html>

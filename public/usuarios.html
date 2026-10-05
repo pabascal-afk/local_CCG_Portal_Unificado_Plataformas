@@ -1,0 +1,363 @@
+﻿<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <title>Gestión de Usuarios (RBAC)</title>
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.10.5/font/bootstrap-icons.css">
+  <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+  <style>
+    body { background-color: #f8f9fa; font-family: 'Inter', sans-serif; padding: 20px; }
+    .card { border-radius: 10px; border: none; box-shadow: 0 4px 12px rgba(0,0,0,0.05); }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <div class="d-flex justify-content-between align-items-center mb-4">
+      <h2 class="fw-bold">Gestión de Usuarios (RBAC)</h2>
+      <button class="btn btn-outline-secondary fw-bold me-2" onclick="abrirModalRoles()"><i class="bi bi-shield-lock"></i> Gestionar Roles</button>
+      <button class="btn btn-primary fw-bold" onclick="abrirModal()">+ Nuevo Usuario</button>
+    </div>
+
+    <div class="card p-3">
+      <table class="table table-hover align-middle">
+        <thead class="table-light">
+          <tr>
+            <th>Nombre</th>
+            <th>Email</th>
+            <th>Rol</th>
+            <th class="text-end">Acciones</th>
+          </tr>
+        </thead>
+        <tbody id="tablaUsuarios">
+          <tr><td colspan="4" class="text-center">Cargando usuarios...</td></tr>
+        </tbody>
+      </table>
+    </div>
+  </div>
+
+  <!-- Modal -->
+  <div class="modal fade" id="modalUser" tabindex="-1">
+    <div class="modal-dialog">
+      <div class="modal-content">
+        <div class="modal-header bg-primary text-white border-0">
+          <h5 class="modal-title fw-bold">Usuario</h5>
+          <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+        </div>
+        <form onsubmit="guardarUsuario(event)">
+          <div class="modal-body">
+            <div class="mb-3">
+              <label class="form-label">Email</label>
+              <input type="email" id="inEmail" class="form-control" required>
+            </div>
+            <div class="mb-3">
+              <label class="form-label">Nombre Completo</label>
+              <input type="text" id="inNombre" class="form-control" required>
+            </div>
+            <div class="mb-3">
+              <label class="form-label">Rol</label>
+              <select id="inRol" class="form-select" required>
+                <option value="Profesor">Profesor (Base)</option>
+                <option value="Coordinación Pedagógica">Coordinación Pedagógica</option>
+                <option value="Convivencia Escolar">Convivencia Escolar</option>
+                <option value="Directivo General">Directivo General</option>
+                <option value="Administrador">Administrador</option>
+              </select>
+            </div>
+          </div>
+          <div class="modal-footer border-0">
+            <button type="submit" class="btn btn-primary w-100" id="btnGuardar">Guardar</button>
+          </div>
+        </form>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    let modalEl;
+    
+    let rolesConfigCache = [];
+    
+    async function cargarRolesGlobales() {
+        const res = await fetch('/api/roles');
+        rolesConfigCache = await res.json();
+        
+        // Popular el select de roles en el modal de usuario
+        const select = document.getElementById('inRol');
+        const valAnterior = select.value;
+        select.innerHTML = '';
+        rolesConfigCache.forEach(r => {
+            select.innerHTML += `<option value="${r.nombre}">${r.nombre}</option>`;
+        });
+        if (valAnterior) select.value = valAnterior;
+    }
+    
+    function abrirModalRoles() {
+        renderListaRoles();
+        nuevoRol();
+        new bootstrap.Modal(document.getElementById('modalRoles')).show();
+    }
+    
+    function renderListaRoles() {
+        const ul = document.getElementById('listaRoles');
+        ul.innerHTML = '';
+        rolesConfigCache.forEach(r => {
+            ul.innerHTML += `<li class="list-group-item list-group-item-action d-flex justify-content-between align-items-center" style="cursor:pointer;" onclick="editarRol(${r.id})">
+                ${r.nombre}
+                <button class="btn btn-sm btn-outline-danger py-0 px-1" onclick="eliminarRol(event, ${r.id})">X</button>
+            </li>`;
+        });
+    }
+    
+    function nuevoRol() {
+        document.getElementById('idRolEditar').value = '';
+        document.getElementById('inNombreRol').value = '';
+        document.getElementById('chkGestUsuarios').checked = false;
+        document.getElementById('chkExportar').checked = false;
+        document.getElementById('chkApagar').checked = false;
+        document.getElementById('chkMalla').checked = false;
+        document.getElementById('chkLaboratorios').checked = false;
+        document.getElementById('chkBloqRecursos').checked = false;
+        document.getElementById('chkBloqDias').checked = false;
+        document.getElementById('inCategorias').value = '';
+        document.getElementById('tituloEdicionRol').innerText = 'Nuevo Rol';
+    }
+    
+    function editarRol(id) {
+        const r = rolesConfigCache.find(x => x.id === id);
+        if(!r) return;
+        document.getElementById('idRolEditar').value = r.id;
+        document.getElementById('inNombreRol').value = r.nombre;
+        document.getElementById('tituloEdicionRol').innerText = 'Editar Rol';
+        
+        let p = { esAdminGeneral: false, puedeAgendarSinRestricciones: false };
+        try { p = JSON.parse(r.permisos); } catch(e){}
+        
+        document.getElementById('chkGestUsuarios').checked = p.gestionarUsuarios || false;
+        document.getElementById('chkExportar').checked = p.exportarBD || false;
+        document.getElementById('chkApagar').checked = p.apagarSistema || false;
+        document.getElementById('chkMalla').checked = p.ignorarMalla || false;
+        document.getElementById('chkLaboratorios').checked = p.pedirLaboratorios || false;
+        document.getElementById('chkBloqRecursos').checked = p.bloquearRecursos || false;
+        document.getElementById('chkBloqDias').checked = p.bloquearDias || false;
+        document.getElementById('inCategorias').value = p.categorias || '';
+    }
+    
+    async function guardarRol(e) {
+        e.preventDefault();
+        const id = document.getElementById('idRolEditar').value;
+        const nombre = document.getElementById('inNombreRol').value;
+        const permisos = {
+            gestionarUsuarios: document.getElementById('chkGestUsuarios').checked,
+            exportarBD: document.getElementById('chkExportar').checked,
+            apagarSistema: document.getElementById('chkApagar').checked,
+            ignorarMalla: document.getElementById('chkMalla').checked,
+            pedirLaboratorios: document.getElementById('chkLaboratorios').checked,
+            bloquearRecursos: document.getElementById('chkBloqRecursos').checked,
+            bloquearDias: document.getElementById('chkBloqDias').checked,
+            categorias: document.getElementById('inCategorias').value
+        };
+        
+        if (id) {
+            await fetch('/api/roles/' + id, { method: 'PUT', headers: {'Content-Type':'application/json'}, body: JSON.stringify({ nombre, permisos }) });
+        } else {
+            await fetch('/api/roles', { method: 'POST', headers: {'Content-Type':'application/json'}, body: JSON.stringify({ nombre, permisos }) });
+        }
+        
+        await cargarRolesGlobales();
+        renderListaRoles();
+        nuevoRol();
+        Swal.fire('Guardado', 'Rol actualizado con éxito', 'success');
+    }
+    
+    async function eliminarRol(e, id) {
+        e.stopPropagation();
+        if(confirm('¿Estás seguro de eliminar este rol?')) {
+            await fetch('/api/roles/' + id, { method: 'DELETE' });
+            await cargarRolesGlobales();
+            renderListaRoles();
+            nuevoRol();
+        }
+    }
+
+    document.addEventListener('DOMContentLoaded', async () => {
+      modalEl = new bootstrap.Modal(document.getElementById('modalUser'));
+      await cargarRolesGlobales();
+      cargarUsuarios();
+    });
+
+    function cargarUsuarios() {
+      
+      fetch('/api/usuarios')
+        .then(res => res.json())
+        .then(data => {
+          const tbody = document.getElementById('tablaUsuarios');
+          tbody.innerHTML = '';
+          data.forEach(u => {
+            let tr = document.createElement('tr');
+            tr.innerHTML = `
+              <td class="fw-semibold">${u.nombre}</td>
+              <td class="text-muted">${u.email}</td>
+              <td><span class="badge bg-secondary">${u.rol}</span></td>
+              <td class="text-end">
+                <button class="btn btn-sm btn-outline-primary me-2" onclick="editar('${u.email}', '${u.nombre}', '${u.rol}')"><i class="bi bi-pencil"></i></button>
+                <button class="btn btn-sm btn-outline-danger" onclick="eliminar('${u.email}')"><i class="bi bi-trash"></i></button>
+              </td>
+            `;
+            tbody.appendChild(tr);
+          });
+        })
+        .catch(err => {
+          document.getElementById('tablaUsuarios').innerHTML = `<tr><td colspan="4" class="text-danger">${err.message}</td></tr>`;
+        });
+
+    }
+
+    function abrirModal() {
+      document.getElementById('inEmail').value = '';
+      document.getElementById('inEmail').disabled = false;
+      document.getElementById('inNombre').value = '';
+      document.getElementById('inRol').value = 'Profesor';
+      modalEl.show();
+    }
+
+    function editar(email, nombre, rol) {
+      document.getElementById('inEmail').value = email;
+      document.getElementById('inEmail').disabled = true; // No permitir cambiar email
+      document.getElementById('inNombre').value = nombre;
+      document.getElementById('inRol').value = rol;
+      modalEl.show();
+    }
+
+    function guardarUsuario(e) {
+      e.preventDefault();
+      const btn = document.getElementById('btnGuardar');
+      btn.disabled = true;
+      btn.innerText = 'Guardando...';
+      
+      const email = document.getElementById('inEmail').value;
+      const nombre = document.getElementById('inNombre').value;
+      const rol = document.getElementById('inRol').value;
+      
+      
+      fetch('/api/usuarios', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ email, rol, nombre })
+      })
+      .then(res => res.json())
+      .then(data => {
+         modalEl.hide();
+         btn.disabled = false;
+         btn.innerText = 'Guardar';
+         Swal.fire('Éxito', data.message || 'Guardado', 'success');
+         cargarUsuarios();
+      })
+      .catch(err => {
+         btn.disabled = false;
+         btn.innerText = 'Guardar';
+         Swal.fire('Error', err.message, 'error');
+      });
+
+    }
+
+    function eliminar(email) {
+      Swal.fire({
+        title: '¿Eliminar usuario?',
+        text: email,
+        icon: 'warning',
+        showCancelButton: true,
+        confirmButtonText: 'Sí, eliminar',
+        cancelButtonText: 'Cancelar'
+      }).then((result) => {
+        if(result.isConfirmed) {
+          
+          fetch('/api/usuarios/' + encodeURIComponent(email), { method: 'DELETE' })
+            .then(res => res.json())
+            .then(data => {
+              Swal.fire('Eliminado', '', 'success');
+              cargarUsuarios();
+            });
+
+        }
+      });
+    }
+  </script>
+
+  <!-- Modal Roles -->
+  <div class="modal fade" id="modalRoles" tabindex="-1">
+    <div class="modal-dialog modal-lg">
+      <div class="modal-content">
+        <div class="modal-header bg-dark text-white">
+          <h5 class="modal-title fw-bold">Gestión de Roles y Permisos</h5>
+          <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+        </div>
+        <div class="modal-body">
+          <div class="row">
+            <div class="col-md-5 border-end">
+              <h6>Roles Actuales</h6>
+              <ul class="list-group list-group-sm" id="listaRoles"></ul>
+              <button class="btn btn-sm btn-success w-100 mt-2" onclick="nuevoRol()">+ Crear Nuevo Rol</button>
+            </div>
+            <div class="col-md-7">
+              <h6 id="tituloEdicionRol">Editar Rol</h6>
+              <form id="formRol" onsubmit="guardarRol(event)">
+                <input type="hidden" id="idRolEditar">
+                <div class="mb-2">
+                  <label class="form-label small fw-bold">Nombre del Rol</label>
+                  <input type="text" id="inNombreRol" class="form-control form-control-sm" required>
+                </div>
+                
+                <div class="mb-3" style="max-height: 400px; overflow-y: auto;">
+                  <h6 class="fw-bold text-primary border-bottom pb-1 mb-2 mt-2">1. Panel de Administración</h6>
+                  <div class="form-check">
+                    <input class="form-check-input" type="checkbox" id="chkGestUsuarios">
+                    <label class="form-check-label small" for="chkGestUsuarios">Gestionar Usuarios y Roles</label>
+                  </div>
+                  <div class="form-check">
+                    <input class="form-check-input" type="checkbox" id="chkExportar">
+                    <label class="form-check-label small" for="chkExportar">Exportar y Administrar Bases de Datos</label>
+                  </div>
+                  <div class="form-check mb-2">
+                    <input class="form-check-input" type="checkbox" id="chkApagar">
+                    <label class="form-check-label small" for="chkApagar">Apagar/Cerrar el Sistema Globalmente</label>
+                  </div>
+                  
+                  <h6 class="fw-bold text-success border-bottom pb-1 mb-2">2. Reservas y Evaluaciones</h6>
+                  <div class="form-check">
+                    <input class="form-check-input" type="checkbox" id="chkMalla">
+                    <label class="form-check-label small" for="chkMalla">Ignorar la Malla Curricular (Cualquier ramo y día)</label>
+                  </div>
+                  <div class="form-check">
+                    <input class="form-check-input" type="checkbox" id="chkLaboratorios">
+                    <label class="form-check-label small" for="chkLaboratorios">Pedir Laboratorios sin restricción docente</label>
+                  </div>
+                  <div class="form-check mb-2">
+                    <input class="form-check-input" type="checkbox" id="chkBloqRecursos">
+                    <label class="form-check-label small" for="chkBloqRecursos">Inhabilitar temporalmente un recurso</label>
+                  </div>
+
+                  <h6 class="fw-bold text-danger border-bottom pb-1 mb-2">3. Calendario Académico Institucional</h6>
+                  <div class="form-check">
+                    <input class="form-check-input" type="checkbox" id="chkBloqDias">
+                    <label class="form-check-label small" for="chkBloqDias">Bloquear fechas y evaluaciones del colegio</label>
+                  </div>
+                  <div class="mt-2">
+                    <label class="form-label small fw-bold mb-1">Categorías de eventos permitidas:</label>
+                    <input type="text" id="inCategorias" class="form-control form-control-sm" placeholder="Ej: Convivencia Escolar (Usa * para todas)">
+                    <small class="text-muted d-block" style="font-size: 10px;">Si se deja en blanco, no podrá crear eventos en el calendario grande.</small>
+                  </div>
+                </div>
+                <button type="submit" class="btn btn-primary btn-sm w-100">Guardar Rol</button>
+
+              </form>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+</body>
+</html>

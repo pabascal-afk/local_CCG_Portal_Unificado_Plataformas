@@ -1,0 +1,864 @@
+﻿<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <title>Reserva de Recursos</title>
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.10.5/font/bootstrap-icons.css">
+  <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+  <script src="https://cdn.jsdelivr.net/npm/fullcalendar@6.1.8/index.global.min.js"></script>
+  
+  <style>
+    body { background-color: #f8f9fa; padding: 20px; font-family: 'Inter', sans-serif; }
+    #calendar { background: white; padding: 20px; border-radius: 8px; box-shadow: 0 4px 12px rgba(0,0,0,0.05); }
+    .fc-event { cursor: pointer; }
+    .nav-tabs .nav-link { font-weight: bold; color: #495057; }
+    .nav-tabs .nav-link.active { color: #0d6efd; border-bottom: 3px solid #0d6efd; }
+    .fc-bg-event { opacity: 0.2; }
+    .evento-disponible { border: 1px dashed #0f5132 !important; font-size: 0.8em; text-align: center; }
+    .evento-disponible:hover { background-color: rgba(15, 81, 50, 0.1) !important; }
+  </style>
+</head>
+<body>
+
+  <div class="container-fluid">
+    <div class="d-flex justify-content-between align-items-center mb-3">
+      <h2 class="fw-bold"><i class="bi bi-pc-display-horizontal"></i> Gestión de Recursos</h2>
+      <div>
+        <button class="btn btn-outline-secondary fw-bold me-2" onclick="abrirConfiguracion()"><i class="bi bi-gear"></i> Configurar</button>
+        <button class="btn btn-primary fw-bold" onclick="abrirModalReserva()"><i class="bi bi-plus-lg"></i> Reservar</button>
+      </div>
+    </div>
+    
+    <ul class="nav nav-tabs mb-4" id="tabsRecursos"></ul>
+    <div id="calendar"></div>
+  </div>
+
+  <div class="modal fade" id="modalReserva" tabindex="-1">
+    <div class="modal-dialog">
+      <div class="modal-content border-0 shadow-lg">
+        <div class="modal-header bg-primary text-white border-0">
+          <h5 class="modal-title fw-semibold">Nueva Reserva</h5>
+          <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+        </div>
+        <form id="formReserva" onsubmit="guardarReserva(event)">
+          <div class="modal-body bg-light">
+            <div class="mb-3">
+              <label class="fw-medium">Fecha</label>
+              <input type="date" id="inFecha" class="form-control" required onchange="cargarMisClases(); filtrarBloquesPorDia();">
+            </div>
+            <div class="mb-3">
+              <label class="fw-medium">Mis Clases de hoy (Para cruzar datos)</label>
+              <select class="form-select" id="inClaseCruzada" onchange="autocompletarDesdeClase()">
+                 <option value="">-- No vincular a una clase (Uso general) --</option>
+              </select>
+            </div>
+            <div class="mb-3">
+              <label class="fw-medium">Recurso a reservar</label>
+              <select class="form-select" id="inRecurso" required disabled></select>
+            </div>
+            <div class="mb-3">
+              <label class="fw-medium">Bloques (Presiona Ctrl para múltiples y Shift para aislar un bloque de 45 mins)</label>
+              <select class="form-select" id="inBloques" multiple size="5" required onchange="agruparBloques()"></select>
+            </div>
+            <div class="mb-3">
+              <label class="fw-medium">Motivo / Actividad</label>
+              <input type="text" id="inMotivo" class="form-control" placeholder="Ej: Clase de Tecnología - 1A" required>
+            </div>
+          </div>
+          <div class="modal-footer border-0 bg-light">
+            <button type="submit" class="btn btn-primary w-100 fw-semibold" id="btnGuardar">Guardar Reserva</button>
+          </div>
+        </form>
+      </div>
+    </div>
+  </div>
+
+  <div class="modal fade" id="modalDisp" tabindex="-1">
+    <div class="modal-dialog modal-lg">
+      <div class="modal-content">
+        <div class="modal-header bg-dark text-white">
+          <h5 class="modal-title fw-bold">Configuración: <span id="dispNombre"></span></h5>
+          <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+        </div>
+        <div class="modal-body">
+          <h6>Matriz de Disponibilidad de Horarios</h6>
+          <p class="text-muted small mb-2">Desmarca los bloques en los que este recurso NO puede ser reservado.</p>
+          <table class="table table-bordered text-center table-sm mb-4">
+            <thead>
+              <tr><th>Bloque</th><th>Lunes</th><th>Martes</th><th>Miércoles</th><th>Jueves</th><th>Viernes</th></tr>
+            </thead>
+            <tbody id="dispBody"></tbody>
+          </table>
+
+          <h6>Agrupación de Bloques</h6>
+          <p class="text-muted small mb-2">Escribe las parejas de bloques que se reservan juntos (ej. 1,2 | 3,4 | 5,6). Separa cada grupo con la barra vertical |.</p>
+          <input type="text" id="dispAgrupados" class="form-control" placeholder="Ej: 1,2 | 3,4 | 5,6">
+          <h6 class="mt-3">Horarios Exactos de Inicio</h6>
+          <p class="text-muted small mb-2">Escribe a qué hora comienza cada bloque, separado por comas (formato XX:XX). El número de horas que ingreses definirá la cantidad total de bloques por día (ej. si ingresas 6 horas, habrán 6 bloques).</p>
+          <input type="text" id="dispHorarios" class="form-control" placeholder="08:00, 08:45, 09:30...">
+          
+          <h6 class="mt-4 text-danger"><i class="bi bi-calendar-x"></i> Bloqueos de Fechas (Inhabilitar recurso)</h6>
+          <p class="text-muted small mb-2">Selecciona un rango de fechas donde nadie podrá reservar este recurso.</p>
+          <div class="d-flex gap-1 mb-2">
+            <input type="date" id="bloqInicio" class="form-control form-control-sm" title="Desde">
+            <input type="date" id="bloqFin" class="form-control form-control-sm" title="Hasta">
+            <input type="text" id="bloqMotivo" class="form-control form-control-sm" placeholder="Motivo">
+            <button class="btn btn-sm btn-danger fw-bold" onclick="agregarBloqueoDisp()">Bloquear</button>
+          </div>
+          <ul id="listaBloqueosFechas" class="list-group list-group-sm mb-3"></ul>
+
+          <button class="btn btn-primary w-100 mt-4" onclick="guardarDisponibilidad()">Guardar Configuración</button>
+          <button class="btn btn-outline-danger w-100 mt-2 fw-bold" onclick="eliminarRecursoDefinitivo()"><i class="bi bi-trash"></i> Eliminar este Recurso</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="modal fade" id="modalConfig" tabindex="-1">
+    <div class="modal-dialog">
+      <div class="modal-content">
+        <div class="modal-header bg-dark text-white">
+          <h5 class="modal-title fw-bold">Gestión de Recursos</h5>
+          <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+        </div>
+        <div class="modal-body">
+          <h6>Agregar Nuevo Recurso</h6>
+          <form onsubmit="guardarNuevoRecurso(event)">
+            <div class="mb-2"><input type="text" id="confNombre" class="form-control form-control-sm" placeholder="Nombre" required></div>
+            <div class="mb-2"><input type="text" id="confResp" class="form-control form-control-sm" placeholder="Responsable (Email)" required></div>
+            <button type="submit" class="btn btn-sm btn-success w-100">Añadir Recurso</button>
+          </form>
+          <hr>
+          <h6>Recursos Actuales</h6>
+          <ul class="list-group list-group-sm" id="listaRecursosConf"></ul>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <script>
+
+    let isShiftPressed = false;
+    document.addEventListener('keydown', e => { if(e.key === 'Shift') isShiftPressed = true; });
+    document.addEventListener('keyup', e => { if(e.key === 'Shift') isShiftPressed = false; });
+
+    let calendar;
+    let modalRes;
+    let modalConfig;
+    let modalDisp;
+    let recursosCache = [];
+    let recursoActual = null;
+    let todasReservas = [];
+      let eventosInstitucionales = [];
+    let usuarioActivo = null;
+    let dispIdActivo = null;
+    let bloqueosActuales = [];
+
+    function agregarBloqueoDisp() {
+        const i = document.getElementById('bloqInicio').value;
+        const f = document.getElementById('bloqFin').value;
+        const m = document.getElementById('bloqMotivo').value;
+        if(!i || !f || !m) { alert('Llena todos los campos'); return; }
+        if(new Date(i) > new Date(f)) { alert('Fecha inicio no puede ser mayor a fin'); return; }
+        
+        bloqueosActuales.push({ inicio: i, fin: f, motivo: m });
+        renderizarBloqueosDisp();
+        document.getElementById('bloqInicio').value = '';
+        document.getElementById('bloqFin').value = '';
+        document.getElementById('bloqMotivo').value = '';
+    }
+    
+    function removerBloqueoDisp(index) {
+        bloqueosActuales.splice(index, 1);
+        renderizarBloqueosDisp();
+    }
+    
+    function renderizarBloqueosDisp() {
+        const ul = document.getElementById('listaBloqueosFechas');
+        ul.innerHTML = '';
+        bloqueosActuales.forEach((b, idx) => {
+            ul.innerHTML += `<li class="list-group-item d-flex justify-content-between text-danger fw-semibold bg-light">
+                <span>${b.inicio} a ${b.fin} - ${b.motivo}</span>
+                <button class="btn btn-sm btn-outline-secondary py-0 px-1" onclick="removerBloqueoDisp(${idx})">X</button>
+            </li>`;
+        });
+    }
+    let diasSemana = ['lunes', 'martes', 'miercoles', 'jueves', 'viernes'];
+
+    document.addEventListener('DOMContentLoaded', async function() {
+      modalRes = new bootstrap.Modal(document.getElementById('modalReserva'));
+      modalConfig = new bootstrap.Modal(document.getElementById('modalConfig'));
+      modalDisp = new bootstrap.Modal(document.getElementById('modalDisp'));
+      
+      try {
+        const u = await fetch('/api/auth/me').then(r=>r.json());
+        usuarioActivo = u;
+      } catch(e) {}
+
+      await cargarRecursosConfig();
+      
+      const calendarEl = document.getElementById('calendar');
+      calendar = new FullCalendar.Calendar(calendarEl, {
+        initialView: 'timeGridWeek',
+        locale: 'es',
+        headerToolbar: { left: 'prev,next today', center: 'title', right: 'timeGridWeek,timeGridDay' },
+        buttonText: { today: 'Hoy', week: 'Semana', day: 'Día' },
+        slotMinTime: "07:30:00",
+        slotMaxTime: "18:00:00",
+        slotDuration: "00:15:00",
+        slotLabelInterval: "01:00:00",
+        allDaySlot: false,
+        hiddenDays: [0, 6], // Ocultar domingos y sabados
+        events: function(info, successCallback, failureCallback) {
+            const evs = generarEventosDinamicos(info.start, info.end);
+            successCallback(evs);
+        },
+        dateClick: function(info) {
+          
+
+          // Es calendario de recursos (tiene horas) o calendario academico (no tiene horas)?
+          // Si tiene info.date, podemos ver la hora
+          const d = info.date;
+          const fechaStr = new Date(d.getTime() - (d.getTimezoneOffset() * 60000)).toISOString().split('T')[0];
+          
+          if (!info.dateStr.includes('T')) {
+              // Calendario mes
+              abrirModalReserva(fechaStr);
+              return;
+          }
+
+          // Calendario de recursos (TimeGrid)
+          abrirModalReserva(fechaStr);
+          
+          // Buscar en qué bloque hizo click basándonos en la hora (ej: 08:15:00)
+          const hrClicked = d.getHours();
+          const minClicked = d.getMinutes();
+          const totalMinsClicked = hrClicked * 60 + minClicked;
+
+          setTimeout(() => {
+              const sel = document.getElementById('inBloques');
+              if(!sel) return;
+              
+              for(let i=0; i<sel.options.length; i++) {
+                  const val = parseInt(sel.options[i].value);
+                  // Usamos la misma logica de hrString2 para extraer las horas
+                  const rActual = recursosCache.find(x => x.nombre === recursoActual);
+                  const hrString = (rActual && rActual.horarios_exactos) ? rActual.horarios_exactos : '08:00,08:45,09:30,10:15,11:00,11:45,12:30,13:15,14:00,14:45,15:30,16:15';
+                  const arr = hrString.split(',');
+                  
+                  let blockStartMins = 0;
+                  if(val >= 1 && val <= arr.length) {
+                      const pts = arr[val-1].split(':');
+                      blockStartMins = parseInt(pts[0]) * 60 + parseInt(pts[1] || '0');
+                  } else {
+                      blockStartMins = 8 * 60 + (val - 1) * 45;
+                  }
+
+                  const blockEndMins = blockStartMins + 45;
+                  
+                  if (totalMinsClicked >= blockStartMins && totalMinsClicked < blockEndMins) {
+                      if (!sel.options[i].disabled) {
+                          sel.options[i].selected = true;
+                      }
+                  } else {
+                      sel.options[i].selected = false;
+                  }
+              }
+              if (!info.jsEvent || !info.jsEvent.shiftKey) { agruparBloques(); }
+          }, 200);
+        },
+        eventClick: function(info) {
+          if (info.event.display === 'background') return;
+          
+          if (info.event.extendedProps.esDisponible) {
+              const d = info.event.start;
+              const fechaStr = new Date(d.getTime() - (d.getTimezoneOffset() * 60000)).toISOString().split('T')[0];
+              abrirModalReserva(fechaStr);
+              setTimeout(() => {
+                  const sel = document.getElementById('inBloques');
+                  for(let i=0; i<sel.options.length; i++) {
+                      if (parseInt(sel.options[i].value) === info.event.extendedProps.bloque) {
+                          sel.options[i].selected = true;
+                      } else {
+                          sel.options[i].selected = false;
+                      }
+                  }
+                  if (!info.jsEvent || !info.jsEvent.shiftKey) { agruparBloques(); }
+                }, 200);
+                return;
+            }
+
+          if (info.event.extendedProps.esReserva) {
+              Swal.fire({
+                title: info.event.title,
+                html: `<b>Reservado por:</b> ${info.event.extendedProps.profesor}<br><b>Motivo:</b> ${info.event.extendedProps.motivo}`,
+                icon: 'info',
+                showCancelButton: true,
+                confirmButtonText: 'Eliminar Reserva',
+                cancelButtonText: 'Cerrar',
+                confirmButtonColor: '#d33'
+              }).then((result) => {
+                if (result.isConfirmed) {
+                  eliminarReserva(info.event.id);
+                }
+              });
+          }
+        }
+      });
+      calendar.render();
+      cargarReservas();
+    });
+
+    async function cargarRecursosConfig() {
+      const res = await fetch('/api/recursos/config');
+      recursosCache = await res.json();
+      
+      const tabs = document.getElementById('tabsRecursos');
+      const combo = document.getElementById('inRecurso');
+      const listaConf = document.getElementById('listaRecursosConf');
+      
+      tabs.innerHTML = '';
+      combo.innerHTML = '<option value="">-- Selecciona --</option>';
+      listaConf.innerHTML = '';
+
+      if (recursosCache.length > 0 && !recursoActual) {
+         recursoActual = recursosCache[0].nombre;
+      }
+
+      recursosCache.forEach(r => {
+        tabs.innerHTML += `
+          <li class="nav-item">
+            <a class="nav-link ${r.nombre === recursoActual ? 'active' : ''}" href="#" onclick="cambiarTab('${r.nombre}')">${r.nombre}</a>
+          </li>`;
+        
+        combo.innerHTML += `<option value="${r.nombre}">${r.nombre}</option>`;
+        
+        listaConf.innerHTML += `<li class="list-group-item d-flex justify-content-between align-items-center">
+            ${r.nombre} 
+            <div>
+              <span class="badge bg-secondary">${r.responsable}</span>
+              <button class="btn btn-sm btn-outline-primary ms-2 py-0 px-1" onclick="abrirDisp(${r.id}, '${r.nombre}')"><i class="bi bi-gear"></i> Ajustes</button>
+            </div>
+        </li>`;
+      });
+    }
+
+    function cambiarTab(nombre) {
+      recursoActual = nombre;
+      cargarRecursosConfig();
+      filtrarCalendario();
+    }
+
+    function cargarReservas() {
+        Promise.all([
+            fetch('/api/reservas').then(r => r.json()),
+            fetch('/api/rpc/getEventosCalendario', { method: 'POST', headers: {'Content-Type': 'application/json'}, body: JSON.stringify({args:[]}) }).then(r => r.json())
+        ]).then(([reservas, eventosResp]) => {
+            todasReservas = reservas;
+            if (eventosResp && eventosResp.result) {
+                eventosInstitucionales = eventosResp.result.filter(e => e.extendedProps.esInstitucional);
+            }
+            filtrarCalendario();
+        });
+      }
+
+    function filtrarCalendario() {
+      calendar.refetchEvents();
+    }
+
+    function generarEventosDinamicos(viewStart, viewEnd) {
+      const eventos = [];
+      const rActual = recursosCache.find(x => x.nombre === recursoActual);
+      if(!rActual) return [];
+      
+      let disp = null;
+      if (rActual.disponibilidad) {
+          try { disp = JSON.parse(rActual.disponibilidad); } catch(e){}
+      }
+
+      const hrString = rActual.horarios_exactos || '08:00,08:45,09:30,10:15,11:00,11:45,12:30,13:15,14:00,14:45,15:30,16:15';
+      const arrHoras = hrString.split(',');
+        const totalB = arrHoras.length;
+      function getHoras(bIndex) {
+         let startH = '00', startM = '00';
+         if(bIndex >= 1 && bIndex <= arrHoras.length) {
+            const pts = arrHoras[bIndex-1].split(':');
+            startH = pts[0]; startM = pts[1] || '00';
+         } else {
+            const totalMins = 8 * 60 + (bIndex - 1) * 45;
+            startH = Math.floor(totalMins / 60).toString().padStart(2,'0');
+            startM = (totalMins % 60).toString().padStart(2,'0');
+         }
+         const minEnd = parseInt(startH) * 60 + parseInt(startM) + 45;
+         const endH = Math.floor(minEnd / 60).toString().padStart(2,'0');
+         const endM = (minEnd % 60).toString().padStart(2,'0');
+         return { start: `${startH}:${startM}:00`, end: `${endH}:${endM}:00` };
+      }
+
+      const mappingDias = ['domingo', 'lunes', 'martes', 'miercoles', 'jueves', 'viernes', 'sabado'];
+
+      // Iterar sobre cada dia visible en el calendario
+      let current = new Date(viewStart);
+      while(current < viewEnd) {
+          const dowIndex = current.getDay();
+          const dStr = mappingDias[dowIndex];
+          const currFechaStr = new Date(current.getTime() - (current.getTimezoneOffset() * 60000)).toISOString().split('T')[0];
+
+          if (dowIndex !== 0 && dowIndex !== 6) {
+              let permitidos = disp ? (disp[dStr] || []) : Array.from({length: totalB}, (_, i) => i + 1);
+              
+              let bloqueadoDiaCompleto = null;
+              if (rActual.bloqueos_fechas) {
+                  let arr = [];
+                  try { arr = JSON.parse(rActual.bloqueos_fechas); } catch(e){}
+                  for(let bloq of arr) {
+                      if (currFechaStr >= bloq.inicio && currFechaStr <= bloq.fin) {
+                          bloqueadoDiaCompleto = bloq.motivo;
+                          permitidos = [];
+                          break;
+                      }
+                  }
+              }
+              
+              
+                // BLOQUEOS INSTITUCIONALES (EVENTOS)
+                eventosInstitucionales.forEach(evInst => {
+                    // Si tiene un recurso especifico, y no es el recurso actual, ignoramos
+                    if (evInst.extendedProps.recurso && evInst.extendedProps.recurso !== rActual.nombre) return;
+
+                    if (evInst.start === currFechaStr) {
+                        const evtBloques = evInst.extendedProps.bloques;
+                        if (evtBloques === 'TODOS' || !evtBloques) {
+                            bloqueadoDiaCompleto = evInst.title;
+                            permitidos = [];
+                        } else {
+                            const bks = evtBloques.split(',').map(Number);
+                            permitidos = permitidos.filter(b => !bks.includes(b));
+                            
+                            // Visual indication of partial blocks
+                            bks.forEach(bk => {
+                                const hBk = getHoras(bk);
+                                eventos.push({
+                                    start: `${currFechaStr}T${hBk.start}`,
+                                    end: `${currFechaStr}T${hBk.end}`,
+                                    display: 'background',
+                                    color: '#ffc107',
+                                    title: evInst.title
+                                });
+                            });
+                        }
+                    }
+                });
+
+                if (bloqueadoDiaCompleto) {
+                  eventos.push({
+                      start: `${currFechaStr}T08:00:00`,
+                      end: `${currFechaStr}T18:00:00`,
+                      display: 'background',
+                      color: '#ffc107',
+                      title: bloqueadoDiaCompleto
+                  });
+              }
+              for (let b = 1; b <= totalB; b++) {
+                  const hObj = getHoras(b);
+                  
+                  if (!permitidos.includes(b)) {
+                      eventos.push({
+                          start: `${currFechaStr}T${hObj.start}`,
+                          end: `${currFechaStr}T${hObj.end}`,
+                          display: 'background',
+                          color: '#e0e0e0',
+                          title: 'No disponible'
+                      });
+                  } else {
+                      // Revisar si est tomada esta reserva especficamente en este dia y este bloque
+                      const yaTomado = todasReservas.some(r => {
+                          return r.recurso === recursoActual && r.fecha === currFechaStr && r.bloques.split(',').includes(b.toString());
+                      });
+
+                      if (!yaTomado) {
+                          // Generar foreground event interactivo "Bloque Disponible"
+                          eventos.push({
+                              start: `${currFechaStr}T${hObj.start}`,
+                              end: `${currFechaStr}T${hObj.end}`,
+                              title: 'Bloque Disponible',
+                              color: 'transparent',
+                              textColor: '#0f5132',
+                              className: 'evento-disponible',
+                              extendedProps: { esDisponible: true, bloque: b }
+                          });
+                      }
+                  }
+              }
+          }
+          current.setDate(current.getDate() + 1);
+      }
+
+      // 2. DIBUJAR RESERVAS TOMADAS
+      const filtradas = todasReservas.filter(r => r.recurso === recursoActual);
+      filtradas.forEach(r => {
+         const bs = r.bloques.split(',').map(b=>parseInt(b));
+         bs.sort((a,b)=>a-b);
+         const primerB = bs[0];
+         const ultimoB = bs[bs.length-1];
+
+         const hObjStart = getHoras(primerB);
+         const hObjEnd = getHoras(ultimoB);
+
+         eventos.push({
+             id: r.id,
+             title: `B:${r.bloques} - ${r.motivo}`,
+             start: `${r.fecha}T${hObjStart.start}`,
+             end: `${r.fecha}T${hObjEnd.end}`,
+             allDay: false,
+             extendedProps: { profesor: r.profesor_email, motivo: r.motivo, esReserva: true },
+             color: '#0d6efd'
+         });
+      });
+
+      return eventos;
+    }
+    
+    function abrirModalReserva(fecha = null) {
+      document.getElementById('formReserva').reset();
+      if(fecha) {
+         document.getElementById('inFecha').value = fecha;
+      } else {
+         document.getElementById('inFecha').value = new Date().toISOString().split('T')[0];
+      }
+      cargarMisClases();
+      filtrarBloquesPorDia();
+      if (recursoActual) document.getElementById('inRecurso').value = recursoActual;
+      modalRes.show();
+    }
+    
+    function filtrarBloquesPorDia() {
+       const fecha = document.getElementById('inFecha').value;
+       if(!fecha || !recursoActual) return;
+       
+       const r = recursosCache.find(x => x.nombre === recursoActual);
+       let disp = null;
+       if(r && r.disponibilidad) {
+          try { disp = JSON.parse(r.disponibilidad); } catch(e){}
+       }
+       
+       const dObj = new Date(fecha + "T12:00:00");
+       const dayIdx = dObj.getDay();
+       
+       const selectBloques = document.getElementById('inBloques');
+       selectBloques.innerHTML = '';
+       
+       if (dayIdx === 0 || dayIdx === 6) {
+           selectBloques.innerHTML = '<option disabled>Fin de semana</option>';
+           return;
+       }
+
+       if (r && r.bloqueos_fechas) {
+           let arr = [];
+           try { arr = JSON.parse(r.bloqueos_fechas); } catch(e){}
+           for(let bloq of arr) {
+               if (fecha >= bloq.inicio && fecha <= bloq.fin) {
+                   selectBloques.innerHTML = `<option disabled>BLOQUEADO: ${bloq.motivo}</option>`;
+                   return;
+               }
+           }
+       }
+       
+       
+         const hrString2 = (r && r.horarios_exactos) ? r.horarios_exactos : '08:00,08:45,09:30,10:15,11:00,11:45,12:30,13:15,14:00,14:45,15:30,16:15';
+         const arrHoras2 = hrString2.split(',');
+         const diaStr = diasSemana[dayIdx - 1];
+         for(let b=1; b<=arrHoras2.length; b++) {
+          let permitido = true;
+          if (disp && disp[diaStr] && !disp[diaStr].includes(b)) {
+             permitido = false;
+          }
+          
+          // Verificar si ya está tomado
+          const yaTomado = todasReservas.some(res => {
+              return res.recurso === recursoActual && res.fecha === fecha && res.bloques.split(',').includes(b.toString());
+          });
+
+          const hrString2 = (r && r.horarios_exactos) ? r.horarios_exactos : '08:00,08:45,09:30,10:15,11:00,11:45,12:30,13:15,14:00,14:45,15:30,16:15';
+          const arrHoras2 = hrString2.split(',');
+          const startHM = arrHoras2[b-1] || '00:00';
+          if (permitido && !yaTomado) {
+              selectBloques.innerHTML += `<option value="${b}">B${b} (${startHM})</option>`;
+          }
+       }
+    }
+
+    // Nueva función para agrupar bloques automáticamente
+    let _evitandoBucle = false;
+    function agruparBloques() {
+         if (isShiftPressed) return;
+         if (_evitandoBucle) return;
+       const r = recursosCache.find(x => x.nombre === recursoActual);
+       if(!r || !r.bloques_agrupados) return;
+       
+       let grupos = [];
+       try { grupos = JSON.parse(r.bloques_agrupados); } catch(e){}
+       if (grupos.length === 0) return;
+
+       _evitandoBucle = true;
+       const selectBloques = document.getElementById('inBloques');
+       const seleccionadosOriginales = Array.from(selectBloques.selectedOptions).map(opt => parseInt(opt.value));
+       let nuevosSeleccionados = new Set(seleccionadosOriginales);
+
+       seleccionadosOriginales.forEach(b => {
+           grupos.forEach(grupo => {
+               if (grupo.includes(b)) {
+                   grupo.forEach(miembro => nuevosSeleccionados.add(miembro));
+               }
+           });
+       });
+
+       for(let i=0; i<selectBloques.options.length; i++) {
+           const optVal = parseInt(selectBloques.options[i].value);
+           if (nuevosSeleccionados.has(optVal) && !selectBloques.options[i].disabled) {
+               selectBloques.options[i].selected = true;
+           }
+       }
+       _evitandoBucle = false;
+    }
+
+    function abrirDisp(id, nombre) {
+       dispIdActivo = id;
+       document.getElementById('dispNombre').innerText = nombre;
+       
+       const r = recursosCache.find(x => x.id === id);
+       let disp = {};
+       let gruposRaw = "1,2 | 3,4 | 5,6"; // Por defecto sugerencia
+       if(r.disponibilidad) {
+          try { disp = JSON.parse(r.disponibilidad); } catch(e){}
+       }
+       if(r.bloques_agrupados) {
+          try { 
+              const parsed = JSON.parse(r.bloques_agrupados); 
+              if (parsed && parsed.length > 0) {
+                  gruposRaw = parsed.map(g => g.join(',')).join(' | ');
+              } else {
+                  gruposRaw = "";
+              }
+          } catch(e){}
+       }
+       
+       const hrString3 = r.horarios_exactos || '08:00,08:45,09:30,10:15,11:00,11:45,12:30,13:15,14:00,14:45,15:30,16:15';
+         const totalBDisp = hrString3.split(',').length;
+         const body = document.getElementById('dispBody');
+         body.innerHTML = '';
+         for(let b=1; b<=totalBDisp; b++) {
+          let tr = `<tr><td>B${b}</td>`;
+          diasSemana.forEach(d => {
+             let checked = disp[d] ? disp[d].includes(b) : true;
+             tr += `<td><input class="form-check-input disp-chk" type="checkbox" data-dia="${d}" data-bloque="${b}" ${checked ? 'checked' : ''}></td>`;
+          });
+          tr += '</tr>';
+          body.innerHTML += tr;
+       }
+
+       document.getElementById('dispAgrupados').value = gruposRaw;
+       document.getElementById('dispHorarios').value = r.horarios_exactos || '08:00,08:45,09:30,10:15,11:00,11:45,12:30,13:15,14:00,14:45,15:30,16:15';
+       bloqueosActuales = [];
+       if (r.bloqueos_fechas) { try { bloqueosActuales = JSON.parse(r.bloqueos_fechas); } catch(e){} }
+       renderizarBloqueosDisp();
+       modalDisp.show();
+    }
+    
+    function eliminarRecursoDefinitivo() {
+        if(!dispIdActivo) return;
+        const r = recursosCache.find(x => x.id === dispIdActivo);
+        if(!r) return;
+        
+        Swal.fire({
+            title: `¿Eliminar ${r.nombre}?`,
+            text: "Esta acción es irreversible. Se borrará el recurso del sistema y sus reservas futuras podrían quedar huérfanas.",
+            icon: 'warning',
+            showCancelButton: true,
+            confirmButtonColor: '#d33',
+            cancelButtonColor: '#3085d6',
+            confirmButtonText: 'Sí, eliminar',
+            cancelButtonText: 'Cancelar'
+        }).then((result) => {
+            if (result.isConfirmed) {
+                fetch('/api/recursos/config/' + dispIdActivo, { method: 'DELETE' })
+                .then(res => res.json())
+                .then(data => {
+                    Swal.fire('Eliminado', data.message, 'success').then(() => {
+                        window.location.reload();
+                    });
+                });
+            }
+        });
+    }
+
+
+    async function guardarDisponibilidad() {
+       const disp = { lunes:[], martes:[], miercoles:[], jueves:[], viernes:[] };
+       document.querySelectorAll('.disp-chk:checked').forEach(chk => {
+          disp[chk.dataset.dia].push(parseInt(chk.dataset.bloque));
+       });
+
+       const gruposStr = document.getElementById('dispAgrupados').value;
+       const grupos = [];
+       if (gruposStr.trim() !== '') {
+           gruposStr.split('|').forEach(part => {
+               const bks = part.split(',').map(s => parseInt(s.trim())).filter(n => !isNaN(n));
+               if (bks.length > 0) grupos.push(bks);
+           });
+       }
+       
+       await fetch('/api/recursos/config/' + dispIdActivo, {
+          method: 'PUT',
+          headers: {'Content-Type': 'application/json'},
+          body: JSON.stringify({ disponibilidad: disp, bloques_agrupados: grupos, horarios_exactos: document.getElementById('dispHorarios').value.replace(/\s/g,''), bloqueos_fechas: bloqueosActuales })
+       });
+       Swal.fire('Guardado', 'Configuración actualizada', 'success');
+       modalDisp.hide();
+       await cargarRecursosConfig();
+    }
+
+    async function cargarMisClases() {
+       const fecha = document.getElementById('inFecha').value;
+       const selClase = document.getElementById('inClaseCruzada');
+       selClase.innerHTML = '<option value="">-- No vincular a una clase (Uso general) --</option>';
+       
+       if (!fecha || !usuarioActivo) return;
+       
+       const res = await fetch('/api/rpc/getHorariosData', {
+           method: 'POST',
+           headers: {'Content-Type': 'application/json'},
+           body: JSON.stringify({ args: [] })
+       });
+       const data = await res.json();
+       const horarios = data.result || [];
+       
+       const dObj = new Date(fecha + "T12:00:00");
+       const dias = ['Domingo', 'Lunes', 'Martes', 'Miercoles', 'Jueves', 'Viernes', 'Sabado'];
+       const diaSemana = dias[dObj.getDay()];
+       
+       const misClases = horarios.filter(h => 
+           h.Día.toLowerCase().includes(diaSemana.toLowerCase()) && 
+           h.Profesor.toLowerCase().includes(usuarioActivo.nombre.toLowerCase())
+       );
+       
+       misClases.forEach(c => {
+           selClase.innerHTML += `<option value='{"bloque":"${c.Bloque}", "curso":"${c.Curso}", "asig":"${c.Asignatura}"}'>B: ${c.Bloque} - ${c.Curso} (${c.Asignatura})</option>`;
+       });
+    }
+
+    function autocompletarDesdeClase() {
+       const val = document.getElementById('inClaseCruzada').value;
+       if(!val) return;
+       const clase = JSON.parse(val);
+       
+       const options = document.getElementById('inBloques').options;
+       for(let i=0; i<options.length; i++){
+           options[i].selected = (options[i].value === clase.bloque);
+       }
+       agruparBloques(); // Agrupar automáticamente si se seleccionó uno
+       
+       document.getElementById('inMotivo').value = `Clase de ${clase.asig} - ${clase.curso}`;
+    }
+
+    function guardarReserva(e) {
+      e.preventDefault();
+      
+      const opcionesBloques = document.getElementById('inBloques').options;
+      const bloquesSel = [];
+      for(let i=0; i<opcionesBloques.length; i++){
+        if(opcionesBloques[i].selected) bloquesSel.push(opcionesBloques[i]);
+      }
+      
+      if(bloquesSel.length === 0) {
+          Swal.fire("Error", "Debes seleccionar al menos un bloque", "error");
+          return;
+      }
+      
+      const procesarGuardado = () => {
+          const btn = document.getElementById('btnGuardar');
+          if(btn) { btn.disabled = true; btn.innerText = "Guardando..."; }
+          
+          const valoresBloques = bloquesSel.map(o => o.value);
+          const datos = {
+            fecha: document.getElementById('inFecha').value,
+            recurso: document.getElementById('inRecurso').value,
+            bloques: valoresBloques.join(','),
+            motivo: document.getElementById('inMotivo').value
+          };
+          
+          fetch('/api/reservas', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(datos)
+          })
+          .then(async res => {
+              const data = await res.json();
+              if(!res.ok) throw new Error(data.error || 'Error desconocido');
+              return data;
+          })
+          .then(async data => {
+              Swal.fire('Guardado', 'Reserva realizada', 'success');
+              if(modalRes) modalRes.hide();
+              if(btn) { btn.disabled = false; btn.innerText = "Guardar Reserva"; }
+              await cargarRecursosConfig();
+          })
+          .catch((err) => {
+              Swal.fire('Error', err.message, 'error');
+              if(btn) { btn.disabled = false; btn.innerText = "Guardar Reserva"; }
+          });
+      };
+      
+      if (bloquesSel.length === 1) {
+          const textBloque = bloquesSel[0].text;
+          Swal.fire({
+              title: '¿Está seguro?',
+              text: `Está reservando solo un bloque de 45 minutos:\n${textBloque}`,
+              icon: 'warning',
+              showCancelButton: true,
+              confirmButtonColor: '#3085d6',
+              cancelButtonColor: '#d33',
+              confirmButtonText: 'Sí, reservar',
+              cancelButtonText: 'Cancelar'
+          }).then((result) => {
+              if (result.isConfirmed) procesarGuardado();
+          });
+      } else {
+          procesarGuardado();
+      }
+    }
+    
+    function eliminarReserva(id) {
+      Swal.fire({title: 'Cancelando...', allowOutsideClick: false, didOpen: () => {Swal.showLoading()}});
+      fetch('/api/reservas/' + id, { method: 'DELETE' })
+        .then(res => res.json())
+        .then(data => {
+          Swal.fire("Cancelada", "Reserva eliminada", "success");
+          cargarReservas();
+        });
+    }
+
+    function abrirConfiguracion() {
+      modalConfig.show();
+    }
+
+    async function guardarNuevoRecurso(e) {
+      e.preventDefault();
+      const datos = {
+         nombre: document.getElementById('confNombre').value,
+         responsable: document.getElementById('confResp').value
+      };
+      await fetch('/api/recursos/config', {
+         method: 'POST',
+         headers: {'Content-Type': 'application/json'},
+         body: JSON.stringify(datos)
+      });
+      document.getElementById('confNombre').value = '';
+      document.getElementById('confResp').value = '';
+      await cargarRecursosConfig();
+    }
+  </script>
+</body>
+</html>

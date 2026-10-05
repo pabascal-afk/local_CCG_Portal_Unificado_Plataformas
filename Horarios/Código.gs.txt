@@ -1,0 +1,121 @@
+function doGet() {
+  return HtmlService.createTemplateFromFile('index')
+    .evaluate()
+    .setTitle('Visor de Horarios 2026 - Coordinación Pedagógica')
+    .addMetaTag('viewport', 'width=device-width, initial-scale=1')
+    .setXFrameOptionsMode(HtmlService.XFrameOptionsMode.ALLOWALL);
+}
+
+function getHorariosData() {
+  const spreadsheetId = '1QgmRnkGO5AuQcb1P8WNZO15ZHwKHQ2qMeMRBrFJMIqo';
+  const ss = SpreadsheetApp.openById(spreadsheetId);
+  const sheet = ss.getSheets().find(s => s.getSheetId() == 1141469377) || ss.getSheets()[0];
+  const data = sheet.getDataRange().getDisplayValues(); 
+  
+  let headerIndex = 0;
+  for (let i = 0; i < data.length; i++) {
+    const rowStr = data[i].join('').toLowerCase();
+    if (rowStr.includes('curso') && (rowStr.includes('dia') || rowStr.includes('día')) && rowStr.includes('bloque')) {
+      headerIndex = i;
+      break;
+    }
+  }
+  
+  const headersRaw = data[headerIndex];
+  const dataRows = data.slice(headerIndex + 1);
+  
+  const headers = headersRaw.map(h => {
+    let clean = String(h).trim();
+    if (clean.toLowerCase() === 'dia' || clean.toLowerCase() === 'día') return 'Día';
+    if (clean.toLowerCase() === 'curso') return 'Curso';
+    if (clean.toLowerCase() === 'bloque') return 'Bloque';
+    if (clean.toLowerCase() === 'profesor') return 'Profesor';
+    if (clean.toLowerCase() === 'asignatura') return 'Asignatura';
+    if (clean.toLowerCase() === 'profesor 2') return 'Profesor 2';
+    if (clean.toLowerCase() === 'profesor 3') return 'Profesor 3';
+    if (clean.toLowerCase() === 'profesor 4') return 'Profesor 4';
+    if (clean.toLowerCase() === 'profesor 5') return 'Profesor 5';
+    return clean;
+  });
+  
+  return dataRows.map(row => {
+    let obj = {};
+    headers.forEach((header, i) => {
+      if (header) obj[header] = row[i];
+    });
+    
+    let asig = String(obj['Asignatura'] || '').toLowerCase();
+    if (asig.includes('electivo')) {
+      obj.ProfesoresExtra = [];
+      ['Profesor 2', 'Profesor 3', 'Profesor 4', 'Profesor 5'].forEach(pKey => {
+        let pName = String(obj[pKey] || '').trim();
+        if (pName) obj.ProfesoresExtra.push(pName);
+      });
+    }
+    
+    return obj;
+  });
+}
+
+function include(filename) {
+  return HtmlService.createHtmlOutputFromFile(filename).getContent();
+}
+
+function actualizarRegistroUnico(curso, dia, bloque, columna, nuevoValor) {
+  const ss = SpreadsheetApp.openById('1QgmRnkGO5AuQcb1P8WNZO15ZHwKHQ2qMeMRBrFJMIqo');
+  const sheet = ss.getSheets().find(s => s.getSheetId() == 1141469377) || ss.getSheets()[0];
+  const data = sheet.getDataRange().getValues();
+  
+  let headerIndex = 0;
+  for (let i = 0; i < data.length; i++) {
+    const rowStr = data[i].join('').toLowerCase();
+    if (rowStr.includes('curso') && (rowStr.includes('dia') || rowStr.includes('día')) && rowStr.includes('bloque')) {
+      headerIndex = i;
+      break;
+    }
+  }
+
+  const headers = data[headerIndex].map(h => String(h).trim().toLowerCase());
+  const colIndex = headers.indexOf(String(columna).toLowerCase());
+  const cursoIdx = headers.indexOf('curso');
+  const diaIdx = headers.indexOf('día') !== -1 ? headers.indexOf('día') : headers.indexOf('dia');
+  const bloqueIdx = headers.indexOf('bloque');
+  
+  if (colIndex === -1 || cursoIdx === -1 || diaIdx === -1 || bloqueIdx === -1) return;
+
+  for(let i=headerIndex+1; i<data.length; i++) {
+    let cellDia = data[i][diaIdx] ? String(data[i][diaIdx]) : '';
+    let cellCurso = String(data[i][cursoIdx] || '');
+    let cellBloque = String(data[i][bloqueIdx] || '');
+    if(cellCurso.trim() == String(curso).trim() && cellDia.toLowerCase().trim().startsWith(String(dia).substring(0,2).toLowerCase()) && cellBloque.trim() == String(bloque).trim()) {
+      sheet.getRange(i+1, colIndex+1).setValue(nuevoValor);
+      break;
+    }
+  }
+}
+
+function actualizarRegistroMasivo(columna, valorAntiguo, nuevoValor) {
+  const ss = SpreadsheetApp.openById('1QgmRnkGO5AuQcb1P8WNZO15ZHwKHQ2qMeMRBrFJMIqo');
+  const sheet = ss.getSheets().find(s => s.getSheetId() == 1141469377) || ss.getSheets()[0];
+  const data = sheet.getDataRange().getValues();
+  
+  let headerIndex = 0;
+  for (let i = 0; i < data.length; i++) {
+    const rowStr = data[i].join('').toLowerCase();
+    if (rowStr.includes('curso') && (rowStr.includes('dia') || rowStr.includes('día')) && rowStr.includes('bloque')) {
+      headerIndex = i;
+      break;
+    }
+  }
+
+  const headers = data[headerIndex].map(h => String(h).trim().toLowerCase());
+  const colIndex = headers.indexOf(String(columna).toLowerCase());
+  
+  if (colIndex === -1) return;
+
+  for(let i=headerIndex+1; i<data.length; i++) {
+    if(data[i][colIndex] === valorAntiguo) {
+      sheet.getRange(i+1, colIndex+1).setValue(nuevoValor);
+    }
+  }
+}
