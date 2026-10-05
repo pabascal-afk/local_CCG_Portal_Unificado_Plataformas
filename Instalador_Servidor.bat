@@ -44,6 +44,9 @@ echo.
 echo [INFO] Instalando/Actualizando modulos y dependencias...
 call npm install
 
+echo [INFO] Inicializando base de datos...
+node server/db/init_db.js
+
 echo.
 IF NOT EXIST ".env" (
     echo [ATENCION] No se encontro un archivo .env de configuracion.
@@ -67,3 +70,4 @@ echo Para arrancar el servidor de forma silenciosa, haz doble click
 echo en el archivo "Iniciar_Plataforma.vbs".
 echo.
 pause
+
