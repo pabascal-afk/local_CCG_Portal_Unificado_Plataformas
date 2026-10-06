@@ -10,7 +10,8 @@ git --version >nul 2>&1
 IF ERRORLEVEL 1 (
     color 0C
     echo [ERROR] Git no esta instalado. Descargalo de https://git-scm.com/
-    pause
+    timeout /t 5 >nul
+exit /b
     exit /b
 )
 
@@ -26,6 +27,8 @@ IF ERRORLEVEL 1 (
 :: Revisar si ya esta clonado
 IF EXIST ".git" (
     echo [INFO] Detectado como repositorio existente.
+    echo [INFO] Deteniendo servidor actual (si estaba encendido)...
+    taskkill /F /IM node.exe >nul 2>&1
     echo [INFO] Obteniendo actualizaciones de GitHub...
     git pull origin main
 ) ELSE (
@@ -60,14 +63,17 @@ IF NOT EXIST ".env" (
     echo [AVISO] Se ha creado un archivo ".env". Por favor abrelo y pega las credenciales de Google.
 )
 
+echo [INFO] Iniciando el servidor en segundo plano...
+start "" "Iniciar_Plataforma.vbs"
+
 echo.
 color 0A
 echo ==========================================================
 echo   [EXITO] Todo listo y actualizado.
 echo ==========================================================
 echo.
-echo Para arrancar el servidor de forma silenciosa, haz doble click 
-echo en el archivo "Iniciar_Plataforma.vbs".
-echo.
-pause
+echo Arrancando el servidor automaticamente...
+start "" "Iniciar_Plataforma.vbs"
+timeout /t 5 >nul
+exit /b
 
