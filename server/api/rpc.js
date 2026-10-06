@@ -413,7 +413,10 @@ router.post('/:functionName', async (req, res) => {
                  }
 
                if (datos.externos && datos.externos.length > 0) {
-                    if (process.env.SMTP_USER && process.env.SMTP_PASS) {
+                    const confRows = await queryAll("SELECT valor FROM config_global WHERE clave = 'emails_activados'");
+               const emailsActivados = confRows.length > 0 ? confRows[0].valor === 'true' : true;
+               
+               if (emailsActivados && process.env.SMTP_USER && process.env.SMTP_PASS) {
                          const htmlList = datos.externos.map(ex => `<li><b>Nombre:</b> ${ex.nombre} | <b>RUT:</b> ${ex.rut} | <b>Motivo:</b> ${ex.motivo}</li>`).join('');
                          const htmlMsg = `<h3>Nuevos Invitados Externos Registrados</h3>
                          <p>El usuario ${user.email} ha programado el evento <b>${datos.texto}</b> el día <b>${fecha}</b> y ha registrado el ingreso de las siguientes personas ajenas al establecimiento, las cuales requieren visación de Dirección:</p>

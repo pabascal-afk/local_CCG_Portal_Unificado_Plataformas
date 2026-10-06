@@ -52,7 +52,10 @@ router.post('/enviar/:id', upload.single('archivo'), async (req, res) => {
             [link_doc || null, archivoPath, id]);
             
         // Send email
-        if (process.env.SMTP_USER && process.env.SMTP_PASS) {
+        const confRows = await queryAll("SELECT valor FROM config_global WHERE clave = 'emails_activados'");
+        const emailsActivados = confRows.length > 0 ? confRows[0].valor === 'true' : true;
+        
+        if (emailsActivados && process.env.SMTP_USER && process.env.SMTP_PASS) {
             let attachments = [];
             if (archivo) {
                 attachments.push({
