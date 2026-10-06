@@ -1,4 +1,4 @@
-﻿@echo off
+@echo off
 color 0B
 echo ==========================================================
 echo    Instalador / Actualizador - Plataforma Unificada
@@ -10,8 +10,7 @@ git --version >nul 2>&1
 IF ERRORLEVEL 1 (
     color 0C
     echo [ERROR] Git no esta instalado. Descargalo de https://git-scm.com/
-    timeout /t 5 >nul
-exit /b
+    pause
     exit /b
 )
 
@@ -27,7 +26,7 @@ IF ERRORLEVEL 1 (
 :: Revisar si ya esta clonado
 IF EXIST ".git" (
     echo [INFO] Detectado como repositorio existente.
-    echo [INFO] Deteniendo servidor actual (si estaba encendido)...
+    echo [INFO] Deteniendo servidor actual si estaba encendido...
     taskkill /F /IM node.exe >nul 2>&1
     echo [INFO] Obteniendo actualizaciones de GitHub...
     git pull origin main
@@ -37,14 +36,14 @@ IF EXIST ".git" (
     git clone https://github.com/pabascal-afk/local_CCG_Portal_Unificado_Plataformas.git .
     IF ERRORLEVEL 1 (
         color 0C
-        echo [ERROR] Hubo un problema al clonar. Asegurate de ejecutar este archivo en una carpeta vacia.
+        echo [ERROR] Hubo un problema al clonar.
         pause
         exit /b
     )
 )
 
 echo.
-echo [INFO] Instalando/Actualizando modulos y dependencias...
+echo [INFO] Instalando/Actualizando modulos...
 call npm install
 
 echo [INFO] Inicializando base de datos...
@@ -52,19 +51,14 @@ node server/db/init_db.js
 
 echo.
 IF NOT EXIST ".env" (
-    echo [ATENCION] No se encontro un archivo .env de configuracion.
-    echo Creando plantilla base .env...
+    echo [ATENCION] Creando plantilla base .env...
     echo SESSION_SECRET=secreto_seguro_123> .env
     echo GOOGLE_CLIENT_ID=>> .env
     echo GOOGLE_CLIENT_SECRET=>> .env
     echo PORT=9000>> .env
     echo MASTER_PIN=1234>> .env
     echo.
-    echo [AVISO] Se ha creado un archivo ".env". Por favor abrelo y pega las credenciales de Google.
 )
-
-echo [INFO] Iniciando el servidor en segundo plano...
-start "" "Iniciar_Plataforma.vbs"
 
 echo.
 color 0A
@@ -76,4 +70,3 @@ echo Arrancando el servidor automaticamente...
 start "" "Iniciar_Plataforma.vbs"
 timeout /t 5 >nul
 exit /b
-
