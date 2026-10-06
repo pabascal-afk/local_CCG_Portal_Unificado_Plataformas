@@ -1,7 +1,7 @@
 ﻿const { startTunnel } = require('untun');
 const axios = require('axios');
 
-process.env.NODE_TLS_REJECT_UNAUTHORIZED = '0'; // Bypass school firewall for Node.js TLS
+process.env.NODE_TLS_REJECT_UNAUTHORIZED = '0'; // Bypass school firewall para Cloudflare fetch
 
 async function initTunnel(port) {
     try {
@@ -10,24 +10,24 @@ async function initTunnel(port) {
         const url = await t.getURL();
         console.log('[TÚNEL] Conectado a Cloudflare en:', url);
         
-        // Registrar la URL en Google Apps Script
-        const gasUrl = process.env.GAS_WEB_APP_URL;
+        // Registrar la URL en el Tablón de Anuncios de Google Apps Script
+        const gasDbUrl = process.env.GAS_TUNNEL_DB_URL;
         const gasSecret = process.env.GAS_SECRET;
         
-        if (gasUrl && gasSecret) {
+        if (gasDbUrl && gasSecret) {
             try {
-                const response = await axios.post(gasUrl, {
+                const response = await axios.post(gasDbUrl, {
                     secret: gasSecret,
                     url: url
                 }, {
                     headers: { 'Content-Type': 'application/json' }
                 });
-                console.log('[TÚNEL] Tablón de Google actualizado:', response.data);
+                console.log('[TÚNEL] Tablón de Google actualizado exitosamente (' + response.data + ')');
             } catch(e) {
-                console.error('[TÚNEL] Error al actualizar Google:', e.message);
+                console.error('[TÚNEL] Error al actualizar Tablón de Google:', e.message);
             }
         } else {
-            console.warn('[TÚNEL] Falta GAS_WEB_APP_URL o GAS_SECRET en el .env');
+            console.warn('[TÚNEL] Falta GAS_TUNNEL_DB_URL o GAS_SECRET en el .env');
         }
         
         return url;
