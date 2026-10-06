@@ -24,7 +24,10 @@ const schemas = [
     profesor_email TEXT,
     profesor_nombre TEXT,
     detalles TEXT,
-    creado_en DATETIME DEFAULT CURRENT_TIMESTAMP
+    creado_en DATETIME DEFAULT CURRENT_TIMESTAMP,
+    estado_doc TEXT DEFAULT 'Pendiente',
+    link_doc TEXT,
+    archivo_doc TEXT
   )`,
   `CREATE TABLE IF NOT EXISTS reservas (
     id TEXT PRIMARY KEY,
@@ -49,6 +52,13 @@ const schemas = [
     cursos TEXT DEFAULT 'TODOS',
     externos TEXT DEFAULT '[]',
     recurso TEXT
+  )`,
+    `CREATE TABLE IF NOT EXISTS coordinadores_areas (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    email TEXT NOT NULL,
+    nombre TEXT NOT NULL,
+    curso_regla TEXT NOT NULL,
+    asignatura_regla TEXT NOT NULL
   )`,
   `CREATE TABLE IF NOT EXISTS config_topes (
     curso TEXT PRIMARY KEY,

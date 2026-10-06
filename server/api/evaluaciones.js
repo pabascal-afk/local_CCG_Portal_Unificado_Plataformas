@@ -22,6 +22,18 @@ const run = (query, params = []) => new Promise((resolve, reject) => {
 });
 
 // GET Evaluaciones
+
+// GET Todas mis evaluaciones (sin limite)
+router.get('/mis-evaluaciones-todas', async (req, res) => {
+    try {
+        const userEmail = req.isAuthenticated() ? req.user.email : 'dev@colegio.edu';
+        const evals = await queryAll("SELECT * FROM evaluaciones WHERE profesor_email = ? ORDER BY fecha DESC", [userEmail]);
+        res.json(evals);
+    } catch (e) {
+        res.status(500).json({ error: e.message });
+    }
+});
+
 router.get('/', async (req, res) => {
     try {
         const rows = await queryAll("SELECT * FROM evaluaciones");

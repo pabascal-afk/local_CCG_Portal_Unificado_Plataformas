@@ -435,6 +435,9 @@ app.get('/api/perfil/preferencias', (req, res) => {
 
 
 // Importar rutas de evaluaciones
+const enviosRouter = require('./api/envios');
+app.use('/api/envios', enviosRouter);
+
 const evaluacionesRouter = require('./api/evaluaciones');
 app.use('/api/evaluaciones', evaluacionesRouter);
 
