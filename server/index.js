@@ -64,7 +64,13 @@ app.use(session({
   saveUninitialized: false
 }));
 
-  app.get(['/', '/index.html'], (req, res, next) => {
+ 
+
+// Configurar Passport (Google OAuth)
+app.use(passport.initialize());
+app.use(passport.session());
+
+ app.get(['/', '/index.html'], (req, res, next) => {
   if (!req.isAuthenticated()) {
     return res.redirect('/login.html');
   }
@@ -76,9 +82,7 @@ app.use(express.static(path.join(__dirname, '../public')));
 
 
 
-// Configurar Passport (Google OAuth)
-app.use(passport.initialize());
-app.use(passport.session());
+
 
 if (process.env.GOOGLE_CLIENT_ID && process.env.GOOGLE_CLIENT_SECRET) {
   passport.use(new GoogleStrategy({
