@@ -153,8 +153,8 @@
             data.evaluaciones.slice(0, 5).forEach(ev => {
                 evCont.innerHTML += `
                   <div class="item-resumen">
-                    <span class="fw-bold text-primary">${ev.curso} - ${ev.asignatura}</span><br>
-                    <span class="small text-muted">Malla registrada para: ${ev.profesor}</span>
+                    <span class="fw-bold text-primary">${ev.curso} - ${ev.asignatura} <span class='badge bg-info ms-2'>${ev.fecha}</span></span><br>
+                    <span class="small text-muted">Malla registrada para: ${ev.profesor_nombre || ev.profesor}</span>
                   </div>
                 `;
             });
