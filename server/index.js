@@ -284,7 +284,10 @@ app.get('/api/reservas', (req, res) => {
 });
 
 app.post('/api/reservas', (req, res) => {
-    const { fecha, bloques, recurso, motivo } = req.body;
+    const { fecha, recurso, motivo } = req.body;
+      let { bloques } = req.body;
+      if (typeof bloques === 'string') bloques = bloques.split(',');
+      if (!Array.isArray(bloques)) bloques = [bloques];
     const profesor_email = req.isAuthenticated() ? req.user.email : 'dev@colegio.edu';
     
     db.all("SELECT * FROM reservas WHERE fecha = ? AND recurso = ? AND estado != 'Cancelada'", [fecha, recurso], (err, rows) => {
