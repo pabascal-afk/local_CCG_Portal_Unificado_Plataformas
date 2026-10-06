@@ -460,8 +460,10 @@ app.delete('/api/roles/:id', (req, res) => {
 
 // Iniciar Servidor
 const { initTray } = require('./tray');
-  app.listen(PORT, () => {
+const { initTunnel } = require('./tunnel');
+  app.listen(PORT, async () => {
     try { initTray(PORT); } catch(e) { console.error('Tray failed', e); }
   console.log(`Servidor Node.js corriendo en http://localhost:${PORT}`);
+  try { await initTunnel(PORT); } catch(e) { console.error('Tunnel failed', e); }
 });
 
