@@ -60,6 +60,10 @@ const schemas = [
     curso_regla TEXT NOT NULL,
     asignatura_regla TEXT NOT NULL
   )`,
+    `CREATE TABLE IF NOT EXISTS config_global (
+    clave TEXT PRIMARY KEY,
+    valor TEXT
+  )`,
   `CREATE TABLE IF NOT EXISTS config_topes (
     curso TEXT PRIMARY KEY,
     max_dia_escritas INTEGER,
