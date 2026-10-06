@@ -1,10 +1,12 @@
-﻿const { tunnel } = require('untun');
+﻿const { startTunnel } = require('untun');
 const axios = require('axios');
+
+process.env.NODE_TLS_REJECT_UNAUTHORIZED = '0'; // Bypass school firewall for Node.js TLS
 
 async function initTunnel(port) {
     try {
         console.log('[TÚNEL] Iniciando conexión con Cloudflare...');
-        const t = await tunnel({ port: port });
+        const t = await startTunnel({ port: port });
         const url = await t.getURL();
         console.log('[TÚNEL] Conectado a Cloudflare en:', url);
         
