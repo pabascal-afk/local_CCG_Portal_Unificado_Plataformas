@@ -1,6 +1,23 @@
 ﻿const express = require('express');
 const router = express.Router();
-const { queryAll, run } = require('../db/db');
+const sqlite3 = require('sqlite3').verbose();
+const path = require('path');
+const dbPath = path.join(__dirname, '../db/colegio.db');
+
+const queryAll = (query, params = []) => new Promise((resolve, reject) => {
+    const db = new sqlite3.Database(dbPath);
+    db.all(query, params, (err, rows) => {
+        db.close();
+        if(err) reject(err); else resolve(rows);
+    });
+});
+const run = (query, params = []) => new Promise((resolve, reject) => {
+    const db = new sqlite3.Database(dbPath);
+    db.run(query, params, function(err) {
+        db.close();
+        if(err) reject(err); else resolve(this.lastID);
+    });
+});
 
 router.get('/emails', async (req, res) => {
     try {
