@@ -61,7 +61,8 @@ app.use(express.urlencoded({ extended: true }));
 app.use(session({
   secret: process.env.SESSION_SECRET || 'colegio_secreto_super_seguro_123',
   resave: false,
-  saveUninitialized: false
+  saveUninitialized: false,
+    cookie: { maxAge: 24 * 60 * 60 * 1000 } // 24 horas
 }));
 
  
