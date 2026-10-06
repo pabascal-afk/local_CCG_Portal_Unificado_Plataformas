@@ -189,10 +189,16 @@
             nuevo_aviso: document.getElementById('chkPrefAviso').checked,
             default_tab: document.getElementById('selectPrefTab').value
         };
+        const pinInput = document.getElementById('inputPinLocal').value;
+        const payload = { preferencias: pref };
+        if (pinInput && pinInput.trim() !== '') {
+            payload.pin = pinInput.trim();
+        }
+        
         fetch('/api/perfil/preferencias', {
             method: 'PUT',
             headers: {'Content-Type': 'application/json'},
-            body: JSON.stringify({preferencias: pref})
+            body: JSON.stringify(payload)
         }).then(r=>r.json()).then(data => {
             modalPerfilObj.hide();
             Swal.fire('Guardado', data.message, 'success');
