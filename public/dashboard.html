@@ -135,7 +135,7 @@
         const resCont = document.getElementById('reservas-container');
         if(data.reservas.length > 0) {
             resCont.innerHTML = '';
-            data.reservas.slice(0, 5).forEach(r => {
+            data.reservas.slice(0, 10).forEach(r => {
                 resCont.innerHTML += `
                   <div class="item-resumen">
                     <span class="badge bg-secondary float-end">${r.fecha}</span>
@@ -150,7 +150,7 @@
         const evCont = document.getElementById('evals-container');
         if(data.evaluaciones.length > 0) {
             evCont.innerHTML = '';
-            data.evaluaciones.slice(0, 5).forEach(ev => {
+            data.evaluaciones.slice(0, 10).forEach(ev => {
                 evCont.innerHTML += `
                   <div class="item-resumen">
                     <span class="fw-bold text-primary">${ev.curso} - ${ev.asignatura} <span class='badge bg-info ms-2'>${ev.fecha}</span></span><br>
