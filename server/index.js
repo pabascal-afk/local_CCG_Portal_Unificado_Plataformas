@@ -131,6 +131,7 @@ app.get('/api/auth/logout', (req, res) => {
   });
 });
 
+
 app.post('/api/auth/local', (req, res) => {
     // 1. Verify Local Origin
     const ip = req.ip || req.connection.remoteAddress;
@@ -157,6 +158,39 @@ app.post('/api/auth/local', (req, res) => {
         req.login(row, (err) => {
             if (err) return res.status(500).json({ error: 'Error interno de sesión.' });
             return res.json({ success: true, redirect: '/' });
+        });
+    });
+});
+
+const crypto = require('crypto');
+
+app.get('/api/auth/gas-url', (req, res) => {
+    res.json({ url: process.env.GAS_WEB_APP_URL || '' });
+});
+
+app.get('/api/auth/gas', (req, res) => {
+    const { email, timestamp, sig } = req.query;
+    if (!email || !timestamp || !sig) return res.status(400).send("Faltan parámetros de seguridad");
+    
+    const now = Date.now();
+    if (now - parseInt(timestamp) > 5 * 60 * 1000) {
+        return res.status(401).send("El link de autenticación ha expirado por seguridad.");
+    }
+    
+    const data = email + "|" + timestamp;
+    const GAS_SECRET = process.env.GAS_SECRET || 'tu_clave_super_secreta_123';
+    const expectedSig = crypto.createHmac('sha256', GAS_SECRET).update(data).digest('hex');
+                              
+    if (sig !== expectedSig) {
+        return res.status(401).send("Firma digital inválida (Posible falsificación detectada)");
+    }
+    
+    db.get("SELECT * FROM usuarios WHERE email = ?", [email.toLowerCase()], (err, row) => {
+        if (err || !row) return res.status(404).send("El correo de Google es válido, pero el usuario no está registrado en la base de datos del colegio.");
+        
+        req.login(row, (err) => {
+            if (err) return res.status(500).send("Error interno al crear la sesión");
+            res.redirect('/');
         });
     });
 });

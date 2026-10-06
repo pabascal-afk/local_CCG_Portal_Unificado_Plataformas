@@ -11,10 +11,10 @@
         <div class="card-body p-5 text-center">
             <h4 class="fw-bold mb-4">Plataforma Unificada</h4>
             
-            <a href="/auth/google" class="btn btn-outline-dark w-100 mb-4 py-2 d-flex align-items-center justify-content-center gap-2">
+            <button onclick="loginGoogle()" class="btn btn-outline-dark w-100 mb-4 py-2 d-flex align-items-center justify-content-center gap-2">
                 <img src="https://upload.wikimedia.org/wikipedia/commons/c/c1/Google_%22G%22_logo.svg" width="20" alt="Google">
                 Ingresar con cuenta Google
-            </a>
+            </button>
 
             <hr class="text-secondary">
 
@@ -36,6 +36,21 @@
         </div>
     </div>
     <script>
+
+        async function loginGoogle() {
+            try {
+                const res = await fetch('/api/auth/gas-url');
+                const data = await res.json();
+                if (!data.url) {
+                    Swal.fire('Configuración pendiente', 'El administrador debe configurar la URL de Apps Script en el archivo .env', 'info');
+                    return;
+                }
+                const currentUrl = window.location.origin;
+                window.location.href = data.url + "?returnUrl=" + encodeURIComponent(currentUrl);
+            } catch(e) {
+                Swal.fire('Error', 'No se pudo conectar al servidor local', 'error');
+            }
+        }
         document.getElementById('local-form').onsubmit = async function(e) {
             e.preventDefault();
             const res = await fetch('/api/auth/local', {
