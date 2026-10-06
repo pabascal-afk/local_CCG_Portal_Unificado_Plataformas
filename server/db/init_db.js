@@ -113,6 +113,12 @@ db.serialize(() => {
             if (err) console.error("Error init table:", err);
         });
     });
+    
+    db.run("ALTER TABLE evaluaciones ADD COLUMN estado_doc TEXT DEFAULT 'Pendiente'", () => {});
+    db.run("ALTER TABLE evaluaciones ADD COLUMN link_doc TEXT", () => {});
+    db.run("ALTER TABLE evaluaciones ADD COLUMN archivo_doc TEXT", () => {});
+    db.run("INSERT OR IGNORE INTO config_global (clave, valor) VALUES ('emails_activados', 'true')", () => {});
+
     console.log("Base de datos colegio.db inicializada correctamente con el esquema final.");
 });
 
