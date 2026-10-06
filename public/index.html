@@ -54,6 +54,11 @@
           <i class="bi bi-people"></i> Gestión de Usuarios
         </a>
       </li>
+      <li class="nav-item d-none" id="nav-coordinadores-container">
+        <a href="#" class="nav-link" onclick="loadApp('coordinadores', this)" id="nav-coordinadores">
+          <i class="bi bi-envelope-paper"></i> Reglas de Envíos
+        </a>
+      </li>
     </ul>
     <div class="p-3 text-center text-secondary" style="font-size: 0.8rem;" id="info-usuario-container">
       <div id="info-usuario" class="mb-2 text-white">Cargando usuario...</div>
@@ -81,6 +86,7 @@
           const rolNormalizado = ctx.rol.toLowerCase();
           if (rolNormalizado === 'administrador' || rolNormalizado === 'admin' || rolNormalizado === 'directivo general') {
             document.getElementById('nav-usuarios-container').classList.remove('d-none');
+              document.getElementById('nav-coordinadores-container').classList.remove('d-none');
           }
           
           // URLs estáticas en Node.js
@@ -90,7 +96,8 @@
             calendario: "/calendario.html",
             horarios: "/horarios.html",
             recursos: "/recursos.html",
-            usuarios: "/usuarios.html"
+            usuarios: "/usuarios.html",
+            coordinadores: "/coordinadores.html"
           };
           fetch('/api/perfil/preferencias').then(r=>r.json()).then(pref => {
                const defaultTab = pref.default_tab || 'dashboard';
