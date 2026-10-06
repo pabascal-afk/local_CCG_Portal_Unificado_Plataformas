@@ -319,7 +319,7 @@ router.post('/:functionName', async (req, res) => {
             return res.json({ result: "Evaluación actualizada correctamente." });
         }
 
-        if (functionName === 'eliminarEvaluacion') {
+        if (functionName === 'eliminarEvaluacion' || functionName === 'eliminarEvaluacionBackend') {
              const { id, fechaStr } = args[0]; // Object argument
              await run("DELETE FROM evaluaciones WHERE id = ?", [id]);
              await run("DELETE FROM reservas WHERE id_evaluacion = ?", [id]);
