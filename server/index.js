@@ -372,15 +372,14 @@ app.get('/api/dashboard/me', (req, res) => {
             if (!err) data.reservas = reservas;
 
             // 3. Evaluaciones (Buscamos coincidencias básicas por nombre)
-            db.all("SELECT * FROM horarios WHERE eval1 IS NOT NULL OR eval2 IS NOT NULL OR eval3 IS NOT NULL", (err, evals) => {
-                if (!err) {
-                    // Filter matching professor (case insensitive basic match)
-                    data.evaluaciones = evals.filter(e => e.profesor && e.profesor.toLowerCase().includes(baseName.toLowerCase().replace('.', ' ')));
-                }
-
-                res.json(data);
-            });
-        });
+            db.all("SELECT * FROM evaluaciones WHERE profesor_email = ? AND fecha >= date('now') ORDER BY fecha ASC LIMIT 10", [userEmail], (err, evals) => {
+                  if (!err) {
+                      data.evaluaciones = evals;
+                  }
+  
+                  res.json(data);
+              });
+          });
     });
 });
 
