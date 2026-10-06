@@ -57,14 +57,24 @@ app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 
 // Archivos estáticos del frontend
-app.use(express.static(path.join(__dirname, '../public')));
-
 // Sesiones
 app.use(session({
   secret: process.env.SESSION_SECRET || 'colegio_secreto_super_seguro_123',
   resave: false,
   saveUninitialized: false
 }));
+
+  app.get(['/', '/index.html'], (req, res, next) => {
+  if (!req.isAuthenticated()) {
+    return res.redirect('/login.html');
+  }
+  next();
+});
+
+// Archivos estáticos del frontend
+app.use(express.static(path.join(__dirname, '../public')));
+
+
 
 // Configurar Passport (Google OAuth)
 app.use(passport.initialize());
