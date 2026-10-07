@@ -831,14 +831,28 @@
     }
     
     function eliminarReserva(id) {
-      Swal.fire({title: 'Cancelando...', allowOutsideClick: false, didOpen: () => {Swal.showLoading()}});
-      fetch('/api/reservas/' + id, { method: 'DELETE' })
-        .then(res => res.json())
-        .then(data => {
-          Swal.fire("Cancelada", "Reserva eliminada", "success");
-          cargarReservas();
+        Swal.fire({
+            title: '¿Cancelar Reserva?',
+            text: 'Si cancelas con 3 días o menos de anticipación, se notificará al Administrador automáticamente.',
+            icon: 'warning',
+            showCancelButton: true,
+            confirmButtonColor: '#d33',
+            cancelButtonColor: '#3085d6',
+            confirmButtonText: 'Sí, cancelar'
+        }).then((result) => {
+            if (result.isConfirmed) {
+                Swal.fire({title: 'Cancelando...', allowOutsideClick: false, didOpen: () => {Swal.showLoading()}});
+                fetch('/api/reservas/' + id, { method: 'DELETE' })
+                  .then(res => res.json())
+                  .then(data => {
+                    Swal.fire("Cancelada", "Reserva eliminada", "success");
+                    cargarReservas();
+                  }).catch(e => {
+                    Swal.fire('Error', 'No se pudo cancelar', 'error');
+                  });
+            }
         });
-    }
+      }
 
     function abrirConfiguracion() {
       modalConfig.show();
