@@ -1,0 +1,1 @@
+const fs = require('fs'); let code = fs.readFileSync('server/index.js', 'utf8'); code = code.replace('if (!req.session || !req.session.user) {', 'if (!req.isAuthenticated()) {'); fs.writeFileSync('server/index.js', code, 'utf8');

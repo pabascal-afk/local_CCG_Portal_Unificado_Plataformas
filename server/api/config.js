@@ -48,4 +48,44 @@ router.get('/gas', async (req, res) => {
     res.json({ url: process.env.GAS_WEB_APP_URL });
 });
 
+
+// ==================== TIPOS DE EVALUACION ====================
+router.get('/tipos-evaluacion', async (req, res) => {
+    try {
+        const rows = await queryAll("SELECT * FROM config_tipos_evaluacion ORDER BY id ASC");
+        res.json(rows);
+    } catch (e) {
+        res.status(500).json({ error: e.message });
+    }
+});
+
+router.post('/tipos-evaluacion', async (req, res) => {
+    try {
+        const { nombre, es_prueba } = req.body;
+        const id = await run("INSERT INTO config_tipos_evaluacion (nombre, es_prueba) VALUES (?, ?)", [nombre, es_prueba ? 1 : 0]);
+        res.json({ id, message: "Tipo agregado" });
+    } catch (e) {
+        res.status(500).json({ error: e.message });
+    }
+});
+
+router.delete('/tipos-evaluacion/:id', async (req, res) => {
+    try {
+        await run("DELETE FROM config_tipos_evaluacion WHERE id = ?", [req.params.id]);
+        res.json({ message: "Tipo eliminado" });
+    } catch (e) {
+        res.status(500).json({ error: e.message });
+    }
+});
+
+router.put('/tipos-evaluacion/:id', async (req, res) => {
+    try {
+        const { nombre, es_prueba } = req.body;
+        await run("UPDATE config_tipos_evaluacion SET nombre = ?, es_prueba = ? WHERE id = ?", [nombre, es_prueba ? 1 : 0, req.params.id]);
+        res.json({ message: "Tipo actualizado" });
+    } catch (e) {
+        res.status(500).json({ error: e.message });
+    }
+});
+
 module.exports = router;

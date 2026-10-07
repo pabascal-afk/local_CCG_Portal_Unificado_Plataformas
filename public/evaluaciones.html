@@ -52,7 +52,103 @@
       })()
     }
   };
-</script>
+
+    // =========== GESTION TIPOS EVALUACION ===========
+    let tiposEvaluacionCache = [];
+    
+    async function cargarTiposEvaluacion() {
+        try {
+            const res = await fetch('/api/config/tipos-evaluacion');
+            tiposEvaluacionCache = await res.json();
+            renderTiposSelect();
+            renderTiposTabla();
+        } catch (e) {
+            console.error("Error cargando tipos:", e);
+        }
+    }
+
+    function renderTiposSelect() {
+        const sel = document.getElementById('inTipo');
+        if(!sel) return;
+        const actualVal = sel.value;
+        sel.innerHTML = '<option value="">-- Selecciona --</option>';
+        tiposEvaluacionCache.forEach(t => {
+            const badge = t.es_prueba ? ' (Prueba/Suma)' : ' (No Suma)';
+            sel.innerHTML += `<option value="${t.nombre}">${t.nombre}${badge}</option>`;
+        });
+        sel.value = actualVal; // Restore selection if exists
+    }
+
+    function abrirModalTipos() {
+        renderTiposTabla();
+        new bootstrap.Modal(document.getElementById('modalTipos')).show();
+    }
+
+    function renderTiposTabla() {
+        const tbody = document.querySelector('#tableTipos tbody');
+        if(!tbody) return;
+        tbody.innerHTML = '';
+        tiposEvaluacionCache.forEach(t => {
+            tbody.innerHTML += `
+                <tr>
+                    <td>${t.nombre}</td>
+                    <td class="text-center">
+                        <div class="form-check form-switch d-inline-block">
+                            <input class="form-check-input" type="checkbox" role="switch" ${t.es_prueba ? 'checked' : ''} onchange="toggleTipoPrueba(${t.id}, this.checked)">
+                        </div>
+                    </td>
+                    <td class="text-end">
+                        <button class="btn btn-sm btn-outline-danger border-0" onclick="borrarTipo(${t.id})"><i class="bi bi-trash"></i></button>
+                    </td>
+                </tr>
+            `;
+        });
+    }
+
+    async function toggleTipoPrueba(id, checked) {
+        const tipo = tiposEvaluacionCache.find(t => t.id === id);
+        if(!tipo) return;
+        try {
+            await fetch('/api/config/tipos-evaluacion/' + id, {
+                method: 'PUT',
+                headers: {'Content-Type': 'application/json'},
+                body: JSON.stringify({ nombre: tipo.nombre, es_prueba: checked })
+            });
+            cargarTiposEvaluacion();
+        } catch(e) { Swal.fire("Error", e.message, "error"); }
+    }
+
+    async function borrarTipo(id) {
+        if(!confirm("¿Borrar este tipo de evaluación?")) return;
+        try {
+            await fetch('/api/config/tipos-evaluacion/' + id, { method: 'DELETE' });
+            cargarTiposEvaluacion();
+        } catch(e) { Swal.fire("Error", e.message, "error"); }
+    }
+
+    document.getElementById('formNuevoTipo')?.addEventListener('submit', async (e) => {
+        e.preventDefault();
+        const btn = e.target.querySelector('button');
+        btn.disabled = true;
+        try {
+            const nombre = document.getElementById('inNuevoTipo').value.trim();
+            const es_prueba = document.getElementById('inNuevoSuma').checked;
+            const res = await fetch('/api/config/tipos-evaluacion', {
+                method: 'POST',
+                headers: {'Content-Type': 'application/json'},
+                body: JSON.stringify({ nombre, es_prueba })
+            });
+            if(!res.ok) throw new Error("Error al guardar, quizás el nombre ya existe");
+            document.getElementById('inNuevoTipo').value = '';
+            document.getElementById('inNuevoSuma').checked = false;
+            await cargarTiposEvaluacion();
+        } catch(e) {
+            Swal.fire("Error", e.message, "error");
+        }
+        btn.disabled = false;
+    });
+
+    </script>
 
 
 
@@ -183,6 +279,7 @@
       <button class="btn btn-outline-danger btn-sm fw-semibold" onclick="abrirModalExportarPDF()">Exportar PDF</button>
       <button class="btn btn-outline-success btn-sm fw-semibold" onclick="alert('Exportacion a Excel en construccion')">Exportar Excel</button>
       <button class="btn btn-warning btn-sm fw-bold ms-2" onclick="abrirModalAuditoria()">Auditor&iacute;a Art. 51</button>
+        <button class="btn btn-outline-info btn-sm fw-semibold" onclick="abrirModalTipos()">⚙️ Tipos de Evaluaci&oacute;n</button>
       <button class="btn btn-outline-secondary btn-sm fw-semibold ms-auto" onclick="alert('Limpieza de DB en construccion')">Administrar DB</button>
       <button class="btn btn-dark btn-sm fw-bold ms-2" onclick="ejecutarCargaAutomaticaFront()" id="btnCargaAuto">&#129302; Carga Autom&aacute;tica</button>
       <div class="form-check form-switch ms-3 d-flex align-items-center">
@@ -207,51 +304,47 @@
           <h5 class="modal-title fw-semibold">Agendar: <span id="txtFecha"></span></h5>
           <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
         </div>
-        <div class="modal-body bg-light">
+        <div class="modal-body bg-light p-4">
           <input type="hidden" id="inFecha">
 
-              <div class="mb-3">
-                <label class="fw-medium">Curso</label>
-                <select class="form-select" id="inCurso" required onchange="actualizarAsignaturas()">
+          <div class="row g-3 mb-3">
+              <div class="col-md-6">
+                <label class="fw-medium text-secondary mb-1"><i class="bi bi-people"></i> Curso</label>
+                <select class="form-select border-2 shadow-sm" id="inCurso" required onchange="actualizarAsignaturas()">
                    <option value="">-- Selecciona --</option>
                 </select>
               </div>
-              <div class="mb-3">
-                <label class="fw-medium">Asignatura</label>
-                <select class="form-select" id="inAsig" required>
+              <div class="col-md-6">
+                <label class="fw-medium text-secondary mb-1"><i class="bi bi-book"></i> Asignatura</label>
+                <select class="form-select border-2 shadow-sm" id="inAsig" required>
                    <option value="">Selecciona un curso primero</option>
                 </select>
               </div>
-
+          </div>
           
-          
-            
-            <div class="mb-3">
-              <label class="fw-medium">Tipo de Evaluación</label>
-                <select class="form-select" id="inTipo" required>
-                  <option value="">-- Selecciona --</option>
-                  <option value="📝 Prueba">📝 Prueba</option>
-                  <option value="🗣️ Exposición Oral">🗣️ Exposición Oral</option>
-                  <option value="🛠️ Trabajo">🛠️ Trabajo</option>
-                  <option value="🔄 Ev. de Proceso">🔄 Ev. de Proceso</option>
-                  <option value="📚 Quiz">📚 Quiz</option>
+          <div class="row g-3 mb-3">
+              <div class="col-md-6">
+                <label class="fw-medium text-secondary mb-1"><i class="bi bi-ui-checks"></i> Tipo de Evaluación</label>
+                <select class="form-select border-2 shadow-sm" id="inTipo" required>
+                  <option value="">Cargando tipos...</option>
                 </select>
-            </div>
+              </div>
+              <div class="col-md-6">
+                <label class="fw-medium text-secondary mb-1"><i class="bi bi-door-open"></i> Recurso (Opcional)</label>
+                <select class="form-select border-2 shadow-sm" id="inRecurso">
+                  <option value="Ninguno">No, ninguno</option>
+                  <option value="Laboratorio de Computación">Lab. de Computación</option>
+                  <option value="Laboratorio Móvil 1">Laboratorio Móvil 1</option>
+                  <option value="Laboratorio Móvil 2">Laboratorio Móvil 2</option>
+                  <option value="Laboratorio de Ciencias">Lab. de Ciencias</option>
+                  <option value="Auditorio">Auditorio</option>
+                </select>
+              </div>
+          </div>
 
-            <div class="mb-3">
-              <label class="fw-medium">¿Requiere recurso especial?</label>
-              <select class="form-select" id="inRecurso">
-                <option value="Ninguno">No, ninguno</option>
-                <option value="Laboratorio de Computación">Laboratorio de Computación</option>
-                <option value="Laboratorio Móvil 1">Laboratorio Móvil 1</option>
-                <option value="Laboratorio Móvil 2">Laboratorio Móvil 2</option>
-                <option value="Laboratorio de Ciencias">Laboratorio de Ciencias</option>
-                <option value="Auditorio">Auditorio</option>
-              </select>
-            </div>
-            <div class="mb-3">
-              <label class="fw-medium">Contenidos / Detalles <small class="text-muted">(Opcional)</small></label>
-            <textarea id="inDetalles" class="form-control" rows="3" placeholder="Ej: Unidad 1. Traer materiales..."></textarea>
+          <div class="mb-2">
+            <label class="fw-medium text-secondary mb-1"><i class="bi bi-card-text"></i> Contenidos / Detalles <small class="text-muted">(Opcional)</small></label>
+            <textarea id="inDetalles" class="form-control border-2 shadow-sm" rows="3" placeholder="Ej: Unidad 1. Traer materiales de arte..."></textarea>
           </div>
         </div>
         <div class="modal-footer border-0 bg-light">
@@ -421,6 +514,7 @@
     let modoBloqueoActivo = false;
 
     document.addEventListener('DOMContentLoaded', function() {
+        cargarTiposEvaluacion();
       // 1. Obtener Configuración Inicial
       google.script.run
         .withSuccessHandler(function(config) {
@@ -1199,5 +1293,40 @@
     };
 
   </script>
+<!-- MODAL GESTOR DE TIPOS DE EVALUACION -->
+  <div class="modal fade" id="modalTipos" tabindex="-1">
+    <div class="modal-dialog modal-dialog-centered">
+      <div class="modal-content border-0 shadow-lg">
+        <div class="modal-header bg-info text-white border-0">
+          <h5 class="modal-title fw-bold">⚙️ Tipos de Evaluaci&oacute;n</h5>
+          <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+        </div>
+        <div class="modal-body bg-light p-4">
+          <p class="text-muted small mb-3">Los tipos marcados como <b>"Prueba"</b> sumar&aacute;n para el c&aacute;lculo del tope de evaluaciones diarias por curso.</p>
+          <div class="table-responsive bg-white border rounded shadow-sm mb-3">
+              <table class="table table-hover align-middle mb-0" id="tableTipos">
+                  <thead class="table-light">
+                      <tr>
+                          <th>Nombre del Tipo</th>
+                          <th class="text-center">Suma Tope?</th>
+                          <th class="text-end">Acci&oacute;n</th>
+                      </tr>
+                  </thead>
+                  <tbody>
+                      <!-- Tipos aqui -->
+                  </tbody>
+              </table>
+          </div>
+          <form id="formNuevoTipo" class="d-flex gap-2">
+              <input type="text" class="form-control" id="inNuevoTipo" placeholder="Ej: 🗣️ Disertaci&oacute;n" required>
+              <div class="form-check form-switch d-flex align-items-center mb-0 px-2" title="Suma para topes de evaluaciones por día">
+                  <input class="form-check-input" type="checkbox" role="switch" id="inNuevoSuma" style="margin-left: 0;">
+              </div>
+              <button type="submit" class="btn btn-primary fw-bold">+</button>
+          </form>
+        </div>
+      </div>
+    </div>
+  </div>
 </body>
 </html>

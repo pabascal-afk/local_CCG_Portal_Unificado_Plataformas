@@ -204,9 +204,14 @@ router.post('/:functionName', async (req, res) => {
               const eventosInstX = await queryAll("SELECT * FROM eventos WHERE fecha LIKE ? AND bloques IS NOT NULL", ["%" + datos.fecha + "%"]);
               const evaluacionesGuardadas = await queryAll("SELECT * FROM evaluaciones WHERE fecha LIKE ?", ["%" + datos.fecha + "%"]);
               
+              const tiposDbList = await queryAll("SELECT * FROM config_tipos_evaluacion");
               const sumarParaTope = (t) => {
-                  const txt = (t || '').toUpperCase();
-                  return txt.includes('PRUEBA') || txt.includes('EXPOSICI') || txt === 'ESCRITA';
+                  const txt = (t || '').trim();
+                  const found = tiposDbList.find(dbT => dbT.nombre.trim() === txt);
+                  if (found) return found.es_prueba === 1;
+                  // Fallback to legacy string matching if type not in DB
+                  const tUpper = txt.toUpperCase();
+                  return tUpper.includes('PRUEBA') || tUpper.includes('EXPOSICI') || tUpper === 'ESCRITA';
               };
 
               const calcularCarga = (listaAsignaturas) => {

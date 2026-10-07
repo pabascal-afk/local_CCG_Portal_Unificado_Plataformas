@@ -1,26 +1,13 @@
-const express = require('express');
+﻿const fs = require('fs');
+const path = require('path');
+
+const code = `const express = require('express');
 const router = express.Router();
 const multer = require('multer');
 const path = require('path');
 const fs = require('fs');
 const nodemailer = require('nodemailer');
-const sqlite3 = require('sqlite3').verbose();
-const dbPath = path.join(__dirname, '../db/colegio.db');
-
-const queryAll = (query, params = []) => new Promise((resolve, reject) => {
-    const db = new sqlite3.Database(dbPath);
-    db.all(query, params, (err, rows) => {
-        db.close();
-        if(err) reject(err); else resolve(rows);
-    });
-});
-const run = (query, params = []) => new Promise((resolve, reject) => {
-    const db = new sqlite3.Database(dbPath);
-    db.run(query, params, function(err) {
-        db.close();
-        if(err) reject(err); else resolve(this.lastID);
-    });
-});
+const { queryAll, run } = require('../db/db');
 
 // Ensure uploads dir exists
 const uploadsDir = path.join(__dirname, '..', '..', 'uploads');
@@ -37,9 +24,6 @@ const transporter = nodemailer.createTransport({
     auth: {
         user: process.env.SMTP_USER,
         pass: process.env.SMTP_PASS
-    },
-    tls: {
-        rejectUnauthorized: false
     }
 });
 
@@ -55,12 +39,12 @@ router.post('/enviar/:id', upload.single('archivo'), async (req, res) => {
         const ev = evals[0];
         
         // Find coordinator
-        const coords = await queryAll(`
+        const coords = await queryAll(\`
             SELECT * FROM coordinadores_areas 
             WHERE (curso_regla = ? OR curso_regla = '*')
             AND (asignatura_regla = ? OR asignatura_regla = '*')
             ORDER BY (curso_regla != '*') DESC, (asignatura_regla != '*') DESC
-        `, [ev.curso, ev.asignatura]);
+        \`, [ev.curso, ev.asignatura]);
         
         const emailDestino = coords.length > 0 ? coords[0].email : (process.env.DIRECTOR_EMAIL || 'utp@colegio.edu');
         const nombreDestino = coords.length > 0 ? coords[0].nombre : 'Coordinación General';
@@ -71,10 +55,7 @@ router.post('/enviar/:id', upload.single('archivo'), async (req, res) => {
             [link_doc || null, archivoPath, id]);
             
         // Send email
-        const confRows = await queryAll("SELECT valor FROM config_global WHERE clave = 'emails_activados'");
-        const emailsActivados = confRows.length > 0 ? confRows[0].valor === 'true' : true;
-        
-        if (emailsActivados && process.env.SMTP_USER && process.env.SMTP_PASS) {
+        if (process.env.SMTP_USER && process.env.SMTP_PASS) {
             let attachments = [];
             if (archivo) {
                 attachments.push({
@@ -83,24 +64,24 @@ router.post('/enviar/:id', upload.single('archivo'), async (req, res) => {
                 });
             }
             
-            const htmlMsg = `
+            const htmlMsg = \`
                 <h3>Nueva Evaluación para Revisión/Impresión</h3>
-                <p>Hola ${nombreDestino},</p>
-                <p>El profesor <b>${ev.profesor_nombre}</b> ha enviado una evaluación para su revisión y/o impresión.</p>
+                <p>Hola \${nombreDestino},</p>
+                <p>El profesor <b>\${ev.profesor_nombre}</b> ha enviado una evaluación para su revisión y/o impresión.</p>
                 <ul>
-                    <li><b>Curso:</b> ${ev.curso}</li>
-                    <li><b>Asignatura:</b> ${ev.asignatura}</li>
-                    <li><b>Fecha Programada:</b> ${ev.fecha}</li>
-                    <li><b>Tipo:</b> ${ev.tipo}</li>
+                    <li><b>Curso:</b> \${ev.curso}</li>
+                    <li><b>Asignatura:</b> \${ev.asignatura}</li>
+                    <li><b>Fecha Programada:</b> \${ev.fecha}</li>
+                    <li><b>Tipo:</b> \${ev.tipo}</li>
                 </ul>
-                <p><b>Instrucciones del profesor:</b><br/>${instrucciones || 'Ninguna'}</p>
-                ${link_doc ? `<p><b>Enlace Google Docs:</b> <a href="${link_doc}">${link_doc}</a></p>` : ''}
-            `;
+                <p><b>Instrucciones del profesor:</b><br/>\${instrucciones || 'Ninguna'}</p>
+                \${link_doc ? \`<p><b>Enlace Google Docs:</b> <a href="\${link_doc}">\${link_doc}</a></p>\` : ''}
+            \`;
             
             await transporter.sendMail({
                 from: '"Sistema Colegio" <' + process.env.SMTP_USER + '>',
                 to: emailDestino,
-                subject: `Entrega Evaluación: ${ev.curso} - ${ev.asignatura}`,
+                subject: \`Entrega Evaluación: \${ev.curso} - \${ev.asignatura}\`,
                 html: htmlMsg,
                 attachments: attachments
             });
@@ -143,3 +124,6 @@ router.delete('/coordinadores/:id', async (req, res) => {
 });
 
 module.exports = router;
+`;
+fs.writeFileSync('server/api/envios.js', code, 'utf8');
+console.log("envios.js creado");

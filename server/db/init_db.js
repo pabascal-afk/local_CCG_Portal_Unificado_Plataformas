@@ -64,7 +64,13 @@ const schemas = [
     clave TEXT PRIMARY KEY,
     valor TEXT
   )`,
-  `CREATE TABLE IF NOT EXISTS config_topes (
+  `CREATE TABLE IF NOT EXISTS config_tipos_evaluacion (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      nombre TEXT UNIQUE NOT NULL,
+      es_prueba BOOLEAN NOT NULL DEFAULT 0
+  );
+  
+  CREATE TABLE IF NOT EXISTS config_topes (
     curso TEXT PRIMARY KEY,
     max_dia_escritas INTEGER,
     max_dia_otras INTEGER,
