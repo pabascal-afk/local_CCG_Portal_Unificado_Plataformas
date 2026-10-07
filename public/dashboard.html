@@ -280,6 +280,7 @@
             data.reservas.slice(0, 10).forEach(r => {
                 resCont.innerHTML += `
                   <div class="item-resumen">
+                    <button class="btn btn-sm btn-outline-danger float-end ms-2 px-1 py-0" onclick="cancelarReserva('${r.id}')" title="Cancelar Reserva"><i class="bi bi-x"></i></button>
                     <span class="badge bg-secondary float-end">${r.fecha}</span>
                     <span class="fw-bold text-dark">${r.recurso}</span><br>
                     <span class="small text-muted">Bloques: ${r.bloques}</span>

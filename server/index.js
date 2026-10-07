@@ -345,10 +345,43 @@ app.post('/api/reservas', (req, res) => {
     });
 });
 
+const nodemailer = require('nodemailer');
+const transporter = nodemailer.createTransport({
+    service: 'gmail',
+    auth: { user: process.env.SMTP_USER, pass: process.env.SMTP_PASS }
+});
+
 app.delete('/api/reservas/:id', (req, res) => {
-  db.run("UPDATE reservas SET estado = 'Cancelada' WHERE id = ?", [req.params.id], function(err) {
-    if (err) return res.status(500).json({error: err.message});
-    res.json({ message: 'Reserva cancelada' });
+  db.get("SELECT * FROM reservas WHERE id = ?", [req.params.id], (err, reserva) => {
+    if (err || !reserva) return res.status(500).json({error: "No encontrada"});
+    
+    const hoy = new Date();
+    const partes = reserva.fecha.split('-');
+    const fechaRes = new Date(partes[0], partes[1]-1, partes[2]);
+    const diffTime = fechaRes - hoy;
+    const diffDays = diffTime / (1000 * 60 * 60 * 24);
+    
+    db.run("UPDATE reservas SET estado = 'Cancelada' WHERE id = ?", [req.params.id], function(err2) {
+      if (err2) return res.status(500).json({error: err2.message});
+      
+      if (diffDays <= 3) {
+          db.get("SELECT responsable FROM recursos_config WHERE nombre = ?", [reserva.recurso], (err3, conf) => {
+              const adminEmail = (conf && conf.responsable) ? conf.responsable : (process.env.SMTP_USER || 'admin@colegio.edu');
+              const dests = [reserva.profesor_email, adminEmail].filter(Boolean).join(', ');
+              
+              if (process.env.SMTP_USER && process.env.SMTP_PASS) {
+                  transporter.sendMail({
+                      from: '"Sistema Colegio" <' + process.env.SMTP_USER + '>',
+                      to: dests,
+                      subject: "Cancelacion de Reserva Tardia: " + reserva.recurso,
+                      html: "<h3>Notificacion de Cancelacion Tardia</h3><p>Se ha cancelado una reserva faltando 3 dias o menos para la fecha.</p><ul><li><b>Recurso:</b> " + reserva.recurso + "</li><li><b>Fecha Original:</b> " + reserva.fecha + "</li><li><b>Bloques:</b> " + reserva.bloques + "</li><li><b>Docente:</b> " + reserva.profesor_email + "</li><li><b>Motivo/Uso:</b> " + reserva.motivo + "</li></ul><p><i>Este es un aviso automatico del sistema para registro administrativo.</i></p>"
+                  }).catch(e => console.error("Error enviando email de cancelacion:", e));
+              }
+          });
+      }
+      
+      res.json({ message: 'Reserva cancelada' });
+    });
   });
 });
 
