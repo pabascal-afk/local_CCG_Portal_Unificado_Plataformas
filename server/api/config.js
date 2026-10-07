@@ -43,4 +43,9 @@ router.post('/emails', async (req, res) => {
     }
 });
 
+
+router.get('/gas', async (req, res) => {
+    res.json({ url: process.env.GAS_WEB_APP_URL });
+});
+
 module.exports = router;

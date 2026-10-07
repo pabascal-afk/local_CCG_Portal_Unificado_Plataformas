@@ -76,8 +76,11 @@
           <p class="small text-muted mb-4">Esta evaluación será enviada automáticamente al Coordinador Pedagógico correspondiente a <b id="lblEnvioCursoAsig"></b>.</p>
           <input type="hidden" id="inEnvioId">
           <div class="mb-3">
-            <label class="form-label fw-bold small">Enlace Google Docs (Opcional)</label>
-            <input type="url" id="inEnvioLink" class="form-control" placeholder="https://docs.google.com/...">
+            <label class="form-label fw-bold small">Enlace a Documento (Google Docs, Drive)</label>
+            <div class="input-group">
+                <input type="url" id="inEnvioLink" class="form-control" placeholder="https://docs.google.com/...">
+                <button class="btn btn-outline-success" type="button" onclick="abrirDrivePicker()"><i class="bi bi-google"></i> Drive</button>
+            </div>
           </div>
           <div class="mb-3">
             <label class="form-label fw-bold small">O Adjuntar Archivo (Word/PDF)</label>
@@ -166,6 +169,33 @@
     document.addEventListener('DOMContentLoaded', () => {
        modalEnvio = new bootstrap.Modal(document.getElementById('modalEnvio'));
        modalTodas = new bootstrap.Modal(document.getElementById('modalTodasEvals'));
+    });
+
+    
+    async function abrirDrivePicker() {
+        const res = await fetch('/api/config/gas');
+        const data = await res.json();
+        if (!data.url) return Swal.fire("Error", "GAS_WEB_APP_URL no configurado", "error");
+        
+        const pickerUrl = data.url + '?mode=picker';
+        
+        // Abrir popup centrado
+        const w = 800; const h = 600;
+        const left = (window.screen.width/2)-(w/2);
+        const top = (window.screen.height/2)-(h/2);
+        window.open(pickerUrl, 'Google Drive', 'toolbar=no, location=no, directories=no, status=no, menubar=no, scrollbars=no, resizable=no, copyhistory=no, width='+w+', height='+h+', top='+top+', left='+left);
+    }
+
+    // Escuchar el mensaje desde el Popup
+    window.addEventListener('message', function(event) {
+        if (event.data && event.data.type === 'drivePickerResult') {
+            document.getElementById('inEnvioLink').value = event.data.url;
+            Swal.fire({
+                toast: true, position: 'top-end', showConfirmButton: false, timer: 3000, 
+                icon: 'success', 
+                title: 'Documento adjuntado: ' + event.data.name
+            });
+        }
     });
 
     function abrirModalEnvio(id, curso, asig) {
