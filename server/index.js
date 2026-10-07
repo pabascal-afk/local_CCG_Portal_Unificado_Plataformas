@@ -345,12 +345,6 @@ app.post('/api/reservas', (req, res) => {
     });
 });
 
-const nodemailer = require('nodemailer');
-const transporter = nodemailer.createTransport({
-    service: 'gmail',
-    auth: { user: process.env.SMTP_USER, pass: process.env.SMTP_PASS }
-});
-
 app.delete('/api/reservas/:id', (req, res) => {
   db.get("SELECT * FROM reservas WHERE id = ?", [req.params.id], (err, reserva) => {
     if (err || !reserva) return res.status(500).json({error: "No encontrada"});
