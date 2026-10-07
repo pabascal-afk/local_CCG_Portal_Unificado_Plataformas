@@ -160,6 +160,7 @@
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
   <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.10.5/font/bootstrap-icons.css">
   
   <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
   <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
@@ -244,54 +245,98 @@
     <h4>Cargando Agenda...</h4>
   </div>
 
-  <div class="header-bar flex-wrap gap-3">
-    <div>
-      <h4 class="mb-0 fw-bold text-primary">Agenda Escolar</h4>
+  <div class="header-bar flex-wrap gap-3 align-items-center">
+    <div class="d-flex flex-column">
+      <h4 class="mb-0 fw-bold text-primary"><i class="bi bi-calendar3"></i> Agenda Escolar</h4>
       <small class="text-muted" id="user-info">Cargando usuario...</small>
     </div>
     
-    <!-- Filtros -->
-    <div class="d-flex gap-2 flex-grow-1" style="max-width: 600px;">
-      <select id="filterCurso" class="form-select form-select-sm" onchange="aplicarFiltros()">
-        <option value="">Todos los cursos</option>
-      </select>
-      <select id="filterAsig" class="form-select form-select-sm" onchange="aplicarFiltros()">
-        <option value="">Todas las asignaturas</option>
-      </select>
-      <select id="filterProf" class="form-select form-select-sm" onchange="aplicarFiltros()">
-        <option value="">Todos los profesores</option>
-      </select>
+    <!-- Filtros Mejorados -->
+    <div class="d-flex gap-2 flex-grow-1 justify-content-center" style="max-width: 600px;">
+      <div class="input-group input-group-sm shadow-sm">
+        <span class="input-group-text bg-white border-2 text-muted"><i class="bi bi-people-fill"></i></span>
+        <select id="filterCurso" class="form-select border-2 border-start-0" onchange="aplicarFiltros()">
+          <option value="">Todos los cursos</option>
+        </select>
+      </div>
+      <div class="input-group input-group-sm shadow-sm">
+        <span class="input-group-text bg-white border-2 text-muted"><i class="bi bi-book-half"></i></span>
+        <select id="filterAsig" class="form-select border-2 border-start-0" onchange="aplicarFiltros()">
+          <option value="">Todas las asignaturas</option>
+        </select>
+      </div>
+      <div class="input-group input-group-sm shadow-sm">
+        <span class="input-group-text bg-white border-2 text-muted"><i class="bi bi-person-badge-fill"></i></span>
+        <select id="filterProf" class="form-select border-2 border-start-0" onchange="aplicarFiltros()">
+          <option value="">Todos los profesores</option>
+        </select>
+      </div>
     </div>
 
     <div class="d-flex align-items-center gap-2">
-      <span class="badge bg-light text-secondary border p-2">[+] Clic en casilla para agendar</span>
-      <button class="btn btn-outline-danger btn-sm fw-semibold" onclick="abrirModalExportarPDF()">
-        <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" fill="currentColor" class="bi bi-file-pdf me-1" viewBox="0 0 16 16">
-          <path fill-rule="evenodd" d="M14 4.5V14a2 2 0 0 1-2 2h-1v-1h1a1 1 0 0 0 1-1V4.5h-2A1.5 1.5 0 0 1 9.5 3V1H4a1 1 0 0 0-1 1v9H2V2a2 2 0 0 1 2-2h5.5zM1.6 11.85H0v3.999h.791v-1.342h.803q.43 0 .732-.173.305-.175.463-.474a1.4 1.4 0 0 0 .161-.677q0-.375-.158-.677a1.18 1.18 0 0 0-.46-.477q-.3-.18-.732-.179m.545 1.333a.8.8 0 0 1-.085.38.57.57 0 0 1-.238.241.8.8 0 0 1-.375.082H.788V12.48h.66q.327 0 .512.181.185.183.185.522zm1.217-1.333v3.999h1.46q.602 0 .998-.237a1.45 1.45 0 0 0 .595-.689q.196-.45.196-1.084 0-.63-.196-1.075a1.43 1.43 0 0 0-.589-.68q-.396-.234-1.005-.234zm.791.645h.563q.371 0 .609.152a.9.9 0 0 1 .354.454q.118.302.118.753a2.3 2.3 0 0 1-.068.592 1.1 1.1 0 0 1-.196.422.8.8 0 0 1-.334.252 1.3 1.3 0 0 1-.483.082h-.563zm3.743 1.763v1.591h-.79V11.85h2.548v.653H7.896v1.117h1.606v.638z"/>
-        </svg> Exportar PDF
+      <span class="badge bg-light text-secondary border p-2 shadow-sm d-none d-md-block"><i class="bi bi-plus-circle"></i> Clic en casilla para agendar</span>
+      <!-- Botón de Offcanvas, oculto por defecto. Comparte ID con el JS legacy -->
+      <button id="adminPanel" class="btn btn-dark fw-bold shadow-sm d-none" type="button" data-bs-toggle="offcanvas" data-bs-target="#adminSidebar">
+        <i class="bi bi-gear-fill"></i> Admin
       </button>
     </div>
   </div>
 
-  <!-- Panel de Administrador (Oculto por defecto) -->
-  <div id="adminPanel" class="card border-0 shadow-sm mb-4 d-none">
-    <div class="card-body d-flex gap-2 align-items-center bg-white rounded-3 border flex-wrap">
-      <span class="fw-bold text-dark me-2">[Admin] Panel Admin:</span>
-      <button class="btn btn-outline-danger btn-sm fw-semibold" onclick="abrirModalExportarPDF()">Exportar PDF</button>
-      <button class="btn btn-outline-success btn-sm fw-semibold" onclick="alert('Exportacion a Excel en construccion')">Exportar Excel</button>
-      <button class="btn btn-warning btn-sm fw-bold ms-2" onclick="abrirModalAuditoria()">Auditor&iacute;a Art. 51</button>
-        <button class="btn btn-outline-info btn-sm fw-semibold" onclick="abrirModalTipos()">⚙️ Tipos de Evaluaci&oacute;n</button>
-      <button class="btn btn-outline-secondary btn-sm fw-semibold ms-auto" onclick="alert('Limpieza de DB en construccion')">Administrar DB</button>
-      <button class="btn btn-dark btn-sm fw-bold ms-2" onclick="ejecutarCargaAutomaticaFront()" id="btnCargaAuto">&#129302; Carga Autom&aacute;tica</button>
-      <div class="form-check form-switch ms-3 d-flex align-items-center">
-        <input class="form-check-input mt-0 me-2" type="checkbox" id="switchSistema" onchange="toggleSistema(this)">
-        <label class="form-check-label fw-bold small text-nowrap" for="switchSistema">Sistema Abierto</label>
+  <!-- OFFCANVAS ADMIN SIDEBAR -->
+  <div class="offcanvas offcanvas-end shadow" tabindex="-1" id="adminSidebar" aria-labelledby="adminSidebarLabel">
+    <div class="offcanvas-header bg-dark text-white border-0">
+      <h5 class="offcanvas-title fw-bold" id="adminSidebarLabel"><i class="bi bi-gear-fill"></i> Panel de Administración</h5>
+      <button type="button" class="btn-close btn-close-white" data-bs-dismiss="offcanvas" aria-label="Close"></button>
+    </div>
+    <div class="offcanvas-body p-4 bg-light">
+      
+      <h6 class="text-muted fw-bold text-uppercase mb-3 small"><i class="bi bi-folder-fill"></i> Reportes y Exportación</h6>
+      <div class="d-grid gap-2 mb-4">
+        <button class="btn btn-outline-danger fw-semibold text-start shadow-sm bg-white" onclick="abrirModalExportarPDF()"><i class="bi bi-file-earmark-pdf-fill"></i> Exportar Calendarios PDF</button>
+        <button class="btn btn-outline-success fw-semibold text-start shadow-sm bg-white" onclick="alert('Exportacion a Excel en construccion')"><i class="bi bi-file-earmark-excel-fill"></i> Exportar a Excel</button>
       </div>
-      <button class="btn btn-primary btn-sm fw-bold ms-2" onclick="abrirModalProfesores()">Profesores</button>
-      <div class="form-check form-switch ms-3 d-flex align-items-center text-danger">
-        <input class="form-check-input mt-0 me-2" type="checkbox" id="switchModoBloqueo" onchange="toggleModoBloqueo(this)">
-        <label class="form-check-label fw-bold small text-nowrap" for="switchModoBloqueo">Modo Bloqueo</label>
+
+      <h6 class="text-muted fw-bold text-uppercase mb-3 small"><i class="bi bi-tools"></i> Herramientas de Agenda</h6>
+      <div class="d-grid gap-2 mb-4">
+        <button class="btn btn-outline-info fw-semibold text-start shadow-sm bg-white" onclick="abrirModalTipos()"><i class="bi bi-ui-checks"></i> Tipos de Evaluación</button>
+        <button class="btn btn-outline-primary fw-semibold text-start shadow-sm bg-white" onclick="abrirModalProfesores()"><i class="bi bi-people-fill"></i> Gestión de Profesores</button>
+        <button class="btn btn-outline-dark fw-semibold text-start shadow-sm bg-white" onclick="ejecutarCargaAutomaticaFront()" id="btnCargaAuto"><i class="bi bi-robot"></i> Carga Automática</button>
       </div>
+
+      <h6 class="text-muted fw-bold text-uppercase mb-3 small"><i class="bi bi-shield-lock-fill"></i> Restricciones y Bloqueos</h6>
+      <div class="d-grid gap-2 mb-4">
+        <button class="btn btn-warning fw-bold text-start shadow-sm" onclick="abrirModalAuditoria()"><i class="bi bi-search"></i> Auditoría Art. 51</button>
+        
+        <div class="card border-danger shadow-sm mt-2">
+          <div class="card-body p-3 d-flex justify-content-between align-items-center">
+            <div>
+                <span class="fw-bold text-danger d-block">Modo Bloqueo Manual</span>
+                <small class="text-muted" style="font-size: 0.7rem;">Click en celda para insertar bloqueos</small>
+            </div>
+            <div class="form-check form-switch m-0 fs-5">
+              <input class="form-check-input" type="checkbox" id="switchModoBloqueo" onchange="toggleModoBloqueo(this)">
+            </div>
+          </div>
+        </div>
+        
+        <div class="card border-secondary shadow-sm mt-2">
+          <div class="card-body p-3 d-flex justify-content-between align-items-center">
+            <div>
+                <span class="fw-bold text-dark d-block">Sistema Abierto</span>
+                <small class="text-muted" style="font-size: 0.7rem;">Permitir agendamiento de profesores</small>
+            </div>
+            <div class="form-check form-switch m-0 fs-5">
+              <input class="form-check-input" type="checkbox" id="switchSistema" onchange="toggleSistema(this)">
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <h6 class="text-muted fw-bold text-uppercase mb-3 small"><i class="bi bi-wrench-adjustable-circle-fill"></i> Mantenimiento</h6>
+      <div class="d-grid gap-2">
+        <button class="btn btn-outline-secondary fw-semibold text-start shadow-sm bg-white" onclick="alert('Limpieza de DB en construccion')"><i class="bi bi-database-fill-gear"></i> Administrar Base de Datos</button>
+      </div>
+
     </div>
   </div>
 
