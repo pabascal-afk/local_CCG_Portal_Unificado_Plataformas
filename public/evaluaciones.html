@@ -73,7 +73,7 @@
         const actualVal = sel.value;
         sel.innerHTML = '<option value="">-- Selecciona --</option>';
         tiposEvaluacionCache.forEach((t, i) => {
-            const badge = t.es_prueba ? ' (Prueba/Suma)' : ' (No Suma)';
+            const badge = t.es_prueba ? ' (SUMA)' : ' (NO SUMA)';
             sel.innerHTML += `<option value="${t.nombre}">${t.nombre}${badge}</option>`;
         });
         sel.value = actualVal; // Restore selection if exists
