@@ -52,8 +52,20 @@ router.get('/gas', async (req, res) => {
 // ==================== TIPOS DE EVALUACION ====================
 router.get('/tipos-evaluacion', async (req, res) => {
     try {
-        const rows = await queryAll("SELECT * FROM config_tipos_evaluacion ORDER BY id ASC");
+        const rows = await queryAll("SELECT * FROM config_tipos_evaluacion ORDER BY orden ASC, id ASC");
         res.json(rows);
+    } catch (e) {
+        res.status(500).json({ error: e.message });
+    }
+});
+
+router.post('/tipos-evaluacion/reordenar', async (req, res) => {
+    try {
+        const { ordenIds } = req.body;
+        for (let i = 0; i < ordenIds.length; i++) {
+            await run("UPDATE config_tipos_evaluacion SET orden = ? WHERE id = ?", [i, ordenIds[i]]);
+        }
+        res.json({ message: "Orden actualizado" });
     } catch (e) {
         res.status(500).json({ error: e.message });
     }
@@ -62,7 +74,10 @@ router.get('/tipos-evaluacion', async (req, res) => {
 router.post('/tipos-evaluacion', async (req, res) => {
     try {
         const { nombre, es_prueba } = req.body;
-        const id = await run("INSERT INTO config_tipos_evaluacion (nombre, es_prueba) VALUES (?, ?)", [nombre, es_prueba ? 1 : 0]);
+        const maxOrdenRow = await queryAll("SELECT MAX(orden) as maxO FROM config_tipos_evaluacion");
+        let nextOrden = 0;
+        if (maxOrdenRow.length > 0 && maxOrdenRow[0].maxO !== null) nextOrden = maxOrdenRow[0].maxO + 1;
+        const id = await run("INSERT INTO config_tipos_evaluacion (nombre, es_prueba, orden) VALUES (?, ?, ?)", [nombre, es_prueba ? 1 : 0, nextOrden]);
         res.json({ id, message: "Tipo agregado" });
     } catch (e) {
         res.status(500).json({ error: e.message });

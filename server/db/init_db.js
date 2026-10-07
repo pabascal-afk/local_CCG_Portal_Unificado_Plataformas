@@ -123,6 +123,7 @@ db.serialize(() => {
     db.run("ALTER TABLE evaluaciones ADD COLUMN estado_doc TEXT DEFAULT 'Pendiente'", () => {});
     db.run("ALTER TABLE evaluaciones ADD COLUMN link_doc TEXT", () => {});
     db.run("ALTER TABLE evaluaciones ADD COLUMN archivo_doc TEXT", () => {});
+    db.run("ALTER TABLE config_tipos_evaluacion ADD COLUMN orden INTEGER DEFAULT 0", () => {});
     db.run("INSERT OR IGNORE INTO config_global (clave, valor) VALUES ('emails_activados', 'true')", () => {});
 
     db.run("INSERT OR IGNORE INTO config_tipos_evaluacion (nombre, es_prueba) VALUES ('📝 Prueba', 1)", () => {});

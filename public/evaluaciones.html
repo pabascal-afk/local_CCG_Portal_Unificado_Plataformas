@@ -72,7 +72,7 @@
         if(!sel) return;
         const actualVal = sel.value;
         sel.innerHTML = '<option value="">-- Selecciona --</option>';
-        tiposEvaluacionCache.forEach(t => {
+        tiposEvaluacionCache.forEach((t, i) => {
             const badge = t.es_prueba ? ' (Prueba/Suma)' : ' (No Suma)';
             sel.innerHTML += `<option value="${t.nombre}">${t.nombre}${badge}</option>`;
         });
@@ -88,7 +88,7 @@
         const tbody = document.querySelector('#tableTipos tbody');
         if(!tbody) return;
         tbody.innerHTML = '';
-        tiposEvaluacionCache.forEach(t => {
+        tiposEvaluacionCache.forEach((t, i) => {
             tbody.innerHTML += `
                 <tr>
                     <td>${t.nombre}</td>
@@ -118,7 +118,27 @@
         } catch(e) { Swal.fire("Error", e.message, "error"); }
     }
 
-    async function borrarTipo(id) {
+    
+      async function moverTipo(index, dir) {
+          if (index + dir < 0 || index + dir >= tiposEvaluacionCache.length) return;
+          const temp = tiposEvaluacionCache[index];
+          tiposEvaluacionCache[index] = tiposEvaluacionCache[index + dir];
+          tiposEvaluacionCache[index + dir] = temp;
+          
+          renderTiposTabla();
+          renderTiposSelect();
+
+          const ordenIds = tiposEvaluacionCache.map(t => t.id);
+          try {
+              await fetch('/api/config/tipos-evaluacion/reordenar', {
+                  method: 'POST',
+                  headers: {'Content-Type': 'application/json'},
+                  body: JSON.stringify({ ordenIds })
+              });
+          } catch(e) { console.error("Error al reordenar:", e); }
+      }
+
+      async function borrarTipo(id) {
         if(!confirm("¿Borrar este tipo de evaluación?")) return;
         try {
             await fetch('/api/config/tipos-evaluacion/' + id, { method: 'DELETE' });
