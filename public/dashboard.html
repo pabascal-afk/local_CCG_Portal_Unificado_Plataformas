@@ -101,8 +101,22 @@
           <h5 class="modal-title fw-bold">Todas mis Evaluaciones</h5>
           <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
         </div>
-        <div class="modal-body" id="todasEvals-container">
-          Cargando...
+        <div class="modal-body pt-2">
+          <div class="row g-2 mb-3">
+             <div class="col-md-6">
+                <select id="filtTodasCurso" class="form-select form-select-sm" onchange="renderTodasEvalsFiltradas()">
+                  <option value="">Todos los cursos</option>
+                </select>
+             </div>
+             <div class="col-md-6">
+                <select id="filtTodasAsig" class="form-select form-select-sm" onchange="renderTodasEvalsFiltradas()">
+                  <option value="">Todas las asignaturas</option>
+                </select>
+             </div>
+          </div>
+          <div id="todasEvals-container">
+            Cargando...
+          </div>
         </div>
       </div>
     </div>
@@ -226,26 +240,54 @@
         }
     }
 
+    let misEvalsCache = [];
     async function abrirModalTodasEvals() {
         modalTodas.show();
         const cont = document.getElementById('todasEvals-container');
         cont.innerHTML = '<p class="text-center mt-4">Cargando...</p>';
         try {
+            let data = [];
             const res = await fetch('/api/evaluaciones/mis-evaluaciones-todas');
             if(res.ok) {
-                const data = await res.json();
-                if(data.length === 0) {
-                    cont.innerHTML = '<p class="text-center text-muted">No tienes evaluaciones.</p>';
-                    return;
-                }
-                cont.innerHTML = data.map(ev => "<div class='item-resumen p-2 border-bottom'><span class='fw-bold text-primary'>" + ev.curso + " - " + ev.asignatura + " <span class='badge bg-info ms-2'>" + ev.fecha + "</span></span>" + (ev.estado_doc === 'Enviada' ? "<span class='badge bg-success float-end mt-1'>Enviada</span>" : "<button class='btn btn-sm btn-outline-primary float-end p-1 ms-2' onclick='modalTodas.hide(); abrirModalEnvio(\"" + ev.id + "\", \"" + ev.curso + "\", \"" + ev.asignatura + "\")'><i class='bi bi-paperclip'></i> Enviar</button>") + "<br><span class='small text-muted'>Tipo: " + ev.tipo + "</span></div>").join('');
+                data = await res.json();
             } else {
                 const d = await fetch('/api/dashboard/me').then(r=>r.json());
-                cont.innerHTML = d.evaluaciones.map(ev => "<div class='item-resumen p-2 border-bottom'><span class='fw-bold text-primary'>" + ev.curso + " - " + ev.asignatura + " <span class='badge bg-info ms-2'>" + ev.fecha + "</span></span>" + (ev.estado_doc === 'Enviada' ? "<span class='badge bg-success float-end mt-1'>Enviada</span>" : "<button class='btn btn-sm btn-outline-primary float-end p-1 ms-2' onclick='modalTodas.hide(); abrirModalEnvio(\"" + ev.id + "\", \"" + ev.curso + "\", \"" + ev.asignatura + "\")'><i class='bi bi-paperclip'></i> Enviar</button>") + "<br><span class='small text-muted'>Tipo: " + ev.tipo + "</span></div>").join('');
+                data = d.evaluaciones;
             }
+            misEvalsCache = data;
+            
+            // Poblar selects
+            const cursos = [...new Set(data.map(e => e.curso))].sort();
+            const asigs = [...new Set(data.map(e => e.asignatura))].sort();
+            
+            document.getElementById('filtTodasCurso').innerHTML = '<option value="">Todos los cursos</option>' + cursos.map(c => `<option value="${c}">${c}</option>`).join('');
+            document.getElementById('filtTodasAsig').innerHTML = '<option value="">Todas las asignaturas</option>' + asigs.map(a => `<option value="${a}">${a}</option>`).join('');
+            
+            renderTodasEvalsFiltradas();
         } catch(e) {
             cont.innerHTML = '<p class="text-danger">Error cargando evaluaciones</p>';
         }
+    }
+
+    function renderTodasEvalsFiltradas() {
+        const cont = document.getElementById('todasEvals-container');
+        const cFiltro = document.getElementById('filtTodasCurso').value;
+        const aFiltro = document.getElementById('filtTodasAsig').value;
+        
+        let filtradas = misEvalsCache;
+        if(cFiltro) filtradas = filtradas.filter(e => e.curso === cFiltro);
+        if(aFiltro) filtradas = filtradas.filter(e => e.asignatura === aFiltro);
+        
+        if(filtradas.length === 0) {
+            cont.innerHTML = '<p class="text-center text-muted">No hay evaluaciones que coincidan.</p>';
+            return;
+        }
+        
+        cont.innerHTML = filtradas.map(ev => 
+            "<div class='item-resumen p-2 border-bottom'><span class='fw-bold text-primary'>" + ev.curso + " - " + ev.asignatura + " <span class='badge bg-info ms-2'>" + ev.fecha + "</span></span>" + 
+            (ev.estado_doc === 'Enviada' ? "<span class='badge bg-success float-end mt-1'>Enviada</span>" : "<button class='btn btn-sm btn-outline-primary float-end p-1 ms-2' onclick='modalTodas.hide(); abrirModalEnvio(\"" + ev.id + "\", \"" + ev.curso + "\", \"" + ev.asignatura + "\")'><i class='bi bi-paperclip'></i> Enviar</button>") + 
+            "<br><span class='small text-muted'>Tipo: " + ev.tipo + "</span></div>"
+        ).join('');
     }
 
 
