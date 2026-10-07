@@ -131,7 +131,8 @@
         const btn = e.target.querySelector('button');
         btn.disabled = true;
         try {
-            const nombre = document.getElementById('inNuevoTipo').value.trim();
+            const emoji = document.getElementById('inNuevoEmoji').value;
+            const nombre = emoji + " " + document.getElementById('inNuevoTipo').value.trim();
             const es_prueba = document.getElementById('inNuevoSuma').checked;
             const res = await fetch('/api/config/tipos-evaluacion', {
                 method: 'POST',
@@ -1318,7 +1319,23 @@
               </table>
           </div>
           <form id="formNuevoTipo" class="d-flex gap-2">
-              <input type="text" class="form-control" id="inNuevoTipo" placeholder="Ej: 🗣️ Disertaci&oacute;n" required>
+              <select class="form-select text-center fs-5 px-1" id="inNuevoEmoji" style="width: 70px;" required title="Selecciona un icono">
+                  <option value="📝">📝</option>
+                  <option value="🗣️">🗣️</option>
+                  <option value="📂">📂</option>
+                  <option value="🔄">🔄</option>
+                  <option value="⏱️">⏱️</option>
+                  <option value="💻">💻</option>
+                  <option value="📖">📖</option>
+                  <option value="🏃">🏃</option>
+                  <option value="🎨">🎨</option>
+                  <option value="🎵">🎵</option>
+                  <option value="🧪">🧪</option>
+                  <option value="🧠">🧠</option>
+                  <option value="📐">📐</option>
+                  <option value="⭐">⭐</option>
+              </select>
+              <input type="text" class="form-control" id="inNuevoTipo" placeholder="Nombre (Ej: Exposición Oral)" required>
               <div class="form-check form-switch d-flex align-items-center mb-0 px-2" title="Suma para topes de evaluaciones por día">
                   <input class="form-check-input" type="checkbox" role="switch" id="inNuevoSuma" style="margin-left: 0;">
               </div>
