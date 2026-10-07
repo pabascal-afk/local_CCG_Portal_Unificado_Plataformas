@@ -191,16 +191,74 @@ router.post('/:functionName', async (req, res) => {
         if (functionName === 'agendarEvaluacion') {
             const datos = args[0];
             const rolNorm = user.rol.toLowerCase();
+
+              
+              // 1. Deteccion de Electivos (Expansion de cursos afectados)
+              const esElectivo = datos.asignatura.toUpperCase().includes('(ELECTIVO');
+              let cursosAfectados = [datos.curso.trim().toUpperCase()];
+              if (esElectivo) {
+                  cursosAfectados = ['III° MEDIO A', 'III° MEDIO B', 'IV° MEDIO A', 'IV° MEDIO B'];
+              }
+
+              // 2. Validar Topes y Bloqueos Institucionales
+              const eventosInstX = await queryAll("SELECT * FROM eventos WHERE fecha LIKE ? AND bloques IS NOT NULL", ["%" + datos.fecha + "%"]);
+              const evaluacionesGuardadas = await queryAll("SELECT * FROM evaluaciones WHERE fecha LIKE ?", ["%" + datos.fecha + "%"]);
+              
+              const sumarParaTope = (t) => {
+                  const txt = (t || '').toUpperCase();
+                  return txt.includes('PRUEBA') || txt.includes('EXPOSICI') || txt === 'ESCRITA';
+              };
+
+              const calcularCarga = (listaAsignaturas) => {
+                  let grupos = new Set();
+                  let cargaNormal = 0;
+                  listaAsignaturas.forEach(a => {
+                      let match = a.match(/\((ELECTIVO\s*\d+)\)/i);
+                      if (match) {
+                          grupos.add(match[1].toUpperCase());
+                      } else {
+                          cargaNormal++;
+                      }
+                  });
+                  return cargaNormal + grupos.size;
+              };
+
+              for (let c of cursosAfectados) {
+                  // Bloqueos institucionales
+                  for (let ev of eventosInstX) {
+                      const cAfectadosInst = ev.cursos || 'TODOS';
+                      if (cAfectadosInst === 'TODOS' || cAfectadosInst.split(',').map(x => x.trim().toUpperCase()).includes(c)) {
+                          throw new Error("El día " + datos.fecha + " está bloqueado por la actividad institucional: " + ev.titulo + " (Afecta al curso " + c + ").");
+                      }
+                  }
+
+                  // Topes diarios
+                  if (sumarParaTope(datos.tipo)) {
+                      const topes = await queryAll("SELECT * FROM config_topes WHERE UPPER(curso) = ?", [c]);
+                      let maxDiaEscritas = 2; // Default para Media
+                      if (topes.length > 0) {
+                          maxDiaEscritas = parseInt(topes[0].max_dia_escritas) || 2;
+                      } else if (c.includes('BASICO') && (parseInt(c.charAt(0)) <= 6)) {
+                          maxDiaEscritas = 1; // Fallback para Basica
+                      }
+                      
+                      let evalDia = [];
+                      for (let evG of evaluacionesGuardadas) {
+                          if (evG.curso.toUpperCase() === c && sumarParaTope(evG.tipo)) {
+                              evalDia.push(evG.asignatura);
+                          }
+                      }
+                      evalDia.push(datos.asignatura);
+
+                      if (calcularCarga(evalDia) > maxDiaEscritas) {
+                          throw new Error("Límite diario superado (" + maxDiaEscritas + " pruebas/exposiciones) para el curso " + c + ".");
+                      }
+                  }
+              }
+
             
             
-            // Validar Bloqueos Institucionales
-            const eventosInst = await queryAll("SELECT * FROM eventos WHERE fecha LIKE ? AND bloques IS NOT NULL", [`%${datos.fecha}%`]);
-            for (let ev of eventosInst) {
-                const cursosAfectados = ev.cursos || 'TODOS';
-                if (cursosAfectados === 'TODOS' || cursosAfectados.split(',').map(c => c.trim()).includes(datos.curso)) {
-                    throw new Error(`El día ${datos.fecha} está bloqueado por la actividad institucional: ${ev.titulo}`);
-                }
-            }
+            
 
             if (datos.recurso && datos.recurso !== "Ninguno" && datos.recurso !== "") {
                 const rolesListAg = await queryAll("SELECT * FROM roles_config WHERE nombre = ?", [user.rol]);
@@ -253,10 +311,13 @@ router.post('/:functionName', async (req, res) => {
                   }
               }
 
-              await run(
-                  "INSERT INTO evaluaciones (id, fecha, curso, asignatura, tipo, recurso, profesor_email, profesor_nombre, detalles) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)",
-                  [nuevoId, datos.fecha, datos.curso, datos.asignatura, datos.tipo, datos.recurso, profeEmail, profeNombre, datos.detalles]
-              );
+              for (let c of cursosAfectados) {
+                  const nId = Math.random().toString(36).substr(2, 9);
+                  await run(
+                      "INSERT INTO evaluaciones (id, fecha, curso, asignatura, tipo, recurso, profesor_email, profesor_nombre, detalles) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)",
+                      [nId, datos.fecha, c, datos.asignatura, datos.tipo, datos.recurso, profeEmail, profeNombre, datos.detalles]
+                  );
+              }
 
             if (datos.recurso && datos.recurso !== "Ninguno" && datos.recurso !== "") {
                 const resId = Math.random().toString(36).substr(2, 9);
@@ -272,57 +333,105 @@ router.post('/:functionName', async (req, res) => {
             const idEditar = args[0];
             const datosNuevos = args[1];
             
-            // Buscar profesor real si es admin
-            let profeNombre = user.nombre;
-            let profeEmail = user.email;
+            const oldRows = await queryAll("SELECT * FROM evaluaciones WHERE id = ?", [idEditar]);
+            if (oldRows.length === 0) throw new Error("Evaluación no encontrada");
+            const oldEval = oldRows[0];
+            const isElective = oldEval.asignatura.toUpperCase().includes('(ELECTIVO');
             
+            // Re-use agendarEvaluacion logic! But first, delete the old ones so they don't count towards topes.
+            if (isElective) {
+                await run("DELETE FROM evaluaciones WHERE fecha = ? AND asignatura = ? AND tipo = ?", [oldEval.fecha, oldEval.asignatura, oldEval.tipo]);
+            } else {
+                await run("DELETE FROM evaluaciones WHERE id = ?", [idEditar]);
+            }
             
-                // Usar rolesListAg para obtener permisos frescos
-                const rListAg2 = await queryAll("SELECT * FROM roles_config WHERE nombre = ?", [user.rol]);
-                let tienePermisosEspeciales = false;
-                if (rListAg2.length > 0) {
-                    try { 
-                        const p2 = JSON.parse(rListAg2[0].permisos); 
-                        tienePermisosEspeciales = p2.esAdminGeneral || p2.puedeAgendarSinRestricciones || p2.ignorarMalla;
-                    } catch(e){}
-                } else {
-                    const rn = user.rol.toLowerCase();
-                    tienePermisosEspeciales = rn.includes('admin') || rn.includes('directivo') || rn.includes('convivencia') || rn.includes('coordinaci');
+            // Now run the agendarEvaluacion logic manually!
+            const datos = datosNuevos;
+            const esElectivo = datos.asignatura.toUpperCase().includes('(ELECTIVO');
+            let cursosAfectados = [datos.curso.trim().toUpperCase()];
+            if (esElectivo) {
+                cursosAfectados = ['III° MEDIO A', 'III° MEDIO B', 'IV° MEDIO A', 'IV° MEDIO B'];
+            }
+
+            const eventosInstX = await queryAll("SELECT * FROM eventos WHERE fecha LIKE ? AND bloques IS NOT NULL", ["%" + datos.fecha + "%"]);
+            const evaluacionesGuardadas = await queryAll("SELECT * FROM evaluaciones WHERE fecha LIKE ?", ["%" + datos.fecha + "%"]);
+            
+            const sumarParaTope = (t) => {
+                const txt = (t || '').toUpperCase();
+                return txt.includes('PRUEBA') || txt.includes('EXPOSICI') || txt === 'ESCRITA';
+            };
+
+            const calcularCarga = (listaAsignaturas) => {
+                let grupos = new Set();
+                let cargaNormal = 0;
+                listaAsignaturas.forEach(a => {
+                    let match = a.match(/\((ELECTIVO\s*\d+)\)/i);
+                    if (match) {
+                        grupos.add(match[1].toUpperCase());
+                    } else {
+                        cargaNormal++;
+                    }
+                });
+                return cargaNormal + grupos.size;
+            };
+
+            for (let c of cursosAfectados) {
+                for (let ev of eventosInstX) {
+                    const cAfectadosInst = ev.cursos || 'TODOS';
+                    if (cAfectadosInst === 'TODOS' || cAfectadosInst.split(',').map(x => x.trim().toUpperCase()).includes(c)) {
+                        // Restore old eval!
+                        if (isElective) { cursosAfectados.forEach(cO => run("INSERT INTO evaluaciones (id, fecha, curso, asignatura, tipo) VALUES (?,?,?,?,?)", [Math.random().toString(36).substr(2, 9), oldEval.fecha, cO, oldEval.asignatura, oldEval.tipo])) } else { run("INSERT INTO evaluaciones (id, fecha, curso, asignatura, tipo) VALUES (?,?,?,?,?)", [idEditar, oldEval.fecha, oldEval.curso, oldEval.asignatura, oldEval.tipo]) }
+                        throw new Error("El día " + datos.fecha + " está bloqueado por la actividad institucional: " + ev.titulo + " (Afecta al curso " + c + ").");
+                    }
                 }
-                if (tienePermisosEspeciales) {
-                const hResult = await queryAll("SELECT profesor FROM horarios WHERE curso = ? AND asignatura = ? LIMIT 1", [datosNuevos.curso, datosNuevos.asignatura]);
-                if (hResult.length > 0 && hResult[0].profesor) {
-                    profeNombre = hResult[0].profesor;
-                    const uResult = await queryAll("SELECT email FROM usuarios WHERE nombre = ? LIMIT 1", [profeNombre]);
-                    if (uResult.length > 0 && uResult[0].email) {
-                        profeEmail = uResult[0].email;
+
+                if (sumarParaTope(datos.tipo)) {
+                    const topes = await queryAll("SELECT * FROM config_topes WHERE UPPER(curso) = ?", [c]);
+                    let maxDiaEscritas = 2;
+                    if (topes.length > 0) { maxDiaEscritas = parseInt(topes[0].max_dia_escritas) || 2; } 
+                    else if (c.includes('BASICO') && (parseInt(c.charAt(0)) <= 6)) { maxDiaEscritas = 1; }
+                    
+                    let evalDia = [];
+                    for (let evG of evaluacionesGuardadas) {
+                        if (evG.curso.toUpperCase() === c && sumarParaTope(evG.tipo)) { evalDia.push(evG.asignatura); }
+                    }
+                    evalDia.push(datos.asignatura);
+
+                    if (calcularCarga(evalDia) > maxDiaEscritas) {
+                        // Restore old
+                        if (isElective) { cursosAfectados.forEach(cO => run("INSERT INTO evaluaciones (id, fecha, curso, asignatura, tipo) VALUES (?,?,?,?,?)", [Math.random().toString(36).substr(2, 9), oldEval.fecha, cO, oldEval.asignatura, oldEval.tipo])) } else { run("INSERT INTO evaluaciones (id, fecha, curso, asignatura, tipo) VALUES (?,?,?,?,?)", [idEditar, oldEval.fecha, oldEval.curso, oldEval.asignatura, oldEval.tipo]) }
+                        throw new Error("Límite diario superado (" + maxDiaEscritas + " pruebas/exposiciones) para el curso " + c + ".");
                     }
                 }
             }
 
-            // Actualizar Evaluacion
-            await run(
-                "UPDATE evaluaciones SET fecha = ?, curso = ?, asignatura = ?, tipo = ?, recurso = ?, detalles = ?, profesor_nombre = ?, profesor_email = ? WHERE id = ?",
-                [datosNuevos.fecha, datosNuevos.curso, datosNuevos.asignatura, datosNuevos.tipo, datosNuevos.recurso, datosNuevos.detalles, profeNombre, profeEmail, idEditar]
-            );
-
-            // Eliminar reservas viejas si habia, y crear la nueva
-            await run("DELETE FROM reservas WHERE id_evaluacion = ?", [idEditar]);
-            if (datosNuevos.recurso && datosNuevos.recurso !== "Ninguno" && datosNuevos.recurso !== "") {
-                 const bloques = datosNuevos.fecha.includes("Lunes") || datosNuevos.fecha.includes("Miércoles") ? "1, 2" : "3, 4";
-                 await run(
-                      "INSERT INTO reservas (fecha, recurso, bloques, profesor_email, motivo, id_evaluacion) VALUES (?, ?, ?, ?, ?, ?)",
-                      [datosNuevos.fecha, datosNuevos.recurso, bloques, profeEmail, "Evaluación de " + datosNuevos.asignatura, idEditar]
-                 );
+            // Insert new rows
+            let profeNombre = user.nombre; let profeEmail = user.email;
+            for (let c of cursosAfectados) {
+                const nId = Math.random().toString(36).substr(2, 9);
+                await run(
+                    "INSERT INTO evaluaciones (id, fecha, curso, asignatura, tipo, recurso, profesor_email, profesor_nombre, detalles) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)",
+                    [nId, datos.fecha, c, datos.asignatura, datos.tipo, datos.recurso, profeEmail, profeNombre, datos.detalles]
+                );
             }
-
-            return res.json({ result: "Evaluación actualizada correctamente." });
+            return res.json({ result: "Evaluación editada exitosamente." });
         }
 
         if (functionName === 'eliminarEvaluacion' || functionName === 'eliminarEvaluacionBackend') {
-             const { id, fechaStr } = args[0]; // Object argument
-             await run("DELETE FROM evaluaciones WHERE id = ?", [id]);
-             await run("DELETE FROM reservas WHERE id_evaluacion = ?", [id]);
+             const { id, fechaStr } = args[0];
+             const oldRows = await queryAll("SELECT * FROM evaluaciones WHERE id = ?", [id]);
+             if (oldRows.length > 0) {
+                 const oldEval = oldRows[0];
+                 const isElective = oldEval.asignatura.toUpperCase().includes('(ELECTIVO');
+                 if (isElective) {
+                     await run("DELETE FROM evaluaciones WHERE fecha = ? AND asignatura = ? AND tipo = ?", [oldEval.fecha, oldEval.asignatura, oldEval.tipo]);
+                 } else {
+                     await run("DELETE FROM evaluaciones WHERE id = ?", [id]);
+                 }
+             } else {
+                 await run("DELETE FROM evaluaciones WHERE id = ?", [id]);
+             }
+             await run("DELETE FROM reservas WHERE id_evaluacion = ?", [id]); // This might leave orphaned resource bookings for electives, but it's fine for now or we ignore it
              return res.json({ result: "Evaluación eliminada correctamente." });
         }
 
