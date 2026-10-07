@@ -126,7 +126,7 @@
         } catch(e) { Swal.fire("Error", e.message, "error"); }
     }
 
-    document.getElementById('formNuevoTipo')?.addEventListener('submit', async (e) => {
+    async function crearNuevoTipo(e) {
         e.preventDefault();
         const btn = e.target.querySelector('button');
         btn.disabled = true;
@@ -1318,7 +1318,7 @@
                   </tbody>
               </table>
           </div>
-          <form id="formNuevoTipo" class="d-flex gap-2">
+          <form id="formNuevoTipo" class="d-flex gap-2" onsubmit="crearNuevoTipo(event)">
               <select class="form-select text-center fs-5 px-1" id="inNuevoEmoji" style="width: 70px;" required title="Selecciona un icono">
                   <option value="📝">📝</option>
                   <option value="🗣️">🗣️</option>
