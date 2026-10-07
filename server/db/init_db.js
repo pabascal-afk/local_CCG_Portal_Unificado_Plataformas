@@ -125,6 +125,13 @@ db.serialize(() => {
     db.run("ALTER TABLE evaluaciones ADD COLUMN archivo_doc TEXT", () => {});
     db.run("INSERT OR IGNORE INTO config_global (clave, valor) VALUES ('emails_activados', 'true')", () => {});
 
+    db.run("INSERT OR IGNORE INTO config_tipos_evaluacion (nombre, es_prueba) VALUES ('📝 Prueba', 1)", () => {});
+    db.run("INSERT OR IGNORE INTO config_tipos_evaluacion (nombre, es_prueba) VALUES ('🗣️ Exposición Oral', 1)", () => {});
+    db.run("INSERT OR IGNORE INTO config_tipos_evaluacion (nombre, es_prueba) VALUES ('📂 Trabajo', 0)", () => {});
+    db.run("INSERT OR IGNORE INTO config_tipos_evaluacion (nombre, es_prueba) VALUES ('🔄 Ev. de Proceso', 0)", () => {});
+    db.run("INSERT OR IGNORE INTO config_tipos_evaluacion (nombre, es_prueba) VALUES ('⏱️ Quiz', 0)", () => {});
+
+
     console.log("Base de datos colegio.db inicializada correctamente con el esquema final.");
 });
 
