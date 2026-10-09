@@ -785,11 +785,15 @@ body.read-only .new-cat-wrapper { display: none !important; }/* Seguridad extra 
                   <input type="color" name="colorNuevo" id="inputColorNuevo" value="#3498db" style="width:100%; border:none; height:30px; cursor:pointer; margin-top: 5px;">
                 </div>
             </div>
-            <div style="flex: 1;">
-                <label style="font-size:0.85em; font-weight:600; color: #555;">Ocupa Recurso Físico</label>
-                <select name="recurso" id="selectRecurso" class="form-control">
-                    <option value="">No, ninguno</option>
-                </select>
+            <div style="flex: 1; border-top: 1px solid #ddd; padding-top: 10px; margin-top: 10px;">
+                <label style="font-size:0.85em; font-weight:600; color: var(--primary);">Solicitar Espacios</label>
+                <div id="selectRecurso" style="display:none;"></div> <!-- Dummy para no romper compatibilidad -->
+                <div id="listaEspaciosCal" style="display:grid; grid-template-columns: 1fr; gap:5px; font-size:0.8em; margin-bottom: 10px; max-height: 100px; overflow-y: auto; background: #f9f9f9; padding: 5px; border-radius: 4px;"></div>
+                
+                <label style="font-size:0.85em; font-weight:600; color: var(--primary);">Solicitar Materiales</label>
+                <div id="listaMaterialesCal" style="display:grid; grid-template-columns: 1fr; gap:5px; font-size:0.8em; max-height: 100px; overflow-y: auto; background: #f9f9f9; padding: 5px; border-radius: 4px;"></div>
+                
+                <div style="font-size: 0.7em; color: #777; margin-top: 5px;">Se enviará un correo a los encargados para autorizar estos recursos.</div>
             </div>
         </div>
         
@@ -904,10 +908,16 @@ body.read-only .new-cat-wrapper { display: none !important; }/* Seguridad extra 
           document.getElementById('calendar-grid').innerHTML = '<p style="text-align:center; margin-top:50px; color:#777;">Cargando calendario...</p>';
           
           fetch('/api/recursos/config').then(r=>r.json()).then(recursos => {
-              const sel = document.getElementById('selectRecurso');
-              sel.innerHTML = '<option value="">No, ninguno</option>';
-              recursos.forEach(r => sel.innerHTML += `<option value="${r.nombre}">${r.nombre}</option>`);
-          });
+                const cont = document.getElementById('listaEspaciosCal');
+                if(cont) cont.innerHTML = recursos.map(r => `<label style="margin:0;"><input type="checkbox" class="chk-esp-cal" value="${r.id}"> ${r.nombre}</label>`).join('');
+            });
+            fetch('/api/actividades/materiales').then(r=>r.json()).then(mats => {
+                const cont = document.getElementById('listaMaterialesCal');
+                if(cont) cont.innerHTML = mats.map(m => `<div style="display:flex; justify-content:space-between; align-items:center;">
+                    <label style="margin:0; flex:1;"><input type="checkbox" class="chk-mat-cal" value="${m.id}" onchange="document.getElementById('cant_cal_${m.id}').disabled = !this.checked"> ${m.nombre}</label>
+                    <input type="number" id="cant_cal_${m.id}" value="1" min="1" disabled style="width:45px; height:22px; font-size:0.9em; padding:0 2px; border:1px solid #ccc;">
+                </div>`).join('');
+            });
 
           google.script.run.withSuccessHandler(procesarDatos).obtenerDatosCompletos();
       }
@@ -1437,7 +1447,7 @@ body.read-only .new-cat-wrapper { display: none !important; }/* Seguridad extra 
                   extList.forEach(ex => agregarFilaExterno(ex.nombre, ex.rut, ex.motivo));
               } catch(e){}
           } const d = ev.dia.toString().padStart(2,'0'); document.getElementById('inputFecha').value = `${ev.anio}-${m}-${d}`; document.getElementById('inputTexto').value = ev.texto.replace(/^\[.*?\]/, '').trim(); llenarSelect(ev.tipo); setValoresBloques(ev.bloquea, ev.bloques); // Set checkboxes state
-          document.getElementById('selectRecurso').value = ev.recurso || '';
+          const sr = document.getElementById('selectRecurso'); if(sr) sr.value = ev.recurso || '';
             document.querySelectorAll('.chk-curso').forEach(chk => chk.checked = true);
             if (ev.cursos && ev.cursos !== 'TODOS') {
               const afectados = ev.cursos.split(',').map(s => s.trim());
@@ -1447,7 +1457,7 @@ body.read-only .new-cat-wrapper { display: none !important; }/* Seguridad extra 
           }
           toggleCursosAfectados();
           } else { 
-            document.getElementById('selectRecurso').value = '';
+            const sr = document.getElementById('selectRecurso'); if(sr) sr.value = '';
               document.querySelectorAll('.chk-curso').forEach(chk => chk.checked = true); 
               toggleCursosAfectados();
               document.getElementById('modalTitle').innerText = "Nuevo Evento";
@@ -1656,8 +1666,30 @@ body.read-only .new-cat-wrapper { display: none !important; }/* Seguridad extra 
         bloques: obtenerValoresBloques(), 
         cursos: document.getElementById('checkBloquea').checked ? recopilarCursosAfectados() : '',
         externos: recopilarExternos(),
-        recurso: this.recurso.value
+        recurso: this.recurso ? this.recurso.value : ''
     }; 
+    
+    const espChecks = Array.from(document.querySelectorAll('.chk-esp-cal:checked')).map(c => c.value);
+    const matChecks = Array.from(document.querySelectorAll('.chk-mat-cal:checked')).map(c => ({
+        id: c.value, cantidad: document.getElementById('cant_cal_'+c.value).value
+    }));
+
+    if (espChecks.length > 0 || matChecks.length > 0) {
+        const payloadAct = {
+            titulo: datos.texto,
+            descripcion: "Solicitado automáticamente al crear Evento Institucional.",
+            fecha: datos.fecha,
+            bloques: datos.bloquea ? datos.bloques : "1",
+            espacios: espChecks,
+            materiales: matChecks
+        };
+        fetch('/api/actividades/solicitar', {
+            method: 'POST',
+            headers: {'Content-Type':'application/json'},
+            body: JSON.stringify(payloadAct)
+        }).catch(console.error);
+    }
+    
     google.script.run.withSuccessHandler(() => { 
         cerrarModal('modalEvento'); 
         cargarTodo(); 
