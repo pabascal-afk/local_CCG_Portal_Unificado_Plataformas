@@ -65,7 +65,8 @@ router.post('/test', async (req, res) => {
         host: host,
         port: parseInt(port),
         secure: secure === true || secure === 'true',
-        auth: { user: user, pass: testPass }
+        auth: { user: user, pass: testPass },
+    tls: { rejectUnauthorized: false }
     });
 
     try {
