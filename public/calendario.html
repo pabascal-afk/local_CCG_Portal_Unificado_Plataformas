@@ -797,29 +797,37 @@ body.read-only .new-cat-wrapper { display: none !important; }/* Seguridad extra 
             📌 Ocupa horario de clases (Bloquea Evaluaciones y Reservas)
           </label>
           
-          <div id="areaBloques" class="bloques-container hidden" style="margin-top: 15px; background: white; padding: 15px; border-radius: 4px; border: 1px solid #ddd;">
-            <div style="display: flex; gap: 20px;">
-                <div style="flex: 1;">
-                    <label style="font-weight: bold; margin-bottom: 8px; color: #333; font-size: 0.85em; display:block;">Bloques que ocupa</label>
-                    <label style="font-size: 0.85em; margin-bottom: 5px; display:inline-block;"><input type="checkbox" id="checkTodosBloques" onchange="toggleTodosBloques()"> Todo el día (TODOS)</label>
-                    <div style="display:flex; flex-wrap:wrap; gap:8px; font-size: 0.85em;" id="checksBloquesIndividuales">
-                      <label><input type="checkbox" class="bloque-cb" value="1"> 1</label>
-                      <label><input type="checkbox" class="bloque-cb" value="2"> 2</label>
-                      <label><input type="checkbox" class="bloque-cb" value="3"> 3</label>
-                      <label><input type="checkbox" class="bloque-cb" value="4"> 4</label>
-                      <label><input type="checkbox" class="bloque-cb" value="5"> 5</label>
-                      <label><input type="checkbox" class="bloque-cb" value="6"> 6</label>
-                      <label><input type="checkbox" class="bloque-cb" value="7"> 7</label>
-                      <label><input type="checkbox" class="bloque-cb" value="8"> 8</label>
-                      <label><input type="checkbox" class="bloque-cb" value="9"> 9</label>
-                      <label><input type="checkbox" class="bloque-cb" value="10"> 10</label>
+          <div id="areaBloques" class="bloques-container hidden" style="margin-top: 15px; background: white; padding: 20px; border-radius: 6px; border: 1px solid #ddd; box-shadow: inset 0 2px 4px rgba(0,0,0,0.02);">
+            <!-- SECCION BLOQUES -->
+            <div style="border-bottom: 1px dashed #ccc; padding-bottom: 15px; margin-bottom: 15px;">
+                <label style="font-weight: bold; margin-bottom: 8px; color: #2c3e50; font-size: 0.9em; display:block;"><i class="bi bi-clock"></i> Bloques que ocupa</label>
+                <div style="margin-bottom: 10px; background: #f0f3f4; padding: 6px 10px; border-radius: 4px; display: inline-block;">
+                    <label style="font-size: 0.85em; font-weight: bold; color: #d35400; margin: 0;"><input type="checkbox" id="checkTodosBloques" onchange="toggleTodosBloques()"> Todo el día (TODOS)</label>
+                </div>
+                <div style="display:flex; flex-wrap:wrap; gap:12px; font-size: 0.85em;" id="checksBloquesIndividuales">
+                  <label><input type="checkbox" class="bloque-cb" value="1"> 1</label>
+                  <label><input type="checkbox" class="bloque-cb" value="2"> 2</label>
+                  <label><input type="checkbox" class="bloque-cb" value="3"> 3</label>
+                  <label><input type="checkbox" class="bloque-cb" value="4"> 4</label>
+                  <label><input type="checkbox" class="bloque-cb" value="5"> 5</label>
+                  <label><input type="checkbox" class="bloque-cb" value="6"> 6</label>
+                  <label><input type="checkbox" class="bloque-cb" value="7"> 7</label>
+                  <label><input type="checkbox" class="bloque-cb" value="8"> 8</label>
+                  <label><input type="checkbox" class="bloque-cb" value="9"> 9</label>
+                  <label><input type="checkbox" class="bloque-cb" value="10"> 10</label>
+                </div>
+            </div>
+            
+            <!-- SECCION CURSOS -->
+            <div id="areaCursosAfectados" style="display: none;">
+                <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px;">
+                    <label style="font-size: 0.9em; font-weight: bold; color: #2c3e50; margin:0;"><i class="bi bi-people"></i> Cursos Afectados <span style="font-weight: normal; color: #7f8c8d; font-size: 0.85em;">(Si es general, selecciona todos)</span></label>
+                    <div style="display: flex; gap: 5px;">
+                        <button type="button" class="btn btn-sm btn-outline-success py-0 px-2" style="font-size:0.75em;" onclick="document.querySelectorAll('.chk-curso').forEach(c => c.checked = true);">Todos</button>
+                        <button type="button" class="btn btn-sm btn-outline-danger py-0 px-2" style="font-size:0.75em;" onclick="document.querySelectorAll('.chk-curso').forEach(c => c.checked = false);">Ninguno</button>
                     </div>
                 </div>
-                
-                <div id="areaCursosAfectados" style="flex: 1; display: none; border-left: 1px solid #eee; padding-left: 20px;">
-                    <label style="font-size: 0.85em; font-weight: bold; margin-bottom: 8px; color: #333; display: block;">Cursos Afectados <small style="font-weight: normal; color: #777;">(Si es general, selecciona todos)</small></label>
-                    <div id="checkCursosContainer" style="font-size: 0.8em; width: 100%; max-height: 100px; overflow-y: auto; display:grid; grid-template-columns: 1fr 1fr; gap:4px;"></div>
-                </div>
+                <div id="checkCursosContainer" style="font-size: 0.8em; width: 100%; max-height: 180px; overflow-y: auto; display:grid; grid-template-columns: repeat(auto-fill, minmax(130px, 1fr)); gap:6px; background: #fafafa; padding: 12px; border-radius: 4px; border: 1px solid #eee;"></div>
             </div>
           </div>
           <input type="hidden" id="inputCursos" value="TODOS">
