@@ -1,4 +1,4 @@
-<!DOCTYPE html>
+﻿<!DOCTYPE html>
 <html>
 
 <head>
@@ -240,7 +240,7 @@
       gap: 8px;
     }
 
-    /* --- AGRUPACIÓN POR DÍA --- */
+    /* --- AGRUPACIÃ“N POR DÃA --- */
     .day-row {
       display: flex;
       background: #fff;
@@ -590,7 +590,7 @@
       font-size: 0.9em;
     }
 
-    /* --- ESTILOS DE IMPRESIÓN (PDF) --- */
+    /* --- ESTILOS DE IMPRESIÃ“N (PDF) --- */
     @media print {
       @page {
         size: A4 portrait;
@@ -686,9 +686,9 @@
     }
 
     /* --- MODO SOLO LECTURA --- */
-body.read-only .fab { display: none !important; }            /* Ocultar botón + flotante */
+body.read-only .fab { display: none !important; }            /* Ocultar botÃ³n + flotante */
 body.read-only .event-actions { display: none !important; }  /* Ocultar botones editar/borrar */
-body.read-only #btnSelectMode { display: none !important; }  /* Ocultar botón Seleccionar */
+body.read-only #btnSelectMode { display: none !important; }  /* Ocultar botÃ³n Seleccionar */
 body.read-only .new-cat-wrapper { display: none !important; }/* Seguridad extra formulario */
 
   </style>
@@ -696,7 +696,7 @@ body.read-only .new-cat-wrapper { display: none !important; }/* Seguridad extra 
 <link rel="icon" type="image/png" href="https://cdn-icons-png.flaticon.com/512/2693/2693507.png">
 
 <script>
-  // Este pequeño truco asegura que el navegador priorice nuestro icono sobre el de Google
+  // Este pequeÃ±o truco asegura que el navegador priorice nuestro icono sobre el de Google
   (function() {
     var link = document.querySelector("link[rel*='icon']") || document.createElement('link');
     link.type = 'image/png';
@@ -717,33 +717,33 @@ body.read-only .new-cat-wrapper { display: none !important; }/* Seguridad extra 
       <div style="width:1px; height:15px; background:#ddd; margin:0 5px;"></div>
 
       <div class="date-filter-group" title="Filtrar por rango de fechas">
-        <span style="font-size:12px">📅</span>
+        <span style="font-size:12px">ðŸ“…</span>
         <input type="date" id="filtroDesde" class="input-date-filter" onchange="renderizar('Actual')" placeholder="Desde">
-        <span style="font-size:10px; color:#aaa;">▶</span>
+        <span style="font-size:10px; color:#aaa;">â–¶</span>
         <input type="date" id="filtroHasta" class="input-date-filter" onchange="renderizar('Actual')" placeholder="Hasta">
-        <button class="btn-clear-date" onclick="limpiarFechas()" title="Ver todo">↺</button>
+        <button class="btn-clear-date" onclick="limpiarFechas()" title="Ver todo">â†º</button>
       </div>
 
       <div style="width:1px; height:15px; background:#ddd; margin:0 5px;"></div>
-      <button class="btn-action btn-select-mode" id="btnSelectMode" onclick="toggleSelectMode()">☑ Seleccionar</button>
-      <button class="btn-action btn-export" onclick="abrirModalExportar()">📥 Exportar</button>
+      <button class="btn-action btn-select-mode" id="btnSelectMode" onclick="toggleSelectMode()">â˜‘ Seleccionar</button>
+      <button class="btn-action btn-export" onclick="abrirModalExportar()">ðŸ“¥ Exportar</button>
 
       <div style="width:1px; height:15px; background:#ddd; margin:0 5px;"></div>
-      <button class="btn-action" style="background:#8e44ad;" onclick="toggleViewMode()">Vista Cuadrícula</button>
+      <button class="btn-action" style="background:#8e44ad;" onclick="toggleViewMode()">Vista CuadrÃ­cula</button>
       <div id="gridNav" style="display:none; align-items:center; gap:10px; background:#fff; padding:3px 15px; border-radius:20px; box-shadow:0 2px 8px rgba(0,0,0,0.05); margin-left:5px;">
-        <button style="border:none; background:transparent; cursor:pointer; font-weight:bold; color:var(--primary);" onclick="cambiarMesGrid(-1)">◀</button>
+        <button style="border:none; background:transparent; cursor:pointer; font-weight:bold; color:var(--primary);" onclick="cambiarMesGrid(-1)">â—€</button>
         <span id="gridMesLabel" style="font-weight:bold; min-width:70px; text-align:center; color:var(--primary); font-size:0.85em; text-transform:uppercase;"></span>
-        <button style="border:none; background:transparent; cursor:pointer; font-weight:bold; color:var(--primary);" onclick="cambiarMesGrid(1)">▶</button>
+        <button style="border:none; background:transparent; cursor:pointer; font-weight:bold; color:var(--primary);" onclick="cambiarMesGrid(1)">â–¶</button>
       </div>
 
       <div style="width:1px; height:15px; background:#ddd; margin:0 5px;"></div>
       <label style="font-size: 0.85em; cursor: pointer; display: flex; align-items: center; gap: 3px; font-weight: 600; color: #333;">
         <input type="checkbox" id="checkVerTodo" onchange="renderizar('Actual')">
-        Ver todo el año
+        Ver todo el aÃ±o
       </label>
 
       <div style="display:flex; align-items:center; gap:5px; margin-left:5px;">
-        <span style="font-size:12px">🔍</span>
+        <span style="font-size:12px">ðŸ”</span>
         <input type="range" min="200" max="800" step="10" value="340" oninput="actualizarZoom(this.value)">
       </div>
     </div>
@@ -754,99 +754,112 @@ body.read-only .new-cat-wrapper { display: none !important; }/* Seguridad extra 
 
   <div id="selectionBar">
     <span style="font-weight:bold" id="selCount">0 seleccionados</span>
-    <button onclick="fusionarRango()" style="background:#e67e22; border:none; color:white; padding:8px 20px; border-radius:20px; cursor:pointer; font-weight:bold;">🔗 Fusionar Rango</button>
-    <button onclick="unificarTexto()" style="background:#3498db; border:none; color:white; padding:8px 20px; border-radius:20px; cursor:pointer; font-weight:bold;">📝 Unificar Texto</button>
+    <button onclick="fusionarRango()" style="background:#e67e22; border:none; color:white; padding:8px 20px; border-radius:20px; cursor:pointer; font-weight:bold;">ðŸ”— Fusionar Rango</button>
+    <button onclick="unificarTexto()" style="background:#3498db; border:none; color:white; padding:8px 20px; border-radius:20px; cursor:pointer; font-weight:bold;">ðŸ“ Unificar Texto</button>
     <button onclick="toggleSelectMode()" style="background:#7f8c8d; border:none; color:white; padding:8px 20px; border-radius:20px; cursor:pointer;">Cancelar</button>
   </div>
 
   <div class="modal-overlay" id="modalEvento">
-    <div class="modal" style="max-width: 600px; padding: 25px;">
-      <h3 id="modalTitle" style="margin-top:0; margin-bottom:20px; border-bottom: 2px solid #eee; padding-bottom: 10px; color: #2c3e50;">Evento</h3>
-      <form id="eventoForm">
-        <input type="hidden" name="idEditar" id="idEditar">
-        
-        <div style="display: flex; gap: 15px; margin-bottom: 15px;">
-            <div style="flex: 1;">
-                <label style="font-size:0.85em; font-weight:600; color: #555;">Fecha</label>
-                <input type="date" name="fecha" id="inputFecha" class="form-control" required>
-            </div>
-            <div style="flex: 2;">
-                <label style="font-size:0.85em; font-weight:600; color: #555;">Actividad / Motivo</label>
-                <input type="text" name="texto" id="inputTexto" class="form-control" placeholder="Descripción breve..." required>
-            </div>
-        </div>
+  <div class="modal" style="max-width: 800px; padding: 0; overflow: hidden; border-radius: 10px; box-shadow: 0 10px 30px rgba(0,0,0,0.2);">
+    <div style="background: #2c3e50; color: white; padding: 15px 20px; display: flex; justify-content: space-between; align-items: center;">
+      <h4 id="modalTitle" style="margin: 0; font-weight: bold;"><i class="bi bi-calendar-event"></i> Evento Institucional</h4>
+      <button type="button" onclick="cerrarModal('modalEvento')" style="background: none; border: none; color: white; font-size: 1.5rem; cursor: pointer;">&times;</button>
+    </div>
+    
+    <form id="eventoForm" style="padding: 20px; max-height: 80vh; overflow-y: auto;">
+      <input type="hidden" name="idEditar" id="idEditar">
+      
+      <h6 style="color: #8e44ad; font-weight: bold; margin-bottom: 15px; border-bottom: 1px solid #eee; padding-bottom: 5px;">1. Detalles Principales</h6>
+      <div style="display: grid; grid-template-columns: 1fr 2fr 1fr; gap: 15px; margin-bottom: 20px;">
+          <div>
+              <label style="font-size:0.85em; font-weight:bold; color: #555;">Fecha</label>
+              <input type="date" name="fecha" id="inputFecha" class="form-control" required>
+          </div>
+          <div>
+              <label style="font-size:0.85em; font-weight:bold; color: #555;">Actividad / Motivo</label>
+              <input type="text" name="texto" id="inputTexto" class="form-control" placeholder="Ej: Acto cívico, Reunión..." required>
+          </div>
+          <div>
+              <label style="font-size:0.85em; font-weight:bold; color: #555;">Categoría</label>
+              <select name="tipo" id="selectTipo" class="form-control" onchange="toggleNuevaCat(this)"></select>
+              <div id="areaNuevaCat" class="new-cat-wrapper hidden" style="margin-top: 5px; background:#f9f9f9; padding:5px; border-radius:4px;">
+                <input type="text" name="tipoNuevo" id="inputTipoNuevo" placeholder="Nombre" style="width: 100%; padding:5px; border:1px solid #ddd; font-size:0.9em; box-sizing: border-box;">
+                <input type="color" name="colorNuevo" id="inputColorNuevo" value="#3498db" style="width:100%; border:none; height:25px; cursor:pointer; margin-top: 5px;">
+              </div>
+          </div>
+      </div>
 
-        <div style="display: flex; gap: 15px; margin-bottom: 15px;">
-            <div style="flex: 1;">
-                <label style="font-size:0.85em; font-weight:600; color: #555;">Categoría</label>
-                <select name="tipo" id="selectTipo" class="form-control" onchange="toggleNuevaCat(this)"></select>
-                <div id="areaNuevaCat" class="new-cat-wrapper hidden" style="margin-top: 5px;">
-                  <input type="text" name="tipoNuevo" id="inputTipoNuevo" placeholder="Nombre" style="width: 100%; padding:5px; border:1px solid #ddd; font-size:0.9em; box-sizing: border-box;">
-                  <input type="color" name="colorNuevo" id="inputColorNuevo" value="#3498db" style="width:100%; border:none; height:30px; cursor:pointer; margin-top: 5px;">
+      <h6 style="color: #e67e22; font-weight: bold; margin-bottom: 10px; border-bottom: 1px solid #eee; padding-bottom: 5px;">2. Afectación Escolar</h6>
+      <div style="background: #fdfbf7; padding: 15px; border-radius: 6px; border: 1px solid #f3e5ab; margin-bottom: 20px;">
+          <label style="font-size:0.95em; font-weight:bold; cursor:pointer; display: flex; align-items: center; gap: 8px; color: #d35400;">
+            <input type="checkbox" id="checkBloquea" onchange="toggleBloques(); toggleCursosAfectados();"> 
+            📌 Ocupa horario de clases (Bloquea Evaluaciones y Reservas)
+          </label>
+          
+          <div id="areaBloques" class="bloques-container hidden" style="margin-top: 15px; background: white; padding: 15px; border-radius: 4px; border: 1px solid #ddd;">
+            <div style="display: flex; gap: 20px;">
+                <div style="flex: 1;">
+                    <label style="font-weight: bold; margin-bottom: 8px; color: #333; font-size: 0.85em; display:block;">Bloques que ocupa</label>
+                    <label style="font-size: 0.85em; margin-bottom: 5px; display:inline-block;"><input type="checkbox" id="checkTodosBloques" onchange="toggleTodosBloques()"> Todo el día (TODOS)</label>
+                    <div style="display:flex; flex-wrap:wrap; gap:8px; font-size: 0.85em;" id="checksBloquesIndividuales">
+                      <label><input type="checkbox" class="bloque-cb" value="1"> 1</label>
+                      <label><input type="checkbox" class="bloque-cb" value="2"> 2</label>
+                      <label><input type="checkbox" class="bloque-cb" value="3"> 3</label>
+                      <label><input type="checkbox" class="bloque-cb" value="4"> 4</label>
+                      <label><input type="checkbox" class="bloque-cb" value="5"> 5</label>
+                      <label><input type="checkbox" class="bloque-cb" value="6"> 6</label>
+                      <label><input type="checkbox" class="bloque-cb" value="7"> 7</label>
+                      <label><input type="checkbox" class="bloque-cb" value="8"> 8</label>
+                      <label><input type="checkbox" class="bloque-cb" value="9"> 9</label>
+                      <label><input type="checkbox" class="bloque-cb" value="10"> 10</label>
+                    </div>
+                </div>
+                
+                <div id="areaCursosAfectados" style="flex: 1; display: none; border-left: 1px solid #eee; padding-left: 20px;">
+                    <label style="font-size: 0.85em; font-weight: bold; margin-bottom: 8px; color: #333; display: block;">Cursos Afectados <small style="font-weight: normal; color: #777;">(Si es general, selecciona todos)</small></label>
+                    <div id="checkCursosContainer" style="font-size: 0.8em; width: 100%; max-height: 100px; overflow-y: auto; display:grid; grid-template-columns: 1fr 1fr; gap:4px;"></div>
                 </div>
             </div>
-            <div style="flex: 1; border-top: 1px solid #ddd; padding-top: 10px; margin-top: 10px;">
-                <label style="font-size:0.85em; font-weight:600; color: var(--primary);">Solicitar Espacios</label>
-                <div id="selectRecurso" style="display:none;"></div> <!-- Dummy para no romper compatibilidad -->
-                <div id="listaEspaciosCal" style="display:grid; grid-template-columns: 1fr; gap:5px; font-size:0.8em; margin-bottom: 10px; max-height: 100px; overflow-y: auto; background: #f9f9f9; padding: 5px; border-radius: 4px;"></div>
-                
-                <label style="font-size:0.85em; font-weight:600; color: var(--primary);">Solicitar Materiales</label>
-                <div id="listaMaterialesCal" style="display:grid; grid-template-columns: 1fr; gap:5px; font-size:0.8em; max-height: 100px; overflow-y: auto; background: #f9f9f9; padding: 5px; border-radius: 4px;"></div>
-                
-                <div style="font-size: 0.7em; color: #777; margin-top: 5px;">Se enviará un correo a los encargados para autorizar estos recursos.</div>
-            </div>
-        </div>
-        
-        <div style="background: #f8f9fa; padding: 15px; border-radius: 6px; border: 1px solid #e9ecef; margin-bottom: 15px;">
-            <label style="font-size:0.9em; font-weight:600; cursor:pointer; display: flex; align-items: center; gap: 8px; color: #d35400;">
-              <input type="checkbox" id="checkBloquea" onchange="toggleBloques(); toggleCursosAfectados();"> 
-              🛑 Bloquea Evaluaciones / Reservas en este horario
-            </label>
-            
-            <div id="areaBloques" class="bloques-container hidden" style="margin-top: 15px; background: white; padding: 10px; border-radius: 4px; border: 1px solid #ddd;">
-              <label style="width: 100%; font-weight: bold; margin-bottom: 8px; color: #333; font-size: 0.85em;">
-                <input type="checkbox" id="checkTodosBloques" onchange="toggleTodosBloques()"> Todo el día (TODOS)
-              </label>
-              <div style="display:flex; flex-wrap:wrap; gap:10px; font-size: 0.85em;" id="checksBloquesIndividuales">
-                <label><input type="checkbox" class="bloque-cb" value="1"> 1</label>
-                <label><input type="checkbox" class="bloque-cb" value="2"> 2</label>
-                <label><input type="checkbox" class="bloque-cb" value="3"> 3</label>
-                <label><input type="checkbox" class="bloque-cb" value="4"> 4</label>
-                <label><input type="checkbox" class="bloque-cb" value="5"> 5</label>
-                <label><input type="checkbox" class="bloque-cb" value="6"> 6</label>
-                <label><input type="checkbox" class="bloque-cb" value="7"> 7</label>
-                <label><input type="checkbox" class="bloque-cb" value="8"> 8</label>
-                <label><input type="checkbox" class="bloque-cb" value="9"> 9</label>
-                <label><input type="checkbox" class="bloque-cb" value="10"> 10</label>
-              </div>
-            </div>
-            
-            <div id="areaCursosAfectados" style="display: none; margin-top: 10px; background: white; padding: 10px; border-radius: 4px; border: 1px solid #ddd;">
-                <label style="font-size: 0.85em; font-weight: bold; margin-bottom: 8px; color: #333; display: block;">Cursos Afectados <small style="font-weight: normal; color: #777;">(Si es general, selecciona todos)</small></label>
-                <div id="checkCursosContainer" style="font-size: 0.8em; width: 100%;"></div>
-            </div>
-            <input type="hidden" id="inputCursos" value="TODOS">
-        </div>
-          
-        <div style="background: #fdfdfe; padding: 15px; border-radius: 6px; border: 1px solid #e9ecef; margin-bottom: 15px;">
-            <label style="font-size: 0.9em; font-weight: 600; color: #2980b9; display: block; margin-bottom: 10px;">
-                <i class="bi bi-people"></i> Invitados Externos (Requieren visación)
-            </label>
-            <div id="listaExternos" class="mb-2"></div>
-            <button type="button" class="btn btn-sm btn-outline-secondary py-0" onclick="agregarFilaExterno()" style="font-size: 0.8em; padding: 4px 8px; cursor: pointer;">+ Añadir Persona Externa</button>
-        </div>
+          </div>
+          <input type="hidden" id="inputCursos" value="TODOS">
+      </div>
 
-        <div style="display:flex; justify-content:flex-end; gap:10px; margin-top: 20px; border-top: 2px solid #eee; padding-top: 15px;">
-          <button type="button" onclick="cerrarModal('modalEvento')" style="background:#f0f0f0; color:#333; border:none; padding:10px 15px; border-radius:4px; font-weight:600; cursor:pointer;">Cancelar</button>
-          <button type="submit" id="btnGuardar" style="background:#2c3e50; color:white; border:none; padding:10px 20px; border-radius:4px; font-weight:600; cursor:pointer;">Guardar</button>
-        </div>
-      </form>
-    </div>
+      <h6 style="color: #2980b9; font-weight: bold; margin-bottom: 10px; border-bottom: 1px solid #eee; padding-bottom: 5px;">3. Logística y Recursos</h6>
+      <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 20px;">
+          
+          <div style="background: #f4f6f6; padding: 15px; border-radius: 6px; border: 1px solid #e5e8e8;">
+              <div id="selectRecurso" style="display:none;"></div>
+              <label style="font-size:0.85em; font-weight:bold; color: var(--primary);">Solicitar Espacios Institucionales</label>
+              <div id="listaEspaciosCal" style="display:grid; grid-template-columns: 1fr; gap:5px; font-size:0.85em; margin-bottom: 15px; max-height: 100px; overflow-y: auto; background: white; padding: 8px; border-radius: 4px; border: 1px solid #ddd;"></div>
+              
+              <label style="font-size:0.85em; font-weight:bold; color: var(--primary);">Solicitar Materiales</label>
+              <div id="listaMaterialesCal" style="display:grid; grid-template-columns: 1fr; gap:5px; font-size:0.85em; max-height: 100px; overflow-y: auto; background: white; padding: 8px; border-radius: 4px; border: 1px solid #ddd;"></div>
+              
+              <div style="font-size: 0.75em; color: #7f8c8d; margin-top: 8px;">Se enviará automáticamente un correo a cada encargado para visarlo.</div>
+          </div>
+          
+          <div style="background: #fdfdfe; padding: 15px; border-radius: 6px; border: 1px solid #e9ecef;">
+              <label style="font-size: 0.9em; font-weight: bold; color: #2980b9; display: block; margin-bottom: 10px;">
+                  Invitados Externos (Requieren visación)
+              </label>
+              <div id="listaExternos" class="mb-2" style="max-height: 150px; overflow-y: auto;"></div>
+              <button type="button" class="btn btn-sm btn-outline-secondary py-0" onclick="agregarFilaExterno()" style="font-size: 0.8em; padding: 4px 8px; cursor: pointer; width: 100%;">+ Añadir Persona Externa</button>
+          </div>
+          
+      </div>
+
+      <div style="display:flex; justify-content:flex-end; gap:10px; margin-top: 20px; border-top: 2px solid #eee; padding-top: 15px;">
+        <button type="button" onclick="cerrarModal('modalEvento')" class="btn btn-light" style="background:#f0f0f0; color:#333; border:none; padding:10px 15px; border-radius:4px; font-weight:600; cursor:pointer;">Cancelar</button>
+        <button type="submit" id="btnGuardar" class="btn btn-primary" style="background:#2c3e50; color:white; border:none; padding:10px 20px; border-radius:4px; font-weight:600; cursor:pointer;">Guardar Evento</button>
+      </div>
+      
+    </form>
   </div>
+</div> </div>
 
   <div class="modal-overlay" id="modalDuplicar">
     <div class="modal" style="max-width: 280px;">
-      <h4 style="margin-top:0; color:#8e44ad; margin-bottom:10px;">📑 Duplicar Evento</h4>
+      <h4 style="margin-top:0; color:#8e44ad; margin-bottom:10px;">ðŸ“‘ Duplicar Evento</h4>
       <div id="duplicarPreview"
         style="background:#f8f9fa; padding:8px; border-radius:4px; margin-bottom:10px; font-style:italic; font-size:0.9em; border-left:3px solid #8e44ad;">
       </div>
@@ -863,14 +876,14 @@ body.read-only .new-cat-wrapper { display: none !important; }/* Seguridad extra 
 
   <div class="modal-overlay" id="modalExportar">
     <div class="modal" style="max-width:450px;">
-      <h3 style="margin-top:0;">📥 Exportar</h3>
+      <h3 style="margin-top:0;">ðŸ“¥ Exportar</h3>
       <div style="margin-bottom:10px; border-bottom:1px solid #eee; padding-bottom:5px;">
-        <label style="font-weight:600; cursor:pointer;"><input type="checkbox" id="checkTodo" checked onchange="toggleTodo(this)"> Todo el año</label>
+        <label style="font-weight:600; cursor:pointer;"><input type="checkbox" id="checkTodo" checked onchange="toggleTodo(this)"> Todo el aÃ±o</label>
       </div>
       <div class="month-checklist" id="listaMesesExport"></div>
       <div style="display:flex; gap:10px; margin-top:15px;">
-        <button onclick="ejecutarExportacion('print')" style="flex:1; background:#2c3e50; color:white; padding:8px; border:none; border-radius:4px; cursor:pointer;">📄 PDF / Imprimir</button>
-        <button onclick="ejecutarExportacion('csv')" style="flex:1; background:#27ae60; color:white; padding:8px; border:none; border-radius:4px; cursor:pointer;">📊 Excel / CSV</button>
+        <button onclick="ejecutarExportacion('print')" style="flex:1; background:#2c3e50; color:white; padding:8px; border:none; border-radius:4px; cursor:pointer;">ðŸ“„ PDF / Imprimir</button>
+        <button onclick="ejecutarExportacion('csv')" style="flex:1; background:#27ae60; color:white; padding:8px; border:none; border-radius:4px; cursor:pointer;">ðŸ“Š Excel / CSV</button>
       </div>
       <div style="text-align:right; margin-top:10px;">
         <button onclick="cerrarModal('modalExportar')" style="background:none; border:none; text-decoration:underline; cursor:pointer; font-size:0.85em; color:#777;">Cancelar</button>
@@ -883,7 +896,7 @@ body.read-only .new-cat-wrapper { display: none !important; }/* Seguridad extra 
     let eventos = [];
     let mapaColores = {}; 
     const meses = ["Enero", "Febrero", "Marzo", "Abril", "Mayo", "Junio", "Julio", "Agosto", "Septiembre", "Octubre", "Noviembre", "Diciembre"];
-    const INICIO_AÑO_ESCOLAR = new Date(2026, 1, 23); 
+    const INICIO_AÃ‘O_ESCOLAR = new Date(2026, 1, 23); 
 
     let isSelectionMode = false;
     let selectedIds = new Set();
@@ -951,7 +964,7 @@ body.read-only .new-cat-wrapper { display: none !important; }/* Seguridad extra 
         renderizar('Todas');
     }
 
-    // Pequeña función para mostrar quién está logueado en la barra (Opcional)
+    // PequeÃ±a funciÃ³n para mostrar quiÃ©n estÃ¡ logueado en la barra (Opcional)
     function crearLabelUsuario() {
         const div = document.createElement('div');
         div.id = 'usuario-actual';
@@ -966,7 +979,7 @@ body.read-only .new-cat-wrapper { display: none !important; }/* Seguridad extra 
 
     function obtenerNumeroSemana(dia, mes, anio) {
         const fechaEvento = new Date(anio, mes, dia);
-        const diffTime = fechaEvento - INICIO_AÑO_ESCOLAR;
+        const diffTime = fechaEvento - INICIO_AÃ‘O_ESCOLAR;
         const diffDays = Math.floor(diffTime / (1000 * 60 * 60 * 24));
         if (diffDays < 0) return -1; 
         return Math.floor(diffDays / 7) + 1;
@@ -1110,14 +1123,14 @@ body.read-only .new-cat-wrapper { display: none !important; }/* Seguridad extra 
                                 <div class="event-content">
                                     <div class="event-text">
                                         ${txt}
-                                        ${(ev.bloquea === 'sí' || ev.bloquea === 'si') ? `<span class="lock-badge" title="Bloquea Evaluaciones">🔒 ${ev.bloques}</span>` : ''}
+                                        ${(ev.bloquea === 'sÃ­' || ev.bloquea === 'si') ? `<span class="lock-badge" title="Bloquea Evaluaciones">ðŸ”’ ${ev.bloques}</span>` : ''}
                                     </div>
                                     ${filtro === 'Todas' ? `<div class="event-cat">${ev.tipo}</div>` : ''}
                                 </div>
 
                                 <div class="event-actions">
-                                    <button class="btn-mini" style="background:#8e44ad" title="Duplicar" onclick="event.stopPropagation(); abrirModalDuplicar(${ev.id})">❐</button>
-                                    <button class="btn-mini" style="background:#95a5a6" title="Editar" onclick="event.stopPropagation(); abrirModalEventos(${ev.id})">✏️</button>
+                                    <button class="btn-mini" style="background:#8e44ad" title="Duplicar" onclick="event.stopPropagation(); abrirModalDuplicar(${ev.id})">â</button>
+                                    <button class="btn-mini" style="background:#95a5a6" title="Editar" onclick="event.stopPropagation(); abrirModalEventos(${ev.id})">âœï¸</button>
                                     <button class="btn-mini" style="background:#c0392b" title="Borrar" onclick="event.stopPropagation(); borrar(${ev.id})">x</button>
                                 </div>
                             </div>
@@ -1145,11 +1158,11 @@ body.read-only .new-cat-wrapper { display: none !important; }/* Seguridad extra 
         const diasEnMes = new Date(anio, mesCuadriculaVisible + 1, 0).getDate();
         const primerDiaSemana = new Date(anio, mesCuadriculaVisible, 1).getDay(); // 0=Sun, 1=Mon...
         
-        // Convertir para que Lunes sea 0 y Sábado sea 5 (Domingo = 6)
+        // Convertir para que Lunes sea 0 y SÃ¡bado sea 5 (Domingo = 6)
         let inicioCol = primerDiaSemana === 0 ? 6 : primerDiaSemana - 1;
         
         let html = '<div class="grid-view-container">';
-        const cabeceras = ['Lunes', 'Martes', 'Miércoles', 'Jueves', 'Viernes', 'Sábado'];
+        const cabeceras = ['Lunes', 'Martes', 'MiÃ©rcoles', 'Jueves', 'Viernes', 'SÃ¡bado'];
         cabeceras.forEach(c => html += `<div class="grid-view-header">${c}</div>`);
         
         for(let i=0; i<inicioCol; i++) {
@@ -1184,8 +1197,8 @@ body.read-only .new-cat-wrapper { display: none !important; }/* Seguridad extra 
             let evHtml = '';
             
             eventosDia.forEach(ev => {
-                const isBloqueado = (ev.bloquea === 'sí' || ev.bloquea === 'si');
-                const badge = isBloqueado ? `🔒 ` : '';
+                const isBloqueado = (ev.bloquea === 'sÃ­' || ev.bloquea === 'si');
+                const badge = isBloqueado ? `ðŸ”’ ` : '';
                 const txtLimpio = ev.texto.replace(/^\[\d+-\d+\]\s*/, '');
                 
                 evHtml += `<div class="grid-view-event" 
@@ -1235,7 +1248,7 @@ body.read-only .new-cat-wrapper { display: none !important; }/* Seguridad extra 
     }
     function unificarTexto() {
         if(selectedIds.size < 2) { alert("Selecciona al menos 2 eventos."); return; }
-        if(!confirm("¿Igualar texto?")) return;
+        if(!confirm("Â¿Igualar texto?")) return;
         const idsArray = Array.from(selectedIds);
         google.script.run.withSuccessHandler(() => { toggleSelectMode(); cargarTodo(); }).unificarEventos(idsArray);
     }
@@ -1285,14 +1298,14 @@ body.read-only .new-cat-wrapper { display: none !important; }/* Seguridad extra 
             }
             
             const { value: formValues } = await Swal.fire({
-              title: 'Añadir Invitado Externo',
+              title: 'AÃ±adir Invitado Externo',
               html:
                 '<input id="swal-ext-nombre" class="swal2-input" placeholder="Nombre Completo" style="width: 80%;">' +
                 '<input id="swal-ext-rut" class="swal2-input" placeholder="RUT (ej: 12.345.678-9)" style="width: 80%;">' +
-                '<input id="swal-ext-motivo" class="swal2-input" placeholder="¿A qué viene?" style="width: 80%;">',
+                '<input id="swal-ext-motivo" class="swal2-input" placeholder="Â¿A quÃ© viene?" style="width: 80%;">',
               focusConfirm: false,
               showCancelButton: true,
-              confirmButtonText: 'Añadir',
+              confirmButtonText: 'AÃ±adir',
               cancelButtonText: 'Cancelar',
               preConfirm: () => {
                 const n = document.getElementById('swal-ext-nombre').value;
@@ -1355,7 +1368,7 @@ body.read-only .new-cat-wrapper { display: none !important; }/* Seguridad extra 
           
           let ui = `
             <div class="mb-2 d-flex justify-content-between align-items-center w-100" style="border-bottom: 1px solid #ddd; padding-bottom: 5px;">
-               <span class="text-muted fw-bold">Selector Rápido:</span>
+               <span class="text-muted fw-bold">Selector RÃ¡pido:</span>
                <div>
                  <button type="button" class="btn btn-sm btn-outline-success py-0 px-2 fw-bold" onclick="document.querySelectorAll('.chk-curso').forEach(c => c.checked = true);">Todos</button>
                  <button type="button" class="btn btn-sm btn-outline-danger py-0 px-2 fw-bold" onclick="document.querySelectorAll('.chk-curso').forEach(c => c.checked = false);">Ninguno</button>
@@ -1414,7 +1427,7 @@ body.read-only .new-cat-wrapper { display: none !important; }/* Seguridad extra 
         const checkTodos = document.getElementById('checkTodosBloques');
         const cbs = document.querySelectorAll('.bloque-cb');
         
-        const isBloqueado = (bloquea === 'sí' || bloquea === 'si');
+        const isBloqueado = (bloquea === 'sÃ­' || bloquea === 'si');
         checkBloquea.checked = isBloqueado;
         toggleBloques();
         
@@ -1480,16 +1493,16 @@ body.read-only .new-cat-wrapper { display: none !important; }/* Seguridad extra 
     function toggleTodo(source) { document.querySelectorAll('.mes-check').forEach(c => c.checked = source.checked); }
     function verificarTodo() { const all = document.querySelectorAll('.mes-check'); const checked = document.querySelectorAll('.mes-check:checked'); document.getElementById('checkTodo').checked = (all.length === checked.length); }
     function cerrarModal(id) { document.getElementById(id).style.display = 'none'; }
-    function borrar(id) { if(confirm("¿Borrar?")) google.script.run.withSuccessHandler(cargarTodo).borrarEvento(id); }
+    function borrar(id) { if(confirm("Â¿Borrar?")) google.script.run.withSuccessHandler(cargarTodo).borrarEvento(id); }
 
     function ejecutarExportacion(tipo) {
         const checks = document.querySelectorAll('.mes-check:checked');
-        const mesesIds = Array.from(checks).map(c => parseInt(c.value)); // Índices de los meses seleccionados
+        const mesesIds = Array.from(checks).map(c => parseInt(c.value)); // Ãndices de los meses seleccionados
         
         if(mesesIds.length === 0) { alert("Selecciona al menos un mes."); return; }
         
         if(tipo === 'print') {
-            // --- LÓGICA DE IMPRESIÓN (PDF) ---
+            // --- LÃ“GICA DE IMPRESIÃ“N (PDF) ---
             document.querySelectorAll('.month-card').forEach(c => c.style.display = 'none');
             mesesIds.forEach(id => { const c = document.getElementById(`card-month-${id}`); if(c) c.style.display = 'block'; });
             cerrarModal('modalExportar');
@@ -1499,11 +1512,11 @@ body.read-only .new-cat-wrapper { display: none !important; }/* Seguridad extra 
             }, 500);
             
         } else {
-            // --- LÓGICA EXCEL .XLSX CON COLORES ---
+            // --- LÃ“GICA EXCEL .XLSX CON COLORES ---
             
             // 1. Mapear eventos
             const eventosMap = {};
-            const coloresMap = {}; // Para guardar qué color usar en ese día
+            const coloresMap = {}; // Para guardar quÃ© color usar en ese dÃ­a
             
             eventos.forEach(ev => {
                 if(!mesesIds.includes(ev.mes)) return;
@@ -1539,27 +1552,27 @@ body.read-only .new-cat-wrapper { display: none !important; }/* Seguridad extra 
             };
 
             // 3. Construir la Data para Excel
-            // La librería trabaja con un array de arrays (filas)
+            // La librerÃ­a trabaja con un array de arrays (filas)
             let ws_data = [];
             let rowHeader1 = [];
             let rowHeader2 = [];
             
             // --- CABECERAS ---
             mesesIds.forEach(mId => {
-                // Fila 1: Nombres de Meses (ocuparán 3 columnas c/u)
+                // Fila 1: Nombres de Meses (ocuparÃ¡n 3 columnas c/u)
                 rowHeader1.push({ v: meses[mId].toUpperCase(), s: styleHeader });
                 rowHeader1.push({ v: "", s: styleHeader });
                 rowHeader1.push({ v: "", s: styleHeader });
                 
-                // Fila 2: Subtítulos
-                rowHeader2.push({ v: "Nº", s: styleDia });
-                rowHeader2.push({ v: "Día", s: styleDia });
+                // Fila 2: SubtÃ­tulos
+                rowHeader2.push({ v: "NÂº", s: styleDia });
+                rowHeader2.push({ v: "DÃ­a", s: styleDia });
                 rowHeader2.push({ v: "Evento", s: styleDia });
             });
             ws_data.push(rowHeader1);
             ws_data.push(rowHeader2);
 
-            // --- FILAS DE DÍAS (1 al 31) ---
+            // --- FILAS DE DÃAS (1 al 31) ---
             const letrasDias = ['D', 'L', 'M', 'M', 'J', 'V', 'S'];
             
             for (let dia = 1; dia <= 31; dia++) {
@@ -1579,15 +1592,15 @@ body.read-only .new-cat-wrapper { display: none !important; }/* Seguridad extra 
                             colorHex = (coloresMap[mesIndex][dia] || "#ffffff").replace('#', '');
                         }
 
-                        // Estilo dinámico para la celda del evento
+                        // Estilo dinÃ¡mico para la celda del evento
                         const styleEvento = JSON.parse(JSON.stringify(styleEventoBase)); // Clonar estilo
                         if(texto !== "") {
                             styleEvento.fill = { fgColor: { rgb: colorHex } };
-                            // Si el fondo es muy oscuro, poner letra blanca (opcional, aquí simple)
+                            // Si el fondo es muy oscuro, poner letra blanca (opcional, aquÃ­ simple)
                             // styleEvento.font = { color: { rgb: "000000" } }; 
                         }
 
-                        // Columna Nº
+                        // Columna NÂº
                         rowData.push({ v: dia, s: styleDia });
                         // Columna Letra
                         rowData.push({ v: letra, s: styleDia });
@@ -1595,7 +1608,7 @@ body.read-only .new-cat-wrapper { display: none !important; }/* Seguridad extra 
                         rowData.push({ v: texto, s: styleEvento });
                         
                     } else {
-                        // Día no válido (ej: 31 Feb) -> Celdas vacías con borde
+                        // DÃ­a no vÃ¡lido (ej: 31 Feb) -> Celdas vacÃ­as con borde
                         rowData.push({ v: "", s: styleDia });
                         rowData.push({ v: "", s: styleDia });
                         rowData.push({ v: "", s: styleEventoBase });
@@ -1608,7 +1621,7 @@ body.read-only .new-cat-wrapper { display: none !important; }/* Seguridad extra 
             const wb = XLSX.utils.book_new();
             const ws = XLSX.utils.aoa_to_sheet(ws_data);
 
-            // 5. MERGE (Combinar Celdas de los títulos de Meses)
+            // 5. MERGE (Combinar Celdas de los tÃ­tulos de Meses)
             // Cada mes ocupa 3 columnas. Mes 0: cols 0-2, Mes 1: cols 3-5...
             const merges = [];
             mesesIds.forEach((_, index) => {
@@ -1620,7 +1633,7 @@ body.read-only .new-cat-wrapper { display: none !important; }/* Seguridad extra 
             // 6. Ancho de Columnas
             const cols = [];
             mesesIds.forEach(() => {
-                cols.push({ wch: 4 });  // Nº
+                cols.push({ wch: 4 });  // NÂº
                 cols.push({ wch: 4 });  // Letra
                 cols.push({ wch: 30 }); // Evento
             });
@@ -1641,12 +1654,12 @@ body.read-only .new-cat-wrapper { display: none !important; }/* Seguridad extra 
     if (document.getElementById('checkBloquea').checked) {
         const bloquesSelec = obtenerValoresBloques();
         if (bloquesSelec === '') {
-            Swal.fire('Atención', 'Debes seleccionar al menos un bloque afectado o marcar "Todo el día".', 'warning');
+            Swal.fire('AtenciÃ³n', 'Debes seleccionar al menos un bloque afectado o marcar "Todo el dÃ­a".', 'warning');
             return;
         }
         const cursosSelec = recopilarCursosAfectados();
         if (cursosSelec === 'NINGUNO') {
-            Swal.fire('Atención', 'Debes seleccionar al menos un curso afectado.', 'warning');
+            Swal.fire('AtenciÃ³n', 'Debes seleccionar al menos un curso afectado.', 'warning');
             return;
         }
     }
@@ -1677,7 +1690,7 @@ body.read-only .new-cat-wrapper { display: none !important; }/* Seguridad extra 
     if (espChecks.length > 0 || matChecks.length > 0) {
         const payloadAct = {
             titulo: datos.texto,
-            descripcion: "Solicitado automáticamente al crear Evento Institucional.",
+            descripcion: "Solicitado automÃ¡ticamente al crear Evento Institucional.",
             fecha: datos.fecha,
             bloques: datos.bloquea ? datos.bloques : "1",
             espacios: espChecks,
@@ -1697,7 +1710,7 @@ body.read-only .new-cat-wrapper { display: none !important; }/* Seguridad extra 
         btn.disabled = false; 
     }).procesarEvento(datos); 
 };
-    document.getElementById('duplicarForm').onsubmit = function(e) { e.preventDefault(); const btn = document.getElementById('btnDuplicarGuardar'); const txtOriginal = btn.innerText; btn.innerText = "Creando..."; btn.disabled = true; const formDuplicar = document.getElementById('duplicarForm'); const datos = { idEditar: "", fecha: document.getElementById('dupFecha').value, texto: document.getElementById('dupTexto').value, tipo: document.getElementById('dupTipo').value, tipoNuevo: "", colorNuevo: "", bloquea: (formDuplicar.dataset.bloquea === 'sí' || formDuplicar.dataset.bloquea === 'si'), bloques: formDuplicar.dataset.bloques }; google.script.run.withSuccessHandler(() => { cerrarModal('modalDuplicar'); cargarTodo(); btn.innerText = txtOriginal; btn.disabled = false; }).procesarEvento(datos); };
+    document.getElementById('duplicarForm').onsubmit = function(e) { e.preventDefault(); const btn = document.getElementById('btnDuplicarGuardar'); const txtOriginal = btn.innerText; btn.innerText = "Creando..."; btn.disabled = true; const formDuplicar = document.getElementById('duplicarForm'); const datos = { idEditar: "", fecha: document.getElementById('dupFecha').value, texto: document.getElementById('dupTexto').value, tipo: document.getElementById('dupTipo').value, tipoNuevo: "", colorNuevo: "", bloquea: (formDuplicar.dataset.bloquea === 'sÃ­' || formDuplicar.dataset.bloquea === 'si'), bloques: formDuplicar.dataset.bloques }; google.script.run.withSuccessHandler(() => { cerrarModal('modalDuplicar'); cargarTodo(); btn.innerText = txtOriginal; btn.disabled = false; }).procesarEvento(datos); };
   </script>
 </body>
 
