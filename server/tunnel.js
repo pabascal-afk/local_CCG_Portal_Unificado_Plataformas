@@ -8,6 +8,7 @@ async function initTunnel(port) {
         console.log('[TUNEL] Iniciando conexión con Localtunnel...');
         const tunnel = await localtunnel({ port: port });
         const url = tunnel.url;
+        process.env.PUBLIC_URL = url;
         console.log('[TUNEL] Conectado a Localtunnel en:', url);
 
         tunnel.on('close', () => {
