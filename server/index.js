@@ -479,6 +479,8 @@ app.use('/api/evaluaciones', evaluacionesRouter);
 const rpcRouter = require('./api/rpc');
 app.use('/api/rpc', rpcRouter);
 
+const smtpRouter = require('./api/smtp');
+app.use('/api/config/smtp', smtpRouter);
 const actividadesRouter = require('./api/actividades');
 app.use('/api/actividades', actividadesRouter);
 
@@ -546,7 +548,9 @@ setInterval(() => {
                         // Enviar correo recordatorio
                         const nodemailer_cron = require('nodemailer');
                         const transporter_cron = nodemailer_cron.createTransport({
-                            service: 'gmail',
+                            host: process.env.SMTP_HOST || 'smtp.gmail.com',
+                            port: parseInt(process.env.SMTP_PORT || '465'),
+                            secure: (process.env.SMTP_SECURE === 'true' || !process.env.SMTP_SECURE),
                             auth: { user: process.env.SMTP_USER, pass: process.env.SMTP_PASS }
                         });
                         if(process.env.SMTP_USER) {

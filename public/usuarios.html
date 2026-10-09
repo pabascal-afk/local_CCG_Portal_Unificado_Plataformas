@@ -16,7 +16,8 @@
   <div class="container">
     <div class="d-flex justify-content-between align-items-center mb-4">
       <h2 class="fw-bold">Gestión de Usuarios (RBAC)</h2>
-      <button class="btn btn-outline-secondary fw-bold me-2" onclick="abrirModalRoles()"><i class="bi bi-shield-lock"></i> Gestionar Roles</button>
+      <button class="btn btn-outline-secondary fw-bold me-2" onclick="abrirModalSmtp()"><i class="bi bi-envelope-at"></i> Servidor de Correos</button>
+        <button class="btn btn-outline-secondary fw-bold me-2" onclick="abrirModalRoles()"><i class="bi bi-shield-lock"></i> Gestionar Roles</button>
       <button class="btn btn-primary fw-bold" onclick="abrirModal()">+ Nuevo Usuario</button>
     </div>
 
@@ -34,6 +35,58 @@
           <tr><td colspan="4" class="text-center">Cargando usuarios...</td></tr>
         </tbody>
       </table>
+    </div>
+  </div>
+
+  
+  <!-- Modal SMTP -->
+  <div class="modal fade" id="modalSmtp" tabindex="-1">
+    <div class="modal-dialog">
+      <div class="modal-content shadow-lg">
+        <div class="modal-header bg-dark text-white border-0">
+          <h5 class="modal-title fw-bold"><i class="bi bi-envelope-gear"></i> Configuración Servidor SMTP</h5>
+          <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+        </div>
+        <form onsubmit="guardarSmtp(event)">
+          <div class="modal-body">
+            <div class="alert alert-info py-2" style="font-size: 0.85em;">
+              Aquí puedes configurar desde dónde se enviarán las notificaciones de la plataforma (ej. un correo de Google Workspace o Microsoft 365).
+            </div>
+            <div class="row g-2 mb-3">
+              <div class="col-8">
+                <label class="form-label fw-bold">Servidor SMTP</label>
+                <input type="text" id="smtpHost" class="form-control" placeholder="ej. smtp.gmail.com" required>
+              </div>
+              <div class="col-4">
+                <label class="form-label fw-bold">Puerto</label>
+                <input type="number" id="smtpPort" class="form-control" placeholder="465 o 587" required>
+              </div>
+            </div>
+            
+            <div class="form-check form-switch mb-3">
+              <input class="form-check-input" type="checkbox" id="smtpSecure">
+              <label class="form-check-label fw-bold">Usar SSL/TLS (Puerto 465)</label>
+            </div>
+
+            <div class="mb-3">
+              <label class="form-label fw-bold">Usuario / Correo Electrónico</label>
+              <input type="email" id="smtpUser" class="form-control" placeholder="notificaciones@tucolegio.cl" required>
+            </div>
+            
+            <div class="mb-3">
+              <label class="form-label fw-bold">Contraseña (App Password)</label>
+              <input type="password" id="smtpPass" class="form-control" placeholder="Dejar en blanco para no cambiar">
+              <small class="text-muted" style="font-size: 0.8em;" id="smtpPassHint"></small>
+            </div>
+            
+            <button type="button" class="btn btn-outline-primary w-100 fw-bold mb-2" onclick="probarSmtp()">Probar Conexión</button>
+            <div id="smtpTestResult" class="text-center small mt-2"></div>
+          </div>
+          <div class="modal-footer bg-light border-0">
+            <button type="submit" class="btn btn-success fw-bold w-100">Guardar Configuración</button>
+          </div>
+        </form>
+      </div>
     </div>
   </div>
 
@@ -186,6 +239,79 @@
       await cargarRolesGlobales();
       cargarUsuarios();
     });
+
+    
+    let modalSmtpEl;
+
+    async function abrirModalSmtp() {
+      if(!modalSmtpEl) modalSmtpEl = new bootstrap.Modal(document.getElementById('modalSmtp'));
+      
+      // Load current config
+      try {
+        const res = await fetch('/api/config/smtp');
+        const data = await res.json();
+        document.getElementById('smtpHost').value = data.host || 'smtp.gmail.com';
+        document.getElementById('smtpPort').value = data.port || '465';
+        document.getElementById('smtpSecure').checked = data.secure;
+        document.getElementById('smtpUser').value = data.user || '';
+        document.getElementById('smtpPass').value = '';
+        document.getElementById('smtpPassHint').innerText = data.hasPassword ? '(Ya hay una contraseña guardada. Si no la escribes, se mantendrá la actual)' : '(No hay contraseña guardada)';
+        document.getElementById('smtpTestResult').innerHTML = '';
+      } catch(e) {}
+      
+      modalSmtpEl.show();
+    }
+
+    async function guardarSmtp(e) {
+      e.preventDefault();
+      const host = document.getElementById('smtpHost').value;
+      const port = document.getElementById('smtpPort').value;
+      const secure = document.getElementById('smtpSecure').checked;
+      const user = document.getElementById('smtpUser').value;
+      const pass = document.getElementById('smtpPass').value;
+
+      try {
+        const res = await fetch('/api/config/smtp', {
+          method: 'POST',
+          headers: {'Content-Type': 'application/json'},
+          body: JSON.stringify({ host, port, secure, user, pass })
+        });
+        const data = await res.json();
+        if(data.success) {
+          Swal.fire('Guardado', 'La configuración del servidor de correos ha sido guardada', 'success');
+          modalSmtpEl.hide();
+        }
+      } catch(e) {
+        Swal.fire('Error', 'No se pudo guardar la configuración', 'error');
+      }
+    }
+
+    async function probarSmtp() {
+      const resEl = document.getElementById('smtpTestResult');
+      resEl.innerHTML = '<span class="text-primary"><i class="spinner-border spinner-border-sm"></i> Probando conexión... esto tomará unos segundos.</span>';
+      
+      const host = document.getElementById('smtpHost').value;
+      const port = document.getElementById('smtpPort').value;
+      const secure = document.getElementById('smtpSecure').checked;
+      const user = document.getElementById('smtpUser').value;
+      const pass = document.getElementById('smtpPass').value;
+
+      try {
+        const res = await fetch('/api/config/smtp/test', {
+          method: 'POST',
+          headers: {'Content-Type': 'application/json'},
+          body: JSON.stringify({ host, port, secure, user, pass })
+        });
+        const data = await res.json();
+        if(data.success) {
+          resEl.innerHTML = '<span class="text-success fw-bold"><i class="bi bi-check-circle"></i> Conexión exitosa y correo de prueba enviado.</span>';
+        } else {
+          resEl.innerHTML = '<span class="text-danger fw-bold"><i class="bi bi-x-circle"></i> Error: ' + data.error + '</span>';
+        }
+      } catch(e) {
+        resEl.innerHTML = '<span class="text-danger fw-bold"><i class="bi bi-x-circle"></i> Error de red al intentar probar.</span>';
+      }
+    }
 
     function cargarUsuarios() {
       
