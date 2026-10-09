@@ -99,6 +99,33 @@
             } catch(e) {}
         }
 
+        function eliminarActividad(id) {
+            if(window.body && window.body.classList && window.body.classList.contains('read-only')) return;
+            Swal.fire({
+                title: '¿Estás seguro?',
+                text: "Se eliminará esta solicitud y los encargados ya no podrán visarla.",
+                icon: 'warning',
+                showCancelButton: true,
+                confirmButtonColor: '#d33',
+                cancelButtonColor: '#3085d6',
+                confirmButtonText: 'Sí, cancelar',
+                cancelButtonText: 'Mantener'
+            }).then((result) => {
+                if (result.isConfirmed) {
+                    fetch('/api/actividades/' + id, { method: 'DELETE' })
+                        .then(r => r.json())
+                        .then(data => {
+                            if(data.success) {
+                                Swal.fire('Cancelada', 'La actividad ha sido eliminada.', 'success');
+                                cargarMisActividades();
+                            } else {
+                                Swal.fire('Error', 'No se pudo eliminar.', 'error');
+                            }
+                        });
+                }
+            });
+        }
+
         function abrirModalSolicitud() {
             document.getElementById('formSolicitud').reset();
             
