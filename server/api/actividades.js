@@ -173,8 +173,7 @@ function enviarCorreoAprobacion(dest, solicitante, titulo, fecha, bloques, desc_
     // Obtener la URL base dinAmicamente podrIa ser complejo (ngrok, localhost, cloudflare).
     // Se recomienda configurar BASE_URL en el .env, pero si no, asumimos la actual (esto es difIcil en emails).
     // Usaremos process.env.GAS_TUNNEL_DB_URL o NGROK_DOMAIN si existe, pero como fallback ponemos una variable BASE_URL
-    let baseUrl = process.env.BASE_URL || 'http://localhost:9000';
-    if (process.env.NGROK_DOMAIN) baseUrl = 'https://' + process.env.NGROK_DOMAIN;
+    let baseUrl = process.env.PUBLIC_URL || process.env.BASE_URL || 'http://localhost:9000';
     
     const approveUrl = `${baseUrl}/api/actividades/aprobar?token=${token}&action=approve`;
     const rejectUrl = `${baseUrl}/api/actividades/aprobar?token=${token}&action=reject`;
