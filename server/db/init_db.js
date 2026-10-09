@@ -6,6 +6,32 @@ const dbPath = path.join(__dirname, 'colegio.db');
 const db = new sqlite3.Database(dbPath);
 
 const schemas = [
+  `CREATE TABLE IF NOT EXISTS config_materiales (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    nombre TEXT NOT NULL,
+    responsable TEXT NOT NULL
+  )`,
+  `CREATE TABLE IF NOT EXISTS actividades (
+    id TEXT PRIMARY KEY,
+    titulo TEXT NOT NULL,
+    descripcion TEXT,
+    fecha TEXT NOT NULL,
+    bloques TEXT NOT NULL,
+    solicitante_email TEXT NOT NULL,
+    estado TEXT DEFAULT 'Pendiente',
+    creado_en DATETIME DEFAULT CURRENT_TIMESTAMP
+  )`,
+  `CREATE TABLE IF NOT EXISTS actividades_req (
+    id TEXT PRIMARY KEY,
+    actividad_id TEXT,
+    tipo TEXT,
+    recurso_id INTEGER,
+    cantidad INTEGER DEFAULT 1,
+    responsable_email TEXT,
+    estado TEXT DEFAULT 'Pendiente',
+    token TEXT
+  )`,
+
   `CREATE TABLE IF NOT EXISTS usuarios (
     id INTEGER PRIMARY KEY AUTOINCREMENT,
     email TEXT UNIQUE NOT NULL,
