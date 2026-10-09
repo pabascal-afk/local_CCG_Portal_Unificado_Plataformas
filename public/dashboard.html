@@ -380,6 +380,32 @@
             cargarDashboard();
         }
     }
-  </script>
+  
+      async function cancelarReserva(id) {
+          Swal.fire({
+              title: '¿Cancelar Reserva?',
+              text: 'Si cancelas con 3 días o menos de anticipación, se generará un reporte automático enviado al encargado del recurso para mantener el registro.',
+              icon: 'warning',
+              showCancelButton: true,
+              confirmButtonText: 'Sí, Cancelar',
+              cancelButtonText: 'No',
+              confirmButtonColor: '#d33'
+          }).then(async (result) => {
+              if (result.isConfirmed) {
+                  try {
+                      const res = await fetch('/api/reservas/' + id, { method: 'DELETE' });
+                      if(res.ok) {
+                          Swal.fire('Cancelada', 'La reserva fue cancelada.', 'success');
+                          cargarDatos();
+                      } else {
+                          Swal.fire('Error', 'No se pudo cancelar la reserva.', 'error');
+                      }
+                  } catch(e) {
+                      Swal.fire('Error', e.message, 'error');
+                  }
+              }
+          });
+      }
+</script>
 </body>
 </html>
