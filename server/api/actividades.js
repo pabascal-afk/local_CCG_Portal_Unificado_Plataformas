@@ -212,4 +212,18 @@ router.get('/mis-actividades', async (req, res) => {
     } catch(e) { res.status(500).json({error: e.message}); }
 });
 
+
+router.delete('/:id', async (req, res) => {
+    try {
+        const id = req.params.id;
+        await run('DELETE FROM actividades_req WHERE actividad_id = ?', [id]);
+        await run('DELETE FROM actividades WHERE id = ?', [id]);
+        res.json({success: true});
+    } catch(e) {
+        console.error(e);
+        res.status(500).json({error: e.message});
+    }
+});
+
 module.exports = router;
+
