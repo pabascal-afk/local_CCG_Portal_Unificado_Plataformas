@@ -124,7 +124,18 @@
           <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
         </div>
         <div class="modal-body">
-          <h6>Agregar Nuevo Recurso</h6>
+          <ul class="nav nav-tabs mb-3" id="configTabs">
+            <li class="nav-item">
+              <a class="nav-link active" data-bs-toggle="tab" href="#tabEspacios">Espacios</a>
+            </li>
+            <li class="nav-item">
+              <a class="nav-link" data-bs-toggle="tab" href="#tabMateriales">Materiales</a>
+            </li>
+          </ul>
+          
+          <div class="tab-content">
+            <div class="tab-pane fade show active" id="tabEspacios">
+              <h6>Agregar Nuevo Espacio/Recurso</h6>
           <form onsubmit="guardarNuevoRecurso(event)">
             <div class="mb-2"><input type="text" id="confNombre" class="form-control form-control-sm" placeholder="Nombre" required></div>
             <div class="mb-2"><input type="text" id="confResp" class="form-control form-control-sm" placeholder="Responsable (Email)" required></div>
@@ -133,6 +144,23 @@
           <hr>
           <h6>Recursos Actuales</h6>
           <ul class="list-group list-group-sm" id="listaRecursosConf"></ul>
+            </div>
+            
+            <div class="tab-pane fade" id="tabMateriales">
+              <h6>Agregar Nuevo Material</h6>
+              <form onsubmit="guardarNuevoMaterial(event)">
+                <div class="mb-2"><input type="text" id="matNombre" class="form-control form-control-sm" placeholder="Nombre del Material (Ej: Proyector)" required></div>
+                <div class="mb-2"><input type="email" id="matResp" class="form-control form-control-sm" placeholder="Email del Responsable" required></div>
+                <button type="submit" class="btn btn-sm btn-primary w-100">Crear Material</button>
+              </form>
+              
+              <hr class="my-3">
+              <h6 class="fw-bold">Materiales Existentes</h6>
+              <ul class="list-group list-group-sm" id="listaMaterialesConf">
+                <li class="list-group-item text-muted text-center">Cargando...</li>
+              </ul>
+            </div>
+          </div>
         </div>
       </div>
     </div>
@@ -312,6 +340,7 @@
     });
 
     async function cargarRecursosConfig() {
+      cargarMateriales(); // Parallelo
       const res = await fetch('/api/recursos/config');
       recursosCache = await res.json();
       
@@ -853,6 +882,47 @@
             }
         });
       }
+
+    
+    let materialesCache = [];
+    async function cargarMateriales() {
+        try {
+            const res = await fetch('/api/actividades/materiales');
+            materialesCache = await res.json();
+            const lista = document.getElementById('listaMaterialesConf');
+            if(!lista) return;
+            lista.innerHTML = '';
+            materialesCache.forEach(m => {
+                lista.innerHTML += `
+                    <li class="list-group-item d-flex justify-content-between align-items-center">
+                        <div>
+                            <strong>${m.nombre}</strong><br>
+                            <small class="text-muted">${m.responsable}</small>
+                        </div>
+                        <button class="btn btn-sm btn-outline-danger" onclick="borrarMaterial(${m.id})"><i class="bi bi-trash"></i></button>
+                    </li>
+                `;
+            });
+        } catch(e) {}
+    }
+
+    async function guardarNuevoMaterial(e) {
+        e.preventDefault();
+        await fetch('/api/actividades/materiales', {
+            method: 'POST',
+            headers: {'Content-Type': 'application/json'},
+            body: JSON.stringify({ nombre: document.getElementById('matNombre').value, responsable: document.getElementById('matResp').value })
+        });
+        document.getElementById('matNombre').value = '';
+        document.getElementById('matResp').value = '';
+        cargarMateriales();
+    }
+
+    async function borrarMaterial(id) {
+        if(!confirm("AEliminar este material?")) return;
+        await fetch('/api/actividades/materiales/' + id, { method: 'DELETE' });
+        cargarMateriales();
+    }
 
     function abrirConfiguracion() {
       modalConfig.show();

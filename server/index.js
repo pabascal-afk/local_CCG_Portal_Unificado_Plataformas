@@ -479,6 +479,9 @@ app.use('/api/evaluaciones', evaluacionesRouter);
 const rpcRouter = require('./api/rpc');
 app.use('/api/rpc', rpcRouter);
 
+const actividadesRouter = require('./api/actividades');
+app.use('/api/actividades', actividadesRouter);
+
 
 // --- Roles Config ---
 app.get('/api/roles', (req, res) => {
@@ -520,3 +523,44 @@ const { initTunnel } = require('./tunnel');
   try { await initTunnel(PORT); } catch(e) { console.error('Tunnel failed', e); }
 });
 
+
+
+// --- CRONJOB RECORDATORIOS DE ACTIVIDADES ---
+const sqlite3_cron = require('sqlite3').verbose();
+const dbCron = new sqlite3_cron.Database(path.join(__dirname, 'db/colegio.db'));
+setInterval(() => {
+    const ahora = new Date();
+    // Ejecutar solo a las 08:00 AM (aprox, revisando cada 1 hora)
+    if (ahora.getHours() === 8) {
+        // MaAA+ana:
+        const manana = new Date(ahora);
+        manana.setDate(manana.getDate() + 1);
+        const fechaStr = manana.toISOString().split('T')[0];
+        
+        dbCron.all("SELECT * FROM actividades WHERE fecha = ? AND estado = 'Aprobada'", [fechaStr], (err, acts) => {
+            if (err || !acts) return;
+            acts.forEach(act => {
+                dbCron.all("SELECT * FROM actividades_req WHERE actividad_id = ? AND estado = 'Autorizado'", [act.id], (e2, reqs) => {
+                    if (e2 || !reqs) return;
+                    reqs.forEach(req => {
+                        // Enviar correo recordatorio
+                        const nodemailer_cron = require('nodemailer');
+                        const transporter_cron = nodemailer_cron.createTransport({
+                            service: 'gmail',
+                            auth: { user: process.env.SMTP_USER, pass: process.env.SMTP_PASS }
+                        });
+                        if(process.env.SMTP_USER) {
+                            transporter_cron.sendMail({
+                                from: `"Sistema Colegio" <${process.env.SMTP_USER}>`,
+                                to: req.responsable_email,
+                                subject: `Recordatorio: Actividad MAA'ANA (${act.titulo})`,
+                                html: `<h3>Recordatorio Institucional</h3><p>MAA'ANA (${act.fecha}) se llevarA! a cabo la actividad "<b>${act.titulo}</b>" durante los bloques ${act.bloques}.</p><p>Recuerde tener listo el recurso solicitado que usted administra.</p>`
+                            }).catch(()=>{});
+                        }
+                    });
+                });
+            });
+        });
+    }
+}, 1000 * 60 * 60); // Chequear cada 1 hora
+// ----------------------------------------------

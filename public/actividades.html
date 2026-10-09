@@ -1,0 +1,229 @@
+﻿<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <title>Gestión de Actividades</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.10.5/font/bootstrap-icons.css">
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+    <style>
+        body { background-color: #f8f9fa; font-family: 'Inter', sans-serif; padding: 20px; }
+        .card { border-radius: 10px; border: none; box-shadow: 0 2px 10px rgba(0,0,0,0.05); }
+        .badge-pend { background-color: #ffc107; color: #000; }
+        .badge-apr { background-color: #28a745; }
+        .badge-rech { background-color: #dc3545; }
+    </style>
+</head>
+<body>
+    <div class="container-fluid">
+        <div class="d-flex justify-content-between align-items-center mb-4">
+            <h3 class="fw-bold text-dark"><i class="bi bi-calendar2-check text-primary"></i> Mis Actividades Institucionales</h3>
+            <button class="btn btn-primary fw-bold shadow-sm" onclick="abrirModalSolicitud()"><i class="bi bi-plus-lg"></i> Solicitar Actividad</button>
+        </div>
+
+        <div class="row" id="actividadesContenedor">
+            <div class="col-12 text-center text-muted py-5">
+                <div class="spinner-border text-primary mb-3" role="status"></div>
+                <p>Cargando actividades...</p>
+            </div>
+        </div>
+    </div>
+
+    <!-- Modal Solicitar -->
+    <div class="modal fade" id="modalSolicitar" tabindex="-1">
+        <div class="modal-dialog modal-lg">
+            <div class="modal-content">
+                <div class="modal-header bg-primary text-white">
+                    <h5 class="modal-title fw-bold">Nueva Solicitud de Actividad</h5>
+                    <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+                </div>
+                <div class="modal-body">
+                    <form id="formSolicitud" onsubmit="enviarSolicitud(event)">
+                        <div class="row g-3 mb-3">
+                            <div class="col-md-12">
+                                <label class="form-label fw-bold">Título de la Actividad</label>
+                                <input type="text" id="inTitulo" class="form-control" required>
+                            </div>
+                            <div class="col-md-12">
+                                <label class="form-label fw-bold">Descripción (Opcional)</label>
+                                <textarea id="inDesc" class="form-control" rows="2"></textarea>
+                            </div>
+                            <div class="col-md-6">
+                                <label class="form-label fw-bold">Fecha</label>
+                                <input type="date" id="inFecha" class="form-control" required>
+                            </div>
+                            <div class="col-md-6">
+                                <label class="form-label fw-bold">Bloques (Ej: 1,2,3)</label>
+                                <input type="text" id="inBloques" class="form-control" required>
+                            </div>
+                        </div>
+
+                        <hr>
+                        <h6 class="fw-bold text-primary mb-3"><i class="bi bi-building"></i> Solicitar Espacios</h6>
+                        <div id="listaEspacios" class="row g-2 mb-3"></div>
+
+                        <hr>
+                        <h6 class="fw-bold text-primary mb-3"><i class="bi bi-box-seam"></i> Solicitar Materiales</h6>
+                        <div id="listaMateriales" class="row g-2 mb-4"></div>
+
+                        <div class="alert alert-info py-2" style="font-size:0.85rem">
+                            <i class="bi bi-info-circle"></i> Al solicitar recursos, se enviará un correo automático a cada encargado. La actividad solo se aprobará cuando todos visen su disponibilidad.
+                        </div>
+                        
+                        <button type="submit" id="btnEnviar" class="btn btn-primary w-100 fw-bold">Enviar Solicitud</button>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        let modalSolicitar;
+        let espaciosCatalogo = [];
+        let materialesCatalogo = [];
+
+        document.addEventListener('DOMContentLoaded', async () => {
+            modalSolicitar = new bootstrap.Modal(document.getElementById('modalSolicitar'));
+            await cargarCatalogos();
+            cargarMisActividades();
+        });
+
+        async function cargarCatalogos() {
+            try {
+                const resEsp = await fetch('/api/recursos/config');
+                espaciosCatalogo = await resEsp.json();
+                
+                const resMat = await fetch('/api/actividades/materiales');
+                materialesCatalogo = await resMat.json();
+            } catch(e) {}
+        }
+
+        function abrirModalSolicitud() {
+            document.getElementById('formSolicitud').reset();
+            
+            // Render Espacios
+            const contEsp = document.getElementById('listaEspacios');
+            contEsp.innerHTML = espaciosCatalogo.map(e => `
+                <div class="col-md-6">
+                    <div class="form-check">
+                        <input class="form-check-input chk-espacio" type="checkbox" value="${e.id}" id="esp_${e.id}">
+                        <label class="form-check-label" for="esp_${e.id}">${e.nombre}</label>
+                    </div>
+                </div>
+            `).join('');
+
+            // Render Materiales (with quantity inputs)
+            const contMat = document.getElementById('listaMateriales');
+            contMat.innerHTML = materialesCatalogo.map(m => `
+                <div class="col-md-6 d-flex align-items-center mb-2">
+                    <div class="form-check me-2">
+                        <input class="form-check-input chk-material" type="checkbox" value="${m.id}" id="mat_${m.id}" onchange="document.getElementById('cant_${m.id}').disabled = !this.checked">
+                        <label class="form-check-label" for="mat_${m.id}">${m.nombre}</label>
+                    </div>
+                    <input type="number" class="form-control form-control-sm w-25 cant-material" id="cant_${m.id}" value="1" min="1" disabled>
+                </div>
+            `).join('');
+
+            modalSolicitar.show();
+        }
+
+        async function enviarSolicitud(e) {
+            e.preventDefault();
+            const btn = document.getElementById('btnEnviar');
+            btn.disabled = true;
+            btn.innerText = "Enviando...";
+
+            const espacios = Array.from(document.querySelectorAll('.chk-espacio:checked')).map(c => c.value);
+            const materiales = Array.from(document.querySelectorAll('.chk-material:checked')).map(c => ({
+                id: c.value,
+                cantidad: document.getElementById('cant_' + c.value).value
+            }));
+
+            const payload = {
+                titulo: document.getElementById('inTitulo').value,
+                descripcion: document.getElementById('inDesc').value,
+                fecha: document.getElementById('inFecha').value,
+                bloques: document.getElementById('inBloques').value,
+                espacios: espacios,
+                materiales: materiales
+            };
+
+            try {
+                const res = await fetch('/api/actividades/solicitar', {
+                    method: 'POST',
+                    headers: {'Content-Type':'application/json'},
+                    body: JSON.stringify(payload)
+                });
+                if(res.ok) {
+                    Swal.fire('Éxito', 'Solicitud enviada a los encargados', 'success');
+                    modalSolicitar.hide();
+                    cargarMisActividades();
+                } else {
+                    Swal.fire('Error', 'Fallo al solicitar', 'error');
+                }
+            } catch(e) {
+                Swal.fire('Error', e.message, 'error');
+            }
+            btn.disabled = false;
+            btn.innerText = "Enviar Solicitud";
+        }
+
+        async function cargarMisActividades() {
+            const cont = document.getElementById('actividadesContenedor');
+            try {
+                const res = await fetch('/api/actividades/mis-actividades');
+                const acts = await res.json();
+                
+                if (acts.length === 0) {
+                    cont.innerHTML = '<div class="col-12 text-center text-muted py-5"><p>No has solicitado ninguna actividad.</p></div>';
+                    return;
+                }
+
+                cont.innerHTML = acts.map(a => {
+                    const badgeClass = a.estado === 'Aprobada' ? 'badge-apr' : (a.estado === 'Rechazada' ? 'badge-rech' : 'badge-pend');
+                    
+                    let reqsHTML = '';
+                    if (a.requerimientos && a.requerimientos.length > 0) {
+                        reqsHTML = '<div class="mt-3 border-top pt-2"><small class="fw-bold text-muted d-block mb-1">Estado de Recursos Solicitados:</small><ul class="list-group list-group-flush small">';
+                        a.requerimientos.forEach(r => {
+                            const rbClass = r.estado === 'Autorizado' ? 'text-success' : (r.estado === 'Rechazado' ? 'text-danger' : 'text-warning');
+                            const icon = r.estado === 'Autorizado' ? 'bi-check-circle-fill' : (r.estado === 'Rechazado' ? 'bi-x-circle-fill' : 'bi-clock-fill');
+                            
+                            let nombreRecurso = "Desconocido";
+                            if (r.tipo === 'ESPACIO') {
+                                const e = espaciosCatalogo.find(x => x.id == r.recurso_id);
+                                if (e) nombreRecurso = e.nombre;
+                            } else {
+                                const m = materialesCatalogo.find(x => x.id == r.recurso_id);
+                                if (m) nombreRecurso = m.nombre;
+                            }
+                            const tipoTxt = r.tipo === 'ESPACIO' ? ('Espacio: ' + nombreRecurso) : ('Material: ' + r.cantidad + 'x ' + nombreRecurso);
+
+                            reqsHTML += `<li class="list-group-item px-0 py-1 bg-transparent"><i class="bi ${icon} ${rbClass} me-2"></i>${tipoTxt} <span class="float-end">${r.responsable_email}</span></li>`;
+                        });
+                        reqsHTML += '</ul></div>';
+                    } else {
+                        reqsHTML = '<div class="mt-3"><small class="text-muted">No se solicitaron recursos.</small></div>';
+                    }
+
+                    return `
+                    <div class="col-md-6 mb-3">
+                        <div class="card h-100 p-3">
+                            <div class="d-flex justify-content-between">
+                                <h5 class="fw-bold mb-1">${a.titulo}</h5>
+                                <span class="badge ${badgeClass} align-self-start">${a.estado}</span>
+                            </div>
+                            <small class="text-muted mb-2"><i class="bi bi-calendar"></i> ${a.fecha} &bull; Bloques: ${a.bloques}</small>
+                            <p class="small mb-0">${a.descripcion || 'Sin descripción'}</p>
+                            ${reqsHTML}
+                        </div>
+                    </div>`;
+                }).join('');
+            } catch(e) {
+                cont.innerHTML = '<div class="col-12 text-center text-danger py-5"><p>Error de conexión</p></div>';
+            }
+        }
+    </script>
+</body>
+</html>
