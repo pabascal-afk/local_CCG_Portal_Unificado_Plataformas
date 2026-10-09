@@ -396,7 +396,7 @@
                       const res = await fetch('/api/reservas/' + id, { method: 'DELETE' });
                       if(res.ok) {
                           Swal.fire('Cancelada', 'La reserva fue cancelada.', 'success');
-                          cargarDatos();
+                          cargarDashboard();
                       } else {
                           Swal.fire('Error', 'No se pudo cancelar la reserva.', 'error');
                       }
