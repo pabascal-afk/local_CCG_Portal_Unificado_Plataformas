@@ -7,14 +7,11 @@ const sqlite3 = require('sqlite3').verbose();
 const path = require('path');
 const nodemailer = require('nodemailer');
 const transporter = nodemailer.createTransport({
-    service: 'gmail',
-    auth: {
-        user: process.env.SMTP_USER,
-        pass: process.env.SMTP_PASS
-    },
-    tls: {
-        rejectUnauthorized: false
-    }
+    host: process.env.SMTP_HOST || 'smtp.gmail.com',
+    port: parseInt(process.env.SMTP_PORT || '465'),
+    secure: (process.env.SMTP_SECURE === 'true' || !process.env.SMTP_SECURE),
+    auth: { user: process.env.SMTP_USER, pass: process.env.SMTP_PASS },
+    tls: { rejectUnauthorized: false }
 });
 
 async function enviarCorreoConfirmacion(reserva, profesorEmail) {
@@ -548,11 +545,12 @@ setInterval(() => {
                         // Enviar correo recordatorio
                         const nodemailer_cron = require('nodemailer');
                         const transporter_cron = nodemailer_cron.createTransport({
-                            host: process.env.SMTP_HOST || 'smtp.gmail.com',
-                            port: parseInt(process.env.SMTP_PORT || '465'),
-                            secure: (process.env.SMTP_SECURE === 'true' || !process.env.SMTP_SECURE),
-                            auth: { user: process.env.SMTP_USER, pass: process.env.SMTP_PASS }
-                        });
+    host: process.env.SMTP_HOST || 'smtp.gmail.com',
+    port: parseInt(process.env.SMTP_PORT || '465'),
+    secure: (process.env.SMTP_SECURE === 'true' || !process.env.SMTP_SECURE),
+    auth: { user: process.env.SMTP_USER, pass: process.env.SMTP_PASS },
+    tls: { rejectUnauthorized: false }
+});
                         if(process.env.SMTP_USER) {
                             transporter_cron.sendMail({
                                 from: `"Sistema Colegio" <${process.env.SMTP_USER}>`,
