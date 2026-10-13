@@ -56,6 +56,7 @@ const db = new sqlite3.Database(dbPath);
 db.serialize(() => {
   db.run("ALTER TABLE recursos_config ADD COLUMN reglas_reserva TEXT DEFAULT '{}'", () => {});
   db.run("ALTER TABLE reservas ADD COLUMN token_aprobacion TEXT", () => {});
+  db.run("ALTER TABLE evaluaciones ADD COLUMN temario TEXT", () => {});
 });
 
 app.use(cors());

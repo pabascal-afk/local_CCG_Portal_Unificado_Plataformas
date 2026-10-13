@@ -79,6 +79,133 @@
         sel.value = actualVal; // Restore selection if exists
     }
 
+    function esTipoPrueba(nombreTipo) {
+        if (!nombreTipo) return false;
+        const item = tiposEvaluacionCache.find(t => t.nombre.trim().toLowerCase() === nombreTipo.trim().toLowerCase());
+        if (item) return !!item.es_prueba;
+        const n = nombreTipo.toUpperCase();
+        return n.includes('PRUEBA') || n.includes('SUMA') || n.includes('EXAMEN') || n.includes('ENSAYO');
+    }
+
+    function actualizarObligatoriedadTemario() {
+        const selTipo = document.getElementById('inTipo');
+        const tipoVal = selTipo ? selTipo.value : '';
+        const esPrueba = esTipoPrueba(tipoVal);
+        const badge = document.getElementById('badgeTemarioReq');
+        const txt = document.getElementById('inTemario');
+        const feedback = document.getElementById('feedbackTemario');
+
+        if (esPrueba) {
+            if (badge) {
+                badge.className = 'badge bg-danger ms-1';
+                badge.innerText = 'Obligatorio';
+            }
+            if (txt) {
+                txt.setAttribute('required', 'required');
+                txt.placeholder = 'Obligatorio: Escribe el temario detallado de la prueba...';
+                txt.classList.add('border-danger-subtle');
+            }
+            if (feedback) {
+                feedback.className = 'form-text text-danger small fw-semibold';
+                feedback.innerHTML = '<i class="bi bi-exclamation-circle-fill me-1"></i>El temario es obligatorio para evaluaciones con categoría de prueba.';
+            }
+        } else {
+            if (badge) {
+                badge.className = 'badge bg-secondary ms-1';
+                badge.innerText = 'Opcional';
+            }
+            if (txt) {
+                txt.removeAttribute('required');
+                txt.placeholder = 'Opcional: Detalla los contenidos, unidades o ejes temáticos...';
+                txt.classList.remove('border-danger-subtle');
+            }
+            if (feedback) {
+                feedback.className = 'form-text text-muted small';
+                feedback.innerText = 'Para pruebas o exámenes, el temario es de ingreso obligatorio.';
+            }
+        }
+    }
+
+    function insertarPlantillaTemario() {
+        const txt = document.getElementById('inTemario');
+        if (!txt) return;
+        const plantilla = "1. Eje / Unidad Temática:\n   - Contenido principal:\n   - Aprendizajes clave:\n\n2. Habilidades / Objetivos:\n   - Aplicación y análisis de conceptos:\n\n3. Material de Estudio:\n   - Páginas del texto / Guías / Cuaderno:";
+        if (txt.value.trim() !== '') {
+            Swal.fire({
+                title: '¿Reemplazar contenido actual?',
+                text: 'Se insertará la estructura base del temario en el campo.',
+                icon: 'question',
+                showCancelButton: true,
+                confirmButtonColor: '#0d6efd',
+                cancelButtonColor: '#6c757d',
+                confirmButtonText: 'Sí, insertar',
+                cancelButtonText: 'Cancelar'
+            }).then(res => {
+                if (res.isConfirmed) {
+                    txt.value = plantilla;
+                    txt.focus();
+                }
+            });
+        } else {
+            txt.value = plantilla;
+            txt.focus();
+        }
+    }
+
+    function copiarTemarioModal() {
+        const temario = (evaluacionSeleccionada && evaluacionSeleccionada.temario) ? evaluacionSeleccionada.temario : '';
+        if (!temario || !temario.trim()) {
+            Swal.fire({ toast: true, position: 'top-end', icon: 'info', title: 'No hay temario para copiar', timer: 1500, showConfirmButton: false });
+            return;
+        }
+        navigator.clipboard.writeText(temario);
+        Swal.fire({
+            toast: true,
+            position: 'top-end',
+            icon: 'success',
+            title: '¡Temario copiado al portapapeles!',
+            showConfirmButton: false,
+            timer: 2000
+        });
+    }
+
+    function abrirVistaCompletaTemario() {
+        const temario = (evaluacionSeleccionada && evaluacionSeleccionada.temario) ? evaluacionSeleccionada.temario : '';
+        const titulo = (evaluacionSeleccionada ? `${evaluacionSeleccionada.asignatura} - ${evaluacionSeleccionada.curso}` : 'Temario');
+        const tipo = (evaluacionSeleccionada ? evaluacionSeleccionada.tipo : 'Evaluación');
+        Swal.fire({
+            title: `<div class="d-flex align-items-center justify-content-center gap-2"><i class="bi bi-journal-text text-primary"></i><span>Temario de Evaluación</span></div>`,
+            html: `
+                <div class="text-start mb-2">
+                    <span class="badge bg-primary me-1">${tipo}</span>
+                    <strong class="text-dark">${escapeHtml(titulo)}</strong>
+                </div>
+                <div class="text-start p-3 bg-light rounded border" style="white-space: pre-wrap; font-size: 0.95rem; max-height: 380px; overflow-y: auto; line-height: 1.5;">${escapeHtml(temario || 'Sin temario registrado')}</div>
+            `,
+            showCancelButton: true,
+            confirmButtonText: '<i class="bi bi-clipboard me-1"></i> Copiar Temario',
+            cancelButtonText: 'Cerrar',
+            confirmButtonColor: '#0d6efd'
+        }).then((res) => {
+            if (res.isConfirmed && temario) {
+                navigator.clipboard.writeText(temario);
+                Swal.fire({
+                    toast: true,
+                    position: 'top-end',
+                    icon: 'success',
+                    title: '¡Temario copiado al portapapeles!',
+                    showConfirmButton: false,
+                    timer: 2000
+                });
+            }
+        });
+    }
+
+    function escapeHtml(str) {
+        if (!str) return '';
+        return String(str).replace(/[&<>"']/g, m => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' })[m]);
+    }
+
     function abrirModalTipos() {
         renderTiposTabla();
         new bootstrap.Modal(document.getElementById('modalTipos')).show();
@@ -391,7 +518,7 @@
           <div class="row g-3 mb-3">
               <div class="col-md-6">
                 <label class="fw-medium text-secondary mb-1"><i class="bi bi-ui-checks"></i> Tipo de Evaluación</label>
-                <select class="form-select border-2 shadow-sm" id="inTipo" required>
+                <select class="form-select border-2 shadow-sm" id="inTipo" required onchange="actualizarObligatoriedadTemario()">
                   <option value="">Cargando tipos...</option>
                 </select>
               </div>
@@ -408,9 +535,24 @@
               </div>
           </div>
 
+          <!-- CAMPO Y BOTON DE TEMARIO -->
+          <div class="mb-3">
+            <div class="d-flex justify-content-between align-items-center mb-1">
+              <label class="fw-medium text-secondary mb-0">
+                <i class="bi bi-journal-text text-primary"></i> Temario
+                <span id="badgeTemarioReq" class="badge bg-secondary ms-1">Opcional</span>
+              </label>
+              <button type="button" class="btn btn-sm btn-outline-primary py-0 px-2" id="btnPlantillaTemario" onclick="insertarPlantillaTemario()" title="Insertar formato base de temario">
+                <i class="bi bi-magic me-1"></i> Plantilla
+              </button>
+            </div>
+            <textarea id="inTemario" class="form-control border-2 shadow-sm" rows="3" placeholder="Detalla los contenidos, unidades o ejes temáticos a evaluar..."></textarea>
+            <div id="feedbackTemario" class="form-text text-muted small">Para pruebas o exámenes, el temario es de ingreso obligatorio.</div>
+          </div>
+
           <div class="mb-2">
-            <label class="fw-medium text-secondary mb-1"><i class="bi bi-card-text"></i> Contenidos / Detalles <small class="text-muted">(Opcional)</small></label>
-            <textarea id="inDetalles" class="form-control border-2 shadow-sm" rows="3" placeholder="Ej: Unidad 1. Traer materiales de arte..."></textarea>
+            <label class="fw-medium text-secondary mb-1"><i class="bi bi-card-text"></i> Observaciones / Materiales <small class="text-muted">(Opcional)</small></label>
+            <textarea id="inDetalles" class="form-control border-2 shadow-sm" rows="2" placeholder="Ej: Traer calculadora, regla, hojas milimetradas..."></textarea>
           </div>
         </div>
         <div class="modal-footer border-0 bg-light">
@@ -507,8 +649,17 @@
               <span class="badge bg-secondary" id="detTipo"></span>
             </li>
             <li class="list-group-item px-0">
-              <span class="text-muted small text-uppercase fw-bold d-block mb-1">Contenidos</span>
-              <p class="mb-0 text-dark" id="detInfo" style="white-space: pre-wrap;"></p>
+              <div class="d-flex justify-content-between align-items-center mb-1">
+                <span class="text-muted small text-uppercase fw-bold"><i class="bi bi-journal-text text-primary"></i> Temario</span>
+                <button type="button" class="btn btn-sm btn-outline-primary py-0 px-2" id="btnCopiarTemario" onclick="copiarTemarioModal()">
+                  <i class="bi bi-clipboard"></i> Copiar Temario
+                </button>
+              </div>
+              <div class="p-3 bg-light rounded border text-dark" id="detTemario" style="white-space: pre-wrap; font-size: 0.92rem; max-height: 220px; overflow-y: auto;"></div>
+            </li>
+            <li class="list-group-item px-0" id="itemDetallesExtra">
+              <span class="text-muted small text-uppercase fw-bold d-block mb-1">Observaciones / Materiales</span>
+              <p class="mb-0 text-dark small" id="detInfo" style="white-space: pre-wrap;"></p>
             </li>
           </ul>
         </div>
@@ -517,7 +668,10 @@
             <button type="button" class="btn btn-outline-danger fw-bold shadow-sm" id="btnEliminarEval" onclick="confirmarEliminacion()" style="display: none;">🗑️ Eliminar</button>
             <button type="button" class="btn btn-primary fw-bold shadow-sm ms-2" id="btnEditarEval" onclick="prepararEdicion()" style="display: none;">✏️ Editar</button>
           </div>
-          <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cerrar</button>
+          <div class="d-flex gap-2">
+            <button type="button" class="btn btn-info text-white fw-bold shadow-sm" id="btnVerTemario" onclick="abrirVistaCompletaTemario()"><i class="bi bi-journal-text me-1"></i> Temario</button>
+            <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cerrar</button>
+          </div>
         </div>
       </div>
     </div>
@@ -805,6 +959,9 @@
       selectAsig.innerHTML = '<option value="">Selecciona un curso primero</option>';
       document.getElementById('inCurso').value = '';
       document.getElementById('inDetalles').value = '';
+      if (document.getElementById('inTemario')) document.getElementById('inTemario').value = '';
+      if (document.getElementById('inTipo')) document.getElementById('inTipo').value = '';
+      actualizarObligatoriedadTemario();
       
       const modal = new bootstrap.Modal(document.getElementById('modalAgenda'));
       modal.show();
@@ -816,15 +973,27 @@
       document.getElementById('detallesTitulo').innerText = evento.title;
       document.getElementById('detProfesor').innerText = evento.extendedProps.profesor || 'Desconocido';
       document.getElementById('detTipo').innerText = evento.extendedProps.tipo || 'General';
-      document.getElementById('detInfo').innerText = evento.extendedProps.detalles || 'Sin detalles adicionales.';
+      
+      const temarioTexto = evento.extendedProps.temario || evento.extendedProps.detalles || '';
+      const detTemarioEl = document.getElementById('detTemario');
+      if (detTemarioEl) {
+        detTemarioEl.innerText = (temarioTexto && temarioTexto.trim()) ? temarioTexto : 'Sin temario registrado.';
+      }
+
+      const detInfoEl = document.getElementById('detInfo');
+      if (detInfoEl) {
+        detInfoEl.innerText = (evento.extendedProps.detalles && evento.extendedProps.detalles.trim()) ? evento.extendedProps.detalles : 'Sin observaciones adicionales.';
+      }
       
       evaluacionSeleccionada = {
+        id: evento.id,
         fechaStr: evento.startStr.split('T')[0],
         curso: evento.extendedProps.curso,
         asignatura: evento.extendedProps.asignatura,
         profesorEmail: evento.extendedProps.profesorEmail || evento.extendedProps.profesor || '',
         tipo: evento.extendedProps.tipo,
-        detalles: evento.extendedProps.detalles
+        detalles: evento.extendedProps.detalles,
+        temario: temarioTexto
       };
 
       const btnEliminar = document.getElementById('btnEliminarEval');
@@ -1179,8 +1348,10 @@
         setTimeout(() => {
           document.getElementById('inAsig').value = evaluacionSeleccionada.asignatura;
           document.getElementById('inTipo').value = evaluacionSeleccionada.tipo;
-            if(evaluacionSeleccionada.recurso) document.getElementById('inRecurso').value = evaluacionSeleccionada.recurso;
+          if (evaluacionSeleccionada.recurso) document.getElementById('inRecurso').value = evaluacionSeleccionada.recurso;
+          if (document.getElementById('inTemario')) document.getElementById('inTemario').value = evaluacionSeleccionada.temario || evaluacionSeleccionada.detalles || "";
           document.getElementById('inDetalles').value = evaluacionSeleccionada.detalles || "";
+          actualizarObligatoriedadTemario();
         }, 100);
       }, 100);
     }
@@ -1190,6 +1361,20 @@
       e.preventDefault();
       
       const btn = e.target.querySelector('button[type="submit"]');
+      const tipoVal = document.getElementById('inTipo').value;
+      const temarioVal = (document.getElementById('inTemario') ? document.getElementById('inTemario').value : '').trim();
+
+      // Validación obligatoria de temario solo para evaluaciones con categoría de prueba
+      if (esTipoPrueba(tipoVal) && !temarioVal) {
+        Swal.fire({
+          icon: 'warning',
+          title: 'Temario Obligatorio',
+          text: 'Debes ingresar el temario de contenidos para las evaluaciones con categoría de prueba.'
+        });
+        if (document.getElementById('inTemario')) document.getElementById('inTemario').focus();
+        return;
+      }
+
       btn.disabled = true;
       btn.innerText = "Procesando...";
 
@@ -1197,8 +1382,9 @@
         fecha: document.getElementById('inFecha').value,
         curso: document.getElementById('inCurso').value,
         asignatura: document.getElementById('inAsig').value,
-        tipo: document.getElementById('inTipo').value,
-          recurso: document.getElementById('inRecurso').value,
+        tipo: tipoVal,
+        recurso: document.getElementById('inRecurso').value,
+        temario: temarioVal,
         detalles: document.getElementById('inDetalles').value
       };
 

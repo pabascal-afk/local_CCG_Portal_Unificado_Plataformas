@@ -29,7 +29,7 @@ router.get('/publico', async (req, res) => {
         }
 
         const cursoFiltro = req.query.curso ? req.query.curso.trim() : null;
-        let query = "SELECT id, fecha, curso, asignatura, tipo, detalles, profesor_nombre FROM evaluaciones WHERE 1=1";
+        let query = "SELECT id, fecha, curso, asignatura, tipo, detalles, temario, profesor_nombre FROM evaluaciones WHERE 1=1";
         const params = [];
 
         if (cursoFiltro) {

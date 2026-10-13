@@ -50,6 +50,7 @@ const schemas = [
     profesor_email TEXT,
     profesor_nombre TEXT,
     detalles TEXT,
+    temario TEXT,
     creado_en DATETIME DEFAULT CURRENT_TIMESTAMP,
     estado_doc TEXT DEFAULT 'Pendiente',
     link_doc TEXT,

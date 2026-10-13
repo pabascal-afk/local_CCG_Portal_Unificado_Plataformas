@@ -178,6 +178,7 @@ router.post('/:functionName', async (req, res) => {
                         tipo: e.tipo,
                         recurso: e.recurso,
                         detalles: e.detalles,
+                        temario: e.temario || e.detalles || '',
                         profesor: esBloqueo ? 'Administración' : (e.profesor_nombre || e.profesor_email),
                         email: esBloqueo ? 'admin@colegio.edu' : e.profesor_email,
                         esBloqueo: esBloqueo
@@ -258,6 +259,21 @@ router.post('/:functionName', async (req, res) => {
               const evaluacionesGuardadas = await queryAll("SELECT * FROM evaluaciones WHERE fecha LIKE ?", ["%" + datos.fecha + "%"]);
               
               const tiposDbList = await queryAll("SELECT * FROM config_tipos_evaluacion");
+              const esPruebaTipo = (t) => {
+                  const txt = (t || '').trim();
+                  const found = tiposDbList.find(dbT => dbT.nombre.toLowerCase().trim() === txt.toLowerCase());
+                  if (found) return found.es_prueba === 1;
+                  const tUpper = txt.toUpperCase();
+                  return tUpper.includes('PRUEBA') || tUpper.includes('SUMA') || tUpper.includes('EXAMEN') || tUpper.includes('ENSAYO');
+              };
+
+              if (esPruebaTipo(datos.tipo)) {
+                  const temarioTxt = (datos.temario || '').trim();
+                  if (!temarioTxt) {
+                      throw new Error("El temario es obligatorio para las evaluaciones con categoría de prueba.");
+                  }
+              }
+
               const sumarParaTope = (t) => {
                   const txt = (t || '').trim();
                   const found = tiposDbList.find(dbT => dbT.nombre.trim() === txt);
@@ -372,8 +388,8 @@ router.post('/:functionName', async (req, res) => {
               for (let c of cursosAfectados) {
                   const nId = Math.random().toString(36).substr(2, 9);
                   await run(
-                      "INSERT INTO evaluaciones (id, fecha, curso, asignatura, tipo, recurso, profesor_email, profesor_nombre, detalles) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)",
-                      [nId, datos.fecha, c, datos.asignatura, datos.tipo, datos.recurso, profeEmail, profeNombre, datos.detalles]
+                      "INSERT INTO evaluaciones (id, fecha, curso, asignatura, tipo, recurso, profesor_email, profesor_nombre, detalles, temario) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)",
+                      [nId, datos.fecha, c, datos.asignatura, datos.tipo, datos.recurso, profeEmail, profeNombre, datos.detalles || '', datos.temario || datos.detalles || '']
                   );
               }
 
@@ -388,10 +404,16 @@ router.post('/:functionName', async (req, res) => {
         }
 
         if (functionName === 'editarEvaluacion') {
-            const idEditar = args[0];
+            const idEditar = (typeof args[0] === 'object' && args[0]) ? (args[0].id || args[0].idEditar) : args[0];
             const datosNuevos = args[1];
             
-            const oldRows = await queryAll("SELECT * FROM evaluaciones WHERE id = ?", [idEditar]);
+            let oldRows = [];
+            if (idEditar) {
+                oldRows = await queryAll("SELECT * FROM evaluaciones WHERE id = ?", [idEditar]);
+            }
+            if (oldRows.length === 0 && typeof args[0] === 'object' && args[0]) {
+                oldRows = await queryAll("SELECT * FROM evaluaciones WHERE fecha = ? AND curso = ? AND asignatura = ?", [args[0].fechaStr || args[0].fecha, args[0].curso, args[0].asignatura]);
+            }
             if (oldRows.length === 0) throw new Error("Evaluación no encontrada");
             const oldEval = oldRows[0];
             const isElective = oldEval.asignatura.toUpperCase().includes('(ELECTIVO');
@@ -400,11 +422,27 @@ router.post('/:functionName', async (req, res) => {
             if (isElective) {
                 await run("DELETE FROM evaluaciones WHERE fecha = ? AND asignatura = ? AND tipo = ?", [oldEval.fecha, oldEval.asignatura, oldEval.tipo]);
             } else {
-                await run("DELETE FROM evaluaciones WHERE id = ?", [idEditar]);
+                await run("DELETE FROM evaluaciones WHERE id = ?", [oldEval.id]);
             }
             
             // Now run the agendarEvaluacion logic manually!
             const datos = datosNuevos;
+            const tiposDbListEdit = await queryAll("SELECT * FROM config_tipos_evaluacion");
+            const esPruebaTipoEdit = (t) => {
+                const txt = (t || '').trim();
+                const found = tiposDbListEdit.find(dbT => dbT.nombre.toLowerCase().trim() === txt.toLowerCase());
+                if (found) return found.es_prueba === 1;
+                const tUpper = txt.toUpperCase();
+                return tUpper.includes('PRUEBA') || tUpper.includes('SUMA') || tUpper.includes('EXAMEN') || tUpper.includes('ENSAYO');
+            };
+
+            if (esPruebaTipoEdit(datos.tipo)) {
+                const temarioTxt = (datos.temario || '').trim();
+                if (!temarioTxt) {
+                    throw new Error("El temario es obligatorio para las evaluaciones con categoría de prueba.");
+                }
+            }
+
             const esElectivo = datos.asignatura.toUpperCase().includes('(ELECTIVO');
             let cursosAfectados = [datos.curso.trim().toUpperCase()];
             if (esElectivo) {
@@ -438,7 +476,7 @@ router.post('/:functionName', async (req, res) => {
                     const cAfectadosInst = ev.cursos || 'TODOS';
                     if (cAfectadosInst === 'TODOS' || cAfectadosInst.split(',').map(x => x.trim().toUpperCase()).includes(c)) {
                         // Restore old eval!
-                        if (isElective) { cursosAfectados.forEach(cO => run("INSERT INTO evaluaciones (id, fecha, curso, asignatura, tipo) VALUES (?,?,?,?,?)", [Math.random().toString(36).substr(2, 9), oldEval.fecha, cO, oldEval.asignatura, oldEval.tipo])) } else { run("INSERT INTO evaluaciones (id, fecha, curso, asignatura, tipo) VALUES (?,?,?,?,?)", [idEditar, oldEval.fecha, oldEval.curso, oldEval.asignatura, oldEval.tipo]) }
+                        if (isElective) { cursosAfectados.forEach(cO => run("INSERT INTO evaluaciones (id, fecha, curso, asignatura, tipo, recurso, profesor_email, profesor_nombre, detalles, temario) VALUES (?,?,?,?,?,?,?,?,?,?)", [Math.random().toString(36).substr(2, 9), oldEval.fecha, cO, oldEval.asignatura, oldEval.tipo, oldEval.recurso, oldEval.profesor_email, oldEval.profesor_nombre, oldEval.detalles, oldEval.temario])) } else { run("INSERT INTO evaluaciones (id, fecha, curso, asignatura, tipo, recurso, profesor_email, profesor_nombre, detalles, temario) VALUES (?,?,?,?,?,?,?,?,?,?)", [oldEval.id, oldEval.fecha, oldEval.curso, oldEval.asignatura, oldEval.tipo, oldEval.recurso, oldEval.profesor_email, oldEval.profesor_nombre, oldEval.detalles, oldEval.temario]) }
                         throw new Error("El día " + datos.fecha + " está bloqueado por la actividad institucional: " + ev.titulo + " (Afecta al curso " + c + ").");
                     }
                 }
@@ -457,7 +495,7 @@ router.post('/:functionName', async (req, res) => {
 
                     if (calcularCarga(evalDia) > maxDiaEscritas) {
                         // Restore old
-                        if (isElective) { cursosAfectados.forEach(cO => run("INSERT INTO evaluaciones (id, fecha, curso, asignatura, tipo) VALUES (?,?,?,?,?)", [Math.random().toString(36).substr(2, 9), oldEval.fecha, cO, oldEval.asignatura, oldEval.tipo])) } else { run("INSERT INTO evaluaciones (id, fecha, curso, asignatura, tipo) VALUES (?,?,?,?,?)", [idEditar, oldEval.fecha, oldEval.curso, oldEval.asignatura, oldEval.tipo]) }
+                        if (isElective) { cursosAfectados.forEach(cO => run("INSERT INTO evaluaciones (id, fecha, curso, asignatura, tipo, recurso, profesor_email, profesor_nombre, detalles, temario) VALUES (?,?,?,?,?,?,?,?,?,?)", [Math.random().toString(36).substr(2, 9), oldEval.fecha, cO, oldEval.asignatura, oldEval.tipo, oldEval.recurso, oldEval.profesor_email, oldEval.profesor_nombre, oldEval.detalles, oldEval.temario])) } else { run("INSERT INTO evaluaciones (id, fecha, curso, asignatura, tipo, recurso, profesor_email, profesor_nombre, detalles, temario) VALUES (?,?,?,?,?,?,?,?,?,?)", [oldEval.id, oldEval.fecha, oldEval.curso, oldEval.asignatura, oldEval.tipo, oldEval.recurso, oldEval.profesor_email, oldEval.profesor_nombre, oldEval.detalles, oldEval.temario]) }
                         throw new Error("Límite diario superado (" + maxDiaEscritas + " pruebas/exposiciones) para el curso " + c + ".");
                     }
                 }
@@ -468,8 +506,8 @@ router.post('/:functionName', async (req, res) => {
             for (let c of cursosAfectados) {
                 const nId = Math.random().toString(36).substr(2, 9);
                 await run(
-                    "INSERT INTO evaluaciones (id, fecha, curso, asignatura, tipo, recurso, profesor_email, profesor_nombre, detalles) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)",
-                    [nId, datos.fecha, c, datos.asignatura, datos.tipo, datos.recurso, profeEmail, profeNombre, datos.detalles]
+                    "INSERT INTO evaluaciones (id, fecha, curso, asignatura, tipo, recurso, profesor_email, profesor_nombre, detalles, temario) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)",
+                    [nId, datos.fecha, c, datos.asignatura, datos.tipo, datos.recurso, profeEmail, profeNombre, datos.detalles || '', datos.temario || datos.detalles || '']
                 );
             }
             return res.json({ result: "Evaluación editada exitosamente." });

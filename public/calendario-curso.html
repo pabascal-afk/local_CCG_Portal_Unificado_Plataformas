@@ -306,7 +306,12 @@
             <span class="badge bg-light text-dark border" id="detProfesor"><i class="bi bi-person-fill me-1"></i>Profesor</span>
           </div>
 
-          <label class="small fw-bold text-secondary mb-1"><i class="bi bi-journal-text me-1 text-primary"></i>Contenidos y Temario:</label>
+          <div class="d-flex justify-content-between align-items-center mb-1">
+            <label class="small fw-bold text-secondary mb-0"><i class="bi bi-journal-text me-1 text-primary"></i>Temario:</label>
+            <button type="button" class="btn btn-sm btn-outline-primary py-0 px-2" style="font-size: 0.78rem;" onclick="copiarTemarioPublico()">
+              <i class="bi bi-clipboard"></i> Copiar Temario
+            </button>
+          </div>
           <div class="detalle-temario-box" id="detContenido">Sin temario especificado.</div>
         </div>
         <div class="modal-footer border-0 bg-light p-2 px-3">
@@ -597,11 +602,12 @@
                   backgroundColor: color,
                   borderColor: color,
                   textColor: '#ffffff',
-                  extendedProps: {
+                    extendedProps: {
                     asignatura: ev.asignatura,
                     tipo: ev.tipo || 'Evaluación',
                     curso: ev.curso,
                     detalles: ev.detalles,
+                    temario: ev.temario || ev.detalles || '',
                     profesor: ev.profesor_nombre || 'Docente a cargo',
                     fecha: ev.fecha,
                     color: color
@@ -650,8 +656,9 @@
       document.getElementById('detProfesor').innerHTML = `<i class="bi bi-person-fill me-1"></i>${props.profesor}`;
 
       const boxTemario = document.getElementById('detContenido');
-      if (props.detalles && props.detalles.trim() && props.detalles.trim() !== '0') {
-        boxTemario.innerText = props.detalles;
+      const textoTemario = props.temario || props.detalles;
+      if (textoTemario && textoTemario.trim() && textoTemario.trim() !== '0') {
+        boxTemario.innerText = textoTemario;
       } else {
         boxTemario.innerHTML = '<span class="text-muted fst-italic">Temario no especificado aún. Consulta con el profesor(a) de la asignatura.</span>';
       }
@@ -662,6 +669,14 @@
       }
 
       modalDetalle.show();
+    }
+
+    function copiarTemarioPublico() {
+      const boxTemario = document.getElementById('detContenido');
+      const texto = boxTemario ? boxTemario.innerText : '';
+      if (!texto || texto.includes('no especificado')) return;
+      navigator.clipboard.writeText(texto);
+      alert('¡Temario copiado al portapapeles!');
     }
 
     function imprimirCalendario() {
