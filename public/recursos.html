@@ -1372,7 +1372,7 @@
         }
       }
       if (faltantes.length > 0) {
-        columnas.push({ titulo: 'Otros Bloques', bloques: faltantes });
+        columnas.push({ titulo: 'Otros Bloques', bloques: faltantes, esOtrosBloques: true });
       }
 
       return columnas;
@@ -1472,6 +1472,21 @@
       }
       const columnas = parsearColumnasModal(reglas.columnas_modal, totalBloques);
 
+      // Si en "Otros Bloques" solo hay bloques no disponibles, se oculta la columna y solo se muestran las definidas
+      const columnasVisibles = columnas.filter(col => {
+        if (col.esOtrosBloques || col.titulo === 'Otros Bloques') {
+          const tieneAlgunDisponible = col.bloques.some(b => {
+            if (disp && disp[diaStr] && !disp[diaStr].includes(b)) return false;
+            return true;
+          });
+          if (tieneAlgunDisponible) {
+            col.bloques = col.bloques.filter(b => (disp && disp[diaStr]) ? disp[diaStr].includes(b) : true);
+          }
+          return tieneAlgunDisponible;
+        }
+        return true;
+      });
+
       const getHorasBloque = (bNum) => {
         const sHM = arrHoras[bNum - 1] || '00:00';
         let eHM = '';
@@ -1541,11 +1556,11 @@
       const gridCols = document.createElement('div');
       gridCols.className = 'grid-columnas-jornadas';
 
-      columnas.forEach(col => {
+      columnasVisibles.forEach(col => {
         const colCard = document.createElement('div');
         colCard.className = 'col-jornada';
 
-        if (columnas.length > 1 || !col.esUnica) {
+        if (columnasVisibles.length > 1 || !col.esUnica) {
           const colHeader = document.createElement('div');
           colHeader.className = 'col-jornada-header';
           colHeader.innerHTML = `
