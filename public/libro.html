@@ -1,0 +1,1101 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Llenado de Libros - Dashboard Pedagógico</title>
+  
+  <!-- Bootstrap 5, Icons, SweetAlert2, Material Symbols -->
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css">
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css">
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:opsz,wght,FILL,GRAD@20..48,100..700,0..1,-50..200" />
+  <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+
+  <style>
+    body {
+      background-color: #f1f5f9;
+      font-family: 'Segoe UI', system-ui, -apple-system, sans-serif;
+      color: #1e293b;
+      padding: 20px;
+    }
+    .header-bar {
+      background: white;
+      border-radius: 12px;
+      padding: 16px 24px;
+      margin-bottom: 20px;
+      box-shadow: 0 1px 3px rgba(0,0,0,0.05);
+      border: 1px solid #e2e8f0;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      flex-wrap: wrap;
+      gap: 12px;
+    }
+    .stats-card {
+      background: #1e293b;
+      color: white;
+      border-radius: 12px;
+      padding: 20px;
+      margin-bottom: 20px;
+      box-shadow: 0 4px 6px -1px rgba(0,0,0,0.1);
+    }
+    .stat-val {
+      font-size: 2rem;
+      font-weight: 800;
+      line-height: 1;
+      display: block;
+      color: #38bdf8;
+    }
+    .stat-val.critico { color: #f43f5e; }
+    .stat-val.pendiente { color: #fbbf24; }
+    .stat-val.ok { color: #34d399; }
+    .stat-label {
+      font-size: 0.72rem;
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+      opacity: 0.85;
+      font-weight: 600;
+      margin-top: 6px;
+      display: block;
+    }
+
+    /* Pestañas */
+    .nav-tabs .nav-link {
+      font-weight: 600;
+      color: #64748b;
+      border: none;
+      border-bottom: 3px solid transparent;
+      padding: 10px 20px;
+      transition: all 0.2s ease;
+    }
+    .nav-tabs .nav-link.active {
+      color: #0284c7;
+      background: transparent;
+      border-bottom: 3px solid #0284c7;
+    }
+
+    /* Acordeón */
+    .accordion-button {
+      background-color: #334155;
+      color: white;
+      font-weight: bold;
+      border-radius: 8px !important;
+    }
+    .accordion-button:not(.collapsed) {
+      background-color: #1e293b;
+      color: white;
+      box-shadow: none;
+    }
+    .accordion-button::after {
+      filter: brightness(0) invert(1);
+    }
+    .accordion-body {
+      background-color: #f8fafc;
+      padding: 16px;
+      border-radius: 0 0 8px 8px;
+    }
+
+    /* Tarjetas Profesor */
+    .profesor-card {
+      background: white;
+      border-radius: 10px;
+      border: 1px solid #e2e8f0;
+      overflow: hidden;
+      margin-bottom: 16px;
+      box-shadow: 0 1px 3px rgba(0,0,0,0.03);
+    }
+    .profesor-header {
+      background: #f1f5f9;
+      padding: 10px 18px;
+      font-weight: 700;
+      font-size: 0.92rem;
+      color: #0f172a;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      border-bottom: 1px solid #e2e8f0;
+    }
+    .status-row {
+      padding: 10px 18px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      border-bottom: 1px solid #f1f5f9;
+      font-size: 0.88rem;
+    }
+    .status-row:last-child { border-bottom: none; }
+    .status-row.critico { background-color: #fff1f2 !important; border-left: 4px solid #e11d48; }
+    .status-row.pendiente { background-color: #fffbeb !important; border-left: 4px solid #f59e0b; }
+    .badge-date {
+      background: #cbd5e1;
+      color: #1e293b;
+      font-weight: 600;
+      padding: 4px 10px;
+      border-radius: 6px;
+      font-size: 0.8rem;
+      min-width: 125px;
+      text-align: center;
+      display: inline-block;
+    }
+    .state-icon { font-size: 1.15rem; vertical-align: middle; }
+    .text-ok { color: #10b981; }
+    .text-error { color: #ef4444; }
+
+    /* Dropzone de carga masiva */
+    .dropzone-box {
+      border: 2px dashed #94a3b8;
+      border-radius: 12px;
+      background: white;
+      padding: 35px 20px;
+      text-align: center;
+      cursor: pointer;
+      transition: all 0.2s ease;
+    }
+    .dropzone-box:hover, .dropzone-box.dragover {
+      border-color: #0284c7;
+      background-color: #f0f9ff;
+    }
+
+    /* Tabla de cola */
+    .queue-table th {
+      background-color: #f8fafc;
+      font-size: 0.8rem;
+      text-transform: uppercase;
+      letter-spacing: 0.04em;
+      color: #64748b;
+    }
+    .badge-queue-pos {
+      background: #0284c7;
+      color: white;
+      font-size: 0.8rem;
+      font-weight: 700;
+      border-radius: 6px;
+      padding: 3px 8px;
+    }
+  </style>
+</head>
+<body>
+
+  <div class="container-fluid px-md-4">
+    
+    <!-- Barra Superior -->
+    <div class="header-bar">
+      <div>
+        <h4 class="mb-0 fw-bold text-dark"><i class="bi bi-book-half text-primary me-2"></i>Seguimiento de Libro Digital</h4>
+        <small class="text-muted">Control pedagógico de clases creadas, firmas, leccionarios y asistencia.</small>
+      </div>
+      <div class="d-flex align-items-center gap-2">
+        <span class="badge bg-danger-subtle text-danger border border-danger-subtle px-3 py-2 fw-semibold">
+          <i class="bi bi-shield-lock me-1"></i> Módulo Administrativo
+        </span>
+        <button class="btn btn-sm btn-outline-secondary" onclick="cargarDashboard()"><i class="bi bi-arrow-clockwise me-1"></i>Actualizar</button>
+      </div>
+    </div>
+
+    <!-- Pestañas de Navegación -->
+    <ul class="nav nav-tabs mb-4" id="mainTabs" role="tablist">
+      <li class="nav-item">
+        <button class="nav-link active" id="tab-dashboard" data-bs-toggle="tab" data-bs-target="#pane-dashboard" type="button">
+          <i class="bi bi-speedometer2 me-1"></i> Dashboard Pedagógico
+        </button>
+      </li>
+      <li class="nav-item">
+        <button class="nav-link" id="tab-importar" data-bs-toggle="tab" data-bs-target="#pane-importar" type="button">
+          <i class="bi bi-cloud-arrow-up me-1"></i> Importar Reportes en Lote
+        </button>
+      </li>
+      <li class="nav-item">
+        <button class="nav-link" id="tab-config" data-bs-toggle="tab" data-bs-target="#pane-config" type="button">
+          <i class="bi bi-gear me-1"></i> Configuración y Alertas
+        </button>
+      </li>
+    </ul>
+
+    <!-- Contenido de Pestañas -->
+    <div class="tab-content" id="mainTabsContent">
+      
+      <!-- ============================================== -->
+      <!-- PESTAÑA 1: DASHBOARD PEDAGÓGICO                -->
+      <!-- ============================================== -->
+      <div class="tab-pane fade show active" id="pane-dashboard" role="tabpanel">
+        
+        <!-- Tarjetas de Estadísticas -->
+        <div class="stats-card">
+          <div class="row text-center g-3">
+            <div class="col-6 col-md-3 border-end border-secondary border-opacity-50">
+              <span class="stat-val critico" id="statCriticos">0</span>
+              <span class="stat-label">🚨 Sin Clases (0/X)</span>
+            </div>
+            <div class="col-6 col-md-3 border-end border-secondary border-opacity-50">
+              <span class="stat-val pendiente" id="statPendientes">0</span>
+              <span class="stat-label">✍️ Firmas Faltantes</span>
+            </div>
+            <div class="col-6 col-md-3 border-end border-secondary border-opacity-50">
+              <span class="stat-val ok" id="statAlDia">0</span>
+              <span class="stat-label">✅ Al Día</span>
+            </div>
+            <div class="col-6 col-md-3">
+              <span class="stat-val" id="statTotalRegistros">0</span>
+              <span class="stat-label">📅 Días Monitoreados (<span id="statTotalProfesores">0</span> Prof.)</span>
+            </div>
+          </div>
+        </div>
+
+        <!-- Filtros y Búsqueda -->
+        <div class="card border-0 shadow-sm mb-4">
+          <div class="card-body py-3">
+            <div class="row g-3 align-items-center">
+              <div class="col-md-5">
+                <div class="input-group">
+                  <span class="input-group-text bg-white border-end-0 text-muted"><i class="bi bi-search"></i></span>
+                  <input type="text" id="filtroDocente" class="form-control border-start-0 shadow-none" placeholder="Buscar profesor..." oninput="renderizarVista()">
+                </div>
+              </div>
+              <div class="col-md-3">
+                <select id="filtroMes" class="form-select shadow-none" onchange="renderizarVista()">
+                  <option value="">Todos los meses</option>
+                </select>
+              </div>
+              <div class="col-md-4 d-flex justify-content-md-end align-items-center gap-3">
+                <div class="form-check form-switch mb-0">
+                  <input class="form-check-input" type="checkbox" id="switchProblemas" onchange="renderizarVista()">
+                  <label class="form-check-label fw-semibold small text-danger" for="switchProblemas">
+                    Ver solo problemas
+                  </label>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Contenedor del Acordeón -->
+        <div id="contenedorAcordeon">
+          <div class="text-center py-5">
+            <div class="spinner-border text-primary" role="status"></div>
+            <p class="text-muted small mt-2">Cargando registros pedagógicos...</p>
+          </div>
+        </div>
+
+      </div>
+
+      <!-- ============================================== -->
+      <!-- PESTAÑA 2: IMPORTADOR MASIVO EN ORDEN          -->
+      <!-- ============================================== -->
+      <div class="tab-pane fade" id="pane-importar" role="tabpanel">
+        
+        <div class="row g-4">
+          <div class="col-lg-5">
+            <div class="card border-0 shadow-sm h-100">
+              <div class="card-body p-4">
+                <h5 class="fw-bold mb-2"><i class="bi bi-file-earmark-spreadsheet text-success me-2"></i>Seleccionar Archivos</h5>
+                <p class="text-muted small mb-4">
+                  Selecciona uno o más reportes semanales (<code>.xlsx</code> o <code>.xls</code>). Podrás ordenar la cola antes de procesarlos para que se importen en la secuencia que desees.
+                </p>
+
+                <!-- Dropzone -->
+                <div class="dropzone-box mb-3" id="dropzone" onclick="document.getElementById('inputArchivos').click()">
+                  <i class="bi bi-cloud-arrow-up text-primary" style="font-size: 2.8rem;"></i>
+                  <h6 class="fw-bold mt-2 mb-1">Arrastra tus archivos aquí</h6>
+                  <p class="text-muted small mb-3">o haz clic para explorar en tu equipo</p>
+                  <button type="button" class="btn btn-outline-primary btn-sm px-3">Elegir archivos</button>
+                  <input type="file" id="inputArchivos" multiple accept=".xlsx, .xls" style="display: none;" onchange="agregarArchivosACola(this.files)">
+                </div>
+
+                <div class="alert alert-info py-2 px-3 small border-0 mb-0">
+                  <i class="bi bi-info-circle me-1"></i> <b>Nota de orden:</b> Los archivos se procesan secuencialmente. Si dos semanas contienen un mismo día y docente, la fila del archivo que se procese después actualizará la anterior.
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <!-- Cola de Archivos -->
+          <div class="col-lg-7">
+            <div class="card border-0 shadow-sm h-100">
+              <div class="card-body p-4 d-flex flex-column">
+                
+                <div class="d-flex justify-content-between align-items-center mb-3">
+                  <h5 class="fw-bold mb-0">
+                    <i class="bi bi-list-ol text-primary me-2"></i>Cola de Procesamiento 
+                    <span class="badge bg-secondary ms-1" id="badgeTotalCola">0</span>
+                  </h5>
+                  <button class="btn btn-sm btn-outline-danger" id="btnLimpiarCola" onclick="limpiarCola()" style="display: none;">
+                    <i class="bi bi-trash me-1"></i>Limpiar cola
+                  </button>
+                </div>
+
+                <!-- Barra de Progreso General -->
+                <div id="progresoContainer" class="mb-3" style="display: none;">
+                  <div class="d-flex justify-content-between align-items-center small mb-1">
+                    <span class="fw-bold text-primary" id="progresoTexto">Procesando lote...</span>
+                    <span class="text-muted" id="progresoPorcentaje">0%</span>
+                  </div>
+                  <div class="progress" style="height: 10px;">
+                    <div id="progresoBarra" class="progress-bar progress-bar-striped progress-bar-animated bg-primary" role="progressbar" style="width: 0%"></div>
+                  </div>
+                </div>
+
+                <!-- Tabla de Cola -->
+                <div class="table-responsive flex-grow-1 border rounded bg-white" style="max-height: 420px; overflow-y: auto;">
+                  <table class="table table-hover align-middle mb-0 queue-table">
+                    <thead>
+                      <tr>
+                        <th class="text-center" style="width: 70px;">Orden</th>
+                        <th>Archivo</th>
+                        <th class="text-center" style="width: 100px;">Reordenar</th>
+                        <th style="width: 170px;">Estado</th>
+                        <th class="text-center" style="width: 60px;">Acción</th>
+                      </tr>
+                    </thead>
+                    <tbody id="tablaColaBody">
+                      <tr>
+                        <td colspan="5" class="text-center text-muted py-5">
+                          <i class="bi bi-inbox text-secondary" style="font-size: 2rem;"></i>
+                          <p class="mb-0 mt-2 small">No hay archivos en la cola. Arrastra o selecciona archivos a la izquierda.</p>
+                        </td>
+                      </tr>
+                    </tbody>
+                  </table>
+                </div>
+
+                <!-- Botón de Ejecución -->
+                <div class="mt-4 pt-2 border-top text-end">
+                  <button type="button" class="btn btn-primary btn-lg px-4 fw-bold shadow-sm" id="btnProcesarLote" onclick="iniciarProcesamientoEnOrden()" disabled>
+                    <i class="bi bi-play-circle-fill me-2"></i>Procesar Todos en Orden
+                  </button>
+                </div>
+
+              </div>
+            </div>
+          </div>
+        </div>
+
+      </div>
+
+      <!-- ============================================== -->
+      <!-- PESTAÑA 3: CONFIGURACIÓN Y NOTIFICACIONES      -->
+      <!-- ============================================== -->
+      <div class="tab-pane fade" id="pane-config" role="tabpanel">
+        
+        <div class="row g-4">
+          
+          <!-- Profesores Exentos (Blacklist) -->
+          <div class="col-md-6">
+            <div class="card border-0 shadow-sm h-100">
+              <div class="card-body p-4">
+                <h5 class="fw-bold mb-2"><i class="bi bi-person-x text-danger me-2"></i>Profesores Exentos (Blacklist)</h5>
+                <p class="text-muted small mb-3">Docentes en licencia, administrativos u horas no evaluables que no deben computarse como falta en los reportes.</p>
+
+                <div class="input-group mb-3">
+                  <input type="text" id="inNuevoExento" class="form-control" placeholder="Nombre completo del profesor...">
+                  <button class="btn btn-primary fw-bold" onclick="agregarExento()"><i class="bi bi-plus-lg me-1"></i>Agregar</button>
+                </div>
+
+                <div id="listaExentos" class="d-flex flex-wrap gap-2 p-3 bg-light rounded border" style="min-height: 120px; max-height: 250px; overflow-y: auto;">
+                  <span class="text-muted small">Cargando lista...</span>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <!-- Días Excluidos (Feriados / Paros) -->
+          <div class="col-md-6">
+            <div class="card border-0 shadow-sm h-100">
+              <div class="card-body p-4">
+                <h5 class="fw-bold mb-2"><i class="bi bi-calendar-x text-warning me-2"></i>Días Excluidos (Feriados / Paros)</h5>
+                <p class="text-muted small mb-3">Fechas en las que no hubo clases ordinarias (feriados, suspensiones o eventos institucionales).</p>
+
+                <div class="input-group mb-3">
+                  <input type="date" id="inNuevoFeriado" class="form-control">
+                  <button class="btn btn-warning fw-bold" onclick="agregarFeriado()"><i class="bi bi-plus-lg me-1"></i>Agregar Fecha</button>
+                </div>
+
+                <div id="listaFeriados" class="d-flex flex-wrap gap-2 p-3 bg-light rounded border" style="min-height: 120px; max-height: 250px; overflow-y: auto;">
+                  <span class="text-muted small">Cargando lista...</span>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <!-- Destinatarios de Resumen de Coordinación -->
+          <div class="col-md-6">
+            <div class="card border-0 shadow-sm h-100">
+              <div class="card-body p-4">
+                <h5 class="fw-bold mb-2"><i class="bi bi-envelope-paper text-primary me-2"></i>Destinatarios de Resumen Semanal</h5>
+                <p class="text-muted small mb-3">Correos electrónicos institucionales que recibirán el informe consolidado de coordinación.</p>
+
+                <div class="input-group mb-3">
+                  <input type="email" id="inNuevoDestinatario" class="form-control" placeholder="ejemplo@colegiocerrogrande.cl">
+                  <button class="btn btn-outline-primary fw-bold" onclick="agregarDestinatario()"><i class="bi bi-plus-lg me-1"></i>Agregar</button>
+                </div>
+
+                <div id="listaDestinatarios" class="d-flex flex-wrap gap-2 p-3 bg-light rounded border" style="min-height: 100px; max-height: 200px; overflow-y: auto;">
+                  <span class="text-muted small">Cargando lista...</span>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <!-- Disparo de Alertas & Zona de Peligro -->
+          <div class="col-md-6">
+            <div class="card border-0 shadow-sm h-100">
+              <div class="card-body p-4 d-flex flex-column justify-content-between">
+                <div>
+                  <h5 class="fw-bold mb-2"><i class="bi bi-send-check text-info me-2"></i>Notificaciones & Acciones</h5>
+                  <p class="text-muted small mb-3">Envía correos electrónicos automáticos usando la configuración SMTP centralizada.</p>
+
+                  <div class="d-grid gap-2 mb-4">
+                    <button class="btn btn-outline-primary py-2 text-start fw-semibold" onclick="enviarResumenAdmin()">
+                      <i class="bi bi-send me-2"></i> Enviar Resumen Consolidado a Coordinación
+                    </button>
+                    <button class="btn btn-outline-warning text-dark py-2 text-start fw-semibold" onclick="enviarAlertasDocentes()">
+                      <i class="bi bi-envelope-exclamation me-2"></i> Notificar Faltas Individualmente a Docentes
+                    </button>
+                  </div>
+                </div>
+
+                <div class="pt-3 border-top">
+                  <h6 class="fw-bold text-danger mb-1"><i class="bi bi-exclamation-triangle-fill me-1"></i>Zona de Mantenimiento</h6>
+                  <p class="text-muted small mb-2">Elimina todos los datos pedagógicos importados para comenzar un nuevo ciclo o periodo.</p>
+                  <button class="btn btn-sm btn-outline-danger" onclick="vaciarRegistros()">
+                    <i class="bi bi-trash-fill me-1"></i>Vaciar Todos los Registros Importados
+                  </button>
+                </div>
+              </div>
+            </div>
+          </div>
+
+        </div>
+
+      </div>
+
+    </div>
+
+  </div>
+
+  <!-- Scripts -->
+  <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+  <script>
+    // Variables de Estado
+    let datosGlobales = [];
+    let configActual = { blacklist: [], dias_excluidos: [], destinatarios_admin: [] };
+    let colaArchivos = []; // Array de { id, file, status, mensaje }
+    let procesandoEnCola = false;
+
+    document.addEventListener('DOMContentLoaded', () => {
+      cargarDashboard();
+      cargarConfiguracion();
+      setupDropzone();
+    });
+
+    // ==============================================
+    // LOGICA DASHBOARD
+    // ==============================================
+
+    async function cargarDashboard() {
+      const contenedor = document.getElementById('contenedorAcordeon');
+      contenedor.innerHTML = `
+        <div class="text-center py-5">
+          <div class="spinner-border text-primary" role="status"></div>
+          <p class="text-muted small mt-2">Cargando registros...</p>
+        </div>
+      `;
+
+      try {
+        const res = await fetch('/api/libro/dashboard');
+        if (!res.ok) throw new Error('Error al cargar datos del servidor');
+        const data = await res.json();
+
+        document.getElementById('statCriticos').innerText = data.metricas.criticos || 0;
+        document.getElementById('statPendientes').innerText = data.metricas.pendientes || 0;
+        document.getElementById('statAlDia').innerText = data.metricas.alDia || 0;
+        document.getElementById('statTotalRegistros').innerText = data.metricas.totalRegistros || 0;
+        document.getElementById('statTotalProfesores').innerText = data.metricas.totalProfesores || 0;
+
+        datosGlobales = data.registros || [];
+        poblarSelectorMeses();
+        renderizarVista();
+      } catch (err) {
+        contenedor.innerHTML = `
+          <div class="alert alert-danger py-4 text-center">
+            <i class="bi bi-exclamation-circle fs-3 d-block mb-2"></i>
+            <b>No se pudieron cargar los registros:</b> ${err.message}
+          </div>
+        `;
+      }
+    }
+
+    function procesarFecha(fechaStr) {
+      const partes = (fechaStr || '').split('/');
+      if (partes.length !== 3) return { mesLabel: "Sin fecha", mesId: 0, diaTexto: fechaStr };
+      
+      const diaNum = parseInt(partes[0], 10);
+      const mesNum = parseInt(partes[1], 10) - 1;
+      const anioNum = parseInt(partes[2], 10);
+      const d = new Date(anioNum, mesNum, diaNum);
+      
+      const dias = ["Domingo", "Lunes", "Martes", "Miércoles", "Jueves", "Viernes", "Sábado"];
+      const meses = ["Enero", "Febrero", "Marzo", "Abril", "Mayo", "Junio", "Julio", "Agosto", "Septiembre", "Octubre", "Noviembre", "Diciembre"];
+      
+      return {
+        mesLabel: `${meses[mesNum]} ${anioNum}`,
+        mesId: anioNum * 100 + mesNum,
+        diaTexto: `${dias[d.getDay()]} ${diaNum}`
+      };
+    }
+
+    function poblarSelectorMeses() {
+      const select = document.getElementById('filtroMes');
+      const mesesSet = new Map();
+
+      datosGlobales.forEach(item => {
+        const info = procesarFecha(item.Fecha);
+        if (info.mesId && !mesesSet.has(info.mesId)) {
+          mesesSet.set(info.mesId, info.mesLabel);
+        }
+      });
+
+      const ordenados = Array.from(mesesSet.entries()).sort((a, b) => b[0] - a[0]);
+      select.innerHTML = '<option value="">Todos los meses</option>';
+      ordenados.forEach(([id, label]) => {
+        select.innerHTML += `<option value="${id}">${label}</option>`;
+      });
+    }
+
+    function renderizarVista() {
+      const contenedor = document.getElementById('contenedorAcordeon');
+      const filtroProblemas = document.getElementById('switchProblemas').checked;
+      const busqueda = (document.getElementById('filtroDocente').value || '').toLowerCase().trim();
+      const mesSeleccionado = document.getElementById('filtroMes').value;
+
+      const mesesMap = new Map();
+
+      datosGlobales.forEach(item => {
+        const req = parseInt(item.Requeridas, 10) || 0;
+        if (req === 0) return;
+
+        const esCrit = item.Critico;
+        const esPend = item.Pendiente;
+
+        if (filtroProblemas && !esCrit && !esPend) return;
+        if (busqueda && !item.Profesor.toLowerCase().includes(busqueda)) return;
+
+        const info = procesarFecha(item.Fecha);
+        if (mesSeleccionado && String(info.mesId) !== String(mesSeleccionado)) return;
+
+        item.diaTexto = info.diaTexto;
+
+        if (!mesesMap.has(info.mesId)) {
+          mesesMap.set(info.mesId, { label: info.mesLabel, profesores: {} });
+        }
+
+        const dataMes = mesesMap.get(info.mesId);
+        if (!dataMes.profesores[item.Profesor]) {
+          dataMes.profesores[item.Profesor] = [];
+        }
+        dataMes.profesores[item.Profesor].push(item);
+      });
+
+      if (mesesMap.size === 0) {
+        contenedor.innerHTML = `
+          <div class="card border-0 shadow-sm py-5 text-center">
+            <i class="bi bi-check2-circle text-success" style="font-size: 3rem;"></i>
+            <h5 class="fw-bold mt-2">No se encontraron registros</h5>
+            <p class="text-muted small mb-0">No hay datos que coincidan con los filtros aplicados o la base de datos está vacía.</p>
+          </div>
+        `;
+        return;
+      }
+
+      const sortedMesIds = Array.from(mesesMap.keys()).sort((a, b) => b - a);
+      let htmlAcordeon = `<div class="accordion" id="acordeonMeses">`;
+
+      sortedMesIds.forEach((mesId, index) => {
+        const mesInfo = mesesMap.get(mesId);
+        const isOpen = index === 0;
+
+        let profHtml = "";
+        const nombresProfesores = Object.keys(mesInfo.profesores).sort();
+
+        nombresProfesores.forEach(prof => {
+          const filas = mesInfo.profesores[prof].map(reg => {
+            const crit = reg.Critico;
+            const pend = reg.Pendiente;
+            const statusClass = crit ? 'critico' : (pend ? 'pendiente' : '');
+
+            return `
+              <div class="status-row ${statusClass}">
+                <div style="width: 140px;">
+                  <span class="badge badge-date">${reg.diaTexto}</span>
+                </div>
+                <div class="d-flex align-items-center gap-4 flex-grow-1 px-3">
+                  <div class="d-flex align-items-center gap-1 ${crit ? 'text-error fw-bold' : ''}" title="Clases creadas / requeridas">
+                    <span class="material-symbols-outlined state-icon">${crit ? 'report' : 'menu_book'}</span>
+                    <span>${reg.Creadas}/${reg.Requeridas}</span>
+                  </div>
+                  <div class="d-flex align-items-center gap-1 ${reg.Contenido > 0 ? 'text-ok opacity-75' : 'text-error fw-bold'}" title="Contenido / Leccionario">
+                    <span class="material-symbols-outlined state-icon">description</span>
+                    <small>${reg.Contenido > 0 ? 'Contenido OK' : 'Sin Contenido'}</small>
+                  </div>
+                  <div class="d-flex align-items-center gap-1 ${reg.Asistencia > 0 ? 'text-ok opacity-75' : 'text-error fw-bold'}" title="Asistencia tomada">
+                    <span class="material-symbols-outlined state-icon">group</span>
+                    <small>${reg.Asistencia > 0 ? 'Asistencia OK' : 'Sin Asistencia'}</small>
+                  </div>
+                  <div class="d-flex align-items-center gap-1 ${reg.Firma >= reg.Requeridas ? 'text-ok' : 'text-error fw-bold'}" title="Firmas registradas">
+                    <span class="material-symbols-outlined state-icon">draw</span>
+                    <span>${reg.Firma}/${reg.Requeridas} Firmas</span>
+                  </div>
+                </div>
+                <div class="small fw-bold ${crit ? 'text-danger' : (pend ? 'text-warning' : 'text-success')}">
+                  ${crit ? '🚨 SIN CLASES' : (pend ? '✍️ PENDIENTE' : '✅ AL DÍA')}
+                </div>
+              </div>
+            `;
+          }).join('');
+
+          profHtml += `
+            <div class="profesor-card">
+              <div class="profesor-header">
+                <span><i class="bi bi-person-badge text-primary me-2"></i>${prof}</span>
+                <span class="badge bg-secondary-subtle text-secondary">${mesInfo.profesores[prof].length} días</span>
+              </div>
+              ${filas}
+            </div>
+          `;
+        });
+
+        htmlAcordeon += `
+          <div class="accordion-item border-0 mb-3 shadow-sm rounded-3 overflow-hidden">
+            <h2 class="accordion-header" id="heading-${mesId}">
+              <button class="accordion-button ${isOpen ? '' : 'collapsed'}" type="button" data-bs-toggle="collapse" data-bs-target="#collapse-${mesId}">
+                📅 ${mesInfo.label} <span class="badge bg-light text-dark ms-2 opacity-75">${nombresProfesores.length} Profesores</span>
+              </button>
+            </h2>
+            <div id="collapse-${mesId}" class="accordion-collapse collapse ${isOpen ? 'show' : ''}" data-bs-parent="#acordeonMeses">
+              <div class="accordion-body">${profHtml}</div>
+            </div>
+          </div>
+        `;
+      });
+
+      htmlAcordeon += `</div>`;
+      contenedor.innerHTML = htmlAcordeon;
+    }
+
+    // ==============================================
+    // LOGICA COLA DE ARCHIVOS Y CARGA EN ORDEN
+    // ==============================================
+
+    function setupDropzone() {
+      const dropzone = document.getElementById('dropzone');
+      ['dragenter', 'dragover'].forEach(eventName => {
+        dropzone.addEventListener(eventName, (e) => {
+          e.preventDefault();
+          dropzone.classList.add('dragover');
+        }, false);
+      });
+      ['dragleave', 'drop'].forEach(eventName => {
+        dropzone.addEventListener(eventName, (e) => {
+          e.preventDefault();
+          dropzone.classList.remove('dragover');
+        }, false);
+      });
+      dropzone.addEventListener('drop', (e) => {
+        const dt = e.dataTransfer;
+        const files = dt.files;
+        if (files && files.length > 0) {
+          agregarArchivosACola(files);
+        }
+      });
+    }
+
+    function agregarArchivosACola(files) {
+      for (let i = 0; i < files.length; i++) {
+        const f = files[i];
+        if (!f.name.endsWith('.xlsx') && !f.name.endsWith('.xls')) continue;
+        colaArchivos.push({
+          id: Math.random().toString(36).substr(2, 9),
+          file: f,
+          status: 'espera', // 'espera', 'procesando', 'completado', 'error'
+          mensaje: ''
+        });
+      }
+      actualizarTablaCola();
+    }
+
+    function actualizarTablaCola() {
+      const tbody = document.getElementById('tablaColaBody');
+      const badgeTotal = document.getElementById('badgeTotalCola');
+      const btnLimpiar = document.getElementById('btnLimpiarCola');
+      const btnProcesar = document.getElementById('btnProcesarLote');
+
+      badgeTotal.innerText = colaArchivos.length;
+      btnLimpiar.style.display = colaArchivos.length > 0 ? 'inline-block' : 'none';
+      btnProcesar.disabled = colaArchivos.length === 0 || procesandoEnCola;
+
+      if (colaArchivos.length === 0) {
+        tbody.innerHTML = `
+          <tr>
+            <td colspan="5" class="text-center text-muted py-5">
+              <i class="bi bi-inbox text-secondary" style="font-size: 2rem;"></i>
+              <p class="mb-0 mt-2 small">No hay archivos en la cola. Arrastra o selecciona archivos a la izquierda.</p>
+            </td>
+          </tr>
+        `;
+        return;
+      }
+
+      let html = '';
+      colaArchivos.forEach((item, index) => {
+        let badgeEstado = '<span class="badge bg-secondary">En espera</span>';
+        if (item.status === 'procesando') {
+          badgeEstado = '<span class="badge bg-primary"><span class="spinner-border spinner-border-sm me-1"></span>Procesando</span>';
+        } else if (item.status === 'completado') {
+          badgeEstado = `<span class="badge bg-success" title="${item.mensaje}">✅ Completado</span>`;
+        } else if (item.status === 'error') {
+          badgeEstado = `<span class="badge bg-danger" title="${item.mensaje}">❌ Error</span>`;
+        }
+
+        const sizeKb = (item.file.size / 1024).toFixed(1);
+
+        html += `
+          <tr>
+            <td class="text-center"><span class="badge-queue-pos">#${index + 1}</span></td>
+            <td>
+              <div class="fw-bold text-truncate" style="max-width: 250px;" title="${item.file.name}">
+                <i class="bi bi-file-earmark-excel text-success me-1"></i>${item.file.name}
+              </div>
+              <small class="text-muted">${sizeKb} KB</small>
+            </td>
+            <td class="text-center">
+              <div class="btn-group btn-group-sm">
+                <button type="button" class="btn btn-outline-secondary py-0 px-2" onclick="moverEnCola(${index}, -1)" ${index === 0 || procesandoEnCola ? 'disabled' : ''} title="Subir orden">⬆</button>
+                <button type="button" class="btn btn-outline-secondary py-0 px-2" onclick="moverEnCola(${index}, 1)" ${index === colaArchivos.length - 1 || procesandoEnCola ? 'disabled' : ''} title="Bajar orden">⬇</button>
+              </div>
+            </td>
+            <td>
+              ${badgeEstado}
+              ${item.mensaje ? `<div class="small text-muted text-truncate mt-1" style="max-width: 200px;" title="${item.mensaje}">${item.mensaje}</div>` : ''}
+            </td>
+            <td class="text-center">
+              <button type="button" class="btn btn-sm btn-outline-danger py-0 px-2" onclick="eliminarDeCola(${index})" ${procesandoEnCola ? 'disabled' : ''} title="Eliminar de la cola">
+                <i class="bi bi-x-lg"></i>
+              </button>
+            </td>
+          </tr>
+        `;
+      });
+
+      tbody.innerHTML = html;
+    }
+
+    function moverEnCola(index, delta) {
+      if (procesandoEnCola) return;
+      const nuevoIndex = index + delta;
+      if (nuevoIndex < 0 || nuevoIndex >= colaArchivos.length) return;
+      const elem = colaArchivos.splice(index, 1)[0];
+      colaArchivos.splice(nuevoIndex, 0, elem);
+      actualizarTablaCola();
+    }
+
+    function eliminarDeCola(index) {
+      if (procesandoEnCola) return;
+      colaArchivos.splice(index, 1);
+      actualizarTablaCola();
+    }
+
+    function limpiarCola() {
+      if (procesandoEnCola) return;
+      colaArchivos = [];
+      actualizarTablaCola();
+      document.getElementById('progresoContainer').style.display = 'none';
+    }
+
+    async function iniciarProcesamientoEnOrden() {
+      if (colaArchivos.length === 0 || procesandoEnCola) return;
+
+      procesandoEnCola = true;
+      actualizarTablaCola();
+
+      const container = document.getElementById('progresoContainer');
+      const barra = document.getElementById('progresoBarra');
+      const texto = document.getElementById('progresoTexto');
+      const porcentaje = document.getElementById('progresoPorcentaje');
+      container.style.display = 'block';
+
+      let exitosos = 0;
+      let fallidos = 0;
+      const total = colaArchivos.length;
+
+      for (let i = 0; i < total; i++) {
+        const item = colaArchivos[i];
+        item.status = 'procesando';
+        item.mensaje = 'Enviando y parseando datos...';
+        actualizarTablaCola();
+
+        const pct = Math.round(((i) / total) * 100);
+        barra.style.width = pct + '%';
+        porcentaje.innerText = pct + '%';
+        texto.innerText = `Procesando archivo ${i + 1} de ${total}: "${item.file.name}"...`;
+
+        try {
+          const formData = new FormData();
+          formData.append('archivo', item.file);
+
+          const res = await fetch('/api/libro/procesar-archivo', {
+            method: 'POST',
+            body: formData
+          });
+
+          const data = await res.json();
+          if (!res.ok) throw new Error(data.error || 'Error en el servidor');
+
+          item.status = 'completado';
+          item.mensaje = `+${data.nuevos} nuevos, ${data.actualizados} actualizados (${data.total} reg)`;
+          exitosos++;
+        } catch (err) {
+          item.status = 'error';
+          item.mensaje = err.message || 'Error procesando';
+          fallidos++;
+        }
+
+        actualizarTablaCola();
+      }
+
+      barra.style.width = '100%';
+      porcentaje.innerText = '100%';
+      texto.innerText = `¡Lote completado! ${exitosos} exitosos, ${fallidos} errores.`;
+      procesandoEnCola = false;
+      actualizarTablaCola();
+
+      Swal.fire({
+        icon: fallidos > 0 ? 'warning' : 'success',
+        title: 'Procesamiento Finalizado',
+        html: `Se procesaron <b>${exitosos}</b> archivo(s) con éxito.${fallidos > 0 ? `<br><span class="text-danger">${fallidos} archivo(s) tuvieron errores.</span>` : ''}`,
+        confirmButtonText: 'Ver en Dashboard'
+      }).then(() => {
+        // Cambiar a pestaña de Dashboard y recargar
+        const tabDash = new bootstrap.Tab(document.getElementById('tab-dashboard'));
+        tabDash.show();
+        cargarDashboard();
+      });
+    }
+
+    // ==============================================
+    // LOGICA CONFIGURACION & NOTIFICACIONES
+    // ==============================================
+
+    async function cargarConfiguracion() {
+      try {
+        const res = await fetch('/api/libro/config');
+        if (!res.ok) return;
+        configActual = await res.json();
+
+        renderizarExentos();
+        renderizarFeriados();
+        renderizarDestinatarios();
+      } catch (e) {
+        console.error('Error cargando configuración:', e);
+      }
+    }
+
+    function renderizarExentos() {
+      const cont = document.getElementById('listaExentos');
+      if (!configActual.blacklist || configActual.blacklist.length === 0) {
+        cont.innerHTML = '<span class="text-muted small">No hay docentes exentos registrados.</span>';
+        return;
+      }
+      cont.innerHTML = configActual.blacklist.map((nombre, i) => `
+        <span class="badge bg-white text-dark border p-2 d-flex align-items-center gap-2 shadow-sm">
+          ${nombre}
+          <i class="bi bi-x-circle text-danger cursor-pointer" onclick="quitarExento(${i})"></i>
+        </span>
+      `).join('');
+    }
+
+    function renderizarFeriados() {
+      const cont = document.getElementById('listaFeriados');
+      if (!configActual.dias_excluidos || configActual.dias_excluidos.length === 0) {
+        cont.innerHTML = '<span class="text-muted small">No hay fechas excluidas registradas.</span>';
+        return;
+      }
+      cont.innerHTML = configActual.dias_excluidos.map((f, i) => `
+        <span class="badge bg-white text-dark border p-2 d-flex align-items-center gap-2 shadow-sm">
+          <i class="bi bi-calendar-event text-warning"></i> ${f}
+          <i class="bi bi-x-circle text-danger cursor-pointer" onclick="quitarFeriado(${i})"></i>
+        </span>
+      `).join('');
+    }
+
+    function renderizarDestinatarios() {
+      const cont = document.getElementById('listaDestinatarios');
+      if (!configActual.destinatarios_admin || configActual.destinatarios_admin.length === 0) {
+        cont.innerHTML = '<span class="text-muted small">No hay correos de coordinación configurados.</span>';
+        return;
+      }
+      cont.innerHTML = configActual.destinatarios_admin.map((email, i) => `
+        <span class="badge bg-white text-dark border p-2 d-flex align-items-center gap-2 shadow-sm">
+          <i class="bi bi-envelope text-primary"></i> ${email}
+          <i class="bi bi-x-circle text-danger cursor-pointer" onclick="quitarDestinatario(${i})"></i>
+        </span>
+      `).join('');
+    }
+
+    async function guardarConfigServidor() {
+      try {
+        await fetch('/api/libro/config', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(configActual)
+        });
+      } catch (e) {
+        console.error('Error guardando configuración:', e);
+      }
+    }
+
+    async function agregarExento() {
+      const inp = document.getElementById('inNuevoExento');
+      const val = inp.value.trim();
+      if (!val) return;
+      if (!configActual.blacklist.includes(val)) {
+        configActual.blacklist.push(val);
+        inp.value = '';
+        renderizarExentos();
+        await guardarConfigServidor();
+        cargarDashboard();
+      }
+    }
+
+    async function quitarExento(index) {
+      configActual.blacklist.splice(index, 1);
+      renderizarExentos();
+      await guardarConfigServidor();
+      cargarDashboard();
+    }
+
+    async function agregarFeriado() {
+      const inp = document.getElementById('inNuevoFeriado');
+      const val = inp.value; // YYYY-MM-DD
+      if (!val) return;
+      const partes = val.split('-');
+      const ddmmyyyy = `${partes[2]}/${partes[1]}/${partes[0]}`;
+      if (!configActual.dias_excluidos.includes(ddmmyyyy)) {
+        configActual.dias_excluidos.push(ddmmyyyy);
+        inp.value = '';
+        renderizarFeriados();
+        await guardarConfigServidor();
+        cargarDashboard();
+      }
+    }
+
+    async function quitarFeriado(index) {
+      configActual.dias_excluidos.splice(index, 1);
+      renderizarFeriados();
+      await guardarConfigServidor();
+      cargarDashboard();
+    }
+
+    async function agregarDestinatario() {
+      const inp = document.getElementById('inNuevoDestinatario');
+      const val = inp.value.trim().toLowerCase();
+      if (!val || !val.includes('@')) return;
+      if (!configActual.destinatarios_admin.includes(val)) {
+        configActual.destinatarios_admin.push(val);
+        inp.value = '';
+        renderizarDestinatarios();
+        await guardarConfigServidor();
+      }
+    }
+
+    async function quitarDestinatario(index) {
+      configActual.destinatarios_admin.splice(index, 1);
+      renderizarDestinatarios();
+      await guardarConfigServidor();
+    }
+
+    async function enviarResumenAdmin() {
+      const { isConfirmed } = await Swal.fire({
+        title: '¿Enviar Resumen a Coordinación?',
+        text: 'Se enviará el reporte consolidado de pendientes a los correos de coordinación configurados.',
+        icon: 'question',
+        showCancelButton: true,
+        confirmButtonText: 'Sí, enviar resumen',
+        cancelButtonText: 'Cancelar'
+      });
+      if (!isConfirmed) return;
+
+      Swal.fire({
+        title: 'Enviando resumen...',
+        text: 'Por favor espera unos instantes.',
+        allowOutsideClick: false,
+        didOpen: () => Swal.showLoading()
+      });
+
+      try {
+        const res = await fetch('/api/libro/enviar-resumen-admin', { method: 'POST' });
+        const data = await res.json();
+        if (!res.ok) throw new Error(data.error);
+        Swal.fire('¡Enviado!', data.message, 'success');
+      } catch (err) {
+        Swal.fire('Error', err.message, 'error');
+      }
+    }
+
+    async function enviarAlertasDocentes() {
+      const { isConfirmed } = await Swal.fire({
+        title: '¿Notificar a los Docentes?',
+        text: 'Cada profesor que tenga días sin clases creadas o con firmas pendientes recibirá un correo individual con su detalle.',
+        icon: 'warning',
+        showCancelButton: true,
+        confirmButtonText: 'Sí, enviar alertas',
+        cancelButtonText: 'Cancelar',
+        confirmButtonColor: '#d97706'
+      });
+      if (!isConfirmed) return;
+
+      Swal.fire({
+        title: 'Enviando notificaciones...',
+        text: 'Enviando correos individuales a docentes con pendientes.',
+        allowOutsideClick: false,
+        didOpen: () => Swal.showLoading()
+      });
+
+      try {
+        const res = await fetch('/api/libro/enviar-alertas-docentes', { method: 'POST' });
+        const data = await res.json();
+        if (!res.ok) throw new Error(data.error);
+
+        let msj = data.message;
+        if (data.sinCorreo && data.sinCorreo.length > 0) {
+          msj += `<br><br><small class="text-danger">Profesores sin correo registrado: ${data.sinCorreo.join(', ')}</small>`;
+        }
+        Swal.fire('Proceso Completado', msj, 'info');
+      } catch (err) {
+        Swal.fire('Error', err.message, 'error');
+      }
+    }
+
+    async function vaciarRegistros() {
+      const { isConfirmed } = await Swal.fire({
+        title: '¿Vaciar Todos los Registros?',
+        text: 'Esta acción eliminará todos los datos importados del libro digital de la base de datos.',
+        icon: 'error',
+        showCancelButton: true,
+        confirmButtonColor: '#dc2626',
+        confirmButtonText: 'Sí, eliminar todo',
+        cancelButtonText: 'Cancelar'
+      });
+      if (!isConfirmed) return;
+
+      try {
+        const res = await fetch('/api/libro/registros?modo=todo', { method: 'DELETE' });
+        const data = await res.json();
+        if (!res.ok) throw new Error(data.error);
+        Swal.fire('Eliminado', data.message, 'success');
+        cargarDashboard();
+      } catch (err) {
+        Swal.fire('Error', err.message, 'error');
+      }
+    }
+  </script>
+</body>
+</html>

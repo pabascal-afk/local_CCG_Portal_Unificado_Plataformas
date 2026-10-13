@@ -62,6 +62,11 @@
           <i class="bi bi-envelope-paper"></i> Reglas de Envíos
         </a>
       </li>
+      <li class="nav-item d-none" id="nav-libro-container">
+        <a href="#" class="nav-link" onclick="loadApp('libro', this)" id="nav-libro">
+          <i class="bi bi-book-half"></i> Llenado de Libros
+        </a>
+      </li>
     </ul>
 
     <!-- Selector de Rol Activo (Exclusivo para usuarios Admin/Profesor duales) -->
@@ -97,7 +102,8 @@
       horarios: "/horarios.html",
       recursos: "/recursos.html",
       usuarios: "/usuarios.html",
-      coordinadores: "/coordinadores.html"
+      coordinadores: "/coordinadores.html",
+      libro: "/libro.html"
     };
     let contexto = {};
     
@@ -115,9 +121,11 @@
       if (esAdminActivo) {
         document.getElementById('nav-usuarios-container').classList.remove('d-none');
         document.getElementById('nav-coordinadores-container').classList.remove('d-none');
+        if (document.getElementById('nav-libro-container')) document.getElementById('nav-libro-container').classList.remove('d-none');
       } else {
         document.getElementById('nav-usuarios-container').classList.add('d-none');
         document.getElementById('nav-coordinadores-container').classList.add('d-none');
+        if (document.getElementById('nav-libro-container')) document.getElementById('nav-libro-container').classList.add('d-none');
       }
       
       // Mostrar selector de rol SOLO si tiene permiso dual

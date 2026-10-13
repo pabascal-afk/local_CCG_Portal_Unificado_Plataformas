@@ -1,0 +1,42 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <base target="_top">
+    <style>
+      body { font-family: sans-serif; padding: 20px; text-align: center; }
+      .btn { padding: 10px 20px; background: #1a73e8; color: white; border: none; border-radius: 4px; cursor: pointer; }
+      #status { margin-top: 15px; color: #555; }
+    </style>
+  </head>
+  <body>
+    <h3>Selecciona el reporte XLS</h3>
+    <input type="file" id="archivo" accept=".xlsx, .xls" /><br><br>
+    <button class="btn" onclick="subir()">Procesar Datos</button>
+    <div id="status"></div>
+
+    <script>
+      function subir() {
+        const fileInput = document.getElementById('archivo');
+        if (fileInput.files.length === 0) {
+          document.getElementById('status').innerText = "Por favor selecciona un archivo.";
+          return;
+        }
+        
+        const file = fileInput.files[0];
+        const reader = new FileReader();
+        document.getElementById('status').innerText = "Procesando... no cierres esta ventana.";
+
+        reader.onload = function(e) {
+          const base64 = e.target.result.split(',')[1];
+          google.script.run
+            .withSuccessHandler(msg => {
+              document.getElementById('status').innerText = msg;
+              setTimeout(() => google.script.host.close(), 2000);
+            })
+            .procesarArchivoBase64(base64, file.name);
+        };
+        reader.readAsDataURL(file);
+      }
+    </script>
+  </body>
+</html>

@@ -57,6 +57,25 @@ db.serialize(() => {
   db.run("ALTER TABLE recursos_config ADD COLUMN reglas_reserva TEXT DEFAULT '{}'", () => {});
   db.run("ALTER TABLE reservas ADD COLUMN token_aprobacion TEXT", () => {});
   db.run("ALTER TABLE evaluaciones ADD COLUMN temario TEXT", () => {});
+  db.run(`CREATE TABLE IF NOT EXISTS libro_registros (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    fecha TEXT NOT NULL,
+    profesor TEXT NOT NULL,
+    profesor_normalizado TEXT NOT NULL,
+    creadas INTEGER DEFAULT 0,
+    requeridas INTEGER DEFAULT 0,
+    contenido INTEGER DEFAULT 0,
+    asistencia INTEGER DEFAULT 0,
+    firma INTEGER DEFAULT 0,
+    critico INTEGER DEFAULT 0,
+    archivo_origen TEXT,
+    actualizado_en DATETIME DEFAULT CURRENT_TIMESTAMP,
+    UNIQUE(fecha, profesor_normalizado) ON CONFLICT REPLACE
+  )`, () => {});
+  db.run(`CREATE TABLE IF NOT EXISTS libro_config (
+    clave TEXT PRIMARY KEY,
+    valor TEXT
+  )`, () => {});
 });
 
 app.use(cors());
@@ -1045,6 +1064,8 @@ const smtpRouter = require('./api/smtp');
 app.use('/api/config/smtp', smtpRouter);
 const actividadesRouter = require('./api/actividades');
 app.use('/api/actividades', actividadesRouter);
+const libroRouter = require('./api/libro');
+app.use('/api/libro', libroRouter);
 
 
 // --- Roles Config ---

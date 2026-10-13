@@ -1,0 +1,381 @@
+// Permite que la URL de la Web App funcione
+function doGet() {
+  return HtmlService.createTemplateFromFile('Index')
+      .evaluate()
+      .setTitle('Gestión de Libro Digital - Colegio')
+      .setXFrameOptionsMode(HtmlService.XFrameOptionsMode.ALLOWALL);
+}
+
+/**
+ * Crea un menú personalizado al abrir la hoja de cálculo.
+ */
+function onOpen() {
+  const ui = SpreadsheetApp.getUi();
+  ui.createMenu('🏫 Reportes')
+      .addItem('📥 Importar Reporte Semanal', 'mostrarSelectorArchivo')
+      .addSeparator()
+      .addItem('✉️ Enviar Reporte', 'verificarYEnviarCorreos')
+      .addToUi();
+}
+
+function obtenerDatosBD() {
+  const ss = SpreadsheetApp.getActiveSpreadsheet();
+  const hojaBD = ss.getSheetByName("BaseDeDatos");
+  const hojaConfig = ss.getSheetByName("Config");
+  
+  if (!hojaBD) return [];
+  
+  // 1. Cargar configuraciones: Blacklist y Días Excluidos
+  let blacklist = [];
+  let diasExcluidos = [];
+  
+  if (hojaConfig) {
+    blacklist = hojaConfig.getRange("A2:A" + hojaConfig.getLastRow())
+                .getValues().flat().map(n => n.toString().trim().toLowerCase()).filter(String);
+    
+    diasExcluidos = hojaConfig.getRange("G2:G" + hojaConfig.getLastRow())
+                    .getDisplayValues().flat().filter(String);
+  }
+  
+  const datos = hojaBD.getDataRange().getDisplayValues(); 
+  if (datos.length <= 1) return [];
+  datos.shift(); 
+  
+  return datos.reduce((acc, fila) => {
+    const fecha = fila[0];
+    const nombreProfesor = fila[1].toString().trim();
+    const requeridas = parseInt(fila[3]) || 0;
+    const creadas = parseInt(fila[2]) || 0;
+    
+    // CORRECCIÓN: Forzamos a que estos datos se lean como números y no como texto
+    const contenido = parseInt(fila[4]) || 0;
+    const asistencia = parseInt(fila[5]) || 0;
+    const firma = parseInt(fila[6]) || 0; 
+
+    // FILTROS DE EXCLUSIÓN
+    if (diasExcluidos.includes(fecha)) return acc; 
+    if (blacklist.includes(nombreProfesor.toLowerCase())) return acc; 
+    if (requeridas === 0) return acc; 
+
+    acc.push({
+      "Fecha": fecha,
+      "Profesor": nombreProfesor,
+      "Creadas": creadas,
+      "Requeridas": requeridas,
+      "Contenido": contenido,
+      "Asistencia": asistencia,
+      "Firma": firma, // Ahora es un número estricto
+      "Critico": (requeridas > 0 && creadas === 0)
+    });
+    
+    return acc;
+  }, []);
+}
+
+/**
+ * Muestra el cuadro de diálogo para seleccionar el archivo XLS.
+ */
+function mostrarSelectorArchivo() {
+  const html = HtmlService.createHtmlOutputFromFile('SelectorArchivo')
+      .setWidth(400)
+      .setHeight(250)
+      .setTitle('Importar Reporte de Libro Digital');
+  SpreadsheetApp.getUi().showModalDialog(html, 'Cargar Reporte Semanal');
+}
+
+/**
+ * Recibe el archivo en base64, lo convierte a Google Sheets y lo procesa.
+ */
+function procesarArchivoBase64(dataBase64, nombreArchivo) {
+  try {
+    const contenido = Utilities.base64Decode(dataBase64);
+    const blob = Utilities.newBlob(contenido, "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet", nombreArchivo);
+    
+    // Configuración para Drive API v3
+    const recurso = {
+      name: "Temp_Import_" + new Date().getTime(),
+      mimeType: "application/vnd.google-apps.spreadsheet"
+    };
+    
+    // Crear archivo temporal convertido
+    const tempFile = Drive.Files.create(recurso, blob);
+    const tempSS = SpreadsheetApp.openById(tempFile.id);
+    const hojaTemp = tempSS.getSheets()[0];
+    
+    // Procesar los datos pedagógicos
+    const filasProcesadas = procesarDesdeHoja(hojaTemp);
+    
+    // Eliminar archivo temporal
+    Drive.Files.remove(tempFile.id);
+    
+    return `Éxito: Se han importado ${filasProcesadas} registros de profesores.`;
+  } catch (e) {
+    console.error(e);
+    return "Error en el proceso: " + e.message;
+  }
+}
+
+/**
+ * Lógica principal de extracción de datos del reporte.
+ */
+function procesarDesdeHoja(hojaOrigen) {
+  const ss = SpreadsheetApp.getActiveSpreadsheet();
+  const hojaDestino = ss.getSheetByName("BaseDeDatos") || ss.insertSheet("BaseDeDatos");
+  
+  const rangoDestino = hojaDestino.getDataRange();
+  // CORRECCIÓN CRÍTICA: getDisplayValues() asegura que lee "13/04/2026" como texto puro
+  const valoresDestino = rangoDestino.getDisplayValues(); 
+  const indicesExistentes = {}; 
+
+  valoresDestino.forEach((fila, index) => {
+    const id = fila[0].trim() + fila[1].trim(); 
+    indicesExistentes[id] = index + 1; 
+  });
+
+  // CORRECCIÓN CRÍTICA: getDisplayValues() en la hoja de origen también
+  const valoresOrigen = hojaOrigen.getDataRange().getDisplayValues();
+  let nuevasFilas = [];
+  let filasActualizadas = 0;
+
+  for (let i = 2; i < valoresOrigen.length; i++) {
+    let nombreProfesor = valoresOrigen[i][0].trim();
+    if (!nombreProfesor) continue;
+
+    for (let dia = 0; dia < 5; dia++) {
+      let colInicio = 1 + (dia * 5);
+      let fecha = valoresOrigen[0][colInicio].trim();
+      let req = parseInt(valoresOrigen[i][colInicio + 1]) || 0;
+
+      if (req > 0) {
+        let idUnico = fecha + nombreProfesor;
+        let datosFila = [
+          fecha, 
+          nombreProfesor, 
+          parseInt(valoresOrigen[i][colInicio]) || 0,     
+          req,                             
+          parseInt(valoresOrigen[i][colInicio + 2]) || 0, 
+          parseInt(valoresOrigen[i][colInicio + 3]) || 0, 
+          parseInt(valoresOrigen[i][colInicio + 4]) || 0  
+        ];
+
+        if (indicesExistentes[idUnico]) {
+          let numFila = indicesExistentes[idUnico];
+          hojaDestino.getRange(numFila, 1, 1, 7).setValues([datosFila]);
+          filasActualizadas++;
+        } else {
+          nuevasFilas.push(datosFila);
+          indicesExistentes[idUnico] = hojaDestino.getLastRow() + nuevasFilas.length;
+        }
+      }
+    }
+  }
+
+  if (nuevasFilas.length > 0) {
+    hojaDestino.getRange(hojaDestino.getLastRow() + 1, 1, nuevasFilas.length, 7).setValues(nuevasFilas);
+  }
+
+  return `Proceso finalizado: ${nuevasFilas.length} registros nuevos y ${filasActualizadas} actualizaciones.`;
+}
+
+function depurarDuplicadosBD() {
+  const ss = SpreadsheetApp.getActiveSpreadsheet();
+  const hojaBD = ss.getSheetByName("BaseDeDatos");
+  
+  if (!hojaBD) {
+    return "Error: No se encontró la hoja 'BaseDeDatos'.";
+  }
+  
+  // Usamos getDisplayValues() para leer las fechas como texto puro ("04/03/2026")
+  // tal como lo haces en el resto de tu código.
+  const datos = hojaBD.getDataRange().getDisplayValues(); 
+  if (datos.length <= 1) return "No hay datos suficientes para depurar.";
+  
+  const registrosVistos = new Set();
+  let filasEliminadas = 0;
+  
+  // Empezamos desde la última fila (datos.length - 1) y subimos hasta la fila 2 (índice 1).
+  // El índice 0 se salta porque es la cabecera (Fecha, Profesor, etc.).
+  for (let i = datos.length - 1; i >= 1; i--) {
+    const fecha = datos[i][0].trim();
+    const nombreProfesor = datos[i][1].trim().toLowerCase();
+    
+    // Si la fila está vacía, nos la saltamos
+    if (!fecha || !nombreProfesor) continue;
+    
+    // Creamos una clave única para identificar el día y al profesor
+    const claveUnica = fecha + "|" + nombreProfesor;
+    
+    if (registrosVistos.has(claveUnica)) {
+      // Si la clave ya existe en el Set, significa que ya encontramos 
+      // la versión más reciente abajo. Por lo tanto, esta fila es antigua y se elimina.
+      // Sumamos 1 a 'i' porque las filas en Google Sheets empiezan desde 1, no desde 0.
+      hojaBD.deleteRow(i + 1);
+      filasEliminadas++;
+    } else {
+      // Si es la primera vez que vemos esta combinación (la más nueva), 
+      // la agregamos al Set para protegerla.
+      registrosVistos.add(claveUnica);
+    }
+  }
+  
+  const resultado = `Depuración terminada: Se eliminaron ${filasEliminadas} registros duplicados antiguos.`;
+  console.log(resultado);
+  return resultado;
+}
+
+/**
+ * Función principal que debe ejecutarse diariamente por un activador.
+ */
+function verificarYEnviarCorreos() {
+  const ss = SpreadsheetApp.getActiveSpreadsheet();
+  const hojaConfig = ss.getSheetByName("Config");
+  if (!hojaConfig) return;
+
+  // 1. Verificar si hoy es el día configurado
+  const diaConfig = hojaConfig.getRange("D2").getValue().toUpperCase();
+  const tipoEnvio = hojaConfig.getRange("E2").getValue().toUpperCase();
+  const emailAdmin = hojaConfig.getRange("F2").getValue();
+  
+  const diasSemana = ["DOMINGO", "LUNES", "MARTES", "MIERCOLES", "JUEVES", "VIERNES", "SABADO"];
+  const hoy = new Date();
+  const nombreHoy = diasSemana[hoy.getDay()];
+
+  if (nombreHoy !== diaConfig) return; // Si no es el día, no hace nada
+
+  // 2. Obtener datos de faltas y correos
+  const datosFaltas = obtenerDatosBD(); // Reutilizamos tu función de la base de datos
+  const listaCorreos = hojaConfig.getRange("B2:C" + hojaConfig.getLastRow()).getValues();
+  
+  if (tipoEnvio === "PROFESOR") {
+    enviarAlertasIndividuales(datosFaltas, listaCorreos);
+  }
+     sendmailadmin();
+  
+}
+
+function enviarAlertasIndividuales(faltas, correos) {
+  correos.forEach(fila => {
+    const nombre = fila[0];
+    const email = fila[1];
+    if (!email) return;
+
+    // Filtrar solo las faltas de este profesor
+    const faltasProfe = faltas.filter(f => f.Profesor === nombre && (f.Critico || parseInt(f.Firma) < parseInt(f.Requeridas)));
+
+    if (faltasProfe.length > 0) {
+      let cuerpoHtml = `<h3>Estimado/a ${nombre},</h3>
+                        <p>Se han detectado las siguientes pendientes en el Libro Digital:</p>
+                        <table border="1" style="border-collapse: collapse; width: 100%;">
+                          <tr style="background-color: #f2f2f2;">
+                            <th>Fecha</th><th>Clases (C/R)</th><th>Estado</th>
+                          </tr>`;
+      
+      faltasProfe.forEach(f => {
+        cuerpoHtml += `<tr>
+                        <td>${f.Fecha}</td>
+                        <td align="center">${f.Creadas}/${f.Requeridas}</td>
+                        <td style="color: red;">${f.Critico ? 'SIN CLASES CREADAS' : 'Faltan Firmas'}</td>
+                       </tr>`;
+      });
+
+      cuerpoHtml += `</table><p>Por favor, regularizar a la brevedad. <br><b>Coordinación Pedagógica</b></p>`;
+
+      MailApp.sendEmail({
+        to: email,
+        subject: "⚠️ Pendientes Libro Digital - " + nombre,
+        htmlBody: cuerpoHtml
+      });
+    }
+  });
+}
+
+function sendmailadmin()
+{
+  const ss = SpreadsheetApp.getActiveSpreadsheet();
+  const hojaConfig = ss.getSheetByName("Config");
+  if (!hojaConfig) return;
+
+  // 1. Verificar si hoy es el día configurado
+  const diaConfig = hojaConfig.getRange("D2").getValue().toUpperCase();
+  const tipoEnvio = hojaConfig.getRange("E2").getValue().toUpperCase();
+  const emailAdmin = hojaConfig.getRange("F2").getValue();
+  
+const datosFaltas = obtenerDatosBD(); // Reutilizamos tu función de la base de datos
+  const listaCorreos = hojaConfig.getRange("B2:C" + hojaConfig.getLastRow()).getValues();
+  
+
+    enviarResumenAdmin(datosFaltas, 'pabascal@colegiocerrogrande.cl');
+    enviarResumenAdmin(datosFaltas, 'jmera@colegiocerrogrande.cl');
+    enviarResumenAdmin(datosFaltas, 'paolapizarro@colegiocerrogrande.cl');
+    enviarResumenAdmin(datosFaltas, 'pgarciac@colegiocerrogrande.cl');
+    enviarResumenAdmin(datosFaltas, 'mdiaz@colegiocerrogrande.cl');
+    enviarResumenAdmin(datosFaltas, 'camilaaraya@colegiocerrogrande.cl');
+
+}
+
+function soloreporte()
+{
+  const ss = SpreadsheetApp.getActiveSpreadsheet();
+  const hojaConfig = ss.getSheetByName("Config");
+  if (!hojaConfig) return;
+  
+  const datosFaltas = obtenerDatosBD(); // Reutilizamos tu función de la base de datos
+
+    enviarResumenAdmin(datosFaltas, 'pgarciac@colegiocerrogrande.cl');
+    enviarResumenAdmin(datosFaltas, 'pabascal@colegiocerrogrande.cl');
+
+}
+
+function enviarResumenAdmin(faltas, emailAdmin) {
+  if (!emailAdmin) return;
+
+  const totalCriticos = faltas.filter(f => f.Critico).length;
+  const totalPendientes = faltas.filter(f => !f.Critico && f.Firma !== f.Requeridas).length;
+
+  const resumenProfesores = {};
+  
+  faltas.forEach(f => {
+    if (!resumenProfesores[f.Profesor]) {
+      resumenProfesores[f.Profesor] = { diasCrear: [], diasFirmar: [] };
+    }
+    
+    if (f.Critico) {
+      resumenProfesores[f.Profesor].diasCrear.push(f.Fecha);
+    } else if (f.Firma !== f.Requeridas) {
+      resumenProfesores[f.Profesor].diasFirmar.push(f.Fecha);
+    }
+  });
+
+  const filasTabla = Object.keys(resumenProfesores).filter(prof => 
+    resumenProfesores[prof].diasCrear.length > 0 || resumenProfesores[prof].diasFirmar.length > 0
+  ).map(prof => {
+    const numCrear = resumenProfesores[prof].diasCrear.length;
+    const numFirmar = resumenProfesores[prof].diasFirmar.length;
+    return `<tr>
+              <td style="padding: 8px;">${prof}</td>
+              <td style="padding: 8px; text-align: center; color: ${numCrear > 0 ? 'red' : 'black'};">${numCrear}</td>
+              <td style="padding: 8px; text-align: center; color: ${numFirmar > 0 ? 'orange' : 'black'};">${numFirmar}</td>
+            </tr>`;
+  }).join('');
+
+  const tablaHtml = `<table border="1" style="border-collapse: collapse; width: 100%; margin-top: 15px;">
+                    <tr style="background-color: #f2f2f2;">
+                      <th style="padding: 8px; text-align: left;">Profesor</th>
+                      <th style="padding: 8px;">Días sin Crear</th>
+                      <th style="padding: 8px;">Días sin Firmar</th>
+                    </tr>
+                    ${filasTabla}
+                  </table>`;
+
+  const cuerpoHtml = `<h2>Resumen Semanal de Coordinación Pedagógica</h2>
+                    <p>🚨 <b>Días totales sin clases creadas:</b> ${totalCriticos}</p>
+                    <p>✍️ <b>Días totales con firmas pendientes:</b> ${totalPendientes}</p>
+                    ${filasTabla.length > 0 ? tablaHtml : '<p>✅ No hay pendientes registrados.</p>'}
+                    <br><p>Revisa el detalle completo en la aplicación web.</p>`;
+
+  MailApp.sendEmail({
+    to: emailAdmin,
+    subject: "📊 Resumen de Libro Digital - Colegio",
+    htmlBody: cuerpoHtml
+  });
+}

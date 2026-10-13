@@ -139,6 +139,27 @@ const schemas = [
     autor TEXT NOT NULL,
     fecha_creacion DATETIME DEFAULT CURRENT_TIMESTAMP,
     importancia TEXT DEFAULT 'Normal'
+  )`,
+  `CREATE TABLE IF NOT EXISTS libro_registros (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    fecha TEXT NOT NULL,
+    profesor TEXT NOT NULL,
+    profesor_normalizado TEXT NOT NULL,
+    creadas INTEGER DEFAULT 0,
+    requeridas INTEGER DEFAULT 0,
+    contenido INTEGER DEFAULT 0,
+    asistencia INTEGER DEFAULT 0,
+    firma INTEGER DEFAULT 0,
+    critico INTEGER DEFAULT 0,
+    archivo_origen TEXT,
+    actualizado_en DATETIME DEFAULT CURRENT_TIMESTAMP,
+    UNIQUE(fecha, profesor_normalizado) ON CONFLICT REPLACE
+  )`,
+  `CREATE INDEX IF NOT EXISTS idx_libro_fecha ON libro_registros(fecha)`,
+  `CREATE INDEX IF NOT EXISTS idx_libro_prof ON libro_registros(profesor_normalizado)`,
+  `CREATE TABLE IF NOT EXISTS libro_config (
+    clave TEXT PRIMARY KEY,
+    valor TEXT
   )`
 ];
 
@@ -163,6 +184,9 @@ db.serialize(() => {
     db.run("INSERT OR IGNORE INTO config_tipos_evaluacion (nombre, es_prueba) VALUES ('🔄 Ev. de Proceso', 0)", () => {});
     db.run("INSERT OR IGNORE INTO config_tipos_evaluacion (nombre, es_prueba) VALUES ('⏱️ Quiz', 0)", () => {});
 
+    db.run("INSERT OR IGNORE INTO libro_config (clave, valor) VALUES ('blacklist', '[]')", () => {});
+    db.run("INSERT OR IGNORE INTO libro_config (clave, valor) VALUES ('dias_excluidos', '[]')", () => {});
+    db.run("INSERT OR IGNORE INTO libro_config (clave, valor) VALUES ('destinatarios_admin', '[\"pabascal@colegiocerrogrande.cl\",\"jmera@colegiocerrogrande.cl\",\"paolapizarro@colegiocerrogrande.cl\",\"pgarciac@colegiocerrogrande.cl\",\"mdiaz@colegiocerrogrande.cl\",\"camilaaraya@colegiocerrogrande.cl\"]')", () => {});
 
     console.log("Base de datos colegio.db inicializada correctamente con el esquema final.");
 });
