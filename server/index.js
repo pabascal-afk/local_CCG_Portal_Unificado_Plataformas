@@ -87,6 +87,9 @@ app.use(passport.session());
 // Archivos estáticos del frontend
 app.use(express.static(path.join(__dirname, '../public')));
 
+// Ping para comprobación de estado del túnel
+app.get('/api/ping', (req, res) => res.send('pong'));
+
 
 
 

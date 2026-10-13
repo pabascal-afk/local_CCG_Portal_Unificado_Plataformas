@@ -1,40 +1,37 @@
-const localtunnel = require('localtunnel');
 const axios = require('axios');
 
-process.env.NODE_TLS_REJECT_UNAUTHORIZED = '0'; // Bypass school firewall
+process.env.NODE_TLS_REJECT_UNAUTHORIZED = '0'; // Bypass school firewall inspection
 
-let isRetrying = false;
+let activeTunnel = null;
+let isStarting = false;
 
 async function initTunnel(port) {
-    try {
-        console.log('[TUNEL] Iniciando conexión con Localtunnel...');
-        const subdomainTarget = process.env.TUNNEL_SUBDOMAIN || 'plataformaccg';
-        
-        const tunnel = await localtunnel({ port: port, subdomain: subdomainTarget });
-        const url = tunnel.url;
-        process.env.PUBLIC_URL = url;
-        console.log('[TUNEL] Conectado a Localtunnel en:', url);
+    if (isStarting) return;
+    isStarting = true;
 
-        tunnel.on('close', () => {
-            console.log('[TUNEL] Localtunnel cerrado inesperadamente.');
-            if (!isRetrying) {
-                isRetrying = true;
-                console.log('[TUNEL] Reconectando en 5 segundos...');
-                setTimeout(() => {
-                    isRetrying = false;
-                    initTunnel(port);
-                }, 5000);
-            }
-        });
+    try {
+        console.log('[TUNEL] Iniciando conexión con Cloudflare Quick Tunnel...');
         
-        tunnel.on('error', (err) => {
-            console.error('[TUNEL] Error en el túnel:', err.message);
+        if (activeTunnel) {
+            try { await activeTunnel.close(); } catch(e) {}
+            activeTunnel = null;
+        }
+
+        const { startTunnel } = await import('untun');
+        const tunnel = await startTunnel({
+            url: `http://127.0.0.1:${port}`,
+            acceptCloudflareNotice: true
         });
-        
+        activeTunnel = tunnel;
+
+        const url = await tunnel.getURL();
+        process.env.PUBLIC_URL = url;
+        console.log('[TUNEL] Conectado exitosamente a Cloudflare en:', url);
+
         // Registrar la URL en el Tablón de Anuncios de Google Apps Script
         const gasDbUrl = process.env.GAS_TUNNEL_DB_URL;
         const gasSecret = process.env.GAS_SECRET;
-        
+
         if (gasDbUrl && gasSecret) {
             try {
                 const response = await axios.post(gasDbUrl, {
@@ -42,21 +39,34 @@ async function initTunnel(port) {
                     url: url
                 }, {
                     headers: { 'Content-Type': 'application/json' },
-                    timeout: 5000
+                    timeout: 7000
                 });
                 console.log('[TUNEL] Tablón de Google actualizado exitosamente (' + response.data + ')');
             } catch(e) {
                 console.error('[TUNEL] Error al actualizar Tablón de Google:', e.message);
             }
         }
-        
+
+        isStarting = false;
         return url;
     } catch (err) {
-        console.error('[TUNEL] Error crítico al iniciar Localtunnel:', err.message);
-        if (!isRetrying) {
-            isRetrying = true;
-            setTimeout(() => { isRetrying = false; initTunnel(port); }, 5000);
-        }
+        console.error('[TUNEL] Error crítico al iniciar Cloudflare Tunnel:', err.message);
+        isStarting = false;
+        setTimeout(() => {
+            initTunnel(port);
+        }, 10000);
     }
 }
+
+// Monitor de salud para auto-reconectar si el túnel se interrumpe
+setInterval(async () => {
+    if (!process.env.PUBLIC_URL || !process.env.PUBLIC_URL.startsWith('http') || isStarting) return;
+    try {
+        await axios.get(process.env.PUBLIC_URL + '/api/ping', { timeout: 8000 });
+    } catch (e) {
+        console.warn('[TUNEL] Alerta: El túnel público no respondió al ping (' + e.message + '). Reconectando...');
+        initTunnel(process.env.PORT || 9000);
+    }
+}, 120000);
+
 module.exports = { initTunnel };
