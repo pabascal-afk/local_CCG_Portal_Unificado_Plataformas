@@ -1,4 +1,4 @@
-﻿<!DOCTYPE html>
+<!DOCTYPE html>
 <html lang="es">
 <head>
   <meta charset="UTF-8">
@@ -63,6 +63,21 @@
         </a>
       </li>
     </ul>
+
+    <!-- Selector de Rol Activo (Exclusivo para usuarios Admin/Profesor duales) -->
+    <div id="role-switcher-container" class="px-3 py-2 mx-2 mb-2 rounded d-none" style="background-color: #1e293b; border: 1px solid #334155;">
+      <div class="d-flex justify-content-between align-items-center mb-1">
+        <span class="text-uppercase fw-bold" style="font-size: 0.68rem; color: #94a3b8; letter-spacing: 0.5px;">
+          <i class="bi bi-arrow-repeat"></i> Modo Activo
+        </span>
+        <span class="badge bg-danger" id="badge-rol-actual" style="font-size: 0.65rem;">ADMIN</span>
+      </div>
+      <select id="select-cambio-rol" class="form-select form-select-sm text-white shadow-none" style="background-color: #0f172a; border-color: #475569; font-size: 0.8rem;" onchange="cambiarRolDesdeSidebar(this.value)">
+        <option value="Administrador">🛡️ Administrador</option>
+        <option value="Profesor">👨‍🏫 Profesor</option>
+      </select>
+    </div>
+
     <div class="p-3 text-center text-secondary" style="font-size: 0.8rem;" id="info-usuario-container">
       <div id="info-usuario" class="mb-2 text-white">Cargando usuario...</div>
       <button class="btn btn-sm btn-outline-light w-100" onclick="abrirPerfil()"><i class="bi bi-gear"></i> Mi Perfil</button>
@@ -74,54 +89,127 @@
   </div>
 
   <script>
-    let urls = {};
+    let urls = {
+      dashboard: "/dashboard.html",
+      evaluaciones: "/evaluaciones.html",
+      calendario: "/calendario.html",
+      actividades: "/actividades.html",
+      horarios: "/horarios.html",
+      recursos: "/recursos.html",
+      usuarios: "/usuarios.html",
+      coordinadores: "/coordinadores.html"
+    };
     let contexto = {};
     
-    document.addEventListener('DOMContentLoaded', function() {
-      // 1. Cargar contexto del usuario (Rol)
+    function actualizarVistaRol(ctx) {
+      contexto = ctx;
+      const nombreMostrar = ctx.nombre || (ctx.email ? ctx.email.split('@')[0] : 'Usuario');
+      document.getElementById('info-usuario').innerHTML = `
+        <div class="fw-bold text-white text-truncate mb-1" title="${nombreMostrar}">${nombreMostrar}</div>
+        <div class="text-secondary small text-truncate" title="${ctx.email}">${ctx.email}</div>
+      `;
       
+      const rolNorm = (ctx.rol || '').toLowerCase();
+      const esAdminActivo = rolNorm.includes('admin') || rolNorm.includes('directiv');
+      
+      if (esAdminActivo) {
+        document.getElementById('nav-usuarios-container').classList.remove('d-none');
+        document.getElementById('nav-coordinadores-container').classList.remove('d-none');
+      } else {
+        document.getElementById('nav-usuarios-container').classList.add('d-none');
+        document.getElementById('nav-coordinadores-container').classList.add('d-none');
+      }
+      
+      // Mostrar selector de rol SOLO si tiene permiso dual
+      const container = document.getElementById('role-switcher-container');
+      if (ctx.puedeCambiarRol) {
+        container.classList.remove('d-none');
+        const select = document.getElementById('select-cambio-rol');
+        const badge = document.getElementById('badge-rol-actual');
+        if (esAdminActivo) {
+          select.value = 'Administrador';
+          badge.className = 'badge bg-danger';
+          badge.innerText = 'ADMIN';
+        } else {
+          select.value = 'Profesor';
+          badge.className = 'badge bg-info text-dark';
+          badge.innerText = 'DOCENTE';
+        }
+      } else {
+        container.classList.add('d-none');
+      }
+    }
+
+    async function cambiarRolDesdeSidebar(nuevoRol) {
+      try {
+        const res = await fetch('/api/auth/cambiar-rol', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ rol: nuevoRol })
+        });
+        const data = await res.json();
+        if (res.ok) {
+          const nuevoMe = await fetch('/api/auth/me').then(r => r.json());
+          actualizarVistaRol(nuevoMe);
+          
+          // Recargar el iframe activo para que adopte los nuevos permisos de inmediato
+          const frame = document.getElementById('appFrame');
+          if (frame && frame.contentWindow) {
+            frame.contentWindow.location.reload();
+          }
+          
+          if (window.Swal) {
+            Swal.mixin({
+              toast: true,
+              position: 'top-end',
+              showConfirmButton: false,
+              timer: 2500,
+              timerProgressBar: true
+            }).fire({
+              icon: 'success',
+              title: `Modo activo: ${nuevoRol}`
+            });
+          }
+        } else {
+          Swal.fire('Error', data.error || 'No se pudo cambiar el rol', 'error');
+        }
+      } catch(e) {
+        Swal.fire('Error', 'Fallo de conexión', 'error');
+      }
+    }
+
+    document.addEventListener('DOMContentLoaded', function() {
       fetch('/api/auth/me')
         .then(res => res.json())
         .then(ctx => {
-          contexto = ctx;
-          document.getElementById('info-usuario').innerText = ctx.email + '\n' + ctx.rol;
-          
-          const rolNormalizado = ctx.rol.toLowerCase();
-          if (rolNormalizado === 'administrador' || rolNormalizado === 'admin' || rolNormalizado === 'directivo general') {
-            document.getElementById('nav-usuarios-container').classList.remove('d-none');
-              document.getElementById('nav-coordinadores-container').classList.remove('d-none');
-          }
-          
-          // URLs estáticas en Node.js
-          urls = {
-            dashboard: "/dashboard.html",
-            evaluaciones: "/evaluaciones.html",
-            calendario: "/calendario.html",
-            actividades: "/actividades.html",
-              horarios: "/horarios.html",
-            recursos: "/recursos.html",
-            usuarios: "/usuarios.html",
-            coordinadores: "/coordinadores.html"
-          };
+          actualizarVistaRol(ctx);
+
           fetch('/api/perfil/preferencias').then(r=>r.json()).then(pref => {
                const defaultTab = pref.default_tab || 'dashboard';
                const navBtn = document.getElementById('nav-' + defaultTab);
                if (navBtn) navBtn.click();
                else document.getElementById('nav-dashboard').click();
-            });
+          });
         }).catch(err => {
-          // Si no está autenticado, redirigir al login (o Auth de Google)
           window.location.href = '/login.html';
         });
-
     });
 
     function loadApp(appName, element) {
       if (!urls[appName]) return;
       document.getElementById('appFrame').src = urls[appName];
       document.querySelectorAll('.nav-link').forEach(el => el.classList.remove('active'));
-      element.classList.add('active');
+      if (element) {
+        element.classList.add('active');
+      } else {
+        const el = document.getElementById('nav-' + appName);
+        if (el) el.classList.add('active');
+      }
     }
+
+    // Exponer para comunicación desde los iframes (Dashboard, etc.)
+    window.loadApp = loadApp;
+    window.cambiarRolDesdeSidebar = cambiarRolDesdeSidebar;
   </script>
 
   <!-- Modal Perfil Preferencias -->

@@ -77,6 +77,23 @@ app.use(session({
 app.use(passport.initialize());
 app.use(passport.session());
 
+// Middleware para gestionar rol activo en sesión (Modo Administrador vs Modo Profesor)
+app.use((req, res, next) => {
+  if (req.user && !req.user.esVisitanteInstitucional) {
+    req.user.rolOriginal = req.user.rolOriginal || req.user.rol;
+    const origNorm = (req.user.rolOriginal || '').toLowerCase().trim();
+    const esAdminBase = origNorm.includes('admin') || origNorm.includes('directiv');
+    req.user.esAdminBase = esAdminBase;
+    req.user.puedeCambiarRol = esAdminBase;
+    req.user.rolesDisponibles = esAdminBase ? ['Administrador', 'Profesor'] : [req.user.rolOriginal];
+
+    if (esAdminBase && req.session && req.session.rolActivo) {
+      req.user.rol = req.session.rolActivo;
+    }
+  }
+  next();
+});
+
  app.get(['/', '/index.html'], (req, res, next) => {
   if (!req.isAuthenticated()) {
     return res.redirect('/login.html');
@@ -226,15 +243,61 @@ app.get('/auth/popup-callback', (req, res) => {
 
 app.get('/api/auth/me', (req, res) => {
   if (req.isAuthenticated()) {
-    res.json(req.user);
+    res.json({
+      id: req.user.id,
+      email: req.user.email,
+      nombre: req.user.nombre,
+      rol: req.user.rol,
+      rolOriginal: req.user.rolOriginal || req.user.rol,
+      esAdminBase: !!req.user.esAdminBase,
+      puedeCambiarRol: !!req.user.puedeCambiarRol,
+      rolesDisponibles: req.user.rolesDisponibles || [req.user.rol],
+      esVisitanteInstitucional: !!req.user.esVisitanteInstitucional
+    });
   } else {
     // Para modo desarrollo sin Google OAuth (solo si no hay client ID)
     if (!process.env.GOOGLE_CLIENT_ID) {
-       res.json({ email: 'admin@colegio.edu', nombre: 'Admin (Dev)', rol: 'Administrador' });
+       const rolActivo = (req.session && req.session.rolActivo) ? req.session.rolActivo : 'Administrador';
+       res.json({ 
+         email: 'admin@colegio.edu', 
+         nombre: 'Admin (Dev)', 
+         rol: rolActivo,
+         rolOriginal: 'Administrador',
+         esAdminBase: true,
+         puedeCambiarRol: true,
+         rolesDisponibles: ['Administrador', 'Profesor']
+       });
     } else {
        res.status(401).json({ error: 'No autenticado' });
     }
   }
+});
+
+app.post('/api/auth/cambiar-rol', (req, res) => {
+  const { rol } = req.body;
+  if (!req.isAuthenticated()) {
+    if (!process.env.GOOGLE_CLIENT_ID) {
+      const nuevo = (rol && rol.toLowerCase().includes('prof')) ? 'Profesor' : 'Administrador';
+      if (!req.session) req.session = {};
+      req.session.rolActivo = nuevo;
+      return res.json({ success: true, rolActivo: nuevo });
+    }
+    return res.status(401).json({ error: 'No autenticado' });
+  }
+
+  const rolOrig = req.user.rolOriginal || req.user.rol;
+  const origNorm = (rolOrig || '').toLowerCase().trim();
+  const esAdmin = origNorm.includes('admin') || origNorm.includes('directiv');
+
+  if (!esAdmin) {
+    return res.status(403).json({ error: 'Solo los usuarios administradores pueden alternar de rol.' });
+  }
+
+  const nuevoRol = (rol && rol.toLowerCase().includes('prof')) ? 'Profesor' : (req.user.rolOriginal || 'Administrador');
+  req.session.rolActivo = nuevoRol;
+  req.user.rol = nuevoRol;
+
+  res.json({ success: true, rolActivo: nuevoRol });
 });
 
 app.get('/api/auth/logout', (req, res) => {
@@ -807,46 +870,102 @@ app.delete('/api/reservas/:id', (req, res) => {
 // --- DASHBOARD API ---
 app.get('/api/dashboard/me', (req, res) => {
     const userEmail = req.isAuthenticated() ? req.user.email : 'dev@colegio.edu';
-    // Mapeo simple: tomamos todo antes del @ o un nombre genérico
-    const baseName = userEmail.split('@')[0];
+    const userName = req.isAuthenticated() ? (req.user.nombre || '') : 'Administrador';
+    const userRol = (req.user && req.user.rol) ? req.user.rol : 'Profesor';
+    const rolNorm = userRol.toLowerCase().trim();
+    const esAdmin = rolNorm.includes('admin') || rolNorm.includes('directiv');
 
     const data = {
         evaluaciones: [],
         reservas: [],
         eventos: [],
-        avisos: []
+        avisos: [],
+        stats: {
+            misEvals: 0,
+            misReservas: 0,
+            totalAvisos: 0,
+            evalsPendientesEnvio: 0,
+            colegioEvalsMes: 0,
+            colegioReservasSemana: 0
+        },
+        usuario: {
+            nombre: userName,
+            email: userEmail,
+            rol: userRol,
+            rolOriginal: req.user ? (req.user.rolOriginal || userRol) : userRol,
+            esAdminBase: req.user ? !!req.user.esAdminBase : esAdmin,
+            puedeCambiarRol: req.user ? !!req.user.puedeCambiarRol : esAdmin
+        }
     };
 
-    // 1. Avisos
-    db.all("SELECT * FROM avisos_muro ORDER BY id DESC LIMIT 10", (err, avisos) => {
-        if (!err) data.avisos = avisos;
+    // 1. Avisos ordenados por Alta prioridad primero y luego más recientes
+    db.all("SELECT * FROM avisos_muro ORDER BY CASE WHEN importancia = 'Alta' THEN 0 ELSE 1 END, id DESC LIMIT 15", (err, avisos) => {
+        if (!err && avisos) {
+            data.avisos = avisos;
+            data.stats.totalAvisos = avisos.length;
+        }
         
-        // 2. Reservas
-        db.all("SELECT * FROM reservas WHERE estado != 'Cancelada' AND profesor_email = ? AND fecha >= date('now') ORDER BY fecha ASC", [userEmail], (err, reservas) => {
-            if (!err) data.reservas = reservas;
+        // 2. Reservas del usuario
+        db.all("SELECT * FROM reservas WHERE estado != 'Cancelada' AND LOWER(profesor_email) = LOWER(?) AND fecha >= date('now') ORDER BY fecha ASC", [userEmail], (errRes, reservas) => {
+            if (!errRes && reservas) {
+                data.reservas = reservas;
+                data.stats.misReservas = reservas.length;
+            }
 
-            // 3. Evaluaciones (Buscamos coincidencias básicas por nombre)
-            db.all("SELECT * FROM evaluaciones WHERE profesor_email = ? AND fecha >= date('now') ORDER BY fecha ASC LIMIT 10", [userEmail], (err, evals) => {
-                  if (!err) {
-                      data.evaluaciones = evals;
-                  }
-  
-                  res.json(data);
-              });
-          });
+            // 3. Evaluaciones (buscamos por email o nombre de profesor)
+            const queryEvals = `
+                SELECT * FROM evaluaciones 
+                WHERE (
+                    LOWER(profesor_email) = LOWER(?) 
+                    OR LOWER(profesor_nombre) = LOWER(?) 
+                    OR (profesor_nombre IS NOT NULL AND LOWER(profesor_nombre) LIKE '%' || LOWER(?) || '%') 
+                    OR (profesor_email IS NOT NULL AND LOWER(profesor_email) LIKE '%' || LOWER(?) || '%')
+                ) 
+                AND fecha >= date('now') 
+                ORDER BY fecha ASC 
+                LIMIT 10
+            `;
+            db.all(queryEvals, [userEmail, userEmail, userName, userName], (errEv, evals) => {
+                if (!errEv && evals) {
+                    data.evaluaciones = evals;
+                    data.stats.misEvals = evals.length;
+                    data.stats.evalsPendientesEnvio = evals.filter(e => e.estado_doc !== 'Enviada').length;
+                }
+
+                // 4. Si está en rol Administrador, cargar métricas globales del colegio
+                if (esAdmin) {
+                    const primerDiaMes = new Date().toISOString().slice(0, 7) + '-01';
+                    db.get("SELECT COUNT(*) as total FROM evaluaciones WHERE fecha >= ?", [primerDiaMes], (errCountEv, rowEv) => {
+                        if (!errCountEv && rowEv) data.stats.colegioEvalsMes = rowEv.total;
+                        db.get("SELECT COUNT(*) as total FROM reservas WHERE fecha >= date('now') AND estado != 'Cancelada'", (errCountRes, rowRes) => {
+                            if (!errCountRes && rowRes) data.stats.colegioReservasSemana = rowRes.total;
+                            res.json(data);
+                        });
+                    });
+                } else {
+                    res.json(data);
+                }
+            });
+        });
     });
 });
 
 app.post('/api/avisos', (req, res) => {
     const { titulo, mensaje, importancia } = req.body;
-    const autor = req.isAuthenticated() ? req.user.email : 'Admin';
+    const autor = req.isAuthenticated() ? (req.user.nombre || req.user.email) : 'Administración';
     db.run("INSERT INTO avisos_muro (titulo, mensaje, autor, importancia) VALUES (?, ?, ?, ?)", [titulo, mensaje, autor, importancia || 'Normal'], function(err) {
         if (err) return res.status(500).json({error: err.message});
-        res.json({ message: 'Aviso publicado', id: this.lastID });
+        res.json({ message: 'Aviso publicado exitosamente', id: this.lastID });
     });
 });
 
 app.delete('/api/avisos/:id', (req, res) => {
+    // Validar permisos de administrador antes de borrar
+    const userRole = (req.user && req.user.rol) ? req.user.rol.toLowerCase() : '';
+    const esAdmin = userRole.includes('admin') || userRole.includes('directiv');
+    if (!esAdmin && req.isAuthenticated()) {
+        return res.status(403).json({ error: 'Solo administradores pueden eliminar avisos.' });
+    }
     db.run("DELETE FROM avisos_muro WHERE id = ?", [req.params.id], function(err) {
         if (err) return res.status(500).json({error: err.message});
         res.json({ message: 'Aviso borrado' });

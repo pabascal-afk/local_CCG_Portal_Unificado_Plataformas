@@ -2,410 +2,1131 @@
 <html lang="es">
 <head>
   <meta charset="UTF-8">
-  <title>Dashboard</title>
+  <title>Inicio / Muro - Plataforma</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
   <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.10.5/font/bootstrap-icons.css">
+  <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+  
   <style>
-    body { background-color: #f8f9fa; font-family: 'Inter', sans-serif; padding: 20px; }
-    .card { border: none; border-radius: 10px; box-shadow: 0 2px 10px rgba(0,0,0,0.05); margin-bottom: 20px; }
-    .card-header { background-color: white; border-bottom: 1px solid #f0f0f0; font-weight: bold; border-radius: 10px 10px 0 0 !important; }
-    .aviso-card { border-left: 4px solid #3498db; background: white; padding: 15px; border-radius: 5px; margin-bottom: 15px; box-shadow: 0 1px 3px rgba(0,0,0,0.05); }
-    .aviso-card.alta { border-left-color: #e74c3c; background-color: #fffaf9; }
-    .aviso-fecha { font-size: 0.8rem; color: #888; }
-    .aviso-autor { font-size: 0.85rem; font-weight: 600; color: #555; }
-    .item-resumen { font-size: 0.9rem; border-bottom: 1px solid #eee; padding: 10px 0; }
-    .item-resumen:last-child { border-bottom: none; }
+    :root {
+      --primary-color: #1e3a8a;
+      --primary-soft: #eff6ff;
+      --accent-color: #2563eb;
+      --text-main: #0f172a;
+      --text-muted: #64748b;
+      --card-bg: #ffffff;
+      --border-color: #e2e8f0;
+    }
+    body {
+      background-color: #f8fafc;
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+      color: var(--text-main);
+      padding: 24px;
+      margin: 0;
+    }
+
+    /* Hero / Banner de Bienvenida */
+    .hero-banner {
+      background: linear-gradient(135deg, #0f172a 0%, #1e293b 50%, #1e3a8a 100%);
+      color: white;
+      border-radius: 16px;
+      padding: 24px 28px;
+      margin-bottom: 24px;
+      box-shadow: 0 8px 24px rgba(15, 23, 42, 0.12);
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      flex-wrap: wrap;
+      gap: 16px;
+    }
+    .hero-title {
+      font-size: 1.55rem;
+      font-weight: 700;
+      margin-bottom: 4px;
+      display: flex;
+      align-items: center;
+      gap: 10px;
+    }
+    .hero-sub {
+      color: #94a3b8;
+      font-size: 0.9rem;
+      margin: 0;
+    }
+    .role-badge {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      padding: 6px 14px;
+      border-radius: 9999px;
+      font-size: 0.85rem;
+      font-weight: 600;
+      box-shadow: 0 2px 8px rgba(0,0,0,0.15);
+    }
+    .role-badge.admin {
+      background: #dc2626;
+      color: white;
+    }
+    .role-badge.docente {
+      background: #0284c7;
+      color: white;
+    }
+
+    /* Botón de cambio de rol en hero */
+    .btn-switch-role {
+      background: rgba(255, 255, 255, 0.15);
+      border: 1px solid rgba(255, 255, 255, 0.25);
+      color: white;
+      padding: 6px 14px;
+      border-radius: 8px;
+      font-size: 0.85rem;
+      font-weight: 500;
+      transition: all 0.2s ease;
+      cursor: pointer;
+    }
+    .btn-switch-role:hover {
+      background: rgba(255, 255, 255, 0.28);
+      color: white;
+      transform: translateY(-1px);
+    }
+
+    /* Accesos Rápidos */
+    .quick-card {
+      background: white;
+      border: 1px solid var(--border-color);
+      border-radius: 12px;
+      padding: 14px 16px;
+      display: flex;
+      align-items: center;
+      gap: 14px;
+      text-decoration: none;
+      color: var(--text-main);
+      box-shadow: 0 1px 3px rgba(0,0,0,0.03);
+      transition: all 0.2s ease;
+      cursor: pointer;
+    }
+    .quick-card:hover {
+      transform: translateY(-2px);
+      box-shadow: 0 6px 18px rgba(0,0,0,0.06);
+      border-color: #cbd5e1;
+      color: var(--accent-color);
+    }
+    .quick-icon {
+      width: 44px;
+      height: 44px;
+      border-radius: 10px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 1.35rem;
+      flex-shrink: 0;
+    }
+    .quick-title {
+      font-weight: 600;
+      font-size: 0.95rem;
+      margin: 0;
+    }
+    .quick-desc {
+      font-size: 0.78rem;
+      color: var(--text-muted);
+      margin: 0;
+    }
+
+    /* KPIs / Métricas */
+    .kpi-card {
+      background: white;
+      border: 1px solid var(--border-color);
+      border-radius: 12px;
+      padding: 16px;
+      box-shadow: 0 1px 3px rgba(0,0,0,0.02);
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+    }
+    .kpi-num {
+      font-size: 1.65rem;
+      font-weight: 700;
+      color: var(--text-main);
+      line-height: 1;
+    }
+    .kpi-label {
+      font-size: 0.82rem;
+      color: var(--text-muted);
+      margin-top: 4px;
+      font-weight: 500;
+    }
+    .kpi-icon {
+      font-size: 1.8rem;
+      opacity: 0.85;
+    }
+
+    /* Tarjetas principales */
+    .main-card {
+      background: white;
+      border: 1px solid var(--border-color);
+      border-radius: 14px;
+      box-shadow: 0 2px 8px rgba(0,0,0,0.03);
+      margin-bottom: 24px;
+      overflow: hidden;
+    }
+    .main-card-header {
+      padding: 16px 20px;
+      border-bottom: 1px solid var(--border-color);
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      background: #ffffff;
+    }
+    .main-card-title {
+      font-size: 1.05rem;
+      font-weight: 700;
+      color: #0f172a;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      margin: 0;
+    }
+
+    /* Avisos / Muro Editorial */
+    .aviso-item {
+      padding: 18px 20px;
+      border-bottom: 1px solid #f1f5f9;
+      transition: background 0.15s ease;
+      position: relative;
+    }
+    .aviso-item:last-child {
+      border-bottom: none;
+    }
+    .aviso-item:hover {
+      background-color: #fafbfc;
+    }
+    .aviso-item.urgente {
+      border-left: 4px solid #ef4444;
+      background-color: #fffaf9;
+    }
+    .aviso-avatar {
+      width: 38px;
+      height: 38px;
+      border-radius: 50%;
+      background: #e2e8f0;
+      color: #334155;
+      font-weight: 700;
+      font-size: 0.85rem;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      flex-shrink: 0;
+    }
+    .aviso-badge-alta {
+      background: #fee2e2;
+      color: #b91c1c;
+      font-size: 0.72rem;
+      font-weight: 700;
+      padding: 3px 8px;
+      border-radius: 6px;
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+    }
+    .aviso-badge-normal {
+      background: #f1f5f9;
+      color: #475569;
+      font-size: 0.72rem;
+      font-weight: 600;
+      padding: 3px 8px;
+      border-radius: 6px;
+    }
+    .aviso-mensaje {
+      color: #334155;
+      font-size: 0.92rem;
+      line-height: 1.55;
+      margin-top: 8px;
+      margin-bottom: 0;
+      white-space: pre-wrap;
+    }
+
+    /* Items Agenda (Evaluaciones & Reservas) */
+    .agenda-item {
+      display: flex;
+      align-items: center;
+      gap: 14px;
+      padding: 12px 16px;
+      border-bottom: 1px solid #f1f5f9;
+      transition: background 0.15s ease;
+    }
+    .agenda-item:last-child {
+      border-bottom: none;
+    }
+    .agenda-item:hover {
+      background: #f8fafc;
+    }
+    .date-badge {
+      width: 48px;
+      height: 50px;
+      border-radius: 10px;
+      background: #f1f5f9;
+      border: 1px solid #e2e8f0;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      flex-shrink: 0;
+    }
+    .date-badge-month {
+      font-size: 0.65rem;
+      font-weight: 700;
+      color: #64748b;
+      text-transform: uppercase;
+      line-height: 1;
+    }
+    .date-badge-day {
+      font-size: 1.15rem;
+      font-weight: 800;
+      color: #0f172a;
+      line-height: 1.1;
+    }
+
+    /* Empty state */
+    .empty-state {
+      padding: 40px 20px;
+      text-align: center;
+      color: #94a3b8;
+    }
+    .empty-state i {
+      font-size: 2.5rem;
+      margin-bottom: 8px;
+      display: inline-block;
+      opacity: 0.5;
+    }
   </style>
 </head>
 <body>
-  
-  <div class="d-flex justify-content-between align-items-center mb-4">
-    <h3 class="fw-bold text-dark m-0"><i class="bi bi-grid"></i> Mi Dashboard</h3>
+
+  <!-- HERO DE BIENVENIDA -->
+  <div class="hero-banner">
+    <div>
+      <div class="hero-title">
+        <span id="saludo-dia">¡Buen día!</span>
+        <span id="nombre-usuario" class="fw-bold">...</span>
+      </div>
+      <p class="hero-sub" id="fecha-hoy"><i class="bi bi-calendar3"></i> Cargando fecha...</p>
+    </div>
+
+    <div class="d-flex align-items-center gap-3">
+      <div id="badge-rol-container">
+        <!-- Render dinámico: Rol Activo -->
+      </div>
+      <button id="btn-toggle-rol" class="btn-switch-role d-none" onclick="toggleRolActivo()">
+        <i class="bi bi-arrow-repeat"></i> <span id="btn-toggle-rol-text">Cambiar Vista</span>
+      </button>
+    </div>
   </div>
 
-  <div class="row mb-4">
-    <!-- Muro de Avisos -->
-    <div class="col-12">
-      <div class="card h-100">
-        <div class="card-header d-flex justify-content-between align-items-center">
-          <span><i class="bi bi-megaphone"></i> Muro de Avisos</span>
-          <button class="btn btn-sm btn-primary d-none" id="btnNuevoAviso" onclick="abrirModalAviso()">+ Publicar Aviso</button>
+  <!-- ACCESOS RÁPIDOS A 1 CLIC -->
+  <div class="row g-3 mb-4">
+    <div class="col-sm-6 col-lg-3">
+      <div class="quick-card" onclick="irA('evaluaciones')">
+        <div class="quick-icon" style="background: #eff6ff; color: #2563eb;">
+          <i class="bi bi-journal-check"></i>
         </div>
-        <div class="card-body" id="muro-container">
-          <p class="text-muted text-center mt-4">Cargando avisos...</p>
+        <div>
+          <h6 class="quick-title">Calendario Pruebas</h6>
+          <p class="quick-desc">Agendar o ver evaluaciones</p>
+        </div>
+      </div>
+    </div>
+    <div class="col-sm-6 col-lg-3">
+      <div class="quick-card" onclick="irA('recursos')">
+        <div class="quick-icon" style="background: #f0fdf4; color: #16a34a;">
+          <i class="bi bi-building"></i>
+        </div>
+        <div>
+          <h6 class="quick-title">Reserva Recursos</h6>
+          <p class="quick-desc">Laboratorios, salas y equipos</p>
+        </div>
+      </div>
+    </div>
+    <div class="col-sm-6 col-lg-3">
+      <div class="quick-card" onclick="irA('calendario')">
+        <div class="quick-icon" style="background: #fefce8; color: #ca8a04;">
+          <i class="bi bi-calendar-event"></i>
+        </div>
+        <div>
+          <h6 class="quick-title">Calendario Escolar</h6>
+          <p class="quick-desc">Actos, eventos y feriados</p>
+        </div>
+      </div>
+    </div>
+    <div class="col-sm-6 col-lg-3">
+      <div class="quick-card" onclick="irA('horarios')">
+        <div class="quick-icon" style="background: #faf5ff; color: #9333ea;">
+          <i class="bi bi-clock-history"></i>
+        </div>
+        <div>
+          <h6 class="quick-title">Visor Horarios</h6>
+          <p class="quick-desc">Malla horaria y profesores</p>
         </div>
       </div>
     </div>
   </div>
-  
-  <div class="row">
-    <!-- Evaluaciones -->
-    <div class="col-md-6">
-      <div class="card h-100">
-        <div class="card-header d-flex justify-content-between align-items-center">
-  <span><i class="bi bi-calendar-check"></i> Mis Próximas Evaluaciones</span>
-  <button class="btn btn-sm btn-link p-0" onclick="abrirModalTodasEvals()">Ver todas</button>
-</div>
-        <div class="card-body p-3" id="evals-container">
-          <p class="text-muted text-center mt-2">No hay evaluaciones recientes.</p>
+
+  <!-- TARJETAS DE INDICADORES (KPIs) -->
+  <div class="row g-3 mb-4">
+    <div class="col-6 col-md-3">
+      <div class="kpi-card">
+        <div>
+          <div class="kpi-num" id="kpi-evals">0</div>
+          <div class="kpi-label">Mis Evaluaciones</div>
         </div>
+        <div class="kpi-icon text-primary"><i class="bi bi-file-earmark-check"></i></div>
       </div>
     </div>
+    <div class="col-6 col-md-3">
+      <div class="kpi-card">
+        <div>
+          <div class="kpi-num" id="kpi-reservas">0</div>
+          <div class="kpi-label">Mis Reservas</div>
+        </div>
+        <div class="kpi-icon text-success"><i class="bi bi-laptop"></i></div>
+      </div>
+    </div>
+    <div class="col-6 col-md-3">
+      <div class="kpi-card">
+        <div>
+          <div class="kpi-num" id="kpi-avisos">0</div>
+          <div class="kpi-label">Avisos en Muro</div>
+        </div>
+        <div class="kpi-icon text-warning"><i class="bi bi-megaphone"></i></div>
+      </div>
+    </div>
+    <div class="col-6 col-md-3">
+      <div class="kpi-card" id="kpi-extra-card">
+        <div>
+          <div class="kpi-num" id="kpi-extra-num">0</div>
+          <div class="kpi-label" id="kpi-extra-label">Temarios Pendientes</div>
+        </div>
+        <div class="kpi-icon text-danger" id="kpi-extra-icon"><i class="bi bi-paperclip"></i></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- CONTENIDO PRINCIPAL EN 2 COLUMNAS (Muro 7 / Agenda 5) -->
+  <div class="row g-4">
     
-    <!-- Reservas -->
-    <div class="col-md-6">
-      <div class="card h-100">
-        <div class="card-header"><i class="bi bi-building"></i> Mis Próximas Reservas</div>
-        <div class="card-body p-3" id="reservas-container">
-          <p class="text-muted text-center mt-2">No tienes reservas activas.</p>
+    <!-- COLUMNA IZQUIERDA: MURO DE COMUNICADOS -->
+    <div class="col-lg-7">
+      <div class="main-card">
+        <div class="main-card-header">
+          <div class="main-card-title">
+            <i class="bi bi-chat-square-text text-primary"></i> Muro de Comunicados
+          </div>
+          <div class="d-flex align-items-center gap-2">
+            <!-- Filtro de importancia -->
+            <select id="filtroAvisos" class="form-select form-select-sm" style="width: auto;" onchange="filtrarAvisos(this.value)">
+              <option value="todos">Todos los avisos</option>
+              <option value="alta">⚠️ Solo Alta Prioridad</option>
+            </select>
+            <button class="btn btn-sm btn-primary d-none" id="btnNuevoAviso" onclick="abrirModalAviso()">
+              <i class="bi bi-plus-lg"></i> Publicar
+            </button>
+          </div>
+        </div>
+        
+        <div id="muro-container">
+          <div class="empty-state">
+            <i class="bi bi-chat-square-dots"></i>
+            <p>Cargando comunicados...</p>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- COLUMNA DERECHA: AGENDA Y OPERACIONES -->
+    <div class="col-lg-5">
+      
+      <!-- PRÓXIMAS EVALUACIONES -->
+      <div class="main-card">
+        <div class="main-card-header">
+          <div class="main-card-title">
+            <i class="bi bi-calendar-check text-primary"></i> Mis Evaluaciones
+          </div>
+          <button class="btn btn-sm btn-link text-decoration-none p-0" onclick="abrirModalTodasEvals()">
+            Ver todas <i class="bi bi-arrow-right"></i>
+          </button>
+        </div>
+        <div id="evals-container">
+          <div class="empty-state py-3">
+            <p class="m-0 text-muted small">Cargando evaluaciones...</p>
+          </div>
+        </div>
+      </div>
+
+      <!-- MIS PRÓXIMAS RESERVAS -->
+      <div class="main-card">
+        <div class="main-card-header">
+          <div class="main-card-title">
+            <i class="bi bi-building-check text-success"></i> Mis Reservas de Recursos
+          </div>
+          <button class="btn btn-sm btn-link text-decoration-none p-0" onclick="irA('recursos')">
+            Reservar <i class="bi bi-plus"></i>
+          </button>
+        </div>
+        <div id="reservas-container">
+          <div class="empty-state py-3">
+            <p class="m-0 text-muted small">No tienes reservas activas.</p>
+          </div>
+        </div>
+      </div>
+
+      <!-- WIDGET EXCLUSIVO DE ADMIN: RESUMEN DE GESTIÓN -->
+      <div class="main-card d-none" id="admin-tools-card">
+        <div class="main-card-header bg-light">
+          <div class="main-card-title text-danger">
+            <i class="bi bi-shield-lock-fill"></i> Herramientas de Administración
+          </div>
+        </div>
+        <div class="p-3">
+          <p class="small text-muted mb-3">Estás en <b>Vista Administrador</b>. Puedes gestionar la plataforma escolar desde estos accesos:</p>
+          <div class="d-grid gap-2">
+            <button class="btn btn-sm btn-outline-dark text-start py-2" onclick="irA('usuarios')">
+              <i class="bi bi-people-fill me-2 text-primary"></i> Gestión de Usuarios y Permisos
+            </button>
+            <button class="btn btn-sm btn-outline-dark text-start py-2" onclick="irA('coordinadores')">
+              <i class="bi bi-envelope-paper-fill me-2 text-success"></i> Reglas de Envíos y Coordinadores
+            </button>
+          </div>
+        </div>
+      </div>
+
+    </div>
+
+  </div>
+
+  <!-- MODAL NUEVO AVISO -->
+  <div class="modal fade" id="modalAviso" tabindex="-1">
+    <div class="modal-dialog">
+      <div class="modal-content border-0 shadow-lg">
+        <div class="modal-header bg-dark text-white">
+          <h5 class="modal-title fw-bold"><i class="bi bi-megaphone-fill text-warning"></i> Publicar Comunicado Institucional</h5>
+          <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+        </div>
+        <div class="modal-body p-4">
+          <div class="mb-3">
+            <label class="form-label fw-bold small">Título del Comunicado</label>
+            <input type="text" id="inTitAviso" class="form-control" placeholder="Ej: Fechas límite para entrega de pruebas..." required>
+          </div>
+          <div class="mb-3">
+            <label class="form-label fw-bold small">Mensaje o Contenido</label>
+            <textarea id="inMsgAviso" class="form-control" rows="5" placeholder="Escribe el mensaje para toda la comunidad docente..." required></textarea>
+          </div>
+          <div class="mb-3">
+            <label class="form-label fw-bold small">Prioridad / Nivel de Urgencia</label>
+            <select id="inImpAviso" class="form-select">
+              <option value="Normal">Informativo Normal</option>
+              <option value="Alta">⚠️ Alta Prioridad (Destacado en Rojo)</option>
+            </select>
+          </div>
+          <button class="btn btn-primary w-100 py-2 fw-bold" onclick="publicarAviso()">
+            <i class="bi bi-send-fill me-1"></i> Publicar en el Muro
+          </button>
         </div>
       </div>
     </div>
   </div>
 
-  
-  <!-- Modal Enviar Documento -->
+  <!-- MODAL ENVIAR EVALUACIÓN A COORDINACIÓN -->
   <div class="modal fade" id="modalEnvio" tabindex="-1">
     <div class="modal-dialog">
-      <div class="modal-content">
-        <div class="modal-header">
-          <h5 class="modal-title fw-bold">Adjuntar y Enviar Evaluación</h5>
-          <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+      <div class="modal-content border-0 shadow-lg">
+        <div class="modal-header bg-primary text-white">
+          <h5 class="modal-title fw-bold"><i class="bi bi-envelope-paper-fill"></i> Adjuntar y Enviar Evaluación</h5>
+          <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
         </div>
-        <div class="modal-body">
-          <p class="small text-muted mb-4">Esta evaluación será enviada automáticamente al Coordinador Pedagógico correspondiente a <b id="lblEnvioCursoAsig"></b>.</p>
+        <div class="modal-body p-4">
+          <p class="small text-muted mb-3">
+            Esta evaluación será notificada y enviada por correo al Coordinador Pedagógico asignado a <b id="lblEnvioCursoAsig" class="text-dark"></b>.
+          </p>
           <input type="hidden" id="inEnvioId">
           <div class="mb-3">
-            <label class="form-label fw-bold small">Enlace Google Docs (Opcional)</label>
+            <label class="form-label fw-bold small"><i class="bi bi-link-45deg"></i> Enlace Google Docs / Drive (Opcional)</label>
             <input type="url" id="inEnvioLink" class="form-control" placeholder="https://docs.google.com/...">
           </div>
           <div class="mb-3">
-            <label class="form-label fw-bold small">O Adjuntar Archivo (Word/PDF)</label>
+            <label class="form-label fw-bold small"><i class="bi bi-file-earmark-arrow-up"></i> O Adjuntar Archivo (Word / PDF)</label>
             <input type="file" id="inEnvioFile" class="form-control">
           </div>
           <div class="mb-3">
-            <label class="form-label fw-bold small">Instrucciones para Coordinación/Impresión</label>
-            <textarea id="inEnvioInstr" class="form-control" rows="3" placeholder="Ej: Imprimir 30 copias a color..."></textarea>
+            <label class="form-label fw-bold small"><i class="bi bi-chat-left-text"></i> Instrucciones para Coordinación / Impresión</label>
+            <textarea id="inEnvioInstr" class="form-control" rows="3" placeholder="Ej: Imprimir 35 copias a doble cara..."></textarea>
           </div>
-          <button class="btn btn-primary w-100" id="btnEnviarEv" onclick="enviarEvaluacionDoc()">Enviar a Coordinación</button>
+          <button class="btn btn-success w-100 py-2 fw-bold" id="btnEnviarEv" onclick="enviarEvaluacionDoc()">
+            <i class="bi bi-send-check-fill me-1"></i> Enviar a Coordinación
+          </button>
         </div>
       </div>
     </div>
   </div>
 
-  <!-- Modal Todas Evaluaciones -->
+  <!-- MODAL TODAS MIS EVALUACIONES -->
   <div class="modal fade" id="modalTodasEvals" tabindex="-1">
     <div class="modal-dialog modal-lg modal-dialog-scrollable">
-      <div class="modal-content">
-        <div class="modal-header">
-          <h5 class="modal-title fw-bold">Todas mis Evaluaciones</h5>
-          <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+      <div class="modal-content border-0 shadow-lg">
+        <div class="modal-header bg-dark text-white">
+          <h5 class="modal-title fw-bold"><i class="bi bi-list-task"></i> Todas mis Evaluaciones Registradas</h5>
+          <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
         </div>
-        <div class="modal-body pt-2">
+        <div class="modal-body p-3">
           <div class="row g-2 mb-3">
-             <div class="col-md-6">
-                <select id="filtTodasCurso" class="form-select form-select-sm" onchange="renderTodasEvalsFiltradas()">
-                  <option value="">Todos los cursos</option>
-                </select>
-             </div>
-             <div class="col-md-6">
-                <select id="filtTodasAsig" class="form-select form-select-sm" onchange="renderTodasEvalsFiltradas()">
-                  <option value="">Todas las asignaturas</option>
-                </select>
-             </div>
+            <div class="col-md-6">
+              <select id="filtTodasCurso" class="form-select form-select-sm" onchange="renderTodasEvalsFiltradas()">
+                <option value="">Todos los cursos</option>
+              </select>
+            </div>
+            <div class="col-md-6">
+              <select id="filtTodasAsig" class="form-select form-select-sm" onchange="renderTodasEvalsFiltradas()">
+                <option value="">Todas las asignaturas</option>
+              </select>
+            </div>
           </div>
           <div id="todasEvals-container">
-            Cargando...
+            <p class="text-center text-muted mt-3">Cargando evaluaciones...</p>
           </div>
-        </div>
-      </div>
-    </div>
-  </div>
-
-  <!-- Modal Nuevo Aviso -->
-  <div class="modal fade" id="modalAviso" tabindex="-1">
-    <div class="modal-dialog">
-      <div class="modal-content">
-        <div class="modal-header">
-          <h5 class="modal-title fw-bold">Publicar Aviso</h5>
-          <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
-        </div>
-        <div class="modal-body">
-          <div class="mb-3">
-            <label class="form-label fw-bold small">Título</label>
-            <input type="text" id="inTitAviso" class="form-control" required>
-          </div>
-          <div class="mb-3">
-            <label class="form-label fw-bold small">Mensaje</label>
-            <textarea id="inMsgAviso" class="form-control" rows="4" required></textarea>
-          </div>
-          <div class="mb-3">
-            <label class="form-label fw-bold small">Importancia</label>
-            <select id="inImpAviso" class="form-select">
-              <option value="Normal">Normal</option>
-              <option value="Alta">Alta (Destacado)</option>
-            </select>
-          </div>
-          <button class="btn btn-primary w-100 mt-2" onclick="publicarAviso()">Publicar</button>
         </div>
       </div>
     </div>
   </div>
 
   <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
-  <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+
   <script>
-    let modalAviso;
+    let modalAvisoObj;
+    let modalEnvioObj;
+    let modalTodasObj;
+
+    let usuarioActual = {};
+    let avisosCache = [];
+    let misEvalsCache = [];
     let esAdmin = false;
 
-    document.addEventListener('DOMContentLoaded', async () => {
-      modalAviso = new bootstrap.Modal(document.getElementById('modalAviso'));
-      
-      // Comprobar rol para mostrar botón de publicar
-      try {
-        const u = await fetch('/api/auth/me').then(r => r.json());
-        const r = u.rol.toLowerCase();
-        if(r.includes('admin') || r.includes('directivo') || r.includes('convivencia')) {
-            esAdmin = true;
-            document.getElementById('btnNuevoAviso').classList.remove('d-none');
-        }
-      } catch(e) {}
+    // Navegar entre apps en el portal contenedor
+    function irA(appName) {
+      if (window.parent && typeof window.parent.loadApp === 'function') {
+        window.parent.loadApp(appName);
+      } else {
+        window.location.href = `/${appName}.html`;
+      }
+    }
 
+    // Inicialización
+    document.addEventListener('DOMContentLoaded', () => {
+      modalAvisoObj = new bootstrap.Modal(document.getElementById('modalAviso'));
+      modalEnvioObj = new bootstrap.Modal(document.getElementById('modalEnvio'));
+      modalTodasObj = new bootstrap.Modal(document.getElementById('modalTodasEvals'));
+
+      establecerSaludoYFecha();
       cargarDashboard();
     });
 
-    
-    let modalEnvio;
-    let modalTodas;
-    document.addEventListener('DOMContentLoaded', () => {
-       modalEnvio = new bootstrap.Modal(document.getElementById('modalEnvio'));
-       modalTodas = new bootstrap.Modal(document.getElementById('modalTodasEvals'));
-    });
+    function establecerSaludoYFecha() {
+      const ahora = new Date();
+      const horas = ahora.getHours();
+      let saludo = "¡Buen día!";
+      if (horas >= 12 && horas < 20) saludo = "¡Buenas tardes!";
+      else if (horas >= 20 || horas < 6) saludo = "¡Buenas noches!";
+      document.getElementById('saludo-dia').innerText = saludo;
 
-    
-    
-
-    function abrirModalEnvio(id, curso, asig) {
-        document.getElementById('inEnvioId').value = id;
-        document.getElementById('lblEnvioCursoAsig').innerText = curso + ' - ' + asig;
-        document.getElementById('inEnvioLink').value = '';
-        document.getElementById('inEnvioFile').value = '';
-        document.getElementById('inEnvioInstr').value = '';
-        modalEnvio.show();
+      const opcionesFecha = { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' };
+      const fechaFormateada = ahora.toLocaleDateString('es-CL', opcionesFecha);
+      document.getElementById('fecha-hoy').innerHTML = `<i class="bi bi-calendar3"></i> ${fechaFormateada.charAt(0).toUpperCase() + fechaFormateada.slice(1)}`;
     }
-
-    async function enviarEvaluacionDoc() {
-        const id = document.getElementById('inEnvioId').value;
-        const link = document.getElementById('inEnvioLink').value;
-        const fileInput = document.getElementById('inEnvioFile');
-        const instr = document.getElementById('inEnvioInstr').value;
-
-        if (!link && fileInput.files.length === 0) {
-            return Swal.fire("Error", "Debes ingresar un enlace o adjuntar un archivo.", "error");
-        }
-
-        const formData = new FormData();
-        formData.append('link_doc', link);
-        formData.append('instrucciones', instr);
-        if (fileInput.files.length > 0) {
-            formData.append('archivo', fileInput.files[0]);
-        }
-
-        const btn = document.getElementById('btnEnviarEv');
-        btn.disabled = true;
-        btn.innerText = "Enviando correo...";
-
-        try {
-            const res = await fetch('/api/envios/enviar/' + id, {
-                method: 'POST',
-                body: formData
-            });
-            const data = await res.json();
-            
-            btn.disabled = false;
-            btn.innerText = "Enviar a Coordinación";
-
-            if (res.ok) {
-                modalEnvio.hide();
-                Swal.fire("Éxito", data.message, "success");
-                cargarDashboard(); 
-                if(modalTodas._isShown) abrirModalTodasEvals(); // refresh
-            } else {
-                Swal.fire("Error", data.error, "error");
-            }
-        } catch (e) {
-            btn.disabled = false;
-            btn.innerText = "Enviar a Coordinación";
-            Swal.fire("Error de red", e.message, "error");
-        }
-    }
-
-    let misEvalsCache = [];
-    async function abrirModalTodasEvals() {
-        modalTodas.show();
-        const cont = document.getElementById('todasEvals-container');
-        cont.innerHTML = '<p class="text-center mt-4">Cargando...</p>';
-        try {
-            let data = [];
-            const res = await fetch('/api/evaluaciones/mis-evaluaciones-todas');
-            if(res.ok) {
-                data = await res.json();
-            } else {
-                const d = await fetch('/api/dashboard/me').then(r=>r.json());
-                data = d.evaluaciones;
-            }
-            misEvalsCache = data;
-            
-            // Poblar selects
-            const cursos = [...new Set(data.map(e => e.curso))].sort();
-            const asigs = [...new Set(data.map(e => e.asignatura))].sort();
-            
-            document.getElementById('filtTodasCurso').innerHTML = '<option value="">Todos los cursos</option>' + cursos.map(c => `<option value="${c}">${c}</option>`).join('');
-            document.getElementById('filtTodasAsig').innerHTML = '<option value="">Todas las asignaturas</option>' + asigs.map(a => `<option value="${a}">${a}</option>`).join('');
-            
-            renderTodasEvalsFiltradas();
-        } catch(e) {
-            cont.innerHTML = '<p class="text-danger">Error cargando evaluaciones</p>';
-        }
-    }
-
-    function renderTodasEvalsFiltradas() {
-        const cont = document.getElementById('todasEvals-container');
-        const cFiltro = document.getElementById('filtTodasCurso').value;
-        const aFiltro = document.getElementById('filtTodasAsig').value;
-        
-        let filtradas = misEvalsCache;
-        if(cFiltro) filtradas = filtradas.filter(e => e.curso === cFiltro);
-        if(aFiltro) filtradas = filtradas.filter(e => e.asignatura === aFiltro);
-        
-        if(filtradas.length === 0) {
-            cont.innerHTML = '<p class="text-center text-muted">No hay evaluaciones que coincidan.</p>';
-            return;
-        }
-        
-        cont.innerHTML = filtradas.map(ev => 
-            "<div class='item-resumen p-2 border-bottom'><span class='fw-bold text-primary'>" + ev.curso + " - " + ev.asignatura + " <span class='badge bg-info ms-2'>" + ev.fecha + "</span></span>" + 
-            (ev.estado_doc === 'Enviada' ? "<span class='badge bg-success float-end mt-1'>Enviada</span>" : "<button class='btn btn-sm btn-outline-primary float-end p-1 ms-2' onclick='modalTodas.hide(); abrirModalEnvio(\"" + ev.id + "\", \"" + ev.curso + "\", \"" + ev.asignatura + "\")'><i class='bi bi-paperclip'></i> Enviar</button>") + 
-            "<br><span class='small text-muted'>Tipo: " + ev.tipo + "</span></div>"
-        ).join('');
-    }
-
 
     async function cargarDashboard() {
       try {
         const data = await fetch('/api/dashboard/me').then(r => r.json());
+        usuarioActual = data.usuario || {};
         
-        // Render Muro
-        const muro = document.getElementById('muro-container');
-        if(data.avisos.length === 0) {
-            muro.innerHTML = '<p class="text-muted text-center mt-4">No hay avisos recientes.</p>';
+        const rolNorm = (usuarioActual.rol || '').toLowerCase();
+        esAdmin = rolNorm.includes('admin') || rolNorm.includes('directiv');
+
+        // 1. Mostrar nombre de usuario
+        const nombreMostrar = usuarioActual.nombre || (usuarioActual.email ? usuarioActual.email.split('@')[0] : 'Docente');
+        document.getElementById('nombre-usuario').innerText = nombreMostrar;
+
+        // 2. Renderizar Rol Badge y botón de alternar rol
+        const badgeCont = document.getElementById('badge-rol-container');
+        const btnToggleRol = document.getElementById('btn-toggle-rol');
+        const btnToggleRolText = document.getElementById('btn-toggle-rol-text');
+
+        if (esAdmin) {
+          badgeCont.innerHTML = `<span class="role-badge admin"><i class="bi bi-shield-fill-check"></i> Vista Administrador</span>`;
+          document.getElementById('admin-tools-card').classList.remove('d-none');
+          document.getElementById('btnNuevoAviso').classList.remove('d-none');
         } else {
-            muro.innerHTML = '';
-            data.avisos.forEach(a => {
-                const isAlta = a.importancia === 'Alta';
-                let btnBorrar = esAdmin ? `<button class="btn btn-sm btn-link text-danger p-0 float-end" onclick="borrarAviso(${a.id})"><i class="bi bi-trash"></i></button>` : '';
-                muro.innerHTML += `
-                  <div class="aviso-card ${isAlta ? 'alta' : ''}">
-                    ${btnBorrar}
-                    <h6 class="fw-bold ${isAlta ? 'text-danger' : 'text-primary'} mb-1">${a.titulo}</h6>
-                    <div class="aviso-autor mb-2">${a.autor} &bull; <span class="aviso-fecha">${new Date(a.fecha_creacion).toLocaleString()}</span></div>
-                    <p class="m-0 text-dark small" style="white-space: pre-wrap;">${a.mensaje}</p>
-                  </div>
-                `;
-            });
+          badgeCont.innerHTML = `<span class="role-badge docente"><i class="bi bi-person-workspace"></i> Vista Profesor</span>`;
+          document.getElementById('admin-tools-card').classList.add('d-none');
+          document.getElementById('btnNuevoAviso').classList.add('d-none');
         }
 
-        // Render Reservas
-        const resCont = document.getElementById('reservas-container');
-        if(data.reservas.length > 0) {
-            resCont.innerHTML = '';
-            data.reservas.slice(0, 10).forEach(r => {
-                resCont.innerHTML += `
-                  <div class="item-resumen">
-                    <button class="btn btn-sm btn-outline-danger float-end ms-2 px-1 py-0" onclick="cancelarReserva('${r.id}')" title="Cancelar Reserva"><i class="bi bi-x"></i></button>
-                    <span class="badge bg-secondary float-end">${r.fecha}</span>
-                    <span class="fw-bold text-dark">${r.recurso}</span><br>
-                    <span class="small text-muted">Bloques: ${r.bloques}</span>
-                  </div>
-                `;
-            });
+        // Si el usuario tiene permisos duales (Admin + Profesor)
+        if (usuarioActual.puedeCambiarRol) {
+          btnToggleRol.classList.remove('d-none');
+          if (esAdmin) {
+            btnToggleRolText.innerText = "Cambiar a Vista Profesor";
+          } else {
+            btnToggleRolText.innerText = "Cambiar a Vista Administrador";
+          }
+        } else {
+          btnToggleRol.classList.add('d-none');
         }
 
-        // Render Evaluaciones (Requiere mapeo básico, podría estar vacío si no mapea exacto)
-        const evCont = document.getElementById('evals-container');
-        if(data.evaluaciones.length > 0) {
-            evCont.innerHTML = '';
-            data.evaluaciones.slice(0, 10).forEach(ev => {
-                evCont.innerHTML += `
-                  <div class="item-resumen">
-                    <span class="fw-bold text-primary">${ev.curso} - ${ev.asignatura} <span class='badge bg-info ms-2'>${ev.fecha}</span></span>
-  ${ev.estado_doc === 'Enviada' ? "<span class='badge bg-success float-end mt-1'>Enviada</span>" : `<button class='btn btn-sm btn-outline-primary float-end p-1 ms-2' onclick='abrirModalEnvio("${ev.id}", "${ev.curso}", "${ev.asignatura}")'><i class='bi bi-paperclip'></i> Enviar</button>`}<br>
-                    <span class="small text-muted">Malla registrada para: ${ev.profesor_nombre || ev.profesor}</span>
-                  </div>
-                `;
-            });
+        // 3. KPIs / Métricas
+        document.getElementById('kpi-evals').innerText = (data.stats && data.stats.misEvals !== undefined) ? data.stats.misEvals : (data.evaluaciones ? data.evaluaciones.length : 0);
+        document.getElementById('kpi-reservas').innerText = (data.stats && data.stats.misReservas !== undefined) ? data.stats.misReservas : (data.reservas ? data.reservas.length : 0);
+        document.getElementById('kpi-avisos').innerText = data.avisos ? data.avisos.length : 0;
+
+        if (esAdmin && data.stats && data.stats.colegioEvalsMes !== undefined) {
+          document.getElementById('kpi-extra-num').innerText = data.stats.colegioEvalsMes;
+          document.getElementById('kpi-extra-label').innerText = "Evals. Colegio (Mes)";
+          document.getElementById('kpi-extra-icon').innerHTML = `<i class="bi bi-mortarboard-fill"></i>`;
         } else {
-             evCont.innerHTML = '<p class="text-muted text-center mt-2 small">No hay evaluaciones mapeadas automáticamente a tu correo. Usa la pestaña Calendario Pruebas.</p>';
+          const pendientes = (data.stats && data.stats.evalsPendientesEnvio !== undefined) ? data.stats.evalsPendientesEnvio : 0;
+          document.getElementById('kpi-extra-num').innerText = pendientes;
+          document.getElementById('kpi-extra-label').innerText = "Temarios Pendientes";
+          document.getElementById('kpi-extra-icon').innerHTML = `<i class="bi bi-paperclip"></i>`;
         }
+
+        // 4. Render Muro de Comunicados
+        avisosCache = data.avisos || [];
+        renderMuroAvisos(avisosCache);
+
+        // 5. Render Evaluaciones
+        renderEvaluaciones(data.evaluaciones || []);
+
+        // 6. Render Reservas
+        renderReservas(data.reservas || []);
 
       } catch(e) {
-        console.error(e);
+        console.error("Error cargando dashboard:", e);
       }
     }
 
+    // Alternar rol desde el botón del Dashboard
+    async function toggleRolActivo() {
+      const nuevoRol = esAdmin ? 'Profesor' : (usuarioActual.rolOriginal || 'Administrador');
+      
+      // Si el parent tiene el método sincronizado, usarlo
+      if (window.parent && typeof window.parent.cambiarRolDesdeSidebar === 'function') {
+        window.parent.cambiarRolDesdeSidebar(nuevoRol);
+      } else {
+        try {
+          const res = await fetch('/api/auth/cambiar-rol', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ rol: nuevoRol })
+          });
+          if (res.ok) {
+            Swal.fire({
+              icon: 'success',
+              title: `Cambiado a Modo ${nuevoRol}`,
+              timer: 1500,
+              showConfirmButton: false
+            }).then(() => {
+              window.location.reload();
+            });
+          }
+        } catch(e) {
+          Swal.fire('Error', 'No se pudo alternar el rol', 'error');
+        }
+      }
+    }
+
+    // Render Muro de Avisos
+    function renderMuroAvisos(lista) {
+      const muro = document.getElementById('muro-container');
+      if (!lista || lista.length === 0) {
+        muro.innerHTML = `
+          <div class="empty-state">
+            <i class="bi bi-chat-square-dots"></i>
+            <h6 class="fw-bold text-dark mt-2">Todo está al día</h6>
+            <p class="small m-0">No hay comunicados publicados actualmente en el muro.</p>
+          </div>
+        `;
+        return;
+      }
+
+      muro.innerHTML = lista.map(a => {
+        const isAlta = a.importancia === 'Alta';
+        const autorNombre = a.autor || 'Administración';
+        const iniciales = autorNombre.split(' ').map(n => n[0]).filter(Boolean).slice(0, 2).join('').toUpperCase() || 'A';
+        const fechaFormateada = formatearFechaRelativa(a.fecha_creacion);
+
+        let btnBorrar = esAdmin ? `
+          <button class="btn btn-sm btn-link text-danger p-0 ms-2" onclick="borrarAviso(${a.id})" title="Eliminar comunicado">
+            <i class="bi bi-trash"></i>
+          </button>
+        ` : '';
+
+        return `
+          <div class="aviso-item ${isAlta ? 'urgente' : ''}">
+            <div class="d-flex justify-content-between align-items-start mb-2">
+              <div class="d-flex align-items-center gap-2">
+                <div class="aviso-avatar" style="${isAlta ? 'background:#fee2e2; color:#b91c1c;' : 'background:#e0f2fe; color:#0369a1;'}">
+                  ${iniciales}
+                </div>
+                <div>
+                  <div class="fw-bold text-dark small" style="line-height: 1.2;">${escapeHtml(autorNombre)}</div>
+                  <div class="text-muted" style="font-size: 0.75rem;">${fechaFormateada}</div>
+                </div>
+              </div>
+              <div class="d-flex align-items-center">
+                ${isAlta 
+                  ? `<span class="aviso-badge-alta"><i class="bi bi-exclamation-triangle-fill"></i> Urgente</span>` 
+                  : `<span class="aviso-badge-normal">Informativo</span>`}
+                ${btnBorrar}
+              </div>
+            </div>
+            <h6 class="fw-bold text-dark mb-1" style="font-size: 0.98rem;">${escapeHtml(a.titulo)}</h6>
+            <p class="aviso-mensaje">${escapeHtml(a.mensaje)}</p>
+          </div>
+        `;
+      }).join('');
+    }
+
+    function filtrarAvisos(tipo) {
+      if (tipo === 'alta') {
+        const filtrados = avisosCache.filter(a => a.importancia === 'Alta');
+        renderMuroAvisos(filtrados);
+      } else {
+        renderMuroAvisos(avisosCache);
+      }
+    }
+
+    // Render Evaluaciones
+    function renderEvaluaciones(evals) {
+      const cont = document.getElementById('evals-container');
+      if (!evals || evals.length === 0) {
+        cont.innerHTML = `
+          <div class="empty-state py-4">
+            <i class="bi bi-calendar2-check"></i>
+            <p class="small m-0">No tienes evaluaciones programadas próximamente.</p>
+          </div>
+        `;
+        return;
+      }
+
+      cont.innerHTML = evals.slice(0, 6).map(ev => {
+        const partesFecha = ev.fecha ? ev.fecha.split('-') : [];
+        let mesStr = '---';
+        let diaStr = '--';
+        if (partesFecha.length === 3) {
+          const meses = ['ENE','FEB','MAR','ABR','MAY','JUN','JUL','AGO','SEP','OCT','NOV','DIC'];
+          const mIdx = parseInt(partesFecha[1], 10) - 1;
+          mesStr = meses[mIdx] || '';
+          diaStr = partesFecha[2];
+        }
+
+        const isEnviada = ev.estado_doc === 'Enviada';
+
+        return `
+          <div class="agenda-item">
+            <div class="date-badge">
+              <span class="date-badge-month">${mesStr}</span>
+              <span class="date-badge-day">${diaStr}</span>
+            </div>
+            <div class="flex-grow-1 overflow-hidden">
+              <div class="fw-bold text-dark text-truncate" style="font-size: 0.9rem;">
+                ${escapeHtml(ev.curso)} &bull; ${escapeHtml(ev.asignatura)}
+              </div>
+              <div class="text-muted small text-truncate">Tipo: ${escapeHtml(ev.tipo || 'Evaluación')}</div>
+            </div>
+            <div class="flex-shrink-0 text-end">
+              ${isEnviada 
+                ? `<span class="badge bg-success-subtle text-success border border-success-subtle" style="font-size: 0.75rem;"><i class="bi bi-check2"></i> Enviada</span>` 
+                : `<button class="btn btn-sm btn-outline-primary py-1 px-2" style="font-size: 0.78rem;" onclick="abrirModalEnvio('${ev.id}', '${escapeAttr(ev.curso)}', '${escapeAttr(ev.asignatura)}')">
+                    <i class="bi bi-paperclip"></i> Enviar
+                   </button>`
+              }
+            </div>
+          </div>
+        `;
+      }).join('');
+    }
+
+    // Render Reservas
+    function renderReservas(reservas) {
+      const cont = document.getElementById('reservas-container');
+      if (!reservas || reservas.length === 0) {
+        cont.innerHTML = `
+          <div class="empty-state py-4">
+            <i class="bi bi-calendar-x"></i>
+            <p class="small m-0">No tienes reservas activas de recursos.</p>
+          </div>
+        `;
+        return;
+      }
+
+      cont.innerHTML = reservas.slice(0, 6).map(r => {
+        const partesFecha = r.fecha ? r.fecha.split('-') : [];
+        let mesStr = '---';
+        let diaStr = '--';
+        if (partesFecha.length === 3) {
+          const meses = ['ENE','FEB','MAR','ABR','MAY','JUN','JUL','AGO','SEP','OCT','NOV','DIC'];
+          const mIdx = parseInt(partesFecha[1], 10) - 1;
+          mesStr = meses[mIdx] || '';
+          diaStr = partesFecha[2];
+        }
+
+        return `
+          <div class="agenda-item">
+            <div class="date-badge" style="background:#f0fdf4; border-color:#dcfce7;">
+              <span class="date-badge-month text-success">${mesStr}</span>
+              <span class="date-badge-day text-success">${diaStr}</span>
+            </div>
+            <div class="flex-grow-1 overflow-hidden">
+              <div class="fw-bold text-dark text-truncate" style="font-size: 0.9rem;">
+                <i class="bi bi-laptop me-1 text-success"></i> ${escapeHtml(r.recurso)}
+              </div>
+              <div class="text-muted small">Bloques: <b>${escapeHtml(r.bloques || '')}</b></div>
+            </div>
+            <div class="flex-shrink-0">
+              <button class="btn btn-sm btn-outline-danger p-1" onclick="cancelarReserva('${r.id}')" title="Cancelar Reserva">
+                <i class="bi bi-x-lg"></i>
+              </button>
+            </div>
+          </div>
+        `;
+      }).join('');
+    }
+
+    // Publicar Aviso
     function abrirModalAviso() {
-        document.getElementById('inTitAviso').value = '';
-        document.getElementById('inMsgAviso').value = '';
-        modalAviso.show();
+      document.getElementById('inTitAviso').value = '';
+      document.getElementById('inMsgAviso').value = '';
+      document.getElementById('inImpAviso').value = 'Normal';
+      modalAvisoObj.show();
     }
 
     async function publicarAviso() {
-        const tit = document.getElementById('inTitAviso').value;
-        const msg = document.getElementById('inMsgAviso').value;
-        const imp = document.getElementById('inImpAviso').value;
-        if(!tit || !msg) return;
+      const tit = document.getElementById('inTitAviso').value.trim();
+      const msg = document.getElementById('inMsgAviso').value.trim();
+      const imp = document.getElementById('inImpAviso').value;
 
-        await fetch('/api/avisos', {
-            method: 'POST',
-            headers: {'Content-Type': 'application/json'},
-            body: JSON.stringify({titulo: tit, mensaje: msg, importancia: imp})
+      if (!tit || !msg) {
+        return Swal.fire("Campos requeridos", "Por favor ingresa un título y un mensaje.", "warning");
+      }
+
+      try {
+        const res = await fetch('/api/avisos', {
+          method: 'POST',
+          headers: {'Content-Type': 'application/json'},
+          body: JSON.stringify({ titulo: tit, mensaje: msg, importancia: imp })
         });
-        modalAviso.hide();
-        cargarDashboard();
+        if (res.ok) {
+          modalAvisoObj.hide();
+          Swal.fire({
+            icon: 'success',
+            title: 'Publicado',
+            text: 'El comunicado ya está visible en el muro.',
+            timer: 1800,
+            showConfirmButton: false
+          });
+          cargarDashboard();
+        } else {
+          const err = await res.json();
+          Swal.fire("Error", err.error || "No se pudo publicar", "error");
+        }
+      } catch(e) {
+        Swal.fire("Error", e.message, "error");
+      }
     }
 
     async function borrarAviso(id) {
-        if(confirm("¿Borrar este aviso?")) {
-            await fetch('/api/avisos/' + id, {method: 'DELETE'});
+      Swal.fire({
+        title: '¿Eliminar comunicado?',
+        text: 'Esta acción quitará el aviso del muro de todos los docentes.',
+        icon: 'warning',
+        showCancelButton: true,
+        confirmButtonText: 'Sí, Eliminar',
+        cancelButtonText: 'Cancelar',
+        confirmButtonColor: '#dc2626'
+      }).then(async (result) => {
+        if (result.isConfirmed) {
+          try {
+            await fetch('/api/avisos/' + id, { method: 'DELETE' });
             cargarDashboard();
+          } catch(e) {
+            Swal.fire('Error', e.message, 'error');
+          }
         }
+      });
     }
-  
-      async function cancelarReserva(id) {
-          Swal.fire({
-              title: '¿Cancelar Reserva?',
-              text: 'Si cancelas con 3 días o menos de anticipación, se generará un reporte automático enviado al encargado del recurso para mantener el registro.',
-              icon: 'warning',
-              showCancelButton: true,
-              confirmButtonText: 'Sí, Cancelar',
-              cancelButtonText: 'No',
-              confirmButtonColor: '#d33'
-          }).then(async (result) => {
-              if (result.isConfirmed) {
-                  try {
-                      const res = await fetch('/api/reservas/' + id, { method: 'DELETE' });
-                      if(res.ok) {
-                          Swal.fire('Cancelada', 'La reserva fue cancelada.', 'success');
-                          cargarDashboard();
-                      } else {
-                          Swal.fire('Error', 'No se pudo cancelar la reserva.', 'error');
-                      }
-                  } catch(e) {
-                      Swal.fire('Error', e.message, 'error');
-                  }
-              }
-          });
+
+    // Enviar Evaluación a Coordinación
+    function abrirModalEnvio(id, curso, asig) {
+      document.getElementById('inEnvioId').value = id;
+      document.getElementById('lblEnvioCursoAsig').innerText = `${curso} - ${asig}`;
+      document.getElementById('inEnvioLink').value = '';
+      document.getElementById('inEnvioFile').value = '';
+      document.getElementById('inEnvioInstr').value = '';
+      modalEnvioObj.show();
+    }
+
+    async function enviarEvaluacionDoc() {
+      const id = document.getElementById('inEnvioId').value;
+      const link = document.getElementById('inEnvioLink').value.trim();
+      const fileInput = document.getElementById('inEnvioFile');
+      const instr = document.getElementById('inEnvioInstr').value.trim();
+
+      if (!link && fileInput.files.length === 0) {
+        return Swal.fire("Faltan datos", "Debes ingresar un enlace de Google Docs o adjuntar un archivo.", "warning");
       }
-</script>
+
+      const formData = new FormData();
+      formData.append('link_doc', link);
+      formData.append('instrucciones', instr);
+      if (fileInput.files.length > 0) {
+        formData.append('archivo', fileInput.files[0]);
+      }
+
+      const btn = document.getElementById('btnEnviarEv');
+      btn.disabled = true;
+      btn.innerHTML = `<span class="spinner-border spinner-border-sm me-1"></span> Enviando correo...`;
+
+      try {
+        const res = await fetch('/api/envios/enviar/' + id, {
+          method: 'POST',
+          body: formData
+        });
+        const data = await res.json();
+        
+        btn.disabled = false;
+        btn.innerHTML = `<i class="bi bi-send-check-fill me-1"></i> Enviar a Coordinación`;
+
+        if (res.ok) {
+          modalEnvioObj.hide();
+          Swal.fire("Enviado con éxito", data.message, "success");
+          cargarDashboard();
+        } else {
+          Swal.fire("Error", data.error || "No se pudo enviar", "error");
+        }
+      } catch (e) {
+        btn.disabled = false;
+        btn.innerHTML = `<i class="bi bi-send-check-fill me-1"></i> Enviar a Coordinación`;
+        Swal.fire("Error de red", e.message, "error");
+      }
+    }
+
+    // Cancelar Reserva
+    async function cancelarReserva(id) {
+      Swal.fire({
+        title: '¿Cancelar Reserva?',
+        text: 'Si cancelas con 3 días o menos de anticipación, se generará un reporte automático para el encargado del recurso.',
+        icon: 'warning',
+        showCancelButton: true,
+        confirmButtonText: 'Sí, Cancelar',
+        cancelButtonText: 'Mantener',
+        confirmButtonColor: '#dc2626'
+      }).then(async (result) => {
+        if (result.isConfirmed) {
+          try {
+            const res = await fetch('/api/reservas/' + id, { method: 'DELETE' });
+            if (res.ok) {
+              Swal.fire('Cancelada', 'La reserva fue cancelada exitosamente.', 'success');
+              cargarDashboard();
+            } else {
+              Swal.fire('Error', 'No se pudo cancelar la reserva.', 'error');
+            }
+          } catch(e) {
+            Swal.fire('Error', e.message, 'error');
+          }
+        }
+      });
+    }
+
+    // Modal Todas las Evaluaciones
+    async function abrirModalTodasEvals() {
+      modalTodasObj.show();
+      const cont = document.getElementById('todasEvals-container');
+      cont.innerHTML = '<p class="text-center text-muted my-3">Cargando...</p>';
+      
+      try {
+        const res = await fetch('/api/evaluaciones/mis-evaluaciones-todas');
+        const data = res.ok ? await res.json() : [];
+        misEvalsCache = data;
+
+        const cursos = [...new Set(data.map(e => e.curso).filter(Boolean))].sort();
+        const asigs = [...new Set(data.map(e => e.asignatura).filter(Boolean))].sort();
+
+        document.getElementById('filtTodasCurso').innerHTML = '<option value="">Todos los cursos</option>' + cursos.map(c => `<option value="${escapeAttr(c)}">${escapeHtml(c)}</option>`).join('');
+        document.getElementById('filtTodasAsig').innerHTML = '<option value="">Todas las asignaturas</option>' + asigs.map(a => `<option value="${escapeAttr(a)}">${escapeHtml(a)}</option>`).join('');
+
+        renderTodasEvalsFiltradas();
+      } catch(e) {
+        cont.innerHTML = '<p class="text-danger text-center my-3">Error al cargar evaluaciones.</p>';
+      }
+    }
+
+    function renderTodasEvalsFiltradas() {
+      const cont = document.getElementById('todasEvals-container');
+      const cFiltro = document.getElementById('filtTodasCurso').value;
+      const aFiltro = document.getElementById('filtTodasAsig').value;
+
+      let filtradas = misEvalsCache;
+      if (cFiltro) filtradas = filtradas.filter(e => e.curso === cFiltro);
+      if (aFiltro) filtradas = filtradas.filter(e => e.asignatura === aFiltro);
+
+      if (filtradas.length === 0) {
+        cont.innerHTML = '<p class="text-center text-muted my-4">No hay evaluaciones que coincidan con los filtros seleccionados.</p>';
+        return;
+      }
+
+      cont.innerHTML = filtradas.map(ev => {
+        const isEnviada = ev.estado_doc === 'Enviada';
+        return `
+          <div class="d-flex justify-content-between align-items-center p-2 border-bottom">
+            <div>
+              <span class="fw-bold text-dark">${escapeHtml(ev.curso)} - ${escapeHtml(ev.asignatura)}</span>
+              <span class="badge bg-primary ms-2">${escapeHtml(ev.fecha)}</span>
+              <div class="small text-muted">Tipo: ${escapeHtml(ev.tipo || 'Evaluación')}</div>
+            </div>
+            <div>
+              ${isEnviada 
+                ? `<span class="badge bg-success-subtle text-success border border-success-subtle">Enviada</span>` 
+                : `<button class="btn btn-sm btn-outline-primary" onclick="modalTodasObj.hide(); abrirModalEnvio('${ev.id}', '${escapeAttr(ev.curso)}', '${escapeAttr(ev.asignatura)}')">
+                    <i class="bi bi-paperclip"></i> Enviar
+                   </button>`
+              }
+            </div>
+          </div>
+        `;
+      }).join('');
+    }
+
+    // Utilidades
+    function formatearFechaRelativa(fechaIso) {
+      if (!fechaIso) return '';
+      const fecha = new Date(fechaIso);
+      const ahora = new Date();
+      const diffMs = ahora - fecha;
+      const diffMin = Math.floor(diffMs / (1000 * 60));
+      const diffHoras = Math.floor(diffMs / (1000 * 60 * 60));
+      const diffDias = Math.floor(diffMs / (1000 * 60 * 60 * 24));
+
+      if (diffMin < 2) return 'Hace un momento';
+      if (diffMin < 60) return `Hace ${diffMin} min`;
+      if (diffHoras < 24) return `Hace ${diffHoras} hora${diffHoras > 1 ? 's' : ''}`;
+      if (diffDias === 1) return 'Ayer';
+      if (diffDias < 7) return `Hace ${diffDias} días`;
+      return fecha.toLocaleDateString('es-CL', { day: 'numeric', month: 'short' });
+    }
+
+    function escapeHtml(str) {
+      if (!str) return '';
+      return String(str).replace(/[&<>"']/g, m => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' })[m]);
+    }
+    function escapeAttr(str) {
+      if (!str) return '';
+      return String(str).replace(/"/g, '&quot;').replace(/'/g, '&#39;');
+    }
+  </script>
 </body>
 </html>

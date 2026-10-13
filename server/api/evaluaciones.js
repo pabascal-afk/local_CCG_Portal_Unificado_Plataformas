@@ -81,7 +81,17 @@ router.get('/cursos-publico', async (req, res) => {
 router.get('/mis-evaluaciones-todas', async (req, res) => {
     try {
         const userEmail = req.isAuthenticated() ? req.user.email : 'dev@colegio.edu';
-        const evals = await queryAll("SELECT * FROM evaluaciones WHERE profesor_email = ? ORDER BY fecha DESC", [userEmail]);
+        const userName = req.isAuthenticated() ? (req.user.nombre || '') : '';
+        const evals = await queryAll(`
+            SELECT * FROM evaluaciones 
+            WHERE (
+                LOWER(profesor_email) = LOWER(?) 
+                OR LOWER(profesor_nombre) = LOWER(?) 
+                OR (profesor_nombre IS NOT NULL AND LOWER(profesor_nombre) LIKE '%' || LOWER(?) || '%')
+                OR (profesor_email IS NOT NULL AND LOWER(profesor_email) LIKE '%' || LOWER(?) || '%')
+            )
+            ORDER BY fecha DESC
+        `, [userEmail, userEmail, userName, userName]);
         res.json(evals);
     } catch (e) {
         res.status(500).json({ error: e.message });
