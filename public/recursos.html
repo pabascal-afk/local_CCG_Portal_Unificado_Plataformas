@@ -247,13 +247,12 @@
   <div class="modal fade" id="modalReserva" tabindex="-1">
     <div class="modal-dialog modal-xl modal-dialog-centered modal-dialog-scrollable">
       <form id="formReserva" class="modal-content border-0 shadow-lg" onsubmit="guardarReserva(event)">
-        <div class="modal-header bg-primary text-white border-0 py-3">
-          <div class="d-flex align-items-center gap-2">
-            <i class="bi bi-calendar2-check fs-4"></i>
-            <div>
-              <h5 class="modal-title fw-bold mb-0" id="modalReservaTitulo">Nueva Reserva</h5>
-              <small class="opacity-75" id="modalReservaSubtitulo">Espacio institucional</small>
-            </div>
+        <div class="modal-header bg-primary text-white border-0 py-2 px-3 d-flex align-items-center justify-content-between">
+          <div class="d-flex align-items-center flex-wrap gap-1 fs-6">
+            <i class="bi bi-calendar2-check me-1 fs-5"></i>
+            <span class="fw-bold" id="modalReservaTitulo">Nueva Reserva</span>
+            <span class="opacity-75 fw-normal mx-1">|</span>
+            <span class="opacity-75 fw-normal" id="modalReservaSubtitulo">Espacio institucional</span>
           </div>
           <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
         </div>
@@ -1130,7 +1129,7 @@
     function abrirModalReserva(fecha = null, bloquesIniciales = []) {
       document.getElementById('formReserva').reset();
       document.getElementById('inReservaId').value = "";
-      document.getElementById('modalReservaTitulo').innerHTML = '<i class="bi bi-calendar2-plus"></i> Nueva Reserva';
+      document.getElementById('modalReservaTitulo').innerText = 'Nueva Reserva';
       document.getElementById('modalReservaSubtitulo').innerText = recursoActual || 'Espacio institucional';
       document.getElementById('btnGuardar').innerText = 'Guardar Reserva';
       document.getElementById('footerBtnEliminar').innerHTML = '';
@@ -1161,8 +1160,8 @@
       document.getElementById('inReservaId').value = reserva.id;
 
       const esPend = reserva.estado === 'Pendiente';
-      document.getElementById('modalReservaTitulo').innerHTML = '<i class="bi bi-pencil-square"></i> Editar Reserva ' + (esPend ? '<span class="badge bg-warning text-dark ms-2">Pendiente</span>' : '');
-      document.getElementById('modalReservaSubtitulo').innerText = 'Reservado por: ' + (reserva.profesor_email || 'Docente');
+      document.getElementById('modalReservaTitulo').innerHTML = 'Editar Reserva' + (esPend ? ' <span class="badge bg-warning text-dark ms-1">Pendiente</span>' : '');
+      document.getElementById('modalReservaSubtitulo').innerText = (reserva.recurso || recursoActual);
       document.getElementById('btnGuardar').innerText = 'Actualizar Reserva';
       document.getElementById('footerBtnEliminar').innerHTML = `<button type="button" class="btn btn-outline-danger fw-semibold" onclick="eliminarReservaDesdeModal('${reserva.id}')"><i class="bi bi-trash"></i> Cancelar Reserva</button>`;
 
@@ -1193,6 +1192,8 @@
       const recVal = document.getElementById('inRecurso').value;
       if (recVal) recursoActual = recVal;
       actualizarInfoResponsableRecurso(recVal);
+      const sub = document.getElementById('modalReservaSubtitulo');
+      if (sub && recVal) sub.innerText = recVal;
       onFechaCambiada();
     }
 
