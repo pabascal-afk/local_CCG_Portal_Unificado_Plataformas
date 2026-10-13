@@ -1,4 +1,4 @@
-﻿<!DOCTYPE html>
+<!DOCTYPE html>
 <html lang="es">
 <head>
   <meta charset="UTF-8">
@@ -18,6 +18,47 @@
     .fc-bg-event { opacity: 0.2; }
     .evento-disponible { border: 1px dashed #0f5132 !important; font-size: 0.8em; text-align: center; }
     .evento-disponible:hover { background-color: rgba(15, 81, 50, 0.1) !important; }
+    
+    .card-bloque {
+      border: 1px solid #dee2e6;
+      border-radius: 6px;
+      padding: 8px 10px;
+      background: #fff;
+      cursor: pointer;
+      transition: all 0.15s ease-in-out;
+      user-select: none;
+      text-align: center;
+    }
+    .card-bloque:hover:not(.disabled) {
+      border-color: #0d6efd;
+      background-color: #f8faff;
+      transform: translateY(-1px);
+    }
+    .card-bloque.selected {
+      background: #0d6efd !important;
+      border-color: #0d6efd !important;
+      color: #fff !important;
+      box-shadow: 0 2px 6px rgba(13,110,253,0.3);
+    }
+    .card-bloque.selected .text-muted, .card-bloque.selected small {
+      color: rgba(255,255,255,0.85) !important;
+    }
+    .card-bloque.occupied {
+      background: #f8f9fa;
+      border-color: #e9ecef;
+      color: #adb5bd;
+      cursor: not-allowed;
+      opacity: 0.75;
+    }
+    .card-bloque.blocked {
+      background: #fff8e6;
+      border-color: #ffe082;
+      color: #b78103;
+      cursor: not-allowed;
+    }
+    .cursor-pointer { cursor: pointer; }
+    .pill-clase-sug { cursor: pointer; transition: transform 0.1s; }
+    .pill-clase-sug:hover { transform: scale(1.03); }
   </style>
 </head>
 <body>
@@ -36,39 +77,104 @@
   </div>
 
   <div class="modal fade" id="modalReserva" tabindex="-1">
-    <div class="modal-dialog">
+    <div class="modal-dialog modal-lg">
       <div class="modal-content border-0 shadow-lg">
-        <div class="modal-header bg-primary text-white border-0">
-          <h5 class="modal-title fw-semibold">Nueva Reserva</h5>
+        <div class="modal-header bg-primary text-white border-0 py-3">
+          <div class="d-flex align-items-center gap-2">
+            <i class="bi bi-calendar2-check fs-4"></i>
+            <div>
+              <h5 class="modal-title fw-bold mb-0" id="modalReservaTitulo">Nueva Reserva</h5>
+              <small class="opacity-75" id="modalReservaSubtitulo">Espacio institucional</small>
+            </div>
+          </div>
           <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
         </div>
         <form id="formReserva" onsubmit="guardarReserva(event)">
-          <div class="modal-body bg-light">
-            <div class="mb-3">
-              <label class="fw-medium">Fecha</label>
-              <input type="date" id="inFecha" class="form-control" required onchange="cargarMisClases(); filtrarBloquesPorDia();">
+          <input type="hidden" id="inReservaId" value="">
+          <div class="modal-body bg-light p-4">
+            
+            <!-- Fila Superior: Fecha y Recurso -->
+            <div class="row g-3 mb-3">
+              <div class="col-md-6">
+                <label class="fw-bold text-dark small mb-1"><i class="bi bi-calendar3"></i> Fecha de Reserva</label>
+                <input type="date" id="inFecha" class="form-control" required onchange="onFechaCambiada()">
+                <div id="infoAnticipacion" class="form-text small text-muted"></div>
+              </div>
+              <div class="col-md-6">
+                <label class="fw-bold text-dark small mb-1"><i class="bi bi-building"></i> Recurso a Reservar</label>
+                <select class="form-select" id="inRecurso" required onchange="onRecursoCambio()"></select>
+                <div id="infoResponsableRecurso" class="form-text small text-muted"></div>
+              </div>
             </div>
-            <div class="mb-3">
-              <label class="fw-medium">Mis Clases de hoy (Para cruzar datos)</label>
-              <select class="form-select" id="inClaseCruzada" onchange="autocompletarDesdeClase()">
-                 <option value="">-- No vincular a una clase (Uso general) --</option>
-              </select>
+
+            <!-- Sugerencia inteligente: Mis Clases de hoy -->
+            <div id="boxMisClases" class="card mb-3 border-0 shadow-sm" style="display:none; background:#f0f7ff;">
+              <div class="card-body py-2 px-3">
+                <div class="d-flex align-items-center justify-content-between mb-1">
+                  <span class="small fw-bold text-primary"><i class="bi bi-magic"></i> Sugerencia: Clases según tu horario para este día</span>
+                  <small class="text-muted" style="font-size:0.75em;">Haz clic para autorrellenar</small>
+                </div>
+                <div id="pillsMisClases" class="d-flex flex-wrap gap-2"></div>
+              </div>
             </div>
-            <div class="mb-3">
-              <label class="fw-medium">Recurso a reservar</label>
-              <select class="form-select" id="inRecurso" required disabled></select>
+
+            <!-- Selector de Bloques con Cuadrícula Visual -->
+            <div class="card mb-3 border-0 shadow-sm">
+              <div class="card-body p-3">
+                <div class="d-flex flex-wrap justify-content-between align-items-center mb-2 pb-2 border-bottom">
+                  <div>
+                    <label class="fw-bold text-dark mb-0"><i class="bi bi-clock"></i> Selección de Bloques</label>
+                    <small class="text-muted d-block" style="font-size:0.8em;">Haz clic directamente sobre los bloques que necesitas</small>
+                  </div>
+                  <div class="form-check form-switch mb-0" id="switchAgrupadosContainer">
+                    <input class="form-check-input" type="checkbox" id="chkAgruparBloques" checked onchange="onToggleAgrupacion()">
+                    <label class="form-check-label small text-muted" for="chkAgruparBloques">Vincular bloques dobles</label>
+                  </div>
+                </div>
+
+                <!-- Grid dinámico de bloques -->
+                <div id="gridBloquesContenedor" class="d-grid gap-2" style="grid-template-columns: repeat(auto-fill, minmax(130px, 1fr));">
+                  <div class="text-muted small py-3 text-center">Cargando bloques disponibles...</div>
+                </div>
+
+                <!-- Resumen y estado de bloques seleccionados -->
+                <div class="d-flex justify-content-between align-items-center mt-3 pt-2 border-top">
+                  <div id="resumenBloquesSel" class="small fw-semibold text-secondary">Ningún bloque seleccionado</div>
+                  <button type="button" class="btn btn-sm btn-link text-decoration-none p-0 text-muted" onclick="deseleccionarTodosBloques()">Limpiar selección</button>
+                </div>
+              </div>
             </div>
-            <div class="mb-3">
-              <label class="fw-medium">Bloques (Presiona Ctrl para múltiples y Shift para aislar un bloque de 45 mins)</label>
-              <select class="form-select" id="inBloques" multiple size="5" required onchange="agruparBloques()"></select>
+
+            <!-- Banner Alerta de Petición Especial -->
+            <div id="alertaPeticionEspecial" class="alert alert-warning border-warning shadow-sm py-2 px-3 mb-3" style="display: none;">
+              <div class="d-flex align-items-start gap-2">
+                <i class="bi bi-exclamation-triangle-fill fs-5 text-warning flex-shrink-0 mt-1"></i>
+                <div>
+                  <b class="d-block" style="font-size:0.95em;">Petición Especial (Cupo semanal superado)</b>
+                  <span class="small" id="textoAlertaEspecial">Esta reserva supera el cupo semanal configurado para este recurso. Se registrará como <b>Pendiente</b> y se enviará un correo automático al encargado para su confirmación.</span>
+                </div>
+              </div>
             </div>
-            <div class="mb-3">
-              <label class="fw-medium">Motivo / Actividad</label>
-              <input type="text" id="inMotivo" class="form-control" placeholder="Ej: Clase de Tecnología - 1A" required>
+
+            <!-- Motivo de la Reserva -->
+            <div class="mb-2">
+              <label class="fw-bold text-dark small mb-1"><i class="bi bi-card-text"></i> Motivo / Actividad</label>
+              <input type="text" id="inMotivo" class="form-control" placeholder="Ej: Clase de Tecnología - 1° Medio A" required>
+              <div class="d-flex gap-1 mt-2">
+                <span class="badge bg-white text-secondary border cursor-pointer" onclick="sugerirMotivo('Clase regular')">+ Clase regular</span>
+                <span class="badge bg-white text-secondary border cursor-pointer" onclick="sugerirMotivo('Evaluación')">+ Evaluación</span>
+                <span class="badge bg-white text-secondary border cursor-pointer" onclick="sugerirMotivo('Taller / Proyecto')">+ Taller / Proyecto</span>
+                <span class="badge bg-white text-secondary border cursor-pointer" onclick="sugerirMotivo('Reunión / Capacitación')">+ Reunión</span>
+              </div>
             </div>
+
           </div>
-          <div class="modal-footer border-0 bg-light">
-            <button type="submit" class="btn btn-primary w-100 fw-semibold" id="btnGuardar">Guardar Reserva</button>
+          <div class="modal-footer border-0 bg-light d-flex justify-content-between p-3">
+            <div id="footerBtnEliminar"></div>
+            <div class="d-flex gap-2">
+              <button type="button" class="btn btn-outline-secondary fw-semibold" data-bs-dismiss="modal">Cancelar</button>
+              <button type="submit" class="btn btn-primary fw-semibold px-4" id="btnGuardar">Guardar Reserva</button>
+            </div>
           </div>
         </form>
       </div>
@@ -107,7 +213,45 @@
             <input type="text" id="bloqMotivo" class="form-control form-control-sm" placeholder="Motivo">
             <button class="btn btn-sm btn-danger fw-bold" onclick="agregarBloqueoDisp()">Bloquear</button>
           </div>
-          <ul id="listaBloqueosFechas" class="list-group list-group-sm mb-3"></ul>
+          <h6 class="mt-4 text-primary"><i class="bi bi-shield-check"></i> Políticas y Límites de Agendamiento</h6>
+          <p class="text-muted small mb-2">Define las restricciones de reserva aplicables para los docentes en este recurso.</p>
+          <div class="card p-3 bg-light border-0 mb-3">
+            <div class="row g-2">
+              <div class="col-md-6">
+                <label class="form-label small fw-bold mb-1">Anticipación Mínima (Días)</label>
+                <input type="number" id="reglaMinDias" class="form-control form-control-sm" placeholder="Ej: 3 (0 = sin mínimo)" min="0" value="0">
+                <small class="text-muted" style="font-size:0.75em;">No permite agendar con menos de estos días de antelación.</small>
+              </div>
+              <div class="col-md-6">
+                <label class="form-label small fw-bold mb-1">Anticipación Máxima (Días)</label>
+                <input type="number" id="reglaMaxDias" class="form-control form-control-sm" placeholder="Ej: 30 (1 mes)" min="0" value="30">
+                <small class="text-muted" style="font-size:0.75em;">Horizonte futuro máximo permitido para reservas.</small>
+              </div>
+              <div class="col-md-6 mt-2">
+                <label class="form-label small fw-bold mb-1">Máx. Bloques Consecutivos</label>
+                <input type="number" id="reglaMaxConsec" class="form-control form-control-sm" placeholder="Ej: 4 (2 clases de 90 min)" min="1" value="4">
+                <small class="text-muted" style="font-size:0.75em;">Límite continuo por reserva.</small>
+              </div>
+              <div class="col-md-6 mt-2">
+                <label class="form-label small fw-bold mb-1">Máx. Bloques por Semana</label>
+                <input type="number" id="reglaMaxSemana" class="form-control form-control-sm" placeholder="Ej: 5" min="1" value="5">
+                <small class="text-muted" style="font-size:0.75em;">Cupo semanal por docente en este recurso.</small>
+              </div>
+              <div class="col-md-6 mt-2">
+                <label class="form-label small fw-bold mb-1">Máx. Bloques por Día</label>
+                <input type="number" id="reglaMaxDia" class="form-control form-control-sm" placeholder="Ej: 2" min="1" value="2">
+                <small class="text-muted" style="font-size:0.75em;">Límite diario por docente.</small>
+              </div>
+              <div class="col-md-6 mt-2 d-flex align-items-center">
+                <div class="form-check mt-3">
+                  <input class="form-check-input" type="checkbox" id="reglaPermitirExcepcion" checked>
+                  <label class="form-check-label small fw-semibold" for="reglaPermitirExcepcion">
+                    Permitir petición especial sujeta a confirmación por correo si supera cupo semanal
+                  </label>
+                </div>
+              </div>
+            </div>
+          </div>
 
           <button class="btn btn-primary w-100 mt-4" onclick="guardarDisponibilidad()">Guardar Configuración</button>
           <button class="btn btn-outline-danger w-100 mt-2 fw-bold" onclick="eliminarRecursoDefinitivo()"><i class="bi bi-trash"></i> Eliminar este Recurso</button>
@@ -258,44 +402,26 @@
           }
 
           // Calendario de recursos (TimeGrid)
-          abrirModalReserva(fechaStr);
-          
-          // Buscar en qué bloque hizo click basándonos en la hora (ej: 08:15:00)
           const hrClicked = d.getHours();
           const minClicked = d.getMinutes();
           const totalMinsClicked = hrClicked * 60 + minClicked;
 
-          setTimeout(() => {
-              const sel = document.getElementById('inBloques');
-              if(!sel) return;
-              
-              for(let i=0; i<sel.options.length; i++) {
-                  const val = parseInt(sel.options[i].value);
-                  // Usamos la misma logica de hrString2 para extraer las horas
-                  const rActual = recursosCache.find(x => x.nombre === recursoActual);
-                  const hrString = (rActual && rActual.horarios_exactos) ? rActual.horarios_exactos : '08:00,08:45,09:30,10:15,11:00,11:45,12:30,13:15,14:00,14:45,15:30,16:15';
-                  const arr = hrString.split(',');
-                  
-                  let blockStartMins = 0;
-                  if(val >= 1 && val <= arr.length) {
-                      const pts = arr[val-1].split(':');
-                      blockStartMins = parseInt(pts[0]) * 60 + parseInt(pts[1] || '0');
-                  } else {
-                      blockStartMins = 8 * 60 + (val - 1) * 45;
-                  }
+          const rActual = recursosCache.find(x => x.nombre === recursoActual);
+          const hrString = (rActual && rActual.horarios_exactos) ? rActual.horarios_exactos : '08:00,08:45,09:30,10:15,11:00,11:45,12:30,13:15,14:00,14:45,15:30,16:15';
+          const arr = hrString.split(',');
+          let bloqueDetectado = null;
 
-                  const blockEndMins = blockStartMins + 45;
-                  
-                  if (totalMinsClicked >= blockStartMins && totalMinsClicked < blockEndMins) {
-                      if (!sel.options[i].disabled) {
-                          sel.options[i].selected = true;
-                      }
-                  } else {
-                      sel.options[i].selected = false;
-                  }
+          for(let b=1; b<=arr.length; b++) {
+              let pts = arr[b-1].split(':');
+              let bStart = parseInt(pts[0]) * 60 + parseInt(pts[1] || '0');
+              let bEnd = bStart + 45;
+              if (totalMinsClicked >= bStart && totalMinsClicked < bEnd) {
+                  bloqueDetectado = b;
+                  break;
               }
-              if (!info.jsEvent || !info.jsEvent.shiftKey) { agruparBloques(); }
-          }, 200);
+          }
+
+          abrirModalReserva(fechaStr, bloqueDetectado ? [bloqueDetectado] : []);
         },
         eventClick: function(info) {
           if (info.event.display === 'background') return;
@@ -303,35 +429,15 @@
           if (info.event.extendedProps.esDisponible) {
               const d = info.event.start;
               const fechaStr = new Date(d.getTime() - (d.getTimezoneOffset() * 60000)).toISOString().split('T')[0];
-              abrirModalReserva(fechaStr);
-              setTimeout(() => {
-                  const sel = document.getElementById('inBloques');
-                  for(let i=0; i<sel.options.length; i++) {
-                      if (parseInt(sel.options[i].value) === info.event.extendedProps.bloque) {
-                          sel.options[i].selected = true;
-                      } else {
-                          sel.options[i].selected = false;
-                      }
-                  }
-                  if (!info.jsEvent || !info.jsEvent.shiftKey) { agruparBloques(); }
-                }, 200);
-                return;
-            }
+              abrirModalReserva(fechaStr, [info.event.extendedProps.bloque]);
+              return;
+          }
 
           if (info.event.extendedProps.esReserva) {
-              Swal.fire({
-                title: info.event.title,
-                html: `<b>Reservado por:</b> ${info.event.extendedProps.profesor}<br><b>Motivo:</b> ${info.event.extendedProps.motivo}`,
-                icon: 'info',
-                showCancelButton: true,
-                confirmButtonText: 'Eliminar Reserva',
-                cancelButtonText: 'Cerrar',
-                confirmButtonColor: '#d33'
-              }).then((result) => {
-                if (result.isConfirmed) {
-                  eliminarReserva(info.event.id);
-                }
-              });
+              const resObj = todasReservas.find(r => r.id === info.event.id);
+              if (resObj) {
+                  abrirModalEditarReserva(resObj);
+              }
           }
         }
       });
@@ -536,122 +642,350 @@
          const hObjStart = getHoras(primerB);
          const hObjEnd = getHoras(ultimoB);
 
+         const esPend = r.estado === 'Pendiente';
          eventos.push({
              id: r.id,
-             title: `B:${r.bloques} - ${r.motivo}`,
+             title: `${esPend ? '⏳ [PENDIENTE] ' : ''}B:${r.bloques} - ${r.motivo}`,
              start: `${r.fecha}T${hObjStart.start}`,
              end: `${r.fecha}T${hObjEnd.end}`,
              allDay: false,
-             extendedProps: { profesor: r.profesor_email, motivo: r.motivo, esReserva: true },
-             color: '#0d6efd'
+             extendedProps: { profesor: r.profesor_email, motivo: r.motivo, esReserva: true, estado: r.estado },
+             color: esPend ? '#f39c12' : '#0d6efd',
+             borderColor: esPend ? '#d35400' : '#0d6efd'
          });
       });
 
       return eventos;
     }
     
-    function abrirModalReserva(fecha = null) {
+    let bloquesSeleccionados = new Set();
+
+    function abrirModalReserva(fecha = null, bloquesIniciales = []) {
       document.getElementById('formReserva').reset();
-      if(fecha) {
-         document.getElementById('inFecha').value = fecha;
+      document.getElementById('inReservaId').value = "";
+      document.getElementById('modalReservaTitulo').innerHTML = '<i class="bi bi-calendar2-plus"></i> Nueva Reserva';
+      document.getElementById('modalReservaSubtitulo').innerText = recursoActual || 'Espacio institucional';
+      document.getElementById('btnGuardar').innerText = 'Guardar Reserva';
+      document.getElementById('footerBtnEliminar').innerHTML = '';
+
+      if (fecha) {
+        document.getElementById('inFecha').value = fecha;
       } else {
-         document.getElementById('inFecha').value = new Date().toISOString().split('T')[0];
+        document.getElementById('inFecha').value = new Date().toISOString().split('T')[0];
       }
-      cargarMisClases();
-      filtrarBloquesPorDia();
-      if (recursoActual) document.getElementById('inRecurso').value = recursoActual;
+
+      if (recursoActual) {
+        document.getElementById('inRecurso').value = recursoActual;
+      }
+
+      bloquesSeleccionados.clear();
+      (bloquesIniciales || []).forEach(b => bloquesSeleccionados.add(parseInt(b)));
+
+      onFechaCambiada();
       modalRes.show();
     }
-    
-    function filtrarBloquesPorDia() {
-       const fecha = document.getElementById('inFecha').value;
-       if(!fecha || !recursoActual) return;
-       
-       const r = recursosCache.find(x => x.nombre === recursoActual);
-       let disp = null;
-       if(r && r.disponibilidad) {
-          try { disp = JSON.parse(r.disponibilidad); } catch(e){}
-       }
-       
-       const dObj = new Date(fecha + "T12:00:00");
-       const dayIdx = dObj.getDay();
-       
-       const selectBloques = document.getElementById('inBloques');
-       selectBloques.innerHTML = '';
-       
-       if (dayIdx === 0 || dayIdx === 6) {
-           selectBloques.innerHTML = '<option disabled>Fin de semana</option>';
-           return;
-       }
 
-       if (r && r.bloqueos_fechas) {
-           let arr = [];
-           try { arr = JSON.parse(r.bloqueos_fechas); } catch(e){}
-           for(let bloq of arr) {
-               if (fecha >= bloq.inicio && fecha <= bloq.fin) {
-                   selectBloques.innerHTML = `<option disabled>BLOQUEADO: ${bloq.motivo}</option>`;
-                   return;
-               }
-           }
-       }
-       
-       
-         const hrString2 = (r && r.horarios_exactos) ? r.horarios_exactos : '08:00,08:45,09:30,10:15,11:00,11:45,12:30,13:15,14:00,14:45,15:30,16:15';
-         const arrHoras2 = hrString2.split(',');
-         const diaStr = diasSemana[dayIdx - 1];
-         for(let b=1; b<=arrHoras2.length; b++) {
-          let permitido = true;
-          if (disp && disp[diaStr] && !disp[diaStr].includes(b)) {
-             permitido = false;
-          }
-          
-          // Verificar si ya está tomado
-          const yaTomado = todasReservas.some(res => {
-              return res.recurso === recursoActual && res.fecha === fecha && res.bloques.split(',').includes(b.toString());
-          });
+    function abrirModalEditarReserva(reserva) {
+      document.getElementById('formReserva').reset();
+      document.getElementById('inReservaId').value = reserva.id;
 
-          const hrString2 = (r && r.horarios_exactos) ? r.horarios_exactos : '08:00,08:45,09:30,10:15,11:00,11:45,12:30,13:15,14:00,14:45,15:30,16:15';
-          const arrHoras2 = hrString2.split(',');
-          const startHM = arrHoras2[b-1] || '00:00';
-          if (permitido && !yaTomado) {
-              selectBloques.innerHTML += `<option value="${b}">B${b} (${startHM})</option>`;
-          }
-       }
+      const esPend = reserva.estado === 'Pendiente';
+      document.getElementById('modalReservaTitulo').innerHTML = '<i class="bi bi-pencil-square"></i> Editar Reserva ' + (esPend ? '<span class="badge bg-warning text-dark ms-2">Pendiente</span>' : '');
+      document.getElementById('modalReservaSubtitulo').innerText = 'Reservado por: ' + (reserva.profesor_email || 'Docente');
+      document.getElementById('btnGuardar').innerText = 'Actualizar Reserva';
+      document.getElementById('footerBtnEliminar').innerHTML = `<button type="button" class="btn btn-outline-danger fw-semibold" onclick="eliminarReservaDesdeModal('${reserva.id}')"><i class="bi bi-trash"></i> Cancelar Reserva</button>`;
+
+      document.getElementById('inFecha').value = reserva.fecha;
+      document.getElementById('inRecurso').value = reserva.recurso;
+      document.getElementById('inMotivo').value = reserva.motivo || '';
+
+      bloquesSeleccionados.clear();
+      if (reserva.bloques) {
+        reserva.bloques.split(',').forEach(b => bloquesSeleccionados.add(parseInt(b)));
+      }
+
+      onFechaCambiada();
+      modalRes.show();
     }
 
-    // Nueva función para agrupar bloques automáticamente
-    let _evitandoBucle = false;
-    function agruparBloques() {
-         if (isShiftPressed) return;
-         if (_evitandoBucle) return;
-       const r = recursosCache.find(x => x.nombre === recursoActual);
-       if(!r || !r.bloques_agrupados) return;
-       
-       let grupos = [];
-       try { grupos = JSON.parse(r.bloques_agrupados); } catch(e){}
-       if (grupos.length === 0) return;
-
-       _evitandoBucle = true;
-       const selectBloques = document.getElementById('inBloques');
-       const seleccionadosOriginales = Array.from(selectBloques.selectedOptions).map(opt => parseInt(opt.value));
-       let nuevosSeleccionados = new Set(seleccionadosOriginales);
-
-       seleccionadosOriginales.forEach(b => {
-           grupos.forEach(grupo => {
-               if (grupo.includes(b)) {
-                   grupo.forEach(miembro => nuevosSeleccionados.add(miembro));
-               }
-           });
-       });
-
-       for(let i=0; i<selectBloques.options.length; i++) {
-           const optVal = parseInt(selectBloques.options[i].value);
-           if (nuevosSeleccionados.has(optVal) && !selectBloques.options[i].disabled) {
-               selectBloques.options[i].selected = true;
-           }
-       }
-       _evitandoBucle = false;
+    function eliminarReservaDesdeModal(id) {
+      if (modalRes) modalRes.hide();
+      eliminarReserva(id);
     }
+
+    function onRecursoCambio() {
+      const recVal = document.getElementById('inRecurso').value;
+      if (recVal) recursoActual = recVal;
+      const r = recursosCache.find(x => x.nombre === recVal);
+      const infoResp = document.getElementById('infoResponsableRecurso');
+      if (r && r.responsable) {
+        infoResp.innerHTML = `<i class="bi bi-person-badge"></i> Encargado: <span class="text-primary">${r.responsable}</span>`;
+      } else {
+        infoResp.innerHTML = '';
+      }
+      onFechaCambiada();
+    }
+
+    function onFechaCambiada() {
+      const fecha = document.getElementById('inFecha').value;
+      const recNombre = document.getElementById('inRecurso').value || recursoActual;
+      const r = recursosCache.find(x => x.nombre === recNombre);
+
+      let reglas = {};
+      if (r && r.reglas_reserva) {
+        try { reglas = JSON.parse(r.reglas_reserva); } catch(e){}
+      }
+
+      const infoAnticipacion = document.getElementById('infoAnticipacion');
+      let minTxt = (reglas.anticipacion_min_dias && parseInt(reglas.anticipacion_min_dias) > 0) ? `Mínimo ${reglas.anticipacion_min_dias} día(s) de anticipación` : '';
+      let maxTxt = (reglas.anticipacion_max_dias && parseInt(reglas.anticipacion_max_dias) > 0) ? `Máximo ${reglas.anticipacion_max_dias} días a futuro` : '';
+      let tips = [minTxt, maxTxt].filter(Boolean).join(' • ');
+      infoAnticipacion.innerText = tips ? `Regla: ${tips}` : '';
+
+      cargarMisClases();
+      renderizarGridBloques();
+    }
+
+    function onToggleAgrupacion() {
+      renderizarGridBloques();
+    }
+
+    function deseleccionarTodosBloques() {
+      bloquesSeleccionados.clear();
+      renderizarGridBloques();
+    }
+
+    function sugerirMotivo(texto) {
+      const input = document.getElementById('inMotivo');
+      if (!input.value) {
+        input.value = texto;
+      } else {
+        input.value += ` - ${texto}`;
+      }
+      input.focus();
+    }
+
+    function renderizarGridBloques() {
+      const fecha = document.getElementById('inFecha').value;
+      const recNombre = document.getElementById('inRecurso').value || recursoActual;
+      const idEdicion = document.getElementById('inReservaId').value;
+      const grid = document.getElementById('gridBloquesContenedor');
+      grid.innerHTML = '';
+
+      if (!fecha || !recNombre) {
+        grid.innerHTML = '<div class="text-muted small py-3 text-center w-100">Selecciona fecha y recurso para ver disponibilidad.</div>';
+        actualizarResumenYAlertas();
+        return;
+      }
+
+      const r = recursosCache.find(x => x.nombre === recNombre);
+      if (!r) {
+        grid.innerHTML = '<div class="text-danger small py-3 text-center w-100">Recurso no configurado.</div>';
+        return;
+      }
+
+      const dObj = new Date(fecha + "T12:00:00");
+      const dayIdx = dObj.getDay();
+
+      if (dayIdx === 0 || dayIdx === 6) {
+        grid.innerHTML = '<div class="alert alert-secondary text-center small mb-0 w-100">Fines de semana no habilitados para reservas.</div>';
+        actualizarResumenYAlertas();
+        return;
+      }
+
+      if (r.bloqueos_fechas) {
+        let arrBloq = [];
+        try { arrBloq = JSON.parse(r.bloqueos_fechas); } catch(e){}
+        for (let bloq of arrBloq) {
+          if (fecha >= bloq.inicio && fecha <= bloq.fin) {
+            grid.innerHTML = `<div class="alert alert-danger text-center small mb-0 w-100"><i class="bi bi-slash-circle"></i> Recurso Inhabilitado: ${bloq.motivo}</div>`;
+            actualizarResumenYAlertas();
+            return;
+          }
+        }
+      }
+
+      const hrString = r.horarios_exactos || '08:00,08:45,09:30,10:15,11:00,11:45,12:30,13:15,14:00,14:45,15:30,16:15';
+      const arrHoras = hrString.split(',');
+      const totalBloques = arrHoras.length;
+
+      let disp = null;
+      if (r.disponibilidad) {
+        try { disp = JSON.parse(r.disponibilidad); } catch(e){}
+      }
+      const diaStr = diasSemana[dayIdx - 1];
+
+      let bloqueosInst = new Set();
+      eventosInstitucionales.forEach(evInst => {
+        if (evInst.extendedProps.recurso && evInst.extendedProps.recurso !== r.nombre) return;
+        if (evInst.start === fecha) {
+          const evtBks = evInst.extendedProps.bloques;
+          if (evtBks === 'TODOS' || !evtBks) {
+            for (let b = 1; b <= totalBloques; b++) bloqueosInst.add(b);
+          } else {
+            evtBks.split(',').map(Number).forEach(b => bloqueosInst.add(b));
+          }
+        }
+      });
+
+      const reservasOcupadas = todasReservas.filter(res => 
+        res.recurso === recNombre && 
+        res.fecha === fecha && 
+        res.id !== idEdicion && 
+        res.estado !== 'Cancelada' && 
+        res.estado !== 'Rechazada'
+      );
+
+      const mapaOcupados = {};
+      reservasOcupadas.forEach(res => {
+        (res.bloques ? res.bloques.split(',') : []).forEach(b => {
+          mapaOcupados[parseInt(b)] = res.profesor_email || 'Docente';
+        });
+      });
+
+      for (let b = 1; b <= totalBloques; b++) {
+        const startHM = arrHoras[b - 1] || '00:00';
+        let bEndHM = '';
+        if (arrHoras[b]) {
+          bEndHM = arrHoras[b];
+        } else {
+          let pts = startHM.split(':');
+          let m = parseInt(pts[0]) * 60 + parseInt(pts[1] || '0') + 45;
+          bEndHM = `${String(Math.floor(m / 60)).padStart(2,'0')}:${String(m % 60).padStart(2,'0')}`;
+        }
+
+        let permitidoSemanal = true;
+        if (disp && disp[diaStr] && !disp[diaStr].includes(b)) {
+          permitidoSemanal = false;
+        }
+
+        const bloqueadoInst = bloqueosInst.has(b);
+        const ocupadoPor = mapaOcupados[b];
+        const isSelected = bloquesSeleccionados.has(b);
+
+        const card = document.createElement('div');
+        card.className = 'card-bloque';
+
+        if (!permitidoSemanal) {
+          card.classList.add('blocked', 'disabled');
+          card.innerHTML = `<span class="fw-bold d-block">B${b}</span><small class="d-block text-muted">${startHM} - ${bEndHM}</small><small class="badge bg-secondary mt-1">No disp.</small>`;
+        } else if (bloqueadoInst) {
+          card.classList.add('blocked', 'disabled');
+          card.innerHTML = `<span class="fw-bold d-block">B${b}</span><small class="d-block text-muted">${startHM} - ${bEndHM}</small><small class="badge bg-warning text-dark mt-1">Acto escolar</small>`;
+        } else if (ocupadoPor) {
+          card.classList.add('occupied', 'disabled');
+          card.innerHTML = `<span class="fw-bold d-block">B${b}</span><small class="d-block">${startHM} - ${bEndHM}</small><small class="badge bg-danger-subtle text-danger mt-1 text-truncate d-block" title="${ocupadoPor}">Tomado</small>`;
+        } else {
+          if (isSelected) card.classList.add('selected');
+          card.innerHTML = `<span class="fw-bold d-block">${isSelected ? '<i class="bi bi-check-circle-fill me-1"></i>' : ''}B${b}</span><small class="d-block ${isSelected ? '' : 'text-muted'}">${startHM} - ${bEndHM}</small><span class="badge ${isSelected ? 'bg-white text-primary' : 'bg-success-subtle text-success'} mt-1">${isSelected ? 'Seleccionado' : 'Disponible'}</span>`;
+          card.onclick = () => toggleBloque(b, r);
+        }
+
+        grid.appendChild(card);
+      }
+
+      actualizarResumenYAlertas();
+    }
+
+    function toggleBloque(b, recursoObj) {
+      const r = recursoObj || recursosCache.find(x => x.nombre === (document.getElementById('inRecurso').value || recursoActual));
+      const agruparSwitch = document.getElementById('chkAgruparBloques').checked;
+
+      let pareja = [];
+      if (agruparSwitch && r && r.bloques_agrupados) {
+        try {
+          const grupos = JSON.parse(r.bloques_agrupados);
+          for (let g of grupos) {
+            if (g.includes(b)) {
+              pareja = g;
+              break;
+            }
+          }
+        } catch(e){}
+      }
+
+      if (bloquesSeleccionados.has(b)) {
+        bloquesSeleccionados.delete(b);
+        if (pareja.length > 0) {
+          pareja.forEach(p => bloquesSeleccionados.delete(p));
+        }
+      } else {
+        bloquesSeleccionados.add(b);
+        if (pareja.length > 0) {
+          pareja.forEach(p => bloquesSeleccionados.add(p));
+        }
+      }
+
+      renderizarGridBloques();
+    }
+
+    function actualizarResumenYAlertas() {
+      const resumen = document.getElementById('resumenBloquesSel');
+      const alerta = document.getElementById('alertaPeticionEspecial');
+      const textoAlerta = document.getElementById('textoAlertaEspecial');
+
+      const seleccionados = Array.from(bloquesSeleccionados).sort((a,b)=>a-b);
+      if (seleccionados.length === 0) {
+        resumen.innerText = 'Ningún bloque seleccionado';
+        alerta.style.display = 'none';
+        return;
+      }
+
+      resumen.innerHTML = `<span class="badge bg-primary fs-6 me-1">${seleccionados.length}</span> bloque(s) seleccionado(s): <b>B${seleccionados.join(', B')}</b>`;
+
+      const recNombre = document.getElementById('inRecurso').value || recursoActual;
+      const fecha = document.getElementById('inFecha').value;
+      const idEdicion = document.getElementById('inReservaId').value;
+      const r = recursosCache.find(x => x.nombre === recNombre);
+
+      if (!r || !fecha) {
+        alerta.style.display = 'none';
+        return;
+      }
+
+      let reglas = {};
+      if (r.reglas_reserva) {
+        try { reglas = JSON.parse(r.reglas_reserva); } catch(e){}
+      }
+
+      const maxSemana = parseInt(reglas.max_bloques_semana) || 0;
+      if (maxSemana > 0 && reglas.permitir_excepcion_semanal !== false) {
+        const [y, m, d] = fecha.split('-').map(Number);
+        const fObj = new Date(y, m - 1, d);
+        const diaSem = fObj.getDay();
+        const diffLun = diaSem === 0 ? -6 : 1 - diaSem;
+        const lunes = new Date(fObj);
+        lunes.setDate(fObj.getDate() + diffLun);
+        const domingo = new Date(lunes);
+        domingo.setDate(lunes.getDate() + 6);
+
+        const fechaIni = lunes.toISOString().split('T')[0];
+        const fechaFin = domingo.toISOString().split('T')[0];
+        const profEmail = (usuarioActivo && usuarioActivo.email) ? usuarioActivo.email.toLowerCase() : 'dev@colegio.edu';
+
+        let bloquesPreviosSemana = 0;
+        todasReservas.forEach(res => {
+          if (res.recurso === recNombre && 
+              res.fecha >= fechaIni && res.fecha <= fechaFin && 
+              res.profesor_email && res.profesor_email.toLowerCase() === profEmail && 
+              res.id !== idEdicion && 
+              res.estado !== 'Cancelada' && res.estado !== 'Rechazada') {
+            bloquesPreviosSemana += (res.bloques ? res.bloques.split(',').length : 0);
+          }
+        });
+
+        const totalProyectado = bloquesPreviosSemana + seleccionados.length;
+        if (totalProyectado > maxSemana) {
+          const respEmail = r.responsable || 'Encargado del Recurso';
+          textoAlerta.innerHTML = `Con esta selección acumulas <b>${totalProyectado} bloques</b> en la semana del ${fechaIni}, superando el límite regular de <b>${maxSemana} bloques</b>. Esta solicitud quedará registrada como <b>Pendiente</b> y se enviará a confirmación de <b>${respEmail}</b>.`;
+          alerta.style.display = 'block';
+          return;
+        }
+      }
+
+      alerta.style.display = 'none';
+    }
+
 
     function abrirDisp(id, nombre) {
        dispIdActivo = id;
@@ -675,10 +1009,10 @@
        }
        
        const hrString3 = r.horarios_exactos || '08:00,08:45,09:30,10:15,11:00,11:45,12:30,13:15,14:00,14:45,15:30,16:15';
-         const totalBDisp = hrString3.split(',').length;
-         const body = document.getElementById('dispBody');
-         body.innerHTML = '';
-         for(let b=1; b<=totalBDisp; b++) {
+       const totalBDisp = hrString3.split(',').length;
+       const body = document.getElementById('dispBody');
+       body.innerHTML = '';
+       for(let b=1; b<=totalBDisp; b++) {
           let tr = `<tr><td>B${b}</td>`;
           diasSemana.forEach(d => {
              let checked = disp[d] ? disp[d].includes(b) : true;
@@ -690,6 +1024,19 @@
 
        document.getElementById('dispAgrupados').value = gruposRaw;
        document.getElementById('dispHorarios').value = r.horarios_exactos || '08:00,08:45,09:30,10:15,11:00,11:45,12:30,13:15,14:00,14:45,15:30,16:15';
+       
+       // Cargar Políticas y Límites de Agendamiento
+       let reglas = {};
+       if (r.reglas_reserva) {
+         try { reglas = JSON.parse(r.reglas_reserva); } catch(e){}
+       }
+       document.getElementById('reglaMinDias').value = reglas.anticipacion_min_dias !== undefined ? reglas.anticipacion_min_dias : 0;
+       document.getElementById('reglaMaxDias').value = reglas.anticipacion_max_dias !== undefined ? reglas.anticipacion_max_dias : 30;
+       document.getElementById('reglaMaxConsec').value = reglas.max_bloques_consecutivos !== undefined ? reglas.max_bloques_consecutivos : 4;
+       document.getElementById('reglaMaxSemana').value = reglas.max_bloques_semana !== undefined ? reglas.max_bloques_semana : 5;
+       document.getElementById('reglaMaxDia').value = reglas.max_bloques_dia !== undefined ? reglas.max_bloques_dia : 2;
+       document.getElementById('reglaPermitirExcepcion').checked = reglas.permitir_excepcion_semanal !== false;
+
        bloqueosActuales = [];
        if (r.bloqueos_fechas) { try { bloqueosActuales = JSON.parse(r.bloqueos_fechas); } catch(e){} }
        renderizarBloqueosDisp();
@@ -723,7 +1070,6 @@
         });
     }
 
-
     async function guardarDisponibilidad() {
        const disp = { lunes:[], martes:[], miercoles:[], jueves:[], viernes:[] };
        document.querySelectorAll('.disp-chk:checked').forEach(chk => {
@@ -738,119 +1084,102 @@
                if (bks.length > 0) grupos.push(bks);
            });
        }
+
+       const reglas = {
+           anticipacion_min_dias: parseInt(document.getElementById('reglaMinDias').value) || 0,
+           anticipacion_max_dias: parseInt(document.getElementById('reglaMaxDias').value) || 30,
+           max_bloques_consecutivos: parseInt(document.getElementById('reglaMaxConsec').value) || 4,
+           max_bloques_semana: parseInt(document.getElementById('reglaMaxSemana').value) || 5,
+           max_bloques_dia: parseInt(document.getElementById('reglaMaxDia').value) || 2,
+           permitir_excepcion_semanal: document.getElementById('reglaPermitirExcepcion').checked
+       };
        
        await fetch('/api/recursos/config/' + dispIdActivo, {
           method: 'PUT',
           headers: {'Content-Type': 'application/json'},
-          body: JSON.stringify({ disponibilidad: disp, bloques_agrupados: grupos, horarios_exactos: document.getElementById('dispHorarios').value.replace(/\s/g,''), bloqueos_fechas: bloqueosActuales })
+          body: JSON.stringify({ 
+              disponibilidad: disp, 
+              bloques_agrupados: grupos, 
+              horarios_exactos: document.getElementById('dispHorarios').value.replace(/\s/g,''), 
+              bloqueos_fechas: bloqueosActuales,
+              reglas_reserva: reglas
+          })
        });
-       Swal.fire('Guardado', 'Configuración actualizada', 'success');
+       Swal.fire('Guardado', 'Configuración actualizada exitosamente', 'success');
        modalDisp.hide();
        await cargarRecursosConfig();
-    }
-
-    async function cargarMisClases() {
-       const fecha = document.getElementById('inFecha').value;
-       const selClase = document.getElementById('inClaseCruzada');
-       selClase.innerHTML = '<option value="">-- No vincular a una clase (Uso general) --</option>';
-       
-       if (!fecha || !usuarioActivo) return;
-       
-       const res = await fetch('/api/rpc/getHorariosData', {
-           method: 'POST',
-           headers: {'Content-Type': 'application/json'},
-           body: JSON.stringify({ args: [] })
-       });
-       const data = await res.json();
-       const horarios = data.result || [];
-       
-       const dObj = new Date(fecha + "T12:00:00");
-       const dias = ['Domingo', 'Lunes', 'Martes', 'Miercoles', 'Jueves', 'Viernes', 'Sabado'];
-       const diaSemana = dias[dObj.getDay()];
-       
-       const misClases = horarios.filter(h => 
-           h.Día.toLowerCase().includes(diaSemana.toLowerCase()) && 
-           h.Profesor.toLowerCase().includes(usuarioActivo.nombre.toLowerCase())
-       );
-       
-       misClases.forEach(c => {
-           selClase.innerHTML += `<option value='{"bloque":"${c.Bloque}", "curso":"${c.Curso}", "asig":"${c.Asignatura}"}'>B: ${c.Bloque} - ${c.Curso} (${c.Asignatura})</option>`;
-       });
-    }
-
-    function autocompletarDesdeClase() {
-       const val = document.getElementById('inClaseCruzada').value;
-       if(!val) return;
-       const clase = JSON.parse(val);
-       
-       const options = document.getElementById('inBloques').options;
-       for(let i=0; i<options.length; i++){
-           options[i].selected = (options[i].value === clase.bloque);
-       }
-       agruparBloques(); // Agrupar automáticamente si se seleccionó uno
-       
-       document.getElementById('inMotivo').value = `Clase de ${clase.asig} - ${clase.curso}`;
     }
 
     function guardarReserva(e) {
       e.preventDefault();
       
-      const opcionesBloques = document.getElementById('inBloques').options;
-      const bloquesSel = [];
-      for(let i=0; i<opcionesBloques.length; i++){
-        if(opcionesBloques[i].selected) bloquesSel.push(opcionesBloques[i]);
-      }
-      
-      if(bloquesSel.length === 0) {
-          Swal.fire("Error", "Debes seleccionar al menos un bloque", "error");
-          return;
+      const seleccionados = Array.from(bloquesSeleccionados).sort((a,b)=>a-b);
+      if (seleccionados.length === 0) {
+        Swal.fire("Atención", "Debes seleccionar al menos un bloque en la cuadrícula.", "warning");
+        return;
       }
       
       const procesarGuardado = () => {
           const btn = document.getElementById('btnGuardar');
-          if(btn) { btn.disabled = true; btn.innerText = "Guardando..."; }
+          const txtOriginal = btn.innerText;
+          btn.disabled = true;
+          btn.innerText = "Guardando...";
           
-          const valoresBloques = bloquesSel.map(o => o.value);
+          const idEdicion = document.getElementById('inReservaId').value;
           const datos = {
             fecha: document.getElementById('inFecha').value,
-            recurso: document.getElementById('inRecurso').value,
-            bloques: valoresBloques.join(','),
+            recurso: document.getElementById('inRecurso').value || recursoActual,
+            bloques: seleccionados.join(','),
             motivo: document.getElementById('inMotivo').value
           };
+
+          const url = idEdicion ? ('/api/reservas/' + idEdicion) : '/api/reservas';
+          const method = idEdicion ? 'PUT' : 'POST';
           
-          fetch('/api/reservas', {
-            method: 'POST',
+          fetch(url, {
+            method: method,
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify(datos)
           })
           .then(async res => {
               const data = await res.json();
-              if(!res.ok) throw new Error(data.error || 'Error desconocido');
+              if(!res.ok) throw new Error(data.error || 'Error al procesar la reserva');
               return data;
           })
           .then(async data => {
-              Swal.fire('Guardado', 'Reserva realizada', 'success');
-              if(modalRes) modalRes.hide();
-              if(btn) { btn.disabled = false; btn.innerText = "Guardar Reserva"; }
-              await cargarRecursosConfig();
+              if (modalRes) modalRes.hide();
+              btn.disabled = false;
+              btn.innerText = txtOriginal;
+
+              if (data.esPeticionEspecial) {
+                Swal.fire({
+                  title: 'Petición Especial Enviada',
+                  text: 'Tu solicitud supera el límite semanal regular y quedó registrada como Pendiente. Se ha enviado un correo al encargado para su visación.',
+                  icon: 'info',
+                  confirmButtonText: 'Entendido'
+                });
+              } else {
+                Swal.fire('¡Éxito!', data.message || 'Reserva procesada exitosamente.', 'success');
+              }
+              await cargarReservas();
           })
           .catch((err) => {
-              Swal.fire('Error', err.message, 'error');
-              if(btn) { btn.disabled = false; btn.innerText = "Guardar Reserva"; }
+              btn.disabled = false;
+              btn.innerText = txtOriginal;
+              Swal.fire('No se pudo guardar', err.message, 'error');
           });
       };
       
-      if (bloquesSel.length === 1) {
-          const textBloque = bloquesSel[0].text;
+      if (seleccionados.length === 1) {
           Swal.fire({
-              title: '¿Está seguro?',
-              text: `Está reservando solo un bloque de 45 minutos:\n${textBloque}`,
-              icon: 'warning',
+              title: '¿Confirmar reserva corta?',
+              text: `Estás reservando solo un bloque individual (45 minutos: Bloque ${seleccionados[0]}). ¿Deseas continuar?`,
+              icon: 'question',
               showCancelButton: true,
-              confirmButtonColor: '#3085d6',
-              cancelButtonColor: '#d33',
-              confirmButtonText: 'Sí, reservar',
-              cancelButtonText: 'Cancelar'
+              confirmButtonColor: '#0d6efd',
+              cancelButtonColor: '#6c757d',
+              confirmButtonText: 'Sí, continuar',
+              cancelButtonText: 'Revisar'
           }).then((result) => {
               if (result.isConfirmed) procesarGuardado();
           });

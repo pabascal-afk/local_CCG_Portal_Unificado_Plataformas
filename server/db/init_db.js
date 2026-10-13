@@ -1,4 +1,4 @@
-﻿const sqlite3 = require('sqlite3').verbose();
+const sqlite3 = require('sqlite3').verbose();
 const path = require('path');
 const fs = require('fs');
 
@@ -65,6 +65,7 @@ const schemas = [
     motivo TEXT,
     profesor_email TEXT,
     estado TEXT DEFAULT 'Aprobada',
+    token_aprobacion TEXT,
     creado_en DATETIME DEFAULT CURRENT_TIMESTAMP
   )`,
   `CREATE TABLE IF NOT EXISTS eventos (
@@ -122,7 +123,8 @@ const schemas = [
     disponibilidad TEXT DEFAULT '{}',
     bloques_agrupados TEXT DEFAULT '[]',
     horarios_exactos TEXT DEFAULT '08:00,08:45,09:30,10:15,11:00,11:45,12:30,13:15,14:00,14:45,15:30,16:15',
-    bloqueos_fechas TEXT DEFAULT '[]'
+    bloqueos_fechas TEXT DEFAULT '[]',
+    reglas_reserva TEXT DEFAULT '{}'
   )`,
   `CREATE TABLE IF NOT EXISTS roles_config (
     id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -150,6 +152,8 @@ db.serialize(() => {
     db.run("ALTER TABLE evaluaciones ADD COLUMN link_doc TEXT", () => {});
     db.run("ALTER TABLE evaluaciones ADD COLUMN archivo_doc TEXT", () => {});
     db.run("ALTER TABLE config_tipos_evaluacion ADD COLUMN orden INTEGER DEFAULT 0", () => {});
+    db.run("ALTER TABLE recursos_config ADD COLUMN reglas_reserva TEXT DEFAULT '{}'", () => {});
+    db.run("ALTER TABLE reservas ADD COLUMN token_aprobacion TEXT", () => {});
     db.run("INSERT OR IGNORE INTO config_global (clave, valor) VALUES ('emails_activados', 'true')", () => {});
 
     db.run("INSERT OR IGNORE INTO config_tipos_evaluacion (nombre, es_prueba) VALUES ('📝 Prueba', 1)", () => {});

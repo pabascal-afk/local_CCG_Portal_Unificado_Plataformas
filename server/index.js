@@ -1,4 +1,4 @@
-﻿require('dotenv').config();
+require('dotenv').config();
 const express = require('express');
 const session = require('express-session');
 const passport = require('passport');
@@ -51,6 +51,12 @@ const PORT = process.env.PORT || 9000;
 // Configurar DB
 const dbPath = path.join(__dirname, 'db', 'colegio.db');
 const db = new sqlite3.Database(dbPath);
+
+// Auto-healing migraciones
+db.serialize(() => {
+  db.run("ALTER TABLE recursos_config ADD COLUMN reglas_reserva TEXT DEFAULT '{}'", () => {});
+  db.run("ALTER TABLE reservas ADD COLUMN token_aprobacion TEXT", () => {});
+});
 
 app.use(cors());
 app.use(express.json());
@@ -260,9 +266,9 @@ app.post('/api/recursos/config', (req, res) => {
 });
 
 app.put('/api/recursos/config/:id', (req, res) => {
-  const { disponibilidad, bloques_agrupados, horarios_exactos, bloqueos_fechas } = req.body;
-  db.run("UPDATE recursos_config SET disponibilidad = COALESCE(?, disponibilidad), bloques_agrupados = COALESCE(?, bloques_agrupados), horarios_exactos = ?, bloqueos_fechas = COALESCE(?, bloqueos_fechas) WHERE id = ?", 
-      [disponibilidad ? JSON.stringify(disponibilidad) : null, bloques_agrupados ? JSON.stringify(bloques_agrupados) : null, horarios_exactos !== undefined ? horarios_exactos : null, bloqueos_fechas ? JSON.stringify(bloqueos_fechas) : null, req.params.id], function(err) {
+  const { disponibilidad, bloques_agrupados, horarios_exactos, bloqueos_fechas, reglas_reserva } = req.body;
+  db.run("UPDATE recursos_config SET disponibilidad = COALESCE(?, disponibilidad), bloques_agrupados = COALESCE(?, bloques_agrupados), horarios_exactos = ?, bloqueos_fechas = COALESCE(?, bloqueos_fechas), reglas_reserva = COALESCE(?, reglas_reserva) WHERE id = ?", 
+      [disponibilidad ? JSON.stringify(disponibilidad) : null, bloques_agrupados ? JSON.stringify(bloques_agrupados) : null, horarios_exactos !== undefined ? horarios_exactos : null, bloqueos_fechas ? JSON.stringify(bloqueos_fechas) : null, reglas_reserva ? JSON.stringify(reglas_reserva) : null, req.params.id], function(err) {
     if (err) return res.status(500).json({error: err.message});
     res.json({ message: 'Configuración actualizada' });
   });
@@ -276,70 +282,364 @@ app.delete('/api/recursos/config/:id', (req, res) => {
   });
 });
 
+// --- Motor de Reglas de Agendamiento ---
+async function validarReglasReserva(fecha, recursoNombre, bloques, profesor_email, idExcluir = null, esAdmin = false) {
+    const recurso = await new Promise((res, rej) => {
+        db.get("SELECT * FROM recursos_config WHERE nombre = ?", [recursoNombre], (err, row) => {
+            if (err) rej(err); else res(row);
+        });
+    });
+    if (!recurso) return { error: "Recurso no encontrado" };
+
+    let reglas = {};
+    if (recurso.reglas_reserva) {
+        try { reglas = JSON.parse(recurso.reglas_reserva); } catch(e){}
+    }
+
+    // A. Anticipación Mínima y Máxima (solo para no-admin)
+    if (!esAdmin) {
+        const hoy = new Date();
+        hoy.setHours(0,0,0,0);
+        const [y, m, d] = fecha.split('-').map(Number);
+        const fechaObj = new Date(y, m - 1, d);
+        fechaObj.setHours(0,0,0,0);
+        const diffDays = Math.round((fechaObj - hoy) / (1000 * 60 * 60 * 24));
+
+        if (reglas.anticipacion_min_dias !== undefined && reglas.anticipacion_min_dias !== null && String(reglas.anticipacion_min_dias).trim() !== '' && parseInt(reglas.anticipacion_min_dias) > 0) {
+            const minDias = parseInt(reglas.anticipacion_min_dias);
+            if (diffDays < minDias) {
+                return { error: `Este recurso requiere al menos ${minDias} día(s) de anticipación para reservar.` };
+            }
+        }
+
+        if (reglas.anticipacion_max_dias !== undefined && reglas.anticipacion_max_dias !== null && String(reglas.anticipacion_max_dias).trim() !== '' && parseInt(reglas.anticipacion_max_dias) > 0) {
+            const maxDias = parseInt(reglas.anticipacion_max_dias);
+            if (diffDays > maxDias) {
+                return { error: `No se puede reservar con más de ${maxDias} días de anticipación para este recurso.` };
+            }
+        }
+    }
+
+    // B. Bloques Consecutivos (ej. max 4)
+    if (reglas.max_bloques_consecutivos && parseInt(reglas.max_bloques_consecutivos) > 0) {
+        const maxConsec = parseInt(reglas.max_bloques_consecutivos);
+        const nums = bloques.map(Number).sort((a,b)=>a-b);
+        let maxStreak = 1;
+        let currStreak = 1;
+        for (let i = 1; i < nums.length; i++) {
+            if (nums[i] === nums[i-1] + 1) {
+                currStreak++;
+                if (currStreak > maxStreak) maxStreak = currStreak;
+            } else {
+                currStreak = 1;
+            }
+        }
+        if (nums.length > 0 && maxStreak > maxConsec) {
+            return { error: `No puedes reservar más de ${maxConsec} bloques consecutivos en este recurso.` };
+        }
+    }
+
+    // C. Límite de Bloques por Día (ej. max 2)
+    if (reglas.max_bloques_dia && parseInt(reglas.max_bloques_dia) > 0 && !esAdmin) {
+        const maxDia = parseInt(reglas.max_bloques_dia);
+        const resDia = await new Promise((res, rej) => {
+            let sql = "SELECT bloques FROM reservas WHERE fecha = ? AND recurso = ? AND profesor_email = ? AND estado != 'Cancelada' AND estado != 'Rechazada'";
+            const params = [fecha, recursoNombre, profesor_email];
+            if (idExcluir) { sql += " AND id != ?"; params.push(idExcluir); }
+            db.all(sql, params, (err, rows) => { if(err) rej(err); else res(rows); });
+        });
+        let totalBloquesDia = bloques.length;
+        resDia.forEach(r => {
+            totalBloquesDia += (r.bloques ? r.bloques.split(',').length : 0);
+        });
+        if (totalBloquesDia > maxDia) {
+            return { error: `Has superado el límite diario para este recurso (máximo ${maxDia} bloques por día). Ya tienes reservas agendadas este día.` };
+        }
+    }
+
+    // D. Límite de Bloques por Semana y Petición Especial
+    let esPeticionEspecial = false;
+    let motivoExcepcion = null;
+    if (reglas.max_bloques_semana && parseInt(reglas.max_bloques_semana) > 0 && !esAdmin) {
+        const maxSemana = parseInt(reglas.max_bloques_semana);
+        const [y, m, d] = fecha.split('-').map(Number);
+        const fObj = new Date(y, m - 1, d);
+        const diaSem = fObj.getDay();
+        const diffLun = diaSem === 0 ? -6 : 1 - diaSem;
+        const lunes = new Date(fObj);
+        lunes.setDate(fObj.getDate() + diffLun);
+        const domingo = new Date(lunes);
+        domingo.setDate(lunes.getDate() + 6);
+
+        const fechaIni = lunes.toISOString().split('T')[0];
+        const fechaFin = domingo.toISOString().split('T')[0];
+
+        const resSem = await new Promise((res, rej) => {
+            let sql = "SELECT bloques FROM reservas WHERE fecha >= ? AND fecha <= ? AND recurso = ? AND profesor_email = ? AND estado != 'Cancelada' AND estado != 'Rechazada'";
+            const params = [fechaIni, fechaFin, recursoNombre, profesor_email];
+            if (idExcluir) { sql += " AND id != ?"; params.push(idExcluir); }
+            db.all(sql, params, (err, rows) => { if(err) rej(err); else res(rows); });
+        });
+
+        let totalBloquesSemana = bloques.length;
+        resSem.forEach(r => {
+            totalBloquesSemana += (r.bloques ? r.bloques.split(',').length : 0);
+        });
+
+        if (totalBloquesSemana > maxSemana) {
+            if (reglas.permitir_excepcion_semanal !== false) {
+                esPeticionEspecial = true;
+                motivoExcepcion = `Supera el cupo semanal de ${maxSemana} bloques (solicitando ${totalBloquesSemana} bloques en la semana del ${fechaIni}).`;
+            } else {
+                return { error: `Has alcanzado el límite semanal de ${maxSemana} bloques para este recurso.` };
+            }
+        }
+    }
+
+    return { valido: true, esPeticionEspecial, motivoExcepcion, recurso };
+}
+
+function enviarCorreoPeticionEspecial(reserva, recurso, token) {
+    if (!process.env.SMTP_USER || !recurso.responsable) return;
+    let baseUrl = process.env.PUBLIC_URL || process.env.BASE_URL || 'http://localhost:9000';
+    const approveUrl = `${baseUrl}/api/reservas/aprobar?token=${token}&action=approve`;
+    const rejectUrl = `${baseUrl}/api/reservas/aprobar?token=${token}&action=reject`;
+
+    transporter.sendMail({
+        from: `"Sistema Colegio" <${process.env.SMTP_USER}>`,
+        to: recurso.responsable,
+        subject: `⚠️ Petición Especial de Reserva: ${recurso.nombre} (${reserva.fecha})`,
+        html: `
+            <div style="font-family: sans-serif; max-width: 600px; margin: auto; border: 1px solid #ddd; border-radius: 8px; padding: 25px;">
+                <h2 style="color: #d35400; margin-top: 0;">Petición Especial de Reserva</h2>
+                <p>El docente <b>${reserva.profesor_email}</b> ha solicitado bloques que superan el cupo semanal configurado para este recurso.</p>
+                <div style="background: #fdfbf7; border: 1px solid #f3e5ab; border-radius: 6px; padding: 15px; margin: 15px 0;">
+                    <p style="margin: 4px 0;"><b>Recurso:</b> ${recurso.nombre}</p>
+                    <p style="margin: 4px 0;"><b>Fecha:</b> ${reserva.fecha}</p>
+                    <p style="margin: 4px 0;"><b>Bloques Solicitados:</b> ${reserva.bloques}</p>
+                    <p style="margin: 4px 0;"><b>Motivo:</b> ${reserva.motivo}</p>
+                </div>
+                <p>Para autorizar o rechazar esta solicitud, utiliza los siguientes botones:</p>
+                <div style="margin-top: 25px; text-align: center;">
+                    <a href="${approveUrl}" style="background-color: #28a745; color: white; padding: 12px 24px; text-decoration: none; border-radius: 6px; font-weight: bold; margin-right: 15px; display: inline-block;">Aprobar Reserva</a>
+                    <a href="${rejectUrl}" style="background-color: #dc3545; color: white; padding: 12px 24px; text-decoration: none; border-radius: 6px; font-weight: bold; display: inline-block;">Rechazar</a>
+                </div>
+                <hr style="margin-top: 30px; border: none; border-top: 1px solid #eee;">
+                <small style="color: #7f8c8d;">Plataforma Escolar Unificada - Notificación Automática</small>
+            </div>
+        `
+    }).catch(err => console.error("Error enviando email de petición especial:", err));
+}
+
 // --- Reservas ---
 app.get('/api/reservas', (req, res) => {
-  db.all("SELECT * FROM reservas WHERE estado != 'Cancelada'", (err, rows) => {
+  db.all("SELECT * FROM reservas WHERE estado != 'Cancelada' AND estado != 'Rechazada'", (err, rows) => {
     if (err) return res.status(500).json({error: err.message});
     res.json(rows);
   });
 });
 
-app.post('/api/reservas', (req, res) => {
-    const { fecha, recurso, motivo } = req.body;
-      let { bloques } = req.body;
-      if (typeof bloques === 'string') bloques = bloques.split(',');
-      if (!Array.isArray(bloques)) bloques = [bloques];
-    const profesor_email = req.isAuthenticated() ? req.user.email : 'dev@colegio.edu';
-    
-    db.all("SELECT * FROM reservas WHERE fecha = ? AND recurso = ? AND estado != 'Cancelada'", [fecha, recurso], (err, rows) => {
-        if (err) return res.status(500).json({error: err.message});
-        
-        for (let row of rows) {
-            const dbBloques = row.bloques.split(',');
-            for (let b of bloques) {
-                if (dbBloques.includes(b.toString())) {
-                    return res.status(400).json({error: `El bloque ${b} ya está reservado.`});
-                }
+app.get('/api/reservas/aprobar', (req, res) => {
+    try {
+        const { token, action } = req.query; // approve | reject
+        if (!token) return res.status(400).send("<h1>Token inválido</h1>");
+
+        db.get("SELECT * FROM reservas WHERE token_aprobacion = ?", [token], (err, reserva) => {
+            if (err || !reserva) return res.send("<div style='text-align:center;font-family:sans-serif;padding:50px;'><h1>Enlace inválido o expirado</h1><p>Esta solicitud ya no existe o ya fue procesada.</p></div>");
+
+            if (reserva.estado !== 'Pendiente') {
+                return res.send(`<div style='text-align:center;font-family:sans-serif;padding:50px;'><h1>Solicitud ya procesada</h1><p>Esta reserva ya se encuentra en estado: <b>${reserva.estado}</b>.</p></div>`);
             }
+
+            const nuevoEstado = (action === 'approve') ? 'Aprobada' : 'Rechazada';
+            db.run("UPDATE reservas SET estado = ? WHERE id = ?", [nuevoEstado, reserva.id], (errUpd) => {
+                if (errUpd) return res.status(500).send("Error del servidor: " + errUpd.message);
+
+                if (process.env.SMTP_USER && reserva.profesor_email) {
+                    transporter.sendMail({
+                        from: `"Sistema Colegio" <${process.env.SMTP_USER}>`,
+                        to: reserva.profesor_email,
+                        subject: `Resultado Petición Especial: ${nuevoEstado} - ${reserva.recurso}`,
+                        html: `
+                            <div style="font-family: sans-serif; padding: 20px;">
+                                <h3>Tu petición especial de reserva ha sido ${nuevoEstado.toUpperCase()}.</h3>
+                                <p><b>Recurso:</b> ${reserva.recurso}</p>
+                                <p><b>Fecha:</b> ${reserva.fecha}</p>
+                                <p><b>Bloques:</b> ${reserva.bloques}</p>
+                                <p><b>Motivo:</b> ${reserva.motivo}</p>
+                            </div>
+                        `
+                    }).catch(()=>{});
+                }
+
+                res.send(`
+                    <div style="text-align: center; font-family: sans-serif; padding: 60px;">
+                        <h1 style="color: ${action === 'approve' ? '#28a745' : '#dc3545'};">${action === 'approve' ? '¡Reserva Aprobada!' : 'Reserva Rechazada'}</h1>
+                        <p style="font-size: 1.1em; color: #555;">La reserva de <b>${reserva.profesor_email}</b> para el recurso <b>${reserva.recurso}</b> ha sido ${nuevoEstado.toLowerCase()} con éxito.</p>
+                        <p style="color: #888; font-size: 0.9em; margin-top: 30px;">Ya puedes cerrar esta ventana.</p>
+                    </div>
+                `);
+            });
+        });
+    } catch(e) {
+        res.status(500).send("Error: " + e.message);
+    }
+});
+
+app.post('/api/reservas', async (req, res) => {
+    try {
+        const { fecha, recurso, motivo } = req.body;
+        let { bloques } = req.body;
+        if (typeof bloques === 'string') bloques = bloques.split(',');
+        if (!Array.isArray(bloques)) bloques = [bloques];
+        const profesor_email = req.isAuthenticated() ? req.user.email : 'dev@colegio.edu';
+        const userRole = (req.user && req.user.rol) ? req.user.rol.toLowerCase() : '';
+        const esAdmin = userRole.includes('admin') || userRole.includes('directiv');
+
+        // 1. Validar Reglas de Agendamiento
+        const validacion = await validarReglasReserva(fecha, recurso, bloques, profesor_email, null, esAdmin);
+        if (validacion.error) {
+            return res.status(400).json({ error: validacion.error });
         }
-        
-        db.all("SELECT * FROM eventos WHERE fecha = ? AND (bloques = 'TODOS' OR bloques IS NOT NULL)", [fecha], (err, evRows) => {
+
+        // 2. Validar colisiones con otras reservas activas
+        db.all("SELECT * FROM reservas WHERE fecha = ? AND recurso = ? AND estado != 'Cancelada' AND estado != 'Rechazada'", [fecha, recurso], (err, rows) => {
             if (err) return res.status(500).json({error: err.message});
             
-            for (let ev of evRows) {
-                // Si el evento tiene recurso asignado y no es el que estamos pidiendo, no bloquea
-                if (ev.recurso && ev.recurso !== recurso) continue;
-
-                if (ev.bloques === 'TODOS' || ev.bloques === '') {
-                     return res.status(400).json({error: `Día bloqueado por evento institucional: ${ev.titulo}`});
-                }
-                const evB = ev.bloques.split(',');
+            for (let row of rows) {
+                const dbBloques = row.bloques.split(',');
                 for (let b of bloques) {
-                    if (evB.includes(b.toString())) {
-                        return res.status(400).json({error: `El bloque ${b} está bloqueado por el evento: ${ev.titulo}`});
+                    if (dbBloques.includes(b.toString())) {
+                        return res.status(400).json({error: `El bloque ${b} ya está reservado por ${row.profesor_email}.`});
                     }
                 }
             }
             
-            const id = Math.random().toString(36).substr(2, 9);
-            db.run("INSERT INTO reservas (id, fecha, bloques, recurso, motivo, profesor_email) VALUES (?, ?, ?, ?, ?, ?)", 
-              [id, fecha, bloques.join(','), recurso, motivo, profesor_email], function(err) {
-              if (err) return res.status(500).json({error: err.message});
-              
-                  // Chequear preferencias_mail
-                  db.get("SELECT preferencias_mail FROM usuarios WHERE email = ?", [profesor_email], (err, row) => {
-                      let mandarEmail = true;
-                      if (row && row.preferencias_mail) {
-                          try { mandarEmail = JSON.parse(row.preferencias_mail).nueva_reserva !== false; } catch(e){}
-                      }
-                      if (mandarEmail) {
-                          // enviarCorreoConfirmacion({ recurso, fecha, bloques: bloques.join(','), motivo }, profesor_email);
-                      }
+            // 3. Validar bloqueos institucionales
+            db.all("SELECT * FROM eventos WHERE fecha = ? AND (bloques = 'TODOS' OR bloques IS NOT NULL)", [fecha], (err, evRows) => {
+                if (err) return res.status(500).json({error: err.message});
+                
+                for (let ev of evRows) {
+                    if (ev.recurso && ev.recurso !== recurso) continue;
+
+                    if (ev.bloques === 'TODOS' || ev.bloques === '') {
+                         return res.status(400).json({error: `Día bloqueado por evento institucional: ${ev.titulo}`});
+                    }
+                    const evB = ev.bloques.split(',');
+                    for (let b of bloques) {
+                        if (evB.includes(b.toString())) {
+                            return res.status(400).json({error: `El bloque ${b} está bloqueado por el evento: ${ev.titulo}`});
+                        }
+                    }
+                }
+                
+                const id = Math.random().toString(36).substr(2, 9);
+                const estado = validacion.esPeticionEspecial ? 'Pendiente' : 'Aprobada';
+                const token = validacion.esPeticionEspecial ? Math.random().toString(36).substr(2, 15) : null;
+
+                db.run("INSERT INTO reservas (id, fecha, bloques, recurso, motivo, profesor_email, estado, token_aprobacion) VALUES (?, ?, ?, ?, ?, ?, ?, ?)", 
+                  [id, fecha, bloques.join(','), recurso, motivo, profesor_email, estado, token], function(err) {
+                  if (err) return res.status(500).json({error: err.message});
+                  
+                  if (validacion.esPeticionEspecial) {
+                      enviarCorreoPeticionEspecial({ fecha, recurso, bloques: bloques.join(','), motivo, profesor_email }, validacion.recurso, token);
+                  }
+
+                  res.json({ 
+                      message: validacion.esPeticionEspecial 
+                          ? 'Reserva enviada como petición especial. Queda pendiente de confirmación por el encargado.' 
+                          : 'Reserva guardada exitosamente.', 
+                      id,
+                      estado,
+                      esPeticionEspecial: validacion.esPeticionEspecial
                   });
-                  res.json({ message: 'Reserva guardada', id });
+                });
             });
         });
-    });
+    } catch(e) {
+        res.status(500).json({ error: e.message });
+    }
+});
+
+app.put('/api/reservas/:id', async (req, res) => {
+    try {
+        const { fecha, recurso, motivo } = req.body;
+        let { bloques } = req.body;
+        if (typeof bloques === 'string') bloques = bloques.split(',');
+        if (!Array.isArray(bloques)) bloques = [bloques];
+
+        const userEmail = req.isAuthenticated() ? req.user.email : 'dev@colegio.edu';
+        const userRole = (req.user && req.user.rol) ? req.user.rol.toLowerCase() : '';
+        const esAdmin = userRole.includes('admin') || userRole.includes('directiv');
+
+        db.get("SELECT * FROM reservas WHERE id = ?", [req.params.id], async (err, currentRes) => {
+            if (err || !currentRes) return res.status(404).json({ error: "Reserva no encontrada" });
+
+            if (!esAdmin && currentRes.profesor_email.toLowerCase() !== userEmail.toLowerCase()) {
+                return res.status(403).json({ error: "No tienes permiso para modificar esta reserva" });
+            }
+
+            const validacion = await validarReglasReserva(fecha, recurso, bloques, currentRes.profesor_email, req.params.id, esAdmin);
+            if (validacion.error) {
+                return res.status(400).json({ error: validacion.error });
+            }
+
+            db.all("SELECT * FROM reservas WHERE fecha = ? AND recurso = ? AND estado != 'Cancelada' AND estado != 'Rechazada' AND id != ?", 
+                [fecha, recurso, req.params.id], (err, rows) => {
+                if (err) return res.status(500).json({ error: err.message });
+                
+                for (let row of rows) {
+                    const dbBloques = row.bloques.split(',');
+                    for (let b of bloques) {
+                        if (dbBloques.includes(b.toString())) {
+                            return res.status(400).json({ error: `El bloque ${b} ya está reservado por ${row.profesor_email}.` });
+                        }
+                    }
+                }
+
+                db.all("SELECT * FROM eventos WHERE fecha = ? AND (bloques = 'TODOS' OR bloques IS NOT NULL)", [fecha], (err, evRows) => {
+                    if (err) return res.status(500).json({ error: err.message });
+                    for (let ev of evRows) {
+                        if (ev.recurso && ev.recurso !== recurso) continue;
+                        if (ev.bloques === 'TODOS' || ev.bloques === '') {
+                            return res.status(400).json({ error: `Día bloqueado por evento institucional: ${ev.titulo}` });
+                        }
+                        const evB = ev.bloques.split(',');
+                        for (let b of bloques) {
+                            if (evB.includes(b.toString())) {
+                                return res.status(400).json({ error: `El bloque ${b} está bloqueado por el evento: ${ev.titulo}` });
+                            }
+                        }
+                    }
+
+                    let nuevoEstado = currentRes.estado;
+                    let token = currentRes.token_aprobacion;
+                    if (validacion.esPeticionEspecial) {
+                        nuevoEstado = 'Pendiente';
+                        token = Math.random().toString(36).substr(2, 15);
+                        enviarCorreoPeticionEspecial({ fecha, recurso, bloques: bloques.join(','), motivo, profesor_email: currentRes.profesor_email }, validacion.recurso, token);
+                    } else if (currentRes.estado === 'Pendiente') {
+                        nuevoEstado = 'Aprobada';
+                    }
+
+                    db.run("UPDATE reservas SET fecha = ?, bloques = ?, recurso = ?, motivo = ?, estado = ?, token_aprobacion = ? WHERE id = ?",
+                        [fecha, bloques.join(','), recurso, motivo, nuevoEstado, token, req.params.id], function(errUpd) {
+                        if (errUpd) return res.status(500).json({ error: errUpd.message });
+                        res.json({ 
+                            message: validacion.esPeticionEspecial 
+                                ? 'Reserva actualizada como petición especial (sujeta a confirmación).' 
+                                : 'Reserva actualizada con éxito.', 
+                            id: req.params.id, 
+                            estado: nuevoEstado, 
+                            esPeticionEspecial: validacion.esPeticionEspecial 
+                        });
+                    });
+                });
+            });
+        });
+    } catch(e) {
+        res.status(500).json({ error: e.message });
+    }
 });
 
 app.delete('/api/reservas/:id', (req, res) => {
