@@ -299,6 +299,16 @@ async function validarReglasReserva(fecha, recursoNombre, bloques, profesor_emai
         try { reglas = JSON.parse(recurso.reglas_reserva); } catch(e){}
     }
 
+    // 0. Contigüidad de Bloques (Una reserva no puede tener bloques separados/discontinuos)
+    const numsContig = bloques.map(Number).sort((a,b)=>a-b);
+    if (numsContig.length > 1) {
+        for (let i = 0; i < numsContig.length - 1; i++) {
+            if (numsContig[i + 1] !== numsContig[i] + 1) {
+                return { error: 'Los bloques seleccionados deben ser contiguos en una misma reserva (sin espacios intermedios). Para horarios separados, agenda reservas independientes.' };
+            }
+        }
+    }
+
     // A. Anticipación Mínima y Máxima (solo para no-admin)
     if (!esAdmin) {
         const hoy = new Date();

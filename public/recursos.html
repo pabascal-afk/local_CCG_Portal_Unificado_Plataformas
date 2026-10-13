@@ -56,6 +56,90 @@
       color: #b78103;
       cursor: not-allowed;
     }
+    
+    /* Supra-Tarjetas para bloques pareados */
+    .supra-card-bloque {
+      border: 1.5px solid #d0e1fd;
+      border-radius: 8px;
+      background: #fbfdff;
+      padding: 8px;
+      display: flex;
+      flex-direction: column;
+      gap: 6px;
+      transition: all 0.15s ease-in-out;
+      min-width: 260px;
+      flex: 1 1 260px;
+    }
+    .supra-card-bloque:hover {
+      border-color: #9ec5fe;
+      box-shadow: 0 2px 8px rgba(13,110,253,0.08);
+    }
+    .supra-card-bloque.all-selected {
+      border-color: #0d6efd;
+      background: #f0f7ff;
+      box-shadow: 0 2px 8px rgba(13,110,253,0.15);
+    }
+    .supra-card-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      font-size: 0.8em;
+      font-weight: 700;
+      color: #0d6efd;
+      border-bottom: 1px dashed #dbe5f7;
+      padding-bottom: 5px;
+      cursor: pointer;
+      user-select: none;
+    }
+    .supra-card-header:hover {
+      color: #0a58ca;
+    }
+    .supra-card-body {
+      display: flex;
+      gap: 8px;
+    }
+    .supra-card-body .card-bloque {
+      flex: 1;
+    }
+
+    /* Tags Jerárquicos y Plantillas */
+    .tag-cat-btn {
+      font-size: 0.8em;
+      font-weight: 600;
+      border-radius: 20px;
+      padding: 3px 10px;
+      cursor: pointer;
+      transition: all 0.15s;
+      border: 1px solid #dee2e6;
+      background: #fff;
+      color: #495057;
+    }
+    .tag-cat-btn:hover {
+      background: #f0f4f9;
+      border-color: #0d6efd;
+      color: #0d6efd;
+    }
+    .tag-cat-btn.active {
+      background: #0d6efd;
+      border-color: #0d6efd;
+      color: #fff;
+    }
+    .subtag-pill {
+      font-size: 0.76em;
+      font-weight: 500;
+      border-radius: 15px;
+      padding: 2px 8px;
+      cursor: pointer;
+      background: #e7f1ff;
+      color: #0a58ca;
+      border: 1px solid #b6d4fe;
+      transition: all 0.12s;
+    }
+    .subtag-pill:hover {
+      background: #cfe2ff;
+      transform: scale(1.02);
+    }
+    
     .cursor-pointer { cursor: pointer; }
     .pill-clase-sug { cursor: pointer; transition: transform 0.1s; }
     .pill-clase-sug:hover { transform: scale(1.03); }
@@ -93,7 +177,7 @@
           <input type="hidden" id="inReservaId" value="">
           <div class="modal-body bg-light p-4">
             
-            <!-- Fila Superior: Fecha y Recurso -->
+            <!-- Fila Superior: Fecha y Recurso Fijo -->
             <div class="row g-3 mb-3">
               <div class="col-md-6">
                 <label class="fw-bold text-dark small mb-1"><i class="bi bi-calendar3"></i> Fecha de Reserva</label>
@@ -101,8 +185,12 @@
                 <div id="infoAnticipacion" class="form-text small text-muted"></div>
               </div>
               <div class="col-md-6">
-                <label class="fw-bold text-dark small mb-1"><i class="bi bi-building"></i> Recurso a Reservar</label>
-                <select class="form-select" id="inRecurso" required onchange="onRecursoCambio()"></select>
+                <label class="fw-bold text-dark small mb-1"><i class="bi bi-building"></i> Recurso</label>
+                <div class="input-group">
+                  <span class="input-group-text bg-white text-primary"><i class="bi bi-geo-alt-fill"></i></span>
+                  <input type="text" id="txtRecursoFijo" class="form-control bg-light fw-bold text-dark" readonly>
+                </div>
+                <input type="hidden" id="inRecurso" value="">
                 <div id="infoResponsableRecurso" class="form-text small text-muted"></div>
               </div>
             </div>
@@ -118,23 +206,19 @@
               </div>
             </div>
 
-            <!-- Selector de Bloques con Cuadrícula Visual -->
+            <!-- Selector de Bloques con Cuadrícula Visual y Supra-Tarjetas -->
             <div class="card mb-3 border-0 shadow-sm">
               <div class="card-body p-3">
                 <div class="d-flex flex-wrap justify-content-between align-items-center mb-2 pb-2 border-bottom">
                   <div>
                     <label class="fw-bold text-dark mb-0"><i class="bi bi-clock"></i> Selección de Bloques</label>
-                    <small class="text-muted d-block" style="font-size:0.8em;">Haz clic directamente sobre los bloques que necesitas</small>
-                  </div>
-                  <div class="form-check form-switch mb-0" id="switchAgrupadosContainer">
-                    <input class="form-check-input" type="checkbox" id="chkAgruparBloques" checked onchange="onToggleAgrupacion()">
-                    <label class="form-check-label small text-muted" for="chkAgruparBloques">Vincular bloques dobles</label>
+                    <small class="text-muted d-block" style="font-size:0.8em;">Los bloques pareados se presentan juntos (clase de 90 min). La reserva debe ser continua.</small>
                   </div>
                 </div>
 
-                <!-- Grid dinámico de bloques -->
-                <div id="gridBloquesContenedor" class="d-grid gap-2" style="grid-template-columns: repeat(auto-fill, minmax(130px, 1fr));">
-                  <div class="text-muted small py-3 text-center">Cargando bloques disponibles...</div>
+                <!-- Grid dinámico de bloques y supra-tarjetas -->
+                <div id="gridBloquesContenedor" class="d-flex flex-wrap gap-2">
+                  <div class="text-muted small py-3 text-center w-100">Cargando bloques disponibles...</div>
                 </div>
 
                 <!-- Resumen y estado de bloques seleccionados -->
@@ -156,15 +240,40 @@
               </div>
             </div>
 
-            <!-- Motivo de la Reserva -->
+            <!-- Motivo de la Reserva con Tags Jerárquicos y Plantillas -->
             <div class="mb-2">
               <label class="fw-bold text-dark small mb-1"><i class="bi bi-card-text"></i> Motivo / Actividad</label>
-              <input type="text" id="inMotivo" class="form-control" placeholder="Ej: Clase de Tecnología - 1° Medio A" required>
-              <div class="d-flex gap-1 mt-2">
-                <span class="badge bg-white text-secondary border cursor-pointer" onclick="sugerirMotivo('Clase regular')">+ Clase regular</span>
-                <span class="badge bg-white text-secondary border cursor-pointer" onclick="sugerirMotivo('Evaluación')">+ Evaluación</span>
-                <span class="badge bg-white text-secondary border cursor-pointer" onclick="sugerirMotivo('Taller / Proyecto')">+ Taller / Proyecto</span>
-                <span class="badge bg-white text-secondary border cursor-pointer" onclick="sugerirMotivo('Reunión / Capacitación')">+ Reunión</span>
+              <input type="text" id="inMotivo" class="form-control" placeholder="Ej: #Clase Regular - #Uso de plataforma - 1° Medio A" required>
+              
+              <!-- Categorías Principales (Nivel 1) -->
+              <div class="d-flex flex-wrap gap-1 mt-2 align-items-center" id="tagsPrincipalesContainer"></div>
+
+              <!-- Sub-tags Contextuales (Nivel 2) -->
+              <div id="subTagsWrapper" class="mt-2 p-2 bg-white rounded border shadow-sm" style="display:none;">
+                <div class="d-flex align-items-center justify-content-between mb-1">
+                  <small class="text-muted fw-bold" style="font-size:0.75em;" id="subTagsTitulo">Sub-actividades relacionadas:</small>
+                  <button type="button" class="btn btn-sm btn-link text-muted p-0 text-decoration-none" style="font-size:0.75em;" onclick="cerrarSubTags()">✕ Cerrar</button>
+                </div>
+                <div class="d-flex flex-wrap gap-1" id="subTagsContainer"></div>
+              </div>
+
+              <!-- Barra Compacta de Plantillas de Reserva -->
+              <div class="card p-2 bg-white border shadow-sm mt-3">
+                <div class="d-flex align-items-center justify-content-between flex-wrap gap-2">
+                  <div class="d-flex align-items-center gap-1">
+                    <i class="bi bi-bookmark-star-fill text-warning"></i>
+                    <span class="small fw-bold text-secondary" style="font-size:0.82em;">Plantilla:</span>
+                    <select id="selPlantillasReserva" class="form-select form-select-sm" style="width: auto; min-width: 170px; font-size:0.82em;" onchange="aplicarPlantillaReserva(this.value)">
+                      <option value="">-- Cargar guardada --</option>
+                    </select>
+                    <button type="button" class="btn btn-sm btn-outline-danger p-0 px-1" id="btnEliminarPlantilla" onclick="eliminarPlantillaSeleccionada()" title="Eliminar plantilla" style="display:none; font-size:0.78em;">
+                      <i class="bi bi-trash"></i>
+                    </button>
+                  </div>
+                  <button type="button" class="btn btn-sm btn-outline-primary py-0 px-2" style="font-size:0.8em;" onclick="guardarComoPlantilla()">
+                    <i class="bi bi-bookmark-plus"></i> Guardar actual
+                  </button>
+                </div>
               </div>
             </div>
 
@@ -370,6 +479,9 @@
         const u = await fetch('/api/auth/me').then(r=>r.json());
         usuarioActivo = u;
       } catch(e) {}
+
+      renderizarTagsPrincipales();
+      cargarPlantillasSelect();
 
       await cargarRecursosConfig();
       
@@ -662,6 +774,272 @@
     
     let bloquesSeleccionados = new Set();
 
+    // --- TAGS JERÁRQUICOS Y CONTEXTUALES ---
+    const TAGS_JERARQUICOS = {
+      '#Clase Regular': [
+        '#Investigación guiada',
+        '#Uso de plataforma',
+        '#Presentación / Disertación',
+        '#Guía de trabajo',
+        '#Lectura compartida',
+        '#Debate grupal'
+      ],
+      '#Evaluación': [
+        '#Prueba escrita',
+        '#Evaluación online / Forms',
+        '#Exposición oral',
+        '#Prueba práctica',
+        '#Diagnóstico',
+        '#Recuperativa'
+      ],
+      '#Laboratorio / Práctico': [
+        '#Experimento científico',
+        '#Observación microscópica',
+        '#Manipulación de material',
+        '#Registro de datos',
+        '#Informe experimental'
+      ],
+      '#Proyecto / Taller': [
+        '#Diseño y prototipado',
+        '#Trabajo colaborativo',
+        '#Feria pedagógica',
+        '#Edición audiovisual',
+        '#Robótica / Programación'
+      ],
+      '#Uso de Tecnología': [
+        '#Canva / Presentaciones',
+        '#Classroom / Drive',
+        '#Simuladores virtuales',
+        '#Búsqueda bibliográfica',
+        '#Kahoot / Quiz'
+      ],
+      '#Reunión': [
+        '#Reunión de departamento',
+        '#Capacitación docente',
+        '#Consejo de curso',
+        '#Academia extracurricular'
+      ]
+    };
+
+    let tagCategoriaActiva = null;
+
+    function renderizarTagsPrincipales() {
+      const cont = document.getElementById('tagsPrincipalesContainer');
+      if (!cont) return;
+      cont.innerHTML = '';
+      Object.keys(TAGS_JERARQUICOS).forEach(cat => {
+        const btn = document.createElement('button');
+        btn.type = 'button';
+        btn.className = 'tag-cat-btn' + (tagCategoriaActiva === cat ? ' active' : '');
+        btn.innerText = cat;
+        btn.onclick = () => seleccionarCategoriaTag(cat);
+        cont.appendChild(btn);
+      });
+    }
+
+    function seleccionarCategoriaTag(cat) {
+      tagCategoriaActiva = cat;
+      renderizarTagsPrincipales();
+
+      const inp = document.getElementById('inMotivo');
+      if (!inp.value.includes(cat)) {
+        if (!inp.value.trim()) {
+          inp.value = cat;
+        } else {
+          inp.value = `${cat} - ${inp.value.trim()}`;
+        }
+      }
+
+      const subWrap = document.getElementById('subTagsWrapper');
+      const subCont = document.getElementById('subTagsContainer');
+      const subTit = document.getElementById('subTagsTitulo');
+      
+      const subList = TAGS_JERARQUICOS[cat] || [];
+      if (subList.length > 0) {
+        subTit.innerText = `Sub-actividades para ${cat}:`;
+        subCont.innerHTML = '';
+        subList.forEach(sub => {
+          const sp = document.createElement('span');
+          sp.className = 'subtag-pill';
+          sp.innerText = sub;
+          sp.onclick = () => {
+            if (!inp.value.includes(sub)) {
+              inp.value = inp.value.trim() ? `${inp.value.trim()} • ${sub}` : sub;
+            }
+            inp.focus();
+          };
+          subCont.appendChild(sp);
+        });
+        subWrap.style.display = 'block';
+      } else {
+        subWrap.style.display = 'none';
+      }
+      inp.focus();
+    }
+
+    function cerrarSubTags() {
+      const subWrap = document.getElementById('subTagsWrapper');
+      if (subWrap) subWrap.style.display = 'none';
+      tagCategoriaActiva = null;
+      renderizarTagsPrincipales();
+    }
+
+    // --- TEMPLATES / PLANTILLAS DE RESERVA ---
+    function getTemplatesStorageKey() {
+      const email = (usuarioActivo && usuarioActivo.email) ? usuarioActivo.email : 'general';
+      return 'ccg_reserva_templates_' + email;
+    }
+
+    function obtenerPlantillasGuardadas() {
+      try {
+        const raw = localStorage.getItem(getTemplatesStorageKey());
+        return raw ? JSON.parse(raw) : [];
+      } catch(e) {
+        return [];
+      }
+    }
+
+    function guardarPlantillasEnStorage(lista) {
+      try {
+        localStorage.setItem(getTemplatesStorageKey(), JSON.stringify(lista));
+      } catch(e){}
+    }
+
+    function cargarPlantillasSelect() {
+      const sel = document.getElementById('selPlantillasReserva');
+      const btnDel = document.getElementById('btnEliminarPlantilla');
+      if (!sel) return;
+
+      const tpls = obtenerPlantillasGuardadas();
+      sel.innerHTML = '<option value="">-- Cargar guardada --</option>';
+      tpls.forEach(t => {
+        const opt = document.createElement('option');
+        opt.value = t.id;
+        opt.innerText = `${t.nombre} (B${(t.bloques || []).join(', B')})`;
+        sel.appendChild(opt);
+      });
+      if (btnDel) btnDel.style.display = 'none';
+    }
+
+    function aplicarPlantillaReserva(tplId) {
+      const btnDel = document.getElementById('btnEliminarPlantilla');
+      if (!tplId) {
+        if (btnDel) btnDel.style.display = 'none';
+        return;
+      }
+      const tpls = obtenerPlantillasGuardadas();
+      const t = tpls.find(x => String(x.id) === String(tplId));
+      if (!t) return;
+
+      bloquesSeleccionados.clear();
+      (t.bloques || []).forEach(b => bloquesSeleccionados.add(parseInt(b)));
+      renderizarGridBloques();
+
+      if (t.motivo) {
+        document.getElementById('inMotivo').value = t.motivo;
+      }
+      if (btnDel) btnDel.style.display = 'inline-block';
+
+      Swal.fire({
+        toast: true,
+        position: 'top-end',
+        icon: 'success',
+        title: `Plantilla "${t.nombre}" cargada`,
+        timer: 2000,
+        showConfirmButton: false
+      });
+    }
+
+    function guardarComoPlantilla() {
+      const seleccionados = Array.from(bloquesSeleccionados).sort((a,b)=>a-b);
+      if (seleccionados.length === 0) {
+        Swal.fire('Atención', 'Selecciona primero los bloques que compondrán tu plantilla.', 'warning');
+        return;
+      }
+      const motivo = document.getElementById('inMotivo').value.trim();
+      if (!motivo) {
+        Swal.fire('Atención', 'Escribe un motivo o selecciona tags para guardar tu plantilla.', 'warning');
+        return;
+      }
+
+      Swal.fire({
+        title: 'Guardar como Plantilla',
+        text: 'Asigna un nombre para reutilizar esta configuración en futuras reservas:',
+        input: 'text',
+        inputPlaceholder: 'Ej: Robótica 8° Básico (Bloques 1 y 2)',
+        inputValue: motivo.slice(0, 40),
+        showCancelButton: true,
+        confirmButtonText: 'Guardar Plantilla',
+        cancelButtonText: 'Cancelar'
+      }).then(res => {
+        if (res.isConfirmed && res.value && res.value.trim()) {
+          const nombre = res.value.trim();
+          const tpls = obtenerPlantillasGuardadas();
+          const nuevo = {
+            id: Date.now(),
+            nombre: nombre,
+            bloques: seleccionados,
+            motivo: motivo,
+            recurso: document.getElementById('inRecurso').value || recursoActual
+          };
+          tpls.push(nuevo);
+          guardarPlantillasEnStorage(tpls);
+          cargarPlantillasSelect();
+          document.getElementById('selPlantillasReserva').value = nuevo.id;
+          const btnDel = document.getElementById('btnEliminarPlantilla');
+          if (btnDel) btnDel.style.display = 'inline-block';
+          Swal.fire('Guardada', `Plantilla "${nombre}" guardada correctamente.`, 'success');
+        }
+      });
+    }
+
+    function eliminarPlantillaSeleccionada() {
+      const sel = document.getElementById('selPlantillasReserva');
+      const tplId = sel.value;
+      if (!tplId) return;
+
+      const tpls = obtenerPlantillasGuardadas();
+      const t = tpls.find(x => String(x.id) === String(tplId));
+      if (!t) return;
+
+      Swal.fire({
+        title: `¿Eliminar plantilla "${t.nombre}"?`,
+        icon: 'warning',
+        showCancelButton: true,
+        confirmButtonText: 'Sí, eliminar',
+        cancelButtonText: 'Cancelar'
+      }).then(res => {
+        if (res.isConfirmed) {
+          const actualizados = tpls.filter(x => String(x.id) !== String(tplId));
+          guardarPlantillasEnStorage(actualizados);
+          cargarPlantillasSelect();
+          Swal.fire('Eliminada', 'La plantilla ha sido eliminada.', 'success');
+        }
+      });
+    }
+
+    // --- REGLA DE CONTIGÜIDAD ---
+    function esContiguo(arr) {
+      if (!arr || arr.length <= 1) return true;
+      const s = [...arr].map(Number).sort((a,b) => a - b);
+      for (let i = 0; i < s.length - 1; i++) {
+        if (s[i + 1] !== s[i] + 1) return false;
+      }
+      return true;
+    }
+
+    function actualizarInfoResponsableRecurso(recVal) {
+      const r = recursosCache.find(x => x.nombre === recVal);
+      const infoResp = document.getElementById('infoResponsableRecurso');
+      if (infoResp) {
+        if (r && r.responsable) {
+          infoResp.innerHTML = `<i class="bi bi-person-badge"></i> Encargado: <span class="text-primary fw-semibold">${r.responsable}</span>`;
+        } else {
+          infoResp.innerHTML = '';
+        }
+      }
+    }
+
     function abrirModalReserva(fecha = null, bloquesIniciales = []) {
       document.getElementById('formReserva').reset();
       document.getElementById('inReservaId').value = "";
@@ -676,13 +1054,17 @@
         document.getElementById('inFecha').value = new Date().toISOString().split('T')[0];
       }
 
-      if (recursoActual) {
-        document.getElementById('inRecurso').value = recursoActual;
-      }
+      const rec = recursoActual;
+      document.getElementById('inRecurso').value = rec;
+      const txtRec = document.getElementById('txtRecursoFijo');
+      if (txtRec) txtRec.value = rec;
+      actualizarInfoResponsableRecurso(rec);
 
       bloquesSeleccionados.clear();
       (bloquesIniciales || []).forEach(b => bloquesSeleccionados.add(parseInt(b)));
 
+      cerrarSubTags();
+      cargarPlantillasSelect();
       onFechaCambiada();
       modalRes.show();
     }
@@ -699,6 +1081,9 @@
 
       document.getElementById('inFecha').value = reserva.fecha;
       document.getElementById('inRecurso').value = reserva.recurso;
+      const txtRec = document.getElementById('txtRecursoFijo');
+      if (txtRec) txtRec.value = reserva.recurso;
+      actualizarInfoResponsableRecurso(reserva.recurso);
       document.getElementById('inMotivo').value = reserva.motivo || '';
 
       bloquesSeleccionados.clear();
@@ -706,6 +1091,8 @@
         reserva.bloques.split(',').forEach(b => bloquesSeleccionados.add(parseInt(b)));
       }
 
+      cerrarSubTags();
+      cargarPlantillasSelect();
       onFechaCambiada();
       modalRes.show();
     }
@@ -718,13 +1105,7 @@
     function onRecursoCambio() {
       const recVal = document.getElementById('inRecurso').value;
       if (recVal) recursoActual = recVal;
-      const r = recursosCache.find(x => x.nombre === recVal);
-      const infoResp = document.getElementById('infoResponsableRecurso');
-      if (r && r.responsable) {
-        infoResp.innerHTML = `<i class="bi bi-person-badge"></i> Encargado: <span class="text-primary">${r.responsable}</span>`;
-      } else {
-        infoResp.innerHTML = '';
-      }
+      actualizarInfoResponsableRecurso(recVal);
       onFechaCambiada();
     }
 
@@ -823,10 +1204,6 @@
       cargarMisClases();
     }
 
-    function onToggleAgrupacion() {
-      renderizarGridBloques();
-    }
-
     function deseleccionarTodosBloques() {
       bloquesSeleccionados.clear();
       renderizarGridBloques();
@@ -920,17 +1297,31 @@
         });
       });
 
-      for (let b = 1; b <= totalBloques; b++) {
-        const startHM = arrHoras[b - 1] || '00:00';
-        let bEndHM = '';
-        if (arrHoras[b]) {
-          bEndHM = arrHoras[b];
-        } else {
-          let pts = startHM.split(':');
-          let m = parseInt(pts[0]) * 60 + parseInt(pts[1] || '0') + 45;
-          bEndHM = `${String(Math.floor(m / 60)).padStart(2,'0')}:${String(m % 60).padStart(2,'0')}`;
-        }
+      let grupos = [];
+      if (r.bloques_agrupados) {
+        try { grupos = JSON.parse(r.bloques_agrupados); } catch(e){}
+      }
+      const grupoDeBloque = {};
+      grupos.forEach(grp => {
+        grp.forEach(b => { grupoDeBloque[b] = grp; });
+      });
+      const gruposRenderizados = new Set();
 
+      const getHorasBloque = (bNum) => {
+        const sHM = arrHoras[bNum - 1] || '00:00';
+        let eHM = '';
+        if (arrHoras[bNum]) {
+          eHM = arrHoras[bNum];
+        } else {
+          let pts = sHM.split(':');
+          let m = parseInt(pts[0]) * 60 + parseInt(pts[1] || '0') + 45;
+          eHM = `${String(Math.floor(m / 60)).padStart(2,'0')}:${String(m % 60).padStart(2,'0')}`;
+        }
+        return { start: sHM, end: eHM };
+      };
+
+      const crearCardBloque = (b) => {
+        const hB = getHorasBloque(b);
         let permitidoSemanal = true;
         if (disp && disp[diaStr] && !disp[diaStr].includes(b)) {
           permitidoSemanal = false;
@@ -945,20 +1336,69 @@
 
         if (!permitidoSemanal) {
           card.classList.add('blocked', 'disabled');
-          card.innerHTML = `<span class="fw-bold d-block">B${b}</span><small class="d-block text-muted">${startHM} - ${bEndHM}</small><small class="badge bg-secondary mt-1">No disp.</small>`;
+          card.innerHTML = `<span class="fw-bold d-block">B${b}</span><small class="d-block text-muted">${hB.start} - ${hB.end}</small><small class="badge bg-secondary mt-1">No disp.</small>`;
         } else if (bloqueadoInst) {
           card.classList.add('blocked', 'disabled');
-          card.innerHTML = `<span class="fw-bold d-block">B${b}</span><small class="d-block text-muted">${startHM} - ${bEndHM}</small><small class="badge bg-warning text-dark mt-1">Acto escolar</small>`;
+          card.innerHTML = `<span class="fw-bold d-block">B${b}</span><small class="d-block text-muted">${hB.start} - ${hB.end}</small><small class="badge bg-warning text-dark mt-1">Acto escolar</small>`;
         } else if (ocupadoPor) {
           card.classList.add('occupied', 'disabled');
-          card.innerHTML = `<span class="fw-bold d-block">B${b}</span><small class="d-block">${startHM} - ${bEndHM}</small><small class="badge bg-danger-subtle text-danger mt-1 text-truncate d-block" title="${ocupadoPor}">Tomado</small>`;
+          card.innerHTML = `<span class="fw-bold d-block">B${b}</span><small class="d-block">${hB.start} - ${hB.end}</small><small class="badge bg-danger-subtle text-danger mt-1 text-truncate d-block" title="${ocupadoPor}">Tomado</small>`;
         } else {
           if (isSelected) card.classList.add('selected');
-          card.innerHTML = `<span class="fw-bold d-block">${isSelected ? '<i class="bi bi-check-circle-fill me-1"></i>' : ''}B${b}</span><small class="d-block ${isSelected ? '' : 'text-muted'}">${startHM} - ${bEndHM}</small><span class="badge ${isSelected ? 'bg-white text-primary' : 'bg-success-subtle text-success'} mt-1">${isSelected ? 'Seleccionado' : 'Disponible'}</span>`;
-          card.onclick = () => toggleBloque(b, r);
+          card.innerHTML = `<span class="fw-bold d-block">${isSelected ? '<i class="bi bi-check-circle-fill me-1"></i>' : ''}B${b}</span><small class="d-block ${isSelected ? '' : 'text-muted'}">${hB.start} - ${hB.end}</small><span class="badge ${isSelected ? 'bg-white text-primary' : 'bg-success-subtle text-success'} mt-1">${isSelected ? 'Seleccionado' : 'Disponible'}</span>`;
+          card.onclick = (e) => {
+            e.stopPropagation();
+            toggleBloque(b, r);
+          };
         }
+        return { card, isSelected, disponible: permitidoSemanal && !bloqueadoInst && !ocupadoPor };
+      };
 
-        grid.appendChild(card);
+      for (let b = 1; b <= totalBloques; b++) {
+        const grp = grupoDeBloque[b];
+
+        if (grp && grp.length > 1) {
+          const grpKey = grp.join('-');
+          if (gruposRenderizados.has(grpKey)) continue;
+          gruposRenderizados.add(grpKey);
+
+          const bInicio = grp[0];
+          const bFin = grp[grp.length - 1];
+          const hIni = getHorasBloque(bInicio).start;
+          const hFin = getHorasBloque(bFin).end;
+          
+          const supraCard = document.createElement('div');
+          supraCard.className = 'supra-card-bloque';
+
+          const supraHeader = document.createElement('div');
+          supraHeader.className = 'supra-card-header';
+
+          const todosSeleccionados = grp.every(subB => bloquesSeleccionados.has(subB));
+          if (todosSeleccionados) supraCard.classList.add('all-selected');
+
+          supraHeader.innerHTML = `
+            <span><i class="bi bi-layers-fill me-1"></i>${hIni} a ${hFin} <span class="text-secondary fw-normal">(${grp.map(x => 'B'+x).join(' y ')})</span></span>
+            <span class="badge ${todosSeleccionados ? 'bg-primary' : 'bg-primary-subtle text-primary'} py-1">${todosSeleccionados ? 'Clase Doble ✓' : 'Seleccionar clase'}</span>
+          `;
+          supraHeader.onclick = () => toggleGrupoBloques(grp, r);
+          supraCard.appendChild(supraHeader);
+
+          const supraBody = document.createElement('div');
+          supraBody.className = 'supra-card-body';
+
+          grp.forEach(subB => {
+            const childInfo = crearCardBloque(subB);
+            supraBody.appendChild(childInfo.card);
+          });
+
+          supraCard.appendChild(supraBody);
+          grid.appendChild(supraCard);
+        } else {
+          const singleInfo = crearCardBloque(b);
+          singleInfo.card.style.minWidth = '130px';
+          singleInfo.card.style.flex = '1 1 130px';
+          grid.appendChild(singleInfo.card);
+        }
       }
 
       actualizarResumenYAlertas();
@@ -966,33 +1406,64 @@
 
     function toggleBloque(b, recursoObj) {
       const r = recursoObj || recursosCache.find(x => x.nombre === (document.getElementById('inRecurso').value || recursoActual));
-      const agruparSwitch = document.getElementById('chkAgruparBloques').checked;
-
-      let pareja = [];
-      if (agruparSwitch && r && r.bloques_agrupados) {
-        try {
-          const grupos = JSON.parse(r.bloques_agrupados);
-          for (let g of grupos) {
-            if (g.includes(b)) {
-              pareja = g;
-              break;
-            }
-          }
-        } catch(e){}
-      }
 
       if (bloquesSeleccionados.has(b)) {
         bloquesSeleccionados.delete(b);
-        if (pareja.length > 0) {
-          pareja.forEach(p => bloquesSeleccionados.delete(p));
+        const restantes = Array.from(bloquesSeleccionados).sort((x,y)=>x-y);
+        if (!esContiguo(restantes)) {
+          bloquesSeleccionados.clear();
+          Swal.fire({
+            toast: true,
+            position: 'top-end',
+            icon: 'info',
+            title: 'Se reinició la selección porque los bloques deben permanecer continuos.',
+            timer: 3000,
+            showConfirmButton: false
+          });
         }
       } else {
-        bloquesSeleccionados.add(b);
-        if (pareja.length > 0) {
-          pareja.forEach(p => bloquesSeleccionados.add(p));
+        const candidatos = Array.from(bloquesSeleccionados);
+        candidatos.push(b);
+        if (!esContiguo(candidatos)) {
+          Swal.fire({
+            toast: true,
+            position: 'top-end',
+            icon: 'warning',
+            title: 'Los bloques deben ser continuos en una misma reserva. Para horarios separados, agenda reservas independientes.',
+            timer: 3500,
+            showConfirmButton: false
+          });
+          return;
         }
+        bloquesSeleccionados.add(b);
       }
 
+      renderizarGridBloques();
+    }
+
+    function toggleGrupoBloques(grp, recursoObj) {
+      const todosEstan = grp.every(b => bloquesSeleccionados.has(b));
+      if (todosEstan) {
+        grp.forEach(b => bloquesSeleccionados.delete(b));
+        const restantes = Array.from(bloquesSeleccionados).sort((x,y)=>x-y);
+        if (!esContiguo(restantes)) bloquesSeleccionados.clear();
+      } else {
+        const candidatos = new Set(bloquesSeleccionados);
+        grp.forEach(b => candidatos.add(b));
+        const arrCand = Array.from(candidatos);
+        if (!esContiguo(arrCand)) {
+          Swal.fire({
+            toast: true,
+            position: 'top-end',
+            icon: 'warning',
+            title: 'Los bloques deben ser continuos. Si deseas seleccionar este grupo, limpia primero la selección anterior.',
+            timer: 3500,
+            showConfirmButton: false
+          });
+          return;
+        }
+        grp.forEach(b => bloquesSeleccionados.add(b));
+      }
       renderizarGridBloques();
     }
 
@@ -1193,6 +1664,11 @@
       const seleccionados = Array.from(bloquesSeleccionados).sort((a,b)=>a-b);
       if (seleccionados.length === 0) {
         Swal.fire("Atención", "Debes seleccionar al menos un bloque en la cuadrícula.", "warning");
+        return;
+      }
+
+      if (!esContiguo(seleccionados)) {
+        Swal.fire("Atención", "Los bloques seleccionados deben ser contiguos en una misma reserva (sin espacios intermedios).", "warning");
         return;
       }
       
