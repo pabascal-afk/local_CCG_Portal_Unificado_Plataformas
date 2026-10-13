@@ -67,8 +67,8 @@
       flex-direction: column;
       gap: 6px;
       transition: all 0.15s ease-in-out;
-      min-width: 260px;
-      flex: 1 1 260px;
+      width: 100%;
+      min-width: 0;
     }
     .supra-card-bloque:hover {
       border-color: #9ec5fe;
@@ -83,7 +83,7 @@
       display: flex;
       justify-content: space-between;
       align-items: center;
-      font-size: 0.8em;
+      font-size: 0.82em;
       font-weight: 700;
       color: #0d6efd;
       border-bottom: 1px dashed #dbe5f7;
@@ -100,6 +100,54 @@
     }
     .supra-card-body .card-bloque {
       flex: 1;
+      min-width: 0;
+    }
+
+    /* Columnas Configurables de Visualización de Bloques (Jornadas) */
+    .grid-columnas-jornadas {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+      gap: 16px;
+      width: 100%;
+      align-items: start;
+    }
+    .col-jornada {
+      background: #ffffff;
+      border: 1px solid #e2e8f0;
+      border-radius: 10px;
+      padding: 12px;
+      box-shadow: 0 1px 3px rgba(0,0,0,0.03);
+      display: flex;
+      flex-direction: column;
+      gap: 10px;
+      min-width: 0;
+    }
+    .col-jornada-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      padding-bottom: 8px;
+      border-bottom: 1.5px solid #edf2f7;
+      font-size: 0.88em;
+      font-weight: 700;
+      color: #1e293b;
+    }
+    .col-jornada-body {
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+    }
+    .col-jornada-body .supra-card-bloque {
+      width: 100%;
+      min-width: 0;
+      flex: none;
+    }
+    .card-bloque-single {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      width: 100%;
+      padding: 9px 12px;
     }
 
     /* Tags Jerárquicos y Plantillas */
@@ -161,7 +209,7 @@
   </div>
 
   <div class="modal fade" id="modalReserva" tabindex="-1">
-    <div class="modal-dialog modal-lg">
+    <div class="modal-dialog modal-xl modal-dialog-centered modal-dialog-scrollable">
       <div class="modal-content border-0 shadow-lg">
         <div class="modal-header bg-primary text-white border-0 py-3">
           <div class="d-flex align-items-center gap-2">
@@ -217,7 +265,7 @@
                 </div>
 
                 <!-- Grid dinámico de bloques y supra-tarjetas -->
-                <div id="gridBloquesContenedor" class="d-flex flex-wrap gap-2">
+                <div id="gridBloquesContenedor" class="w-100">
                   <div class="text-muted small py-3 text-center w-100">Cargando bloques disponibles...</div>
                 </div>
 
@@ -313,6 +361,11 @@
           <h6 class="mt-3">Horarios Exactos de Inicio</h6>
           <p class="text-muted small mb-2">Escribe a qué hora comienza cada bloque, separado por comas (formato XX:XX). El número de horas que ingreses definirá la cantidad total de bloques por día (ej. si ingresas 6 horas, habrán 6 bloques).</p>
           <input type="text" id="dispHorarios" class="form-control" placeholder="08:00, 08:45, 09:30...">
+
+          <h6 class="mt-3"><i class="bi bi-columns-gap text-primary"></i> Columnas de Visualización en Modal (Jornadas)</h6>
+          <p class="text-muted small mb-2">Ordena las tarjetas y suprabloques verticalmente de arriba a abajo en columnas separadas (ej: Mañana y Tarde). Escribe el título de cada columna seguido de dos puntos y sus bloques (admite rangos como <code>1-4</code> o listas separadas por comas). Separa las columnas con <code>|</code>.</p>
+          <input type="text" id="dispColumnas" class="form-control" placeholder="Ej: Mañana: 1-4 | Tarde: 5-8 (o Mañana: 1,2,3,4 | Tarde: 5,6,7,8)">
+          <small class="text-muted d-block mt-1" style="font-size:0.75em;">Si se deja vacío, todos los bloques se mostrarán ordenados de arriba a abajo en una sola columna continua.</small>
           
           <h6 class="mt-4 text-danger"><i class="bi bi-calendar-x"></i> Bloqueos de Fechas (Inhabilitar recurso)</h6>
           <p class="text-muted small mb-2">Selecciona un rango de fechas donde nadie podrá reservar este recurso.</p>
@@ -1219,6 +1272,78 @@
       input.focus();
     }
 
+    function parsearColumnasModal(columnasStr, totalBloques) {
+      const columnas = [];
+      const bloquesAsignados = new Set();
+
+      if (columnasStr && typeof columnasStr === 'string' && columnasStr.trim().length > 0) {
+        const partes = columnasStr.split('|');
+        partes.forEach((parte, idx) => {
+          const p = parte.trim();
+          if (!p) return;
+
+          let titulo = 'Columna ' + (idx + 1);
+          let bksStr = p;
+
+          if (p.includes(':')) {
+            const sub = p.split(':');
+            titulo = sub[0].trim() || titulo;
+            bksStr = sub.slice(1).join(':').trim();
+          }
+
+          const bloquesCol = [];
+          const tokens = bksStr.split(',');
+          tokens.forEach(tok => {
+            tok = tok.trim();
+            if (!tok) return;
+            if (tok.includes('-')) {
+              const dashParts = tok.split('-');
+              const rIni = parseInt(dashParts[0].trim());
+              const rFin = parseInt(dashParts[1].trim());
+              if (!isNaN(rIni) && !isNaN(rFin)) {
+                const start = Math.min(rIni, rFin);
+                const end = Math.max(rIni, rFin);
+                for (let num = start; num <= end; num++) {
+                  if (num >= 1 && num <= totalBloques && !bloquesAsignados.has(num)) {
+                    bloquesCol.push(num);
+                    bloquesAsignados.add(num);
+                  }
+                }
+              }
+            } else {
+              const num = parseInt(tok);
+              if (!isNaN(num) && num >= 1 && num <= totalBloques && !bloquesAsignados.has(num)) {
+                bloquesCol.push(num);
+                bloquesAsignados.add(num);
+              }
+            }
+          });
+
+          if (bloquesCol.length > 0) {
+            columnas.push({ titulo, bloques: bloquesCol });
+          }
+        });
+      }
+
+      if (columnas.length === 0) {
+        const todos = [];
+        for (let b = 1; b <= totalBloques; b++) todos.push(b);
+        return [{ titulo: 'Horarios', bloques: todos, esUnica: true }];
+      }
+
+      const faltantes = [];
+      for (let b = 1; b <= totalBloques; b++) {
+        if (!bloquesAsignados.has(b)) {
+          faltantes.push(b);
+        }
+      }
+      if (faltantes.length > 0) {
+        columnas.push({ titulo: 'Otros Bloques', bloques: faltantes });
+      }
+
+      return columnas;
+    }
+
     function renderizarGridBloques() {
       const fecha = document.getElementById('inFecha').value;
       const recNombre = document.getElementById('inRecurso').value || recursoActual;
@@ -1307,6 +1432,12 @@
       });
       const gruposRenderizados = new Set();
 
+      let reglas = {};
+      if (r.reglas_reserva) {
+        try { reglas = JSON.parse(r.reglas_reserva); } catch(e){}
+      }
+      const columnas = parsearColumnasModal(reglas.columnas_modal, totalBloques);
+
       const getHorasBloque = (bNum) => {
         const sHM = arrHoras[bNum - 1] || '00:00';
         let eHM = '';
@@ -1320,7 +1451,7 @@
         return { start: sHM, end: eHM };
       };
 
-      const crearCardBloque = (b) => {
+      const crearCardBloque = (b, isSingle = false) => {
         const hB = getHorasBloque(b);
         let permitidoSemanal = true;
         if (disp && disp[diaStr] && !disp[diaStr].includes(b)) {
@@ -1334,73 +1465,117 @@
         const card = document.createElement('div');
         card.className = 'card-bloque';
 
+        let badgeHtml = '';
         if (!permitidoSemanal) {
           card.classList.add('blocked', 'disabled');
-          card.innerHTML = `<span class="fw-bold d-block">B${b}</span><small class="d-block text-muted">${hB.start} - ${hB.end}</small><small class="badge bg-secondary mt-1">No disp.</small>`;
+          badgeHtml = '<small class="badge bg-secondary">No disp.</small>';
         } else if (bloqueadoInst) {
           card.classList.add('blocked', 'disabled');
-          card.innerHTML = `<span class="fw-bold d-block">B${b}</span><small class="d-block text-muted">${hB.start} - ${hB.end}</small><small class="badge bg-warning text-dark mt-1">Acto escolar</small>`;
+          badgeHtml = '<small class="badge bg-warning text-dark">Acto escolar</small>';
         } else if (ocupadoPor) {
           card.classList.add('occupied', 'disabled');
-          card.innerHTML = `<span class="fw-bold d-block">B${b}</span><small class="d-block">${hB.start} - ${hB.end}</small><small class="badge bg-danger-subtle text-danger mt-1 text-truncate d-block" title="${ocupadoPor}">Tomado</small>`;
+          badgeHtml = `<small class="badge bg-danger-subtle text-danger text-truncate" style="max-width:130px;" title="${ocupadoPor}">Tomado</small>`;
         } else {
           if (isSelected) card.classList.add('selected');
-          card.innerHTML = `<span class="fw-bold d-block">${isSelected ? '<i class="bi bi-check-circle-fill me-1"></i>' : ''}B${b}</span><small class="d-block ${isSelected ? '' : 'text-muted'}">${hB.start} - ${hB.end}</small><span class="badge ${isSelected ? 'bg-white text-primary' : 'bg-success-subtle text-success'} mt-1">${isSelected ? 'Seleccionado' : 'Disponible'}</span>`;
+          badgeHtml = `<span class="badge ${isSelected ? 'bg-white text-primary' : 'bg-success-subtle text-success'}">${isSelected ? 'Seleccionado ✓' : 'Disponible'}</span>`;
           card.onclick = (e) => {
             e.stopPropagation();
             toggleBloque(b, r);
           };
         }
+
+        if (isSingle) {
+          card.classList.add('card-bloque-single');
+          card.innerHTML = `
+            <div class="d-flex align-items-center gap-2">
+              <span class="fw-bold">${isSelected ? '<i class="bi bi-check-circle-fill me-1"></i>' : ''}Bloque ${b}</span>
+              <small class="${isSelected ? 'text-white-50' : 'text-muted'}">(${hB.start} - ${hB.end})</small>
+            </div>
+            <div>${badgeHtml}</div>
+          `;
+        } else {
+          card.innerHTML = `
+            <span class="fw-bold d-block">${isSelected ? '<i class="bi bi-check-circle-fill me-1"></i>' : ''}B${b}</span>
+            <small class="d-block ${isSelected ? 'text-white-50' : 'text-muted'}">${hB.start} - ${hB.end}</small>
+            <div class="mt-1">${badgeHtml}</div>
+          `;
+        }
+
         return { card, isSelected, disponible: permitidoSemanal && !bloqueadoInst && !ocupadoPor };
       };
 
-      for (let b = 1; b <= totalBloques; b++) {
-        const grp = grupoDeBloque[b];
+      const gridCols = document.createElement('div');
+      gridCols.className = 'grid-columnas-jornadas';
 
-        if (grp && grp.length > 1) {
-          const grpKey = grp.join('-');
-          if (gruposRenderizados.has(grpKey)) continue;
-          gruposRenderizados.add(grpKey);
+      columnas.forEach(col => {
+        const colCard = document.createElement('div');
+        colCard.className = 'col-jornada';
 
-          const bInicio = grp[0];
-          const bFin = grp[grp.length - 1];
-          const hIni = getHorasBloque(bInicio).start;
-          const hFin = getHorasBloque(bFin).end;
-          
-          const supraCard = document.createElement('div');
-          supraCard.className = 'supra-card-bloque';
-
-          const supraHeader = document.createElement('div');
-          supraHeader.className = 'supra-card-header';
-
-          const todosSeleccionados = grp.every(subB => bloquesSeleccionados.has(subB));
-          if (todosSeleccionados) supraCard.classList.add('all-selected');
-
-          supraHeader.innerHTML = `
-            <span><i class="bi bi-layers-fill me-1"></i>${hIni} a ${hFin} <span class="text-secondary fw-normal">(${grp.map(x => 'B'+x).join(' y ')})</span></span>
-            <span class="badge ${todosSeleccionados ? 'bg-primary' : 'bg-primary-subtle text-primary'} py-1">${todosSeleccionados ? 'Clase Doble ✓' : 'Seleccionar clase'}</span>
+        if (columnas.length > 1 || !col.esUnica) {
+          const colHeader = document.createElement('div');
+          colHeader.className = 'col-jornada-header';
+          colHeader.innerHTML = `
+            <span><i class="bi bi-clock-history me-1 text-primary"></i> ${col.titulo}</span>
+            <span class="badge bg-primary-subtle text-primary border border-primary-subtle">${col.bloques.length} bloques</span>
           `;
-          supraHeader.onclick = () => toggleGrupoBloques(grp, r);
-          supraCard.appendChild(supraHeader);
-
-          const supraBody = document.createElement('div');
-          supraBody.className = 'supra-card-body';
-
-          grp.forEach(subB => {
-            const childInfo = crearCardBloque(subB);
-            supraBody.appendChild(childInfo.card);
-          });
-
-          supraCard.appendChild(supraBody);
-          grid.appendChild(supraCard);
-        } else {
-          const singleInfo = crearCardBloque(b);
-          singleInfo.card.style.minWidth = '130px';
-          singleInfo.card.style.flex = '1 1 130px';
-          grid.appendChild(singleInfo.card);
+          colCard.appendChild(colHeader);
         }
-      }
 
+        const colBody = document.createElement('div');
+        colBody.className = 'col-jornada-body';
+
+        for (let b of col.bloques) {
+          const grp = grupoDeBloque[b];
+
+          if (grp && grp.length > 1 && grp.every(subB => col.bloques.includes(subB))) {
+            const grpKey = grp.join('-');
+            if (gruposRenderizados.has(grpKey)) continue;
+            gruposRenderizados.add(grpKey);
+
+            const bInicio = grp[0];
+            const bFin = grp[grp.length - 1];
+            const hIni = getHorasBloque(bInicio).start;
+            const hFin = getHorasBloque(bFin).end;
+            
+            const supraCard = document.createElement('div');
+            supraCard.className = 'supra-card-bloque';
+
+            const supraHeader = document.createElement('div');
+            supraHeader.className = 'supra-card-header';
+
+            const todosSeleccionados = grp.every(subB => bloquesSeleccionados.has(subB));
+            if (todosSeleccionados) supraCard.classList.add('all-selected');
+
+            supraHeader.innerHTML = `
+              <span><i class="bi bi-layers-fill me-1"></i>${hIni} a ${hFin} <span class="text-secondary fw-normal">(${grp.map(x => 'B'+x).join(' y ')})</span></span>
+              <span class="badge ${todosSeleccionados ? 'bg-primary text-white' : 'bg-primary-subtle text-primary'} py-1">${todosSeleccionados ? 'Clase Doble ✓' : 'Seleccionar clase'}</span>
+            `;
+            supraHeader.onclick = () => toggleGrupoBloques(grp, r);
+            supraCard.appendChild(supraHeader);
+
+            const supraBody = document.createElement('div');
+            supraBody.className = 'supra-card-body';
+
+            grp.forEach(subB => {
+              const childInfo = crearCardBloque(subB, false);
+              supraBody.appendChild(childInfo.card);
+            });
+
+            supraCard.appendChild(supraBody);
+            colBody.appendChild(supraCard);
+          } else {
+            if (grp && grp.length > 1 && gruposRenderizados.has(grp.join('-'))) continue;
+
+            const singleInfo = crearCardBloque(b, true);
+            colBody.appendChild(singleInfo.card);
+          }
+        }
+
+        colCard.appendChild(colBody);
+        gridCols.appendChild(colCard);
+      });
+
+      grid.appendChild(gridCols);
       actualizarResumenYAlertas();
     }
 
@@ -1578,6 +1753,7 @@
        if (r.reglas_reserva) {
          try { reglas = JSON.parse(r.reglas_reserva); } catch(e){}
        }
+       document.getElementById('dispColumnas').value = reglas.columnas_modal || '';
        document.getElementById('reglaMinDias').value = reglas.anticipacion_min_dias !== undefined ? reglas.anticipacion_min_dias : 0;
        document.getElementById('reglaMaxDias').value = reglas.anticipacion_max_dias !== undefined ? reglas.anticipacion_max_dias : 30;
        document.getElementById('reglaMaxConsec').value = reglas.max_bloques_consecutivos !== undefined ? reglas.max_bloques_consecutivos : 4;
@@ -1639,7 +1815,8 @@
            max_bloques_consecutivos: parseInt(document.getElementById('reglaMaxConsec').value) || 4,
            max_bloques_semana: parseInt(document.getElementById('reglaMaxSemana').value) || 5,
            max_bloques_dia: parseInt(document.getElementById('reglaMaxDia').value) || 2,
-           permitir_excepcion_semanal: document.getElementById('reglaPermitirExcepcion').checked
+           permitir_excepcion_semanal: document.getElementById('reglaPermitirExcepcion').checked,
+           columnas_modal: document.getElementById('dispColumnas').value.trim()
        };
        
        await fetch('/api/recursos/config/' + dispIdActivo, {
