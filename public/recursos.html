@@ -191,6 +191,42 @@
     .cursor-pointer { cursor: pointer; }
     .pill-clase-sug { cursor: pointer; transition: transform 0.1s; }
     .pill-clase-sug:hover { transform: scale(1.03); }
+
+    /* Overflow vertical y scrollbar estilizado para modales */
+    #modalReserva .modal-dialog,
+    #modalDisp .modal-dialog {
+      max-height: calc(100vh - 2rem);
+    }
+    #modalReserva .modal-content,
+    #modalDisp .modal-content {
+      max-height: calc(100vh - 2rem);
+      display: flex;
+      flex-direction: column;
+    }
+    #modalReserva .modal-body,
+    #modalDisp .modal-body {
+      overflow-y: auto !important;
+      max-height: calc(100vh - 160px);
+      -webkit-overflow-scrolling: touch;
+    }
+    #modalReserva .modal-body::-webkit-scrollbar,
+    #modalDisp .modal-body::-webkit-scrollbar {
+      width: 8px;
+    }
+    #modalReserva .modal-body::-webkit-scrollbar-track,
+    #modalDisp .modal-body::-webkit-scrollbar-track {
+      background: #f1f5f9;
+      border-radius: 4px;
+    }
+    #modalReserva .modal-body::-webkit-scrollbar-thumb,
+    #modalDisp .modal-body::-webkit-scrollbar-thumb {
+      background: #cbd5e1;
+      border-radius: 4px;
+    }
+    #modalReserva .modal-body::-webkit-scrollbar-thumb:hover,
+    #modalDisp .modal-body::-webkit-scrollbar-thumb:hover {
+      background: #94a3b8;
+    }
   </style>
 </head>
 <body>
@@ -210,7 +246,7 @@
 
   <div class="modal fade" id="modalReserva" tabindex="-1">
     <div class="modal-dialog modal-xl modal-dialog-centered modal-dialog-scrollable">
-      <div class="modal-content border-0 shadow-lg">
+      <form id="formReserva" class="modal-content border-0 shadow-lg" onsubmit="guardarReserva(event)">
         <div class="modal-header bg-primary text-white border-0 py-3">
           <div class="d-flex align-items-center gap-2">
             <i class="bi bi-calendar2-check fs-4"></i>
@@ -221,9 +257,8 @@
           </div>
           <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
         </div>
-        <form id="formReserva" onsubmit="guardarReserva(event)">
-          <input type="hidden" id="inReservaId" value="">
-          <div class="modal-body bg-light p-4">
+        <input type="hidden" id="inReservaId" value="">
+        <div class="modal-body bg-light p-4">
             
             <!-- Fila Superior: Fecha y Recurso Fijo -->
             <div class="row g-3 mb-3">
@@ -336,10 +371,9 @@
         </form>
       </div>
     </div>
-  </div>
 
   <div class="modal fade" id="modalDisp" tabindex="-1">
-    <div class="modal-dialog modal-lg">
+    <div class="modal-dialog modal-lg modal-dialog-centered modal-dialog-scrollable">
       <div class="modal-content">
         <div class="modal-header bg-dark text-white">
           <h5 class="modal-title fw-bold">Configuración: <span id="dispNombre"></span></h5>
