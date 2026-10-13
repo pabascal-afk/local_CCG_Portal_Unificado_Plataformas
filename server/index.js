@@ -81,6 +81,9 @@ app.use(passport.session());
   if (!req.isAuthenticated()) {
     return res.redirect('/login.html');
   }
+  if (req.user && req.user.esVisitanteInstitucional) {
+    return res.redirect('/calendario-curso.html');
+  }
   next();
 });
 
@@ -90,9 +93,17 @@ app.use(express.static(path.join(__dirname, '../public')));
 // Ping para comprobación de estado del túnel
 app.get('/api/ping', (req, res) => res.send('pong'));
 
-
-
-
+function esDominioInstitucional(email) {
+  if (!email || typeof email !== 'string') return false;
+  const em = email.toLowerCase().trim();
+  const allowedConfig = process.env.ALLOWED_GOOGLE_DOMAINS 
+    ? process.env.ALLOWED_GOOGLE_DOMAINS.split(',').map(d => d.trim().toLowerCase().replace(/^@/, '')) 
+    : ['colegiocerrogrande.cl', 'alumnos.colegiocerrogrande.cl'];
+  
+  const domain = em.split('@')[1];
+  if (!domain) return false;
+  return allowedConfig.some(allowed => domain === allowed || domain.endsWith('.' + allowed));
+}
 
 if (process.env.GOOGLE_CLIENT_ID && process.env.GOOGLE_CLIENT_SECRET) {
   passport.use(new GoogleStrategy({
@@ -104,20 +115,47 @@ if (process.env.GOOGLE_CLIENT_ID && process.env.GOOGLE_CLIENT_SECRET) {
       const email = profile.emails[0].value.toLowerCase();
       db.get("SELECT * FROM usuarios WHERE email = ?", [email], (err, row) => {
         if (err) return cb(err);
-        if (!row) {
-          // Usuario no registrado en la BD, se rechaza
-          return cb(null, false, { message: 'Usuario no autorizado.' });
+        if (row) {
+          return cb(null, row); // Usuario de la BD (profesor/administrador)
         }
-        return cb(null, row); // Retorna el usuario de la BD
+        
+        // Si no está en BD pero pertenece a un dominio Google institucional:
+        if (esDominioInstitucional(email)) {
+          const usuarioVisitante = {
+            id: 'visitor_' + Buffer.from(email).toString('hex').slice(0, 12),
+            email: email,
+            nombre: profile.displayName || email.split('@')[0],
+            rol: 'Lector',
+            esVisitanteInstitucional: true
+          };
+          return cb(null, usuarioVisitante);
+        }
+
+        // Usuario no autorizado
+        return cb(null, false, { message: 'Debes iniciar sesión con una cuenta de Google institucional del colegio (@colegiocerrogrande.cl).' });
       });
     }
   ));
 }
 
-passport.serializeUser((user, done) => done(null, user.id));
-passport.deserializeUser((id, done) => {
+passport.serializeUser((user, done) => {
+  if (user && user.esVisitanteInstitucional) {
+    done(null, user);
+  } else {
+    done(null, (user && user.id) ? user.id : user);
+  }
+});
+
+passport.deserializeUser((idOrUser, done) => {
+  if (idOrUser && typeof idOrUser === 'object' && idOrUser.esVisitanteInstitucional) {
+    return done(null, idOrUser);
+  }
+  const id = (idOrUser && idOrUser.id) ? idOrUser.id : idOrUser;
   db.get("SELECT * FROM usuarios WHERE id = ?", [id], (err, row) => {
-    done(err, row);
+    if (err) return done(err);
+    if (row) return done(null, row);
+    if (typeof idOrUser === 'object') return done(null, idOrUser);
+    done(null, null);
   });
 });
 
@@ -128,13 +166,63 @@ function isAuthenticated(req, res, next) {
 }
 
 // Rutas de Auth
-app.get('/auth/google', passport.authenticate('google', { scope: ['profile', 'email'] }));
+app.get('/auth/google', (req, res, next) => {
+  if (req.query.popup === '1' || req.query.popup === 'true') {
+    req.session.oauthPopup = true;
+  } else {
+    req.session.oauthPopup = false;
+  }
+  passport.authenticate('google', { scope: ['profile', 'email'] })(req, res, next);
+});
 
-app.get('/auth/google/callback', 
-  passport.authenticate('google', { failureRedirect: '/login.html' }),
-  function(req, res) {
+app.get('/auth/google/callback', (req, res, next) => {
+  const isPopup = req.session && req.session.oauthPopup;
+  passport.authenticate('google', { 
+    failureRedirect: isPopup ? '/auth/popup-callback?error=unauthorized' : '/login.html' 
+  })(req, res, () => {
+    if (isPopup) {
+      delete req.session.oauthPopup;
+      return res.redirect('/auth/popup-callback?status=success');
+    }
+    if (req.user && req.user.esVisitanteInstitucional) {
+      return res.redirect('/calendario-curso.html');
+    }
     res.redirect('/');
   });
+});
+
+app.get('/auth/popup-callback', (req, res) => {
+  const { status, error } = req.query;
+  const isOk = status === 'success';
+  res.send(`<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="UTF-8">
+  <title>Autenticación Institucional</title>
+</head>
+<body style="font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; text-align: center; padding: 40px; background: #f8fafc; color: #1e293b;">
+  <div style="max-width: 380px; margin: 0 auto; background: white; padding: 30px; border-radius: 12px; box-shadow: 0 4px 15px rgba(0,0,0,0.06);">
+    <h3 style="margin-top:0; color: ${isOk ? '#16a34a' : '#dc2626'}; font-size: 1.3rem;">
+      ${isOk ? '✓ Sesión iniciada con éxito' : '✕ Acceso no autorizado'}
+    </h3>
+    <p style="font-size: 0.95rem; color: #64748b; line-height: 1.5;">
+      ${isOk 
+        ? 'Autenticado con tu cuenta institucional. Cerrando ventana y cargando calendario...' 
+        : 'Debes utilizar una cuenta de Google institucional del colegio (@colegiocerrogrande.cl).'
+      }
+    </p>
+  </div>
+  <script>
+    if (window.opener) {
+      try {
+        window.opener.postMessage({ type: 'AUTH_RESULT', success: ${isOk} }, '*');
+      } catch(e){}
+    }
+    setTimeout(function() { window.close(); }, ${isOk ? 1000 : 3500});
+  </script>
+</body>
+</html>`);
+});
 
 app.get('/api/auth/me', (req, res) => {
   if (req.isAuthenticated()) {
@@ -210,10 +298,35 @@ app.get('/api/auth/gas', (req, res) => {
     }
     
     db.get("SELECT * FROM usuarios WHERE email = ?", [email.toLowerCase()], (err, row) => {
-        if (err || !row) return res.status(404).send("El correo de Google es válido, pero el usuario no está registrado en la base de datos del colegio.");
+        if (err) return res.status(500).send("Error de base de datos");
+        
+        if (!row) {
+            if (esDominioInstitucional(email)) {
+                const usuarioVisitante = {
+                    id: 'visitor_' + Buffer.from(email).toString('hex').slice(0, 12),
+                    email: email.toLowerCase(),
+                    nombre: email.split('@')[0],
+                    rol: 'Lector',
+                    esVisitanteInstitucional: true
+                };
+                return req.login(usuarioVisitante, (errLog) => {
+                    if (errLog) return res.status(500).send("Error interno al crear la sesión");
+                    if (req.session && req.session.oauthPopup) {
+                        delete req.session.oauthPopup;
+                        return res.redirect('/auth/popup-callback?status=success');
+                    }
+                    res.redirect('/calendario-curso.html');
+                });
+            }
+            return res.status(404).send("Debes utilizar una cuenta institucional del colegio (@colegiocerrogrande.cl).");
+        }
         
         req.login(row, (err) => {
             if (err) return res.status(500).send("Error interno al crear la sesión");
+            if (req.session && req.session.oauthPopup) {
+                delete req.session.oauthPopup;
+                return res.redirect('/auth/popup-callback?status=success');
+            }
             res.redirect('/');
         });
     });

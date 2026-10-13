@@ -1,4 +1,4 @@
-﻿const express = require('express');
+const express = require('express');
 const router = express.Router();
 const sqlite3 = require('sqlite3').verbose();
 const path = require('path');
@@ -21,7 +21,61 @@ const run = (query, params = []) => new Promise((resolve, reject) => {
     });
 });
 
-// GET Evaluaciones
+// GET Evaluaciones para vista pública / embebida (requiere sesión institucional activa)
+router.get('/publico', async (req, res) => {
+    try {
+        if (!req.isAuthenticated() && process.env.GOOGLE_CLIENT_ID) {
+            return res.status(401).json({ error: 'Debes iniciar sesión con tu cuenta de Google institucional para ver las evaluaciones.' });
+        }
+
+        const cursoFiltro = req.query.curso ? req.query.curso.trim() : null;
+        let query = "SELECT id, fecha, curso, asignatura, tipo, detalles, profesor_nombre FROM evaluaciones WHERE 1=1";
+        const params = [];
+
+        if (cursoFiltro) {
+            query += " AND LOWER(curso) = LOWER(?)";
+            params.push(cursoFiltro);
+        }
+        query += " ORDER BY fecha ASC";
+
+        const rows = await queryAll(query, params);
+        res.json(rows);
+    } catch (e) {
+        res.status(500).json({ error: e.message });
+    }
+});
+
+// GET Lista ordenada de cursos para el selector público
+router.get('/cursos-publico', async (req, res) => {
+    try {
+        const rows = await queryAll(`
+            SELECT DISTINCT curso FROM (
+                SELECT curso FROM evaluaciones WHERE curso IS NOT NULL AND TRIM(curso) != ''
+                UNION
+                SELECT curso FROM horarios WHERE curso IS NOT NULL AND TRIM(curso) != ''
+            ) ORDER BY 
+              CASE 
+                WHEN curso LIKE '%KINDER%' THEN 1
+                WHEN curso LIKE '%1°%' THEN 2
+                WHEN curso LIKE '%2°%' THEN 3
+                WHEN curso LIKE '%3°%' THEN 4
+                WHEN curso LIKE '%4°%' THEN 5
+                WHEN curso LIKE '%5°%' THEN 6
+                WHEN curso LIKE '%6°%' THEN 7
+                WHEN curso LIKE '%7°%' THEN 8
+                WHEN curso LIKE '%8°%' THEN 9
+                WHEN curso LIKE '%I°%' THEN 10
+                WHEN curso LIKE '%II°%' THEN 11
+                WHEN curso LIKE '%III°%' THEN 12
+                WHEN curso LIKE '%IV°%' THEN 13
+                ELSE 20
+              END, curso ASC
+        `);
+        res.json(rows.map(r => r.curso));
+    } catch (e) {
+        res.status(500).json({ error: e.message });
+    }
+});
 
 // GET Todas mis evaluaciones (sin limite)
 router.get('/mis-evaluaciones-todas', async (req, res) => {

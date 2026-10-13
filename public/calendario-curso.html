@@ -1,0 +1,673 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Calendario de Evaluaciones por Curso</title>
+  <link rel="icon" type="image/svg+xml" href="/favicon.svg">
+  
+  <!-- Bootstrap 5 & Icons -->
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.10.5/font/bootstrap-icons.css">
+  
+  <!-- FullCalendar v6 -->
+  <script src="https://cdn.jsdelivr.net/npm/fullcalendar@6.1.8/index.global.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+
+  <style>
+    :root {
+      --fc-border-color: #e2e8f0;
+      --fc-today-bg-color: #f0f7ff;
+      --fc-page-bg-color: #ffffff;
+    }
+    body {
+      background-color: #f8fafc;
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+      color: #1e293b;
+      margin: 0;
+      padding: 0;
+    }
+
+    /* Barra Superior */
+    .top-bar {
+      background: #ffffff;
+      border-bottom: 1px solid #e2e8f0;
+      padding: 10px 16px;
+      box-shadow: 0 1px 3px rgba(0,0,0,0.03);
+    }
+    .brand-title {
+      font-size: 1.15rem;
+      font-weight: 700;
+      color: #0f172a;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+
+    /* Calendario */
+    #calendar {
+      background: #ffffff;
+      border-radius: 12px;
+      padding: 16px;
+      box-shadow: 0 2px 8px rgba(0,0,0,0.04);
+      border: 1px solid #e2e8f0;
+      min-height: 600px;
+    }
+
+    .fc-header-toolbar {
+      margin-bottom: 14px !important;
+      flex-wrap: wrap;
+      gap: 8px;
+    }
+    .fc-toolbar-title {
+      font-size: 1.25rem !important;
+      font-weight: 700 !important;
+      color: #1e293b;
+      text-transform: capitalize;
+    }
+    .fc-button-primary {
+      background-color: #f1f5f9 !important;
+      border-color: #e2e8f0 !important;
+      color: #334155 !important;
+      font-weight: 600 !important;
+      border-radius: 6px !important;
+      padding: 6px 12px !important;
+      font-size: 0.85rem !important;
+      transition: all 0.15s ease-in-out !important;
+      box-shadow: none !important;
+    }
+    .fc-button-primary:hover {
+      background-color: #e2e8f0 !important;
+      border-color: #cbd5e1 !important;
+      color: #0f172a !important;
+    }
+    .fc-button-active {
+      background-color: #0d6efd !important;
+      border-color: #0d6efd !important;
+      color: #ffffff !important;
+    }
+    .fc-event {
+      cursor: pointer;
+      border-radius: 5px;
+      padding: 3px 6px;
+      font-size: 0.82rem;
+      font-weight: 600;
+      border: none !important;
+      box-shadow: 0 1px 2px rgba(0,0,0,0.06);
+      transition: transform 0.1s ease;
+    }
+    .fc-event:hover {
+      transform: translateY(-1px);
+      filter: brightness(0.96);
+    }
+    .fc-daygrid-day-number {
+      font-weight: 600;
+      color: #475569;
+      font-size: 0.88rem;
+    }
+    .fc-day-today .fc-daygrid-day-number {
+      color: #0d6efd;
+      font-weight: 800;
+    }
+
+    /* Tarjeta de Inicio de Sesión */
+    .card-auth {
+      max-width: 440px;
+      margin: 50px auto;
+      border-radius: 16px;
+      border: 1px solid #e2e8f0;
+      box-shadow: 0 10px 25px rgba(0,0,0,0.05);
+      background: #ffffff;
+      padding: 36px 28px;
+      text-align: center;
+    }
+    .btn-google {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      gap: 10px;
+      width: 100%;
+      padding: 12px 18px;
+      font-weight: 600;
+      font-size: 0.95rem;
+      border-radius: 8px;
+      border: 1.5px solid #cbd5e1;
+      background: #ffffff;
+      color: #1e293b;
+      transition: all 0.2s ease;
+      cursor: pointer;
+    }
+    .btn-google:hover {
+      background: #f8fafc;
+      border-color: #94a3b8;
+      box-shadow: 0 2px 8px rgba(0,0,0,0.06);
+    }
+
+    /* Modal Detalle */
+    .modal-content-detalle {
+      border-radius: 14px;
+      border: 0;
+      overflow: hidden;
+      box-shadow: 0 12px 30px rgba(0,0,0,0.15);
+    }
+    .detalle-temario-box {
+      background: #f8fafc;
+      border-left: 4px solid #0d6efd;
+      border-radius: 6px;
+      padding: 14px;
+      white-space: pre-wrap;
+      font-size: 0.92rem;
+      line-height: 1.6;
+      color: #334155;
+    }
+
+    /* Modo Impresión */
+    @media print {
+      body {
+        background: white !important;
+        color: black !important;
+        padding: 0 !important;
+      }
+      .no-print, .top-bar, .fc-header-toolbar, .btn, #boxAuth {
+        display: none !important;
+      }
+      #printHeader {
+        display: block !important;
+      }
+      #calendar {
+        border: none !important;
+        box-shadow: none !important;
+        padding: 0 !important;
+        width: 100% !important;
+      }
+      .fc-daygrid-day-events {
+        page-break-inside: avoid;
+      }
+      .fc-event {
+        color: #000 !important;
+        background: #f0f0f0 !important;
+        border: 1px solid #ccc !important;
+      }
+    }
+    #printHeader {
+      display: none;
+      padding-bottom: 12px;
+      border-bottom: 2px solid #000;
+      margin-bottom: 16px;
+    }
+  </style>
+</head>
+<body>
+
+  <!-- Encabezado de Impresión (Solo visible al imprimir) -->
+  <div id="printHeader" class="text-center">
+    <h3 class="fw-bold mb-1">Colegio Cerro Grande</h3>
+    <h5 class="text-secondary mb-1">Calendario Oficial de Evaluaciones</h5>
+    <h6 id="printCursoTitulo" class="fw-bold text-primary mb-0">Curso: -</h6>
+  </div>
+
+  <!-- Barra Superior de Navegación y Filtro -->
+  <div class="top-bar no-print" id="mainTopBar">
+    <div class="container-fluid d-flex flex-wrap align-items-center justify-content-between gap-2">
+      
+      <!-- Título y Marca -->
+      <div class="d-flex align-items-center gap-2">
+        <div class="brand-title">
+          <i class="bi bi-calendar2-week-fill text-primary fs-4"></i>
+          <span>Evaluaciones</span>
+        </div>
+        <span class="badge bg-primary-subtle text-primary border border-primary-subtle fs-6" id="badgeCursoActual">Selecciona Curso</span>
+      </div>
+
+      <!-- Selector de Curso y Herramientas -->
+      <div class="d-flex align-items-center flex-wrap gap-2">
+        
+        <!-- Dropdown de Cursos -->
+        <div id="wrapperSelectorCurso" class="d-flex align-items-center gap-1">
+          <label for="selCurso" class="small fw-bold text-secondary d-none d-sm-inline"><i class="bi bi-mortarboard-fill me-1"></i>Curso:</label>
+          <select id="selCurso" class="form-select form-select-sm fw-semibold shadow-sm" style="min-width: 180px;" onchange="onCursoSeleccionado(this.value)">
+            <option value="">Cargando cursos...</option>
+          </select>
+        </div>
+
+        <!-- Botones de Impresión y Vistas -->
+        <button class="btn btn-sm btn-outline-secondary fw-semibold shadow-sm" onclick="imprimirCalendario()" title="Imprimir o guardar en PDF">
+          <i class="bi bi-printer-fill me-1"></i><span class="d-none d-md-inline">Imprimir / PDF</span>
+        </button>
+
+        <!-- Indicador de Usuario / Sesión -->
+        <div id="userSection" class="d-flex align-items-center gap-2 ps-2 border-start">
+          <div class="spinner-border spinner-border-sm text-secondary" id="userSpinner"></div>
+          <div id="userInfo" class="small fw-semibold text-truncate d-none" style="max-width: 150px;"></div>
+          <button id="btnLogout" class="btn btn-sm btn-outline-danger p-1 px-2 d-none" onclick="cerrarSesion()" title="Cerrar Sesión">
+            <i class="bi bi-box-arrow-right"></i>
+          </button>
+        </div>
+
+      </div>
+
+    </div>
+  </div>
+
+  <!-- Contenedor Principal -->
+  <div class="container-fluid p-3 p-md-4">
+
+    <!-- Card de Autenticación Institucional (Mostrado si no hay sesión) -->
+    <div id="boxAuth" class="card-auth no-print d-none">
+      <div class="mb-3">
+        <i class="bi bi-shield-lock-fill text-primary" style="font-size: 3.2rem;"></i>
+      </div>
+      <h4 class="fw-bold mb-2">Acceso Exclusivo Comunidad Escolar</h4>
+      <p class="text-muted small mb-4">
+        Para visualizar el calendario oficial de evaluaciones en tiempo real, ingresa con tu cuenta de Google institucional del colegio.
+      </p>
+
+      <button onclick="iniciarSesionGoogle()" class="btn-google mb-3">
+        <svg width="18" height="18" viewBox="0 0 18 18">
+          <path fill="#4285F4" d="M17.64 9.2c0-.637-.057-1.251-.164-1.84H9v3.481h4.844c-.209 1.125-.843 2.078-1.796 2.717v2.258h2.908c1.702-1.567 2.684-3.874 2.684-6.616z"/>
+          <path fill="#34A853" d="M9 18c2.43 0 4.467-.806 5.956-2.184l-2.908-2.258c-.806.54-1.837.86-3.048.86-2.344 0-4.328-1.584-5.036-3.711H.957v2.332C2.438 15.983 5.482 18 9 18z"/>
+          <path fill="#FBBC05" d="M3.964 10.707c-.18-.54-.282-1.117-.282-1.707s.102-1.167.282-1.707V4.961H.957C.347 6.175 0 7.55 0 9s.347 2.825.957 4.039l3.007-2.332z"/>
+          <path fill="#EA4335" d="M9 3.58c1.321 0 2.508.454 3.44 1.345l2.582-2.58C13.463.891 11.426 0 9 0 5.482 0 2.438 2.017.957 4.961L3.964 7.293C4.672 5.166 6.656 3.58 9 3.58z"/>
+        </svg>
+        Iniciar sesión con cuenta Google (@colegiocerrogrande.cl)
+      </button>
+
+      <div class="small text-muted" style="font-size: 0.8rem;">
+        <i class="bi bi-info-circle me-1"></i>Información sincronizada en vivo con la plataforma académica.
+      </div>
+    </div>
+
+    <!-- Calendario Activo -->
+    <div id="boxCalendario" class="d-none">
+      <div id="calendar"></div>
+    </div>
+
+  </div>
+
+  <!-- Modal Detalle de Evaluación -->
+  <div class="modal fade" id="modalDetalleEval" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered">
+      <div class="modal-content modal-content-detalle border-0 shadow-lg">
+        <div class="modal-header text-white border-0 py-3" id="modalHeaderDetalle" style="background-color: #0d6efd;">
+          <div class="d-flex align-items-center gap-2">
+            <i class="bi bi-bookmark-check-fill fs-4"></i>
+            <div>
+              <h5 class="modal-title fw-bold mb-0" id="detAsignatura">Asignatura</h5>
+              <small class="opacity-75" id="detCurso">Curso</small>
+            </div>
+          </div>
+          <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+        </div>
+        <div class="modal-body p-4 bg-white">
+          <div class="d-flex flex-wrap gap-2 mb-3">
+            <span class="badge bg-secondary-subtle text-secondary" id="detFecha"><i class="bi bi-calendar3 me-1"></i>Fecha</span>
+            <span class="badge bg-primary-subtle text-primary border border-primary-subtle" id="detTipo">Tipo</span>
+            <span class="badge bg-light text-dark border" id="detProfesor"><i class="bi bi-person-fill me-1"></i>Profesor</span>
+          </div>
+
+          <label class="small fw-bold text-secondary mb-1"><i class="bi bi-journal-text me-1 text-primary"></i>Contenidos y Temario:</label>
+          <div class="detalle-temario-box" id="detContenido">Sin temario especificado.</div>
+        </div>
+        <div class="modal-footer border-0 bg-light p-2 px-3">
+          <button type="button" class="btn btn-sm btn-outline-secondary fw-semibold" data-bs-dismiss="modal">Cerrar</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    let calendar = null;
+    let usuarioActivo = null;
+    let cursoActual = '';
+    let modalDetalle = null;
+
+    // Paleta de colores temáticos por asignatura
+    const COLORES_ASIGNATURAS = {
+      'MATEMATICA': '#6f42c1',
+      'MATEMÁTICA': '#6f42c1',
+      'LENGUAJE': '#0d6efd',
+      'LENGUA Y LITERATURA': '#0d6efd',
+      'CIENCIAS': '#198754',
+      'CIENCIAS NATURALES': '#198754',
+      'BIOLOGIA': '#198754',
+      'BIOLOGÍA': '#198754',
+      'QUIMICA': '#20c997',
+      'QUÍMICA': '#20c997',
+      'FISICA': '#0dcaf0',
+      'FÍSICA': '#0dcaf0',
+      'HISTORIA': '#fd7e14',
+      'HISTORIA, GEOGRAFIA Y CS. SOCIALES': '#fd7e14',
+      'INGLES': '#0284c7',
+      'INGLÉS': '#0284c7',
+      'ARTES': '#d63384',
+      'ARTES VISUALES': '#d63384',
+      'MUSICA': '#e83e8c',
+      'MÚSICA': '#e83e8c',
+      'EDUCACION FISICA': '#10b981',
+      'EDUCACIÓN FÍSICA': '#10b981',
+      'TECNOLOGIA': '#6366f1',
+      'TECNOLOGÍA': '#6366f1',
+      'FILOSOFIA': '#8b5cf6',
+      'FILOSOFÍA': '#8b5cf6',
+      'RELIGION': '#f59e0b',
+      'RELIGIÓN': '#f59e0b',
+      'ORIENTACION': '#64748b',
+      'ORIENTACIÓN': '#64748b'
+    };
+
+    function obtenerColorAsignatura(asig) {
+      if (!asig) return '#3b82f6';
+      const upper = asig.toUpperCase().trim();
+      for (const [key, color] of Object.entries(COLORES_ASIGNATURAS)) {
+        if (upper.includes(key)) return color;
+      }
+      return '#475569';
+    }
+
+    // Inicialización al cargar la página
+    document.addEventListener('DOMContentLoaded', async () => {
+      modalDetalle = new bootstrap.Modal(document.getElementById('modalDetalleEval'));
+
+      // 1. Detección de Parámetros URL (Embed, SoloCurso, Curso preseleccionado)
+      const urlParams = new URLSearchParams(window.location.search);
+      const paramCurso = urlParams.get('curso');
+      const paramSoloCurso = urlParams.get('soloCurso') === '1' || urlParams.get('soloCurso') === 'true';
+      const paramEmbed = urlParams.get('embed') === '1' || urlParams.get('embed') === 'true';
+
+      if (paramSoloCurso) {
+        document.getElementById('wrapperSelectorCurso').classList.add('d-none');
+      }
+      if (paramEmbed) {
+        document.querySelector('.brand-title').classList.add('d-none');
+      }
+
+      // 2. Escuchar mensajes postMessage desde Popup de Auth
+      window.addEventListener('message', (event) => {
+        if (event.data && event.data.type === 'AUTH_RESULT') {
+          if (event.data.success) {
+            verificarSesionYCargar();
+          } else {
+            Swal.fire('Acceso no autorizado', 'Debes iniciar sesión con tu cuenta de Google institucional del colegio (@colegiocerrogrande.cl).', 'warning');
+          }
+        }
+      });
+
+      // 3. Cargar Cursos en el Dropdown
+      await cargarListaCursos(paramCurso);
+
+      // 4. Verificar Sesión
+      await verificarSesionYCargar();
+    });
+
+    async function cargarListaCursos(cursoPreseleccionado) {
+      const select = document.getElementById('selCurso');
+      try {
+        const res = await fetch('/api/evaluaciones/cursos-publico');
+        if (res.ok) {
+          const cursos = await res.json();
+          select.innerHTML = '';
+          
+          if (!cursoPreseleccionado) {
+            select.innerHTML += '<option value="">-- Seleccionar Curso --</option>';
+          }
+
+          let encontrado = false;
+          cursos.forEach(c => {
+            const opt = document.createElement('option');
+            opt.value = c;
+            opt.innerText = c;
+            if (cursoPreseleccionado && c.toLowerCase().trim() === cursoPreseleccionado.toLowerCase().trim()) {
+              opt.selected = true;
+              encontrado = true;
+              cursoActual = c;
+            }
+            select.appendChild(opt);
+          });
+
+          if (encontrado) {
+            actualizarBadgeCurso(cursoActual);
+          } else if (cursoPreseleccionado) {
+            // Si el curso en URL no estaba en la lista, lo agregamos como seleccionado
+            const opt = document.createElement('option');
+            opt.value = cursoPreseleccionado;
+            opt.innerText = cursoPreseleccionado;
+            opt.selected = true;
+            select.appendChild(opt);
+            cursoActual = cursoPreseleccionado;
+            actualizarBadgeCurso(cursoActual);
+          } else if (cursos.length > 0) {
+            // Por defecto preseleccionar el primer curso si no se especificó
+            cursoActual = cursos[0];
+            select.value = cursoActual;
+            actualizarBadgeCurso(cursoActual);
+          }
+        }
+      } catch (e) {
+        console.error('Error cargando cursos:', e);
+      }
+    }
+
+    async function verificarSesionYCargar() {
+      const spinner = document.getElementById('userSpinner');
+      const boxAuth = document.getElementById('boxAuth');
+      const boxCal = document.getElementById('boxCalendario');
+      const userInfo = document.getElementById('userInfo');
+      const btnLogout = document.getElementById('btnLogout');
+
+      try {
+        const res = await fetch('/api/auth/me');
+        if (res.ok) {
+          usuarioActivo = await res.json();
+          if (spinner) spinner.classList.add('d-none');
+          
+          if (userInfo) {
+            userInfo.innerText = usuarioActivo.nombre || usuarioActivo.email;
+            userInfo.title = usuarioActivo.email;
+            userInfo.classList.remove('d-none');
+          }
+          if (btnLogout) btnLogout.classList.remove('d-none');
+
+          boxAuth.classList.add('d-none');
+          boxCal.classList.remove('d-none');
+
+          if (!calendar) {
+            inicializarFullCalendar();
+          } else {
+            calendar.refetchEvents();
+          }
+        } else {
+          // No autenticado
+          if (spinner) spinner.classList.add('d-none');
+          if (userInfo) userInfo.classList.add('d-none');
+          if (btnLogout) btnLogout.classList.add('d-none');
+          boxCal.classList.add('d-none');
+          boxAuth.classList.remove('d-none');
+        }
+      } catch (e) {
+        if (spinner) spinner.classList.add('d-none');
+        boxCal.classList.add('d-none');
+        boxAuth.classList.remove('d-none');
+      }
+    }
+
+    async function iniciarSesionGoogle() {
+      // 1. Comprobar si existe enlace directo de GAS o ir por OAuth popup
+      try {
+        const res = await fetch('/api/auth/gas-url');
+        const data = await res.json();
+        const ancho = 520, alto = 620;
+        const left = (window.screen.width / 2) - (ancho / 2);
+        const top = (window.screen.height / 2) - (alto / 2);
+
+        let urlAuth = '/auth/google?popup=1';
+        if (data && data.url) {
+          const currentUrl = window.location.origin;
+          urlAuth = data.url + '?returnUrl=' + encodeURIComponent(currentUrl);
+        }
+
+        const popup = window.open(
+          urlAuth,
+          'google_login_popup',
+          `width=${ancho},height=${alto},top=${top},left=${left},status=no,resizable=yes`
+        );
+
+        // Polling de seguridad en caso de que popup se cierre o navegue fuera de alcance
+        const timer = setInterval(async () => {
+          if (!popup || popup.closed) {
+            clearInterval(timer);
+            await verificarSesionYCargar();
+          }
+        }, 1500);
+
+      } catch (e) {
+        window.location.href = '/auth/google';
+      }
+    }
+
+    function cerrarSesion() {
+      window.location.href = '/api/auth/logout';
+    }
+
+    function onCursoSeleccionado(nuevoCurso) {
+      cursoActual = nuevoCurso;
+      actualizarBadgeCurso(nuevoCurso);
+
+      // Actualizar URL sin recargar
+      const url = new URL(window.location);
+      if (nuevoCurso) {
+        url.searchParams.set('curso', nuevoCurso);
+      } else {
+        url.searchParams.delete('curso');
+      }
+      window.history.replaceState({}, '', url);
+
+      if (calendar) {
+        calendar.refetchEvents();
+      }
+    }
+
+    function actualizarBadgeCurso(curso) {
+      const badge = document.getElementById('badgeCursoActual');
+      const printCurso = document.getElementById('printCursoTitulo');
+      if (badge) {
+        badge.innerText = curso || 'Todos los Cursos';
+      }
+      if (printCurso) {
+        printCurso.innerText = 'Curso: ' + (curso || 'General');
+      }
+    }
+
+    function inicializarFullCalendar() {
+      const calendarEl = document.getElementById('calendar');
+      calendar = new FullCalendar.Calendar(calendarEl, {
+        initialView: window.innerWidth < 768 ? 'listMonth' : 'dayGridMonth',
+        locale: 'es',
+        headerToolbar: {
+          left: 'prev,next today',
+          center: 'title',
+          right: 'dayGridMonth,listMonth'
+        },
+        buttonText: {
+          today: 'Hoy',
+          month: 'Mes',
+          list: 'Agenda'
+        },
+        navLinks: true,
+        dayMaxEvents: 3,
+        moreLinkClick: 'popover',
+        height: 'auto',
+        events: async function(fetchInfo, successCallback, failureCallback) {
+          if (!cursoActual) {
+            successCallback([]);
+            return;
+          }
+          try {
+            const url = `/api/evaluaciones/publico?curso=${encodeURIComponent(cursoActual)}`;
+            const res = await fetch(url);
+            if (res.ok) {
+              const data = await res.json();
+              const eventos = data.map(ev => {
+                const color = obtenerColorAsignatura(ev.asignatura);
+                return {
+                  id: ev.id,
+                  title: `${ev.asignatura} (${ev.tipo || 'Evaluación'})`,
+                  start: ev.fecha,
+                  allDay: true,
+                  backgroundColor: color,
+                  borderColor: color,
+                  textColor: '#ffffff',
+                  extendedProps: {
+                    asignatura: ev.asignatura,
+                    tipo: ev.tipo || 'Evaluación',
+                    curso: ev.curso,
+                    detalles: ev.detalles,
+                    profesor: ev.profesor_nombre || 'Docente a cargo',
+                    fecha: ev.fecha,
+                    color: color
+                  }
+                };
+              });
+              successCallback(eventos);
+            } else if (res.status === 401) {
+              verificarSesionYCargar();
+              failureCallback();
+            } else {
+              failureCallback();
+            }
+          } catch (e) {
+            console.error('Error obteniendo evaluaciones:', e);
+            failureCallback(e);
+          }
+        },
+        eventClick: function(info) {
+          mostrarDetalle(info.event.extendedProps);
+        }
+      });
+
+      calendar.render();
+
+      // Adaptar vista según tamaño de pantalla al redimensionar
+      window.addEventListener('resize', () => {
+        if (window.innerWidth < 768 && calendar.view.type === 'dayGridMonth') {
+          calendar.changeView('listMonth');
+        }
+      });
+    }
+
+    function mostrarDetalle(props) {
+      document.getElementById('detAsignatura').innerText = props.asignatura || 'Evaluación';
+      document.getElementById('detCurso').innerText = props.curso || cursoActual;
+      
+      const fParts = (props.fecha || '').split('-');
+      let fTxt = props.fecha;
+      if (fParts.length === 3) {
+        const dObj = new Date(parseInt(fParts[0]), parseInt(fParts[1]) - 1, parseInt(fParts[2]));
+        fTxt = dObj.toLocaleDateString('es-CL', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' });
+      }
+      document.getElementById('detFecha').innerHTML = `<i class="bi bi-calendar3 me-1"></i>${fTxt}`;
+      document.getElementById('detTipo').innerText = props.tipo || 'Evaluación';
+      document.getElementById('detProfesor').innerHTML = `<i class="bi bi-person-fill me-1"></i>${props.profesor}`;
+
+      const boxTemario = document.getElementById('detContenido');
+      if (props.detalles && props.detalles.trim() && props.detalles.trim() !== '0') {
+        boxTemario.innerText = props.detalles;
+      } else {
+        boxTemario.innerHTML = '<span class="text-muted fst-italic">Temario no especificado aún. Consulta con el profesor(a) de la asignatura.</span>';
+      }
+
+      const header = document.getElementById('modalHeaderDetalle');
+      if (header && props.color) {
+        header.style.backgroundColor = props.color;
+      }
+
+      modalDetalle.show();
+    }
+
+    function imprimirCalendario() {
+      if (!calendar) return;
+      window.print();
+    }
+  </script>
+</body>
+</html>
