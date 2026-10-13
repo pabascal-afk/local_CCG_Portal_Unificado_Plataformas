@@ -728,6 +728,81 @@
       onFechaCambiada();
     }
 
+    let horariosCache = null;
+    async function obtenerHorarios() {
+      if (horariosCache) return horariosCache;
+      try {
+        const res = await fetch('/api/evaluaciones/horarios');
+        if (res.ok) {
+          horariosCache = await res.json();
+        }
+      } catch (e) {
+        console.warn('No se pudieron obtener horarios:', e);
+      }
+      return horariosCache || [];
+    }
+
+    async function cargarMisClases() {
+      const box = document.getElementById('boxMisClases');
+      const pills = document.getElementById('pillsMisClases');
+      if (!box || !pills) return;
+
+      box.style.display = 'none';
+      pills.innerHTML = '';
+
+      const fechaVal = document.getElementById('inFecha').value;
+      if (!fechaVal || !usuarioActivo) return;
+
+      const dObj = new Date(fechaVal + "T12:00:00");
+      const dias = ['DOMINGO', 'LUNES', 'MARTES', 'MIERCOLES', 'JUEVES', 'VIERNES', 'SABADO'];
+      const diaNombre = dias[dObj.getDay()];
+
+      const listaHorarios = await obtenerHorarios();
+      if (!listaHorarios || listaHorarios.length === 0) return;
+
+      const proNombre = (usuarioActivo.nombre || '').toUpperCase().trim();
+      if (!proNombre) return;
+
+      const misClasesDia = listaHorarios.filter(h => {
+        const diaH = (h.dia || '').toUpperCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "");
+        const diaTarget = diaNombre.normalize("NFD").replace(/[\u0300-\u036f]/g, "");
+        if (diaH !== diaTarget) return false;
+
+        const profH = (h.profesor || '').toUpperCase().trim();
+        return profH && (profH.includes(proNombre) || proNombre.includes(profH));
+      });
+
+      if (misClasesDia.length === 0) return;
+
+      const agrupadas = {};
+      misClasesDia.forEach(c => {
+        const key = `${c.curso} - ${c.asignatura}`;
+        if (!agrupadas[key]) agrupadas[key] = { curso: c.curso, asignatura: c.asignatura, bloques: [] };
+        if (!agrupadas[key].bloques.includes(c.bloque)) {
+          agrupadas[key].bloques.push(c.bloque);
+        }
+      });
+
+      pills.innerHTML = '';
+      Object.values(agrupadas).forEach(c => {
+        c.bloques.sort((a,b) => a - b);
+        const btn = document.createElement('button');
+        btn.type = 'button';
+        btn.className = 'btn btn-sm btn-outline-primary rounded-pill py-1 px-2 fw-semibold';
+        btn.style.fontSize = '0.82em';
+        btn.innerHTML = `<i class="bi bi-mortarboard"></i> <b>${c.curso}</b> (${c.asignatura}) • Bloque ${c.bloques.join('-')}`;
+        btn.onclick = () => {
+          bloquesSeleccionados.clear();
+          c.bloques.forEach(b => bloquesSeleccionados.add(b));
+          renderizarGridBloques();
+          document.getElementById('inMotivo').value = `${c.curso} - ${c.asignatura}`;
+        };
+        pills.appendChild(btn);
+      });
+
+      box.style.display = 'block';
+    }
+
     function onFechaCambiada() {
       const fecha = document.getElementById('inFecha').value;
       const recNombre = document.getElementById('inRecurso').value || recursoActual;
@@ -742,10 +817,10 @@
       let minTxt = (reglas.anticipacion_min_dias && parseInt(reglas.anticipacion_min_dias) > 0) ? `Mínimo ${reglas.anticipacion_min_dias} día(s) de anticipación` : '';
       let maxTxt = (reglas.anticipacion_max_dias && parseInt(reglas.anticipacion_max_dias) > 0) ? `Máximo ${reglas.anticipacion_max_dias} días a futuro` : '';
       let tips = [minTxt, maxTxt].filter(Boolean).join(' • ');
-      infoAnticipacion.innerText = tips ? `Regla: ${tips}` : '';
+      if (infoAnticipacion) infoAnticipacion.innerText = tips ? `Regla: ${tips}` : '';
 
-      cargarMisClases();
       renderizarGridBloques();
+      cargarMisClases();
     }
 
     function onToggleAgrupacion() {
