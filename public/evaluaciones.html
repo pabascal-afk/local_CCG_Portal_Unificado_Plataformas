@@ -499,6 +499,7 @@
         </div>
         <div class="modal-body bg-light p-4">
           <input type="hidden" id="inFecha">
+          <div id="avisoHorarioDia" style="display: none;"></div>
 
           <div class="row g-3 mb-3">
               <div class="col-md-6">
@@ -783,39 +784,108 @@
     }
 
     function llenarSelectorCursos() {
-      const select = document.getElementById('inCurso');
-      select.innerHTML = '<option value="">-- Selecciona un curso --</option>';
-      configuracionGlobal.cursos.forEach(c => {
-        select.innerHTML += `<option value="${c}">${c}</option>`;
+      actualizarCursosPorDia();
+    }
+
+    function actualizarCursosPorDia() {
+      const selectCurso = document.getElementById('inCurso');
+      const selectAsig = document.getElementById('inAsig');
+      const btnGuardar = document.getElementById('btnGuardar');
+      const avisoBox = document.getElementById('avisoHorarioDia');
+
+      if (!selectCurso) return;
+
+      const userEsAdmin = !!(configuracionGlobal.usuario && configuracionGlobal.usuario.permisos && 
+        (configuracionGlobal.usuario.permisos.esAdminGeneral || configuracionGlobal.usuario.permisos.puedeAgendarSinRestricciones));
+
+      const diaNorm = (diaSemanaGlobal || '').toUpperCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "");
+
+      selectCurso.innerHTML = '<option value="">-- Selecciona un curso --</option>';
+      selectAsig.innerHTML = '<option value="">Selecciona un curso primero</option>';
+
+      if (userEsAdmin) {
+        if (avisoBox) avisoBox.style.display = 'none';
+        if (btnGuardar) btnGuardar.disabled = false;
+        (configuracionGlobal.cursos || []).forEach(c => {
+          selectCurso.innerHTML += `<option value="${c}">${c}</option>`;
+        });
+        return;
+      }
+
+      // Si es profesor: filtrar SOLO los cursos donde el profesor tiene clases ESE DÍA según el horario
+      const cursosConClasesEseDia = (configuracionGlobal.cursos || []).filter(c => {
+        const dictCurso = configuracionGlobal.asignaturasDict && configuracionGlobal.asignaturasDict[c];
+        if (!dictCurso) return false;
+        const ramosDelDia = dictCurso[diaNorm] || dictCurso[diaSemanaGlobal];
+        return Array.isArray(ramosDelDia) && ramosDelDia.length > 0;
       });
+
+      if (cursosConClasesEseDia.length > 0) {
+        if (avisoBox) {
+          avisoBox.className = 'alert alert-info py-2 px-3 small mb-3 border-0 bg-primary-subtle text-primary-emphasis';
+          avisoBox.innerHTML = `<i class="bi bi-clock-history me-1"></i> Mostrando solo tus cursos y ramos programados para el <strong>${diaSemanaGlobal}</strong>.`;
+          avisoBox.style.display = 'block';
+        }
+        if (btnGuardar) btnGuardar.disabled = false;
+
+        cursosConClasesEseDia.forEach(c => {
+          selectCurso.innerHTML += `<option value="${c}">${c}</option>`;
+        });
+
+        // Si solo tiene clases en 1 curso este día, auto-seleccionarlo y cargar ramos
+        if (cursosConClasesEseDia.length === 1) {
+          selectCurso.value = cursosConClasesEseDia[0];
+          actualizarAsignaturas();
+        }
+      } else {
+        // No tiene clases este día
+        if (avisoBox) {
+          avisoBox.className = 'alert alert-warning py-2 px-3 small mb-3 border-0 bg-warning-subtle text-warning-emphasis';
+          avisoBox.innerHTML = `<i class="bi bi-exclamation-triangle-fill me-1"></i> No tienes clases programadas en tu horario el día <strong>${diaSemanaGlobal || 'seleccionado'}</strong>. Solo puedes agendar evaluaciones en los días en que tienes asignaturas con el curso.`;
+          avisoBox.style.display = 'block';
+        }
+        selectCurso.innerHTML = '<option value="" disabled selected>(No tienes cursos este día)</option>';
+        selectAsig.innerHTML = '<option value="" disabled selected>(Sin ramos disponibles)</option>';
+        if (btnGuardar) btnGuardar.disabled = true;
+      }
     }
 
     function actualizarAsignaturas() {
       const vCurso = document.getElementById('inCurso').value;
       const selectAsig = document.getElementById('inAsig');
       
-      selectAsig.innerHTML = '<option value="">-- Selecciona Asignatura --</option>';
+      selectAsig.innerHTML = '<option value="">-- Selecciona Asignatura / Ramo --</option>';
       
-      if (vCurso && configuracionGlobal.asignaturasDict[vCurso]) {
-        const asignaturasDelDia = configuracionGlobal.asignaturasDict[vCurso][diaSemanaGlobal];
-        
-        if (asignaturasDelDia && asignaturasDelDia.length > 0) {
-          asignaturasDelDia.forEach(a => {
+      if (!vCurso) return;
+
+      const userEsAdmin = !!(configuracionGlobal.usuario && configuracionGlobal.usuario.permisos && 
+        (configuracionGlobal.usuario.permisos.esAdminGeneral || configuracionGlobal.usuario.permisos.puedeAgendarSinRestricciones));
+      
+      const diaNorm = (diaSemanaGlobal || '').toUpperCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "");
+      const dictCurso = configuracionGlobal.asignaturasDict && configuracionGlobal.asignaturasDict[vCurso];
+
+      if (dictCurso) {
+        let asignaturasDisponibles = [];
+
+        if (userEsAdmin) {
+          asignaturasDisponibles = dictCurso[diaNorm] || dictCurso[diaSemanaGlobal] || dictCurso['_todas'] || [];
+          if (asignaturasDisponibles.length === 0 && dictCurso['_todas']) {
+            asignaturasDisponibles = dictCurso['_todas'];
+          }
+        } else {
+          // Profesor: SOLO los ramos que tiene ESE DÍA según el horario
+          asignaturasDisponibles = dictCurso[diaNorm] || dictCurso[diaSemanaGlobal] || [];
+        }
+
+        if (asignaturasDisponibles && asignaturasDisponibles.length > 0) {
+          asignaturasDisponibles.forEach(a => {
             selectAsig.innerHTML += `<option value="${a}">${a}</option>`;
           });
-        } else {
-          // Si no tiene clases en el horario habitual de este día, mostrar sus asignaturas en este curso
-          const todasAsig = configuracionGlobal.asignaturasDict[vCurso]['_todas'] || [];
-          const diasHabituales = configuracionGlobal.asignaturasDict[vCurso]['_dias'] || [];
-          
-          if (todasAsig.length > 0) {
-            const diasTxt = diasHabituales.length > 0 ? diasHabituales.join(', ') : 'otros días';
-            todasAsig.forEach(a => {
-              selectAsig.innerHTML += `<option value="${a}">${a} (Clases habituales: ${diasTxt})</option>`;
-            });
-          } else {
-            selectAsig.innerHTML = '<option value="">(No haces clases este d\u00EDa en este curso)</option>';
+          if (asignaturasDisponibles.length === 1) {
+            selectAsig.value = asignaturasDisponibles[0];
           }
+        } else {
+          selectAsig.innerHTML = '<option value="" disabled selected>(No tienes ramos este día en este curso)</option>';
         }
       }
     }
@@ -953,11 +1023,9 @@
       
       // Formatear fecha para el título (Ej: 15/10/2023)
       const partes = fechaStr.split('-');
-      document.getElementById('txtFecha').innerText = `${partes[2]}/${partes[1]}/${partes[0]}`;
+      document.getElementById('txtFecha').innerText = `${partes[2]}/${partes[1]}/${partes[0]} (${diaSemanaGlobal})`;
       
-      const selectAsig = document.getElementById('inAsig');
-      selectAsig.innerHTML = '<option value="">Selecciona un curso primero</option>';
-      document.getElementById('inCurso').value = '';
+      actualizarCursosPorDia();
       document.getElementById('inDetalles').value = '';
       if (document.getElementById('inTemario')) document.getElementById('inTemario').value = '';
       if (document.getElementById('inTipo')) document.getElementById('inTipo').value = '';
@@ -1343,10 +1411,22 @@
       
       // Esperar a que los combos se llenen y seleccionar valores
       setTimeout(() => {
-        document.getElementById('inCurso').value = evaluacionSeleccionada.curso;
+        const inCurso = document.getElementById('inCurso');
+        if (inCurso && evaluacionSeleccionada.curso) {
+          if (![...inCurso.options].some(o => o.value === evaluacionSeleccionada.curso)) {
+            inCurso.innerHTML += `<option value="${evaluacionSeleccionada.curso}">${evaluacionSeleccionada.curso}</option>`;
+          }
+          inCurso.value = evaluacionSeleccionada.curso;
+        }
         actualizarAsignaturas();
         setTimeout(() => {
-          document.getElementById('inAsig').value = evaluacionSeleccionada.asignatura;
+          const inAsig = document.getElementById('inAsig');
+          if (inAsig && evaluacionSeleccionada.asignatura) {
+            if (![...inAsig.options].some(o => o.value === evaluacionSeleccionada.asignatura)) {
+              inAsig.innerHTML += `<option value="${evaluacionSeleccionada.asignatura}">${evaluacionSeleccionada.asignatura}</option>`;
+            }
+            inAsig.value = evaluacionSeleccionada.asignatura;
+          }
           document.getElementById('inTipo').value = evaluacionSeleccionada.tipo;
           if (evaluacionSeleccionada.recurso) document.getElementById('inRecurso').value = evaluacionSeleccionada.recurso;
           if (document.getElementById('inTemario')) document.getElementById('inTemario').value = evaluacionSeleccionada.temario || evaluacionSeleccionada.detalles || "";
@@ -1362,7 +1442,18 @@
       
       const btn = e.target.querySelector('button[type="submit"]');
       const tipoVal = document.getElementById('inTipo').value;
+      const cursoVal = document.getElementById('inCurso').value;
+      const asigVal = document.getElementById('inAsig').value;
       const temarioVal = (document.getElementById('inTemario') ? document.getElementById('inTemario').value : '').trim();
+
+      if (!cursoVal || !asigVal) {
+        Swal.fire({
+          icon: 'warning',
+          title: 'Datos Incompletos',
+          text: 'Debes seleccionar un curso y un ramo válido para la fecha seleccionada.'
+        });
+        return;
+      }
 
       // Validación obligatoria de temario solo para evaluaciones con categoría de prueba
       if (esTipoPrueba(tipoVal) && !temarioVal) {
@@ -1380,8 +1471,8 @@
 
       const datosNuevos = {
         fecha: document.getElementById('inFecha').value,
-        curso: document.getElementById('inCurso').value,
-        asignatura: document.getElementById('inAsig').value,
+        curso: cursoVal,
+        asignatura: asigVal,
         tipo: tipoVal,
         recurso: document.getElementById('inRecurso').value,
         temario: temarioVal,

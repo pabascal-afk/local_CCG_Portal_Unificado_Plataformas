@@ -246,15 +246,54 @@ router.post('/:functionName', async (req, res) => {
             const datos = args[0];
             const rolNorm = user.rol.toLowerCase();
 
-              
-              // 1. Deteccion de Electivos (Expansion de cursos afectados)
-              const esElectivo = datos.asignatura.toUpperCase().includes('(ELECTIVO');
-              let cursosAfectados = [datos.curso.trim().toUpperCase()];
-              if (esElectivo) {
-                  cursosAfectados = ['III° MEDIO A', 'III° MEDIO B', 'IV° MEDIO A', 'IV° MEDIO B'];
-              }
+            // Usar rolesListAg para obtener permisos
+            const rListAg2 = await queryAll("SELECT * FROM roles_config WHERE nombre = ?", [user.rol]);
+            let tienePermisosEspeciales = false;
+            if (rListAg2.length > 0) {
+                try { 
+                    const p2 = JSON.parse(rListAg2[0].permisos); 
+                    tienePermisosEspeciales = p2.esAdminGeneral || p2.puedeAgendarSinRestricciones || p2.ignorarMalla;
+                } catch(e){}
+            } else {
+                const rn = user.rol.toLowerCase();
+                tienePermisosEspeciales = rn.includes('admin') || rn.includes('directivo') || rn.includes('convivencia') || rn.includes('coordinaci');
+            }
 
-              // 2. Validar Topes y Bloqueos Institucionales
+            // 1. Deteccion de Electivos (Expansion de cursos afectados)
+            const esElectivo = datos.asignatura.toUpperCase().includes('(ELECTIVO') || datos.asignatura.toUpperCase().includes('ELECTIVO');
+            let cursosAfectados = [datos.curso.trim().toUpperCase()];
+            if (esElectivo) {
+                cursosAfectados = ['III° MEDIO A', 'III° MEDIO B', 'IV° MEDIO A', 'IV° MEDIO B'];
+            }
+
+            // 1.1 Si es profesor sin permisos de admin, validar que tenga ESE ramo ESE día según el horario
+            if (!tienePermisosEspeciales) {
+                const partesF = (datos.fecha || '').split('-');
+                if (partesF.length === 3) {
+                    const fDate = new Date(parseInt(partesF[0], 10), parseInt(partesF[1], 10) - 1, parseInt(partesF[2], 10));
+                    const diasSem = ['DOMINGO', 'LUNES', 'MARTES', 'MIERCOLES', 'JUEVES', 'VIERNES', 'SABADO'];
+                    const diaSem = diasSem[fDate.getDay()];
+                    const diaSemNorm = diaSem.toUpperCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "");
+
+                    const hClases = await queryAll("SELECT * FROM horarios");
+                    const tieneClase = hClases.some(h => {
+                        if (!sonMismoProfesor(h.profesor, user)) return false;
+                        const hDiaNorm = (h.dia || '').toUpperCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "");
+                        if (hDiaNorm !== diaSemNorm) return false;
+                        const hAsig = (h.asignatura || '').trim().toUpperCase();
+                        const dAsig = (datos.asignatura || '').trim().toUpperCase();
+                        const hCurso = (h.curso || '').trim().toUpperCase();
+                        const dCurso = (datos.curso || '').trim().toUpperCase();
+                        return hAsig === dAsig && (hCurso === dCurso || esElectivo);
+                    });
+
+                    if (!tieneClase) {
+                        throw new Error(`No tienes clases de la asignatura "${datos.asignatura}" en tu horario el día ${diaSem}. Solo puedes agendar evaluaciones en los días en que tienes clases.`);
+                    }
+                }
+            }
+
+            // 2. Validar Topes y Bloqueos Institucionales
               const eventosInstX = await queryAll("SELECT * FROM eventos WHERE fecha LIKE ? AND bloques IS NOT NULL", ["%" + datos.fecha + "%"]);
               const evaluacionesGuardadas = await queryAll("SELECT * FROM evaluaciones WHERE fecha LIKE ?", ["%" + datos.fecha + "%"]);
               
@@ -360,18 +399,6 @@ router.post('/:functionName', async (req, res) => {
               let profeEmail = user.email;
               
               
-                // Usar rolesListAg para obtener permisos frescos
-                const rListAg2 = await queryAll("SELECT * FROM roles_config WHERE nombre = ?", [user.rol]);
-                let tienePermisosEspeciales = false;
-                if (rListAg2.length > 0) {
-                    try { 
-                        const p2 = JSON.parse(rListAg2[0].permisos); 
-                        tienePermisosEspeciales = p2.esAdminGeneral || p2.puedeAgendarSinRestricciones || p2.ignorarMalla;
-                    } catch(e){}
-                } else {
-                    const rn = user.rol.toLowerCase();
-                    tienePermisosEspeciales = rn.includes('admin') || rn.includes('directivo') || rn.includes('convivencia') || rn.includes('coordinaci');
-                }
                 if (tienePermisosEspeciales) {
                   const hResult = await queryAll("SELECT profesor FROM horarios WHERE curso = ? AND asignatura = ? LIMIT 1", [datos.curso, datos.asignatura]);
                   if (hResult.length > 0 && hResult[0].profesor) {
@@ -443,10 +470,50 @@ router.post('/:functionName', async (req, res) => {
                 }
             }
 
-            const esElectivo = datos.asignatura.toUpperCase().includes('(ELECTIVO');
+            const esElectivo = datos.asignatura.toUpperCase().includes('(ELECTIVO') || datos.asignatura.toUpperCase().includes('ELECTIVO');
             let cursosAfectados = [datos.curso.trim().toUpperCase()];
             if (esElectivo) {
                 cursosAfectados = ['III° MEDIO A', 'III° MEDIO B', 'IV° MEDIO A', 'IV° MEDIO B'];
+            }
+
+            // Validar que el profesor tenga clases ese día según su horario
+            const rListAgEdit = await queryAll("SELECT * FROM roles_config WHERE nombre = ?", [user.rol]);
+            let tienePermisosEspecialesEdit = false;
+            if (rListAgEdit.length > 0) {
+                try { 
+                    const pEdit = JSON.parse(rListAgEdit[0].permisos); 
+                    tienePermisosEspecialesEdit = pEdit.esAdminGeneral || pEdit.puedeAgendarSinRestricciones || pEdit.ignorarMalla;
+                } catch(e){}
+            } else {
+                const rn = user.rol.toLowerCase();
+                tienePermisosEspecialesEdit = rn.includes('admin') || rn.includes('directivo') || rn.includes('convivencia') || rn.includes('coordinaci');
+            }
+
+            if (!tienePermisosEspecialesEdit) {
+                const partesF = (datos.fecha || '').split('-');
+                if (partesF.length === 3) {
+                    const fDate = new Date(parseInt(partesF[0], 10), parseInt(partesF[1], 10) - 1, parseInt(partesF[2], 10));
+                    const diasSem = ['DOMINGO', 'LUNES', 'MARTES', 'MIERCOLES', 'JUEVES', 'VIERNES', 'SABADO'];
+                    const diaSem = diasSem[fDate.getDay()];
+                    const diaSemNorm = diaSem.toUpperCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "");
+
+                    const hClases = await queryAll("SELECT * FROM horarios");
+                    const tieneClase = hClases.some(h => {
+                        if (!sonMismoProfesor(h.profesor, user)) return false;
+                        const hDiaNorm = (h.dia || '').toUpperCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "");
+                        if (hDiaNorm !== diaSemNorm) return false;
+                        const hAsig = (h.asignatura || '').trim().toUpperCase();
+                        const dAsig = (datos.asignatura || '').trim().toUpperCase();
+                        const hCurso = (h.curso || '').trim().toUpperCase();
+                        const dCurso = (datos.curso || '').trim().toUpperCase();
+                        return hAsig === dAsig && (hCurso === dCurso || esElectivo);
+                    });
+
+                    if (!tieneClase) {
+                        if (isElective) { cursosAfectados.forEach(cO => run("INSERT INTO evaluaciones (id, fecha, curso, asignatura, tipo, recurso, profesor_email, profesor_nombre, detalles, temario) VALUES (?,?,?,?,?,?,?,?,?,?)", [Math.random().toString(36).substr(2, 9), oldEval.fecha, cO, oldEval.asignatura, oldEval.tipo, oldEval.recurso, oldEval.profesor_email, oldEval.profesor_nombre, oldEval.detalles, oldEval.temario])) } else { run("INSERT INTO evaluaciones (id, fecha, curso, asignatura, tipo, recurso, profesor_email, profesor_nombre, detalles, temario) VALUES (?,?,?,?,?,?,?,?,?,?)", [oldEval.id, oldEval.fecha, oldEval.curso, oldEval.asignatura, oldEval.tipo, oldEval.recurso, oldEval.profesor_email, oldEval.profesor_nombre, oldEval.detalles, oldEval.temario]) }
+                        throw new Error(`No tienes clases de la asignatura "${datos.asignatura}" en tu horario el día ${diaSem}. Solo puedes agendar evaluaciones en los días en que tienes clases.`);
+                    }
+                }
             }
 
             const eventosInstX = await queryAll("SELECT * FROM eventos WHERE fecha LIKE ? AND bloques IS NOT NULL", ["%" + datos.fecha + "%"]);
