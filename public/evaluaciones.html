@@ -591,6 +591,10 @@
             document.getElementById('adminPanel').classList.remove('d-none');
             document.getElementById('switchSistema').checked = config.sistemaAbierto;
           } else {
+            document.getElementById('adminPanel').classList.add('d-none');
+            modoBloqueoActivo = false;
+            const swBlq = document.getElementById('switchModoBloqueo');
+            if (swBlq) swBlq.checked = false;
             if (!config.sistemaAbierto) {
               Swal.fire('Sistema Cerrado', 'El agendamiento est\u00E1 inhabilitado temporalmente.', 'warning');
             }
@@ -646,7 +650,18 @@
             selectAsig.innerHTML += `<option value="${a}">${a}</option>`;
           });
         } else {
-          selectAsig.innerHTML = '<option value="">(No haces clases este d\u00EDa en este curso)</option>';
+          // Si no tiene clases en el horario habitual de este día, mostrar sus asignaturas en este curso
+          const todasAsig = configuracionGlobal.asignaturasDict[vCurso]['_todas'] || [];
+          const diasHabituales = configuracionGlobal.asignaturasDict[vCurso]['_dias'] || [];
+          
+          if (todasAsig.length > 0) {
+            const diasTxt = diasHabituales.length > 0 ? diasHabituales.join(', ') : 'otros días';
+            todasAsig.forEach(a => {
+              selectAsig.innerHTML += `<option value="${a}">${a} (Clases habituales: ${diasTxt})</option>`;
+            });
+          } else {
+            selectAsig.innerHTML = '<option value="">(No haces clases este d\u00EDa en este curso)</option>';
+          }
         }
       }
     }
@@ -718,14 +733,28 @@
       const vAsig = document.getElementById('filterAsig').value;
       const vProf = document.getElementById('filterProf').value;
 
+      const esAdmin = configuracionGlobal.usuario && configuracionGlobal.usuario.permisos && 
+        (configuracionGlobal.usuario.permisos.esAdminGeneral || configuracionGlobal.usuario.permisos.puedeAgendarSinRestricciones);
+
       return todosLosEventos.filter(e => {
-        // Los bloqueos (feriados, etc) siempre se muestran
+        // Los bloqueos (feriados, etc)
         if (e.extendedProps && e.extendedProps.esBloqueo) {
-              if (!vCurso) return true; // Si no hay filtro de curso, muestra todos los bloqueos
+              // Si se filtra por un profesor, NUNCA mostrar bloqueos administrativos como si fueran evaluaciones del profesor
+              if (vProf) return false;
+
+              // En modo Profesor (no admin), si no hay filtro de curso, solo mostrar bloqueos globales (TODOS)
+              // o bloqueos que afecten a los cursos que este profesor realmente enseña
+              if (!esAdmin && !vCurso) {
+                  if (e.extendedProps.curso === 'TODOS') return true;
+                  const misCursos = configuracionGlobal.cursos || [];
+                  return misCursos.includes(e.extendedProps.curso);
+              }
+
+              if (!vCurso) return true; // Si es admin y no hay filtro de curso, muestra todos los bloqueos
               if (e.extendedProps.curso === 'TODOS') return true; // Bloqueo global se muestra siempre
               if (e.extendedProps.curso === vCurso) return true; // Coincide con el curso filtrado
               return false; // Es un bloqueo de otro curso
-          }
+        }
 
         if (vCurso && e.extendedProps.curso !== vCurso) return false;
         if (vAsig && e.extendedProps.asignatura !== vAsig) return false;

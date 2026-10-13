@@ -235,7 +235,7 @@
     <div class="d-flex justify-content-between align-items-center mb-3">
       <h2 class="fw-bold"><i class="bi bi-pc-display-horizontal"></i> Gestión de Recursos</h2>
       <div>
-        <button class="btn btn-outline-secondary fw-bold me-2" onclick="abrirConfiguracion()"><i class="bi bi-gear"></i> Configurar</button>
+        <button id="btnConfigurarRecursos" class="btn btn-outline-secondary fw-bold me-2" onclick="abrirConfiguracion()"><i class="bi bi-gear"></i> Configurar</button>
         <button class="btn btn-primary fw-bold" onclick="abrirModalReserva()"><i class="bi bi-plus-lg"></i> Reservar</button>
       </div>
     </div>
@@ -564,6 +564,11 @@
       try {
         const u = await fetch('/api/auth/me').then(r=>r.json());
         usuarioActivo = u;
+        const esAdmin = u && u.rol && (u.rol.toLowerCase().includes('admin') || u.rol.toLowerCase().includes('directiv'));
+        const btnConf = document.getElementById('btnConfigurarRecursos');
+        if (btnConf) {
+          btnConf.style.display = esAdmin ? 'inline-block' : 'none';
+        }
       } catch(e) {}
 
       renderizarTagsPrincipales();
@@ -670,11 +675,12 @@
         
         combo.innerHTML += `<option value="${r.nombre}">${r.nombre}</option>`;
         
+        const esAdmin = usuarioActivo && usuarioActivo.rol && (usuarioActivo.rol.toLowerCase().includes('admin') || usuarioActivo.rol.toLowerCase().includes('directiv'));
         listaConf.innerHTML += `<li class="list-group-item d-flex justify-content-between align-items-center">
             ${r.nombre} 
             <div>
               <span class="badge bg-secondary">${r.responsable}</span>
-              <button class="btn btn-sm btn-outline-primary ms-2 py-0 px-1" onclick="abrirDisp(${r.id}, '${r.nombre}')"><i class="bi bi-gear"></i> Ajustes</button>
+              ${esAdmin ? `<button class="btn btn-sm btn-outline-primary ms-2 py-0 px-1" onclick="abrirDisp(${r.id}, '${r.nombre}')"><i class="bi bi-gear"></i> Ajustes</button>` : ''}
             </div>
         </li>`;
       });
@@ -1160,10 +1166,28 @@
       document.getElementById('inReservaId').value = reserva.id;
 
       const esPend = reserva.estado === 'Pendiente';
-      document.getElementById('modalReservaTitulo').innerHTML = 'Editar Reserva' + (esPend ? ' <span class="badge bg-warning text-dark ms-1">Pendiente</span>' : '');
+      const esAdmin = usuarioActivo && usuarioActivo.rol && (usuarioActivo.rol.toLowerCase().includes('admin') || usuarioActivo.rol.toLowerCase().includes('directiv'));
+      const esMio = usuarioActivo && reserva.profesor_email && (usuarioActivo.email.toLowerCase() === reserva.profesor_email.toLowerCase());
+
+      const btnG = document.getElementById('btnGuardar');
+      const footerDel = document.getElementById('footerBtnEliminar');
+      const inMot = document.getElementById('inMotivo');
+
+      if (!esAdmin && !esMio) {
+        document.getElementById('modalReservaTitulo').innerHTML = 'Detalles de Reserva' + (esPend ? ' <span class="badge bg-warning text-dark ms-1">Pendiente</span>' : '');
+        if (btnG) btnG.style.display = 'none';
+        if (footerDel) footerDel.innerHTML = '';
+        if (inMot) inMot.readOnly = true;
+      } else {
+        document.getElementById('modalReservaTitulo').innerHTML = 'Editar Reserva' + (esPend ? ' <span class="badge bg-warning text-dark ms-1">Pendiente</span>' : '');
+        if (btnG) {
+          btnG.style.display = 'inline-block';
+          btnG.innerText = 'Actualizar Reserva';
+        }
+        if (inMot) inMot.readOnly = false;
+        if (footerDel) footerDel.innerHTML = `<button type="button" class="btn btn-outline-danger fw-semibold" onclick="eliminarReservaDesdeModal('${reserva.id}')"><i class="bi bi-trash"></i> Cancelar Reserva</button>`;
+      }
       document.getElementById('modalReservaSubtitulo').innerText = (reserva.recurso || recursoActual);
-      document.getElementById('btnGuardar').innerText = 'Actualizar Reserva';
-      document.getElementById('footerBtnEliminar').innerHTML = `<button type="button" class="btn btn-outline-danger fw-semibold" onclick="eliminarReservaDesdeModal('${reserva.id}')"><i class="bi bi-trash"></i> Cancelar Reserva</button>`;
 
       document.getElementById('inFecha').value = reserva.fecha;
       document.getElementById('inRecurso').value = reserva.recurso;
@@ -1761,6 +1785,11 @@
 
 
     function abrirDisp(id, nombre) {
+       const esAdmin = usuarioActivo && usuarioActivo.rol && (usuarioActivo.rol.toLowerCase().includes('admin') || usuarioActivo.rol.toLowerCase().includes('directiv'));
+       if (!esAdmin) {
+         Swal.fire('Acceso Restringido', 'Solo los administradores pueden ajustar la disponibilidad y reglas de los recursos.', 'warning');
+         return;
+       }
        dispIdActivo = id;
        document.getElementById('dispNombre').innerText = nombre;
        
@@ -2034,6 +2063,11 @@
     }
 
     function abrirConfiguracion() {
+      const esAdmin = usuarioActivo && usuarioActivo.rol && (usuarioActivo.rol.toLowerCase().includes('admin') || usuarioActivo.rol.toLowerCase().includes('directiv'));
+      if (!esAdmin) {
+        Swal.fire('Acceso Restringido', 'Solo los administradores pueden gestionar la configuración de recursos y materiales.', 'warning');
+        return;
+      }
       modalConfig.show();
     }
 

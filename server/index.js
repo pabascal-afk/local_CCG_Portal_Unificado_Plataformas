@@ -435,6 +435,10 @@ app.get('/api/recursos/config', (req, res) => {
 });
 
 app.post('/api/recursos/config', (req, res) => {
+  const userRole = (req.user && req.user.rol) ? req.user.rol.toLowerCase() : '';
+  const esAdmin = userRole.includes('admin') || userRole.includes('directiv');
+  if (!esAdmin) return res.status(403).json({ error: 'Solo los administradores pueden crear recursos.' });
+
   const { nombre, responsable, duracion_bloque, horario_inicio, horario_fin, disponibilidad } = req.body;
   const dispStr = disponibilidad ? JSON.stringify(disponibilidad) : '{}';
   db.run("INSERT INTO recursos_config (nombre, responsable, duracion_bloque, horario_inicio, horario_fin, disponibilidad) VALUES (?, ?, ?, ?, ?, ?)",
@@ -445,6 +449,10 @@ app.post('/api/recursos/config', (req, res) => {
 });
 
 app.put('/api/recursos/config/:id', (req, res) => {
+  const userRole = (req.user && req.user.rol) ? req.user.rol.toLowerCase() : '';
+  const esAdmin = userRole.includes('admin') || userRole.includes('directiv');
+  if (!esAdmin) return res.status(403).json({ error: 'Solo los administradores pueden modificar recursos.' });
+
   const { disponibilidad, bloques_agrupados, horarios_exactos, bloqueos_fechas, reglas_reserva } = req.body;
   db.run("UPDATE recursos_config SET disponibilidad = COALESCE(?, disponibilidad), bloques_agrupados = COALESCE(?, bloques_agrupados), horarios_exactos = ?, bloqueos_fechas = COALESCE(?, bloqueos_fechas), reglas_reserva = COALESCE(?, reglas_reserva) WHERE id = ?", 
       [disponibilidad ? JSON.stringify(disponibilidad) : null, bloques_agrupados ? JSON.stringify(bloques_agrupados) : null, horarios_exactos !== undefined ? horarios_exactos : null, bloqueos_fechas ? JSON.stringify(bloqueos_fechas) : null, reglas_reserva ? JSON.stringify(reglas_reserva) : null, req.params.id], function(err) {
@@ -453,8 +461,11 @@ app.put('/api/recursos/config/:id', (req, res) => {
   });
 });
 
-
 app.delete('/api/recursos/config/:id', (req, res) => {
+  const userRole = (req.user && req.user.rol) ? req.user.rol.toLowerCase() : '';
+  const esAdmin = userRole.includes('admin') || userRole.includes('directiv');
+  if (!esAdmin) return res.status(403).json({ error: 'Solo los administradores pueden eliminar recursos.' });
+
   db.run("DELETE FROM recursos_config WHERE id = ?", [req.params.id], function(err) {
     if (err) return res.status(500).json({error: err.message});
     res.json({ message: 'Recurso eliminado correctamente' });
@@ -832,8 +843,15 @@ app.put('/api/reservas/:id', async (req, res) => {
 });
 
 app.delete('/api/reservas/:id', (req, res) => {
+  const userRole = (req.user && req.user.rol) ? req.user.rol.toLowerCase() : '';
+  const userEmail = (req.user && req.user.email) ? req.user.email.toLowerCase() : '';
+  const esAdmin = userRole.includes('admin') || userRole.includes('directiv');
+
   db.get("SELECT * FROM reservas WHERE id = ?", [req.params.id], (err, reserva) => {
     if (err || !reserva) return res.status(500).json({error: "No encontrada"});
+    if (!esAdmin && reserva.profesor_email && reserva.profesor_email.toLowerCase() !== userEmail) {
+        return res.status(403).json({ error: "No tienes permiso para cancelar esta reserva." });
+    }
     
     const hoy = new Date();
     const partes = reserva.fecha.split('-');
@@ -912,7 +930,7 @@ app.get('/api/dashboard/me', (req, res) => {
                 data.stats.misReservas = reservas.length;
             }
 
-            // 3. Evaluaciones (buscamos por email o nombre de profesor)
+            // 3. Evaluaciones (buscamos por email o nombre de profesor, excluyendo bloqueos administrativos)
             const queryEvals = `
                 SELECT * FROM evaluaciones 
                 WHERE (
@@ -921,6 +939,7 @@ app.get('/api/dashboard/me', (req, res) => {
                     OR (profesor_nombre IS NOT NULL AND LOWER(profesor_nombre) LIKE '%' || LOWER(?) || '%') 
                     OR (profesor_email IS NOT NULL AND LOWER(profesor_email) LIKE '%' || LOWER(?) || '%')
                 ) 
+                AND (tipo NOT LIKE '%BLOQUEO%' AND (asignatura IS NULL OR UPPER(asignatura) != 'ADMIN'))
                 AND fecha >= date('now') 
                 ORDER BY fecha ASC 
                 LIMIT 10

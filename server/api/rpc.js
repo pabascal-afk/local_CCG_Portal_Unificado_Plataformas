@@ -1,4 +1,4 @@
-﻿const express = require('express');
+const express = require('express');
 const router = express.Router();
 const sqlite3 = require('sqlite3').verbose();
 const nodemailer = require('nodemailer');
@@ -21,6 +21,29 @@ const run = (query, params = []) => new Promise((resolve, reject) => {
         if(err) reject(err); else resolve(this.lastID);
     });
 });
+
+function sonMismoProfesor(profesorHorario, user) {
+    if (!profesorHorario || !user) return false;
+    const norm = (s) => (s || '').toString().toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "").trim().replace(/\s+/g, ' ');
+    const p1 = norm(profesorHorario);
+    const pNombre = norm(user.nombre);
+    if (p1 === pNombre) return true;
+    
+    if (user.email) {
+        const uEmailPrefix = norm(user.email.split('@')[0]);
+        const parts = p1.split(' ');
+        if (parts.length >= 2) {
+            const initialPlusLast = parts[0][0] + parts[parts.length - 1];
+            if (initialPlusLast === uEmailPrefix) return true;
+        }
+        if (uEmailPrefix.length >= 4 && p1.includes(uEmailPrefix)) return true;
+    }
+    
+    if (p1.length > 5 && pNombre.length > 5) {
+        if (p1.includes(pNombre) || pNombre.includes(p1)) return true;
+    }
+    return false;
+}
 
 router.post('/:functionName', async (req, res) => {
     const { functionName } = req.params;
@@ -53,10 +76,13 @@ router.post('/:functionName', async (req, res) => {
             // Extract from DB
             const allHorarios = await queryAll("SELECT * FROM horarios");
             const cursosSet = new Set();
+            const misCursosSet = new Set();
             const asigSet = new Set();
             const profSet = new Set();
             
             const asigDict = {};
+            const misAsignaturasPorCurso = {};
+            const misDiasPorCurso = {};
             
             allHorarios.forEach(h => {
                 if(h.curso) cursosSet.add(h.curso.trim());
@@ -69,8 +95,17 @@ router.post('/:functionName', async (req, res) => {
                 
                 if(!asigDict[c]) asigDict[c] = {};
                 
-                // Si es admin, puede elegir cualquier asignatura cualquier da, as que guardamos todas en "TODAS"
-                if(permisos && permisos.puedeAgendarSinRestricciones) {
+                const esMiClase = sonMismoProfesor(h.profesor, user);
+                if (esMiClase && c) {
+                    misCursosSet.add(c);
+                    if (!misAsignaturasPorCurso[c]) misAsignaturasPorCurso[c] = new Set();
+                    if (a) misAsignaturasPorCurso[c].add(a);
+                    if (!misDiasPorCurso[c]) misDiasPorCurso[c] = new Set();
+                    if (d) misDiasPorCurso[c].add(d);
+                }
+                
+                // Si es admin, puede elegir cualquier asignatura cualquier día, así que guardamos todas en "TODAS"
+                if(isAdmin) {
                    const dias = ['LUNES', 'MARTES', 'MIERCOLES', 'JUEVES', 'VIERNES'];
                    dias.forEach(diaNormal => {
                        if(!asigDict[c][diaNormal]) asigDict[c][diaNormal] = new Set();
@@ -78,12 +113,21 @@ router.post('/:functionName', async (req, res) => {
                    });
                 } else {
                    // Solo los del profe actual
-                   if(h.profesor && h.profesor.trim().toLowerCase() === user.nombre.toLowerCase()) {
+                   if(esMiClase) {
                        if(!asigDict[c][d]) asigDict[c][d] = new Set();
                        if(a) asigDict[c][d].add(a);
                    }
                 }
             });
+
+            // Si es modo profesor, enriquecer cada uno de sus cursos con _todas y _dias
+            if (!isAdmin) {
+                for (let c in misAsignaturasPorCurso) {
+                    if (!asigDict[c]) asigDict[c] = {};
+                    asigDict[c]['_todas'] = misAsignaturasPorCurso[c];
+                    asigDict[c]['_dias'] = misDiasPorCurso[c];
+                }
+            }
 
             // Convert Sets to Arrays
             const finalDict = {};
@@ -94,16 +138,22 @@ router.post('/:functionName', async (req, res) => {
                 }
             }
 
+            const cursosFinales = (!isAdmin && misCursosSet.size > 0)
+                ? Array.from(misCursosSet).sort()
+                : Array.from(cursosSet).sort();
+
             const result = {
                 usuario: { 
                     nombre: user.nombre, 
                     rol: user.rol, 
                     email: user.email,
-                    permisos: permisos
+                    permisos: permisos,
+                    esAdmin: isAdmin
                 },
                 sistemaAbierto: true,
                 profesoresBloqueados: [],
-                cursos: Array.from(cursosSet).sort(),
+                cursos: cursosFinales,
+                misCursos: Array.from(misCursosSet).sort(),
                 asignaturasDict: finalDict,
                 filtrosGlobales: {
                     cursos: Array.from(cursosSet).sort(),
@@ -116,32 +166,35 @@ router.post('/:functionName', async (req, res) => {
         
         if (functionName === 'getEventosCalendario') {
             const evaluaciones = await queryAll("SELECT * FROM evaluaciones");
-            const eventos = evaluaciones.map(e => ({
-                id: e.id,
-                title: `${e.asignatura} - ${e.curso} (${e.tipo})`,
-                start: e.fecha,
-                extendedProps: {
-                    curso: e.curso,
-                    asignatura: e.asignatura,
-                    tipo: e.tipo,
-                    recurso: e.recurso,
-                    detalles: e.detalles,
-                    profesor: e.profesor_nombre || e.profesor_email,
-                    email: e.profesor_email,
-                    esBloqueo: e.tipo && e.tipo.includes('BLOQUEO')
-                },
-                color: (() => {
-                    if (e.tipo && e.tipo.includes('BLOQUEO')) return '#dc3545';
-                    if (!e.asignatura) return '#3788d8';
-                    let hash = 0;
-                    const nombre = e.asignatura.toUpperCase();
-                    for (let i = 0; i < nombre.length; i++) {
-                        hash = nombre.charCodeAt(i) + ((hash << 5) - hash);
-                    }
-                    const c = (hash & 0x00FFFFFF).toString(16).toUpperCase();
-                    return '#' + '00000'.substring(0, 6 - c.length) + c;
-                })()
-            }));
+            const eventos = evaluaciones.map(e => {
+                const esBloqueo = !!(e.tipo && e.tipo.includes('BLOQUEO') || (e.asignatura && e.asignatura.toUpperCase() === 'ADMIN'));
+                return {
+                    id: e.id,
+                    title: `${e.asignatura} - ${e.curso} (${e.tipo})`,
+                    start: e.fecha,
+                    extendedProps: {
+                        curso: e.curso,
+                        asignatura: e.asignatura,
+                        tipo: e.tipo,
+                        recurso: e.recurso,
+                        detalles: e.detalles,
+                        profesor: esBloqueo ? 'Administración' : (e.profesor_nombre || e.profesor_email),
+                        email: esBloqueo ? 'admin@colegio.edu' : e.profesor_email,
+                        esBloqueo: esBloqueo
+                    },
+                    color: (() => {
+                        if (esBloqueo) return '#dc3545';
+                        if (!e.asignatura) return '#3788d8';
+                        let hash = 0;
+                        const nombre = e.asignatura.toUpperCase();
+                        for (let i = 0; i < nombre.length; i++) {
+                            hash = nombre.charCodeAt(i) + ((hash << 5) - hash);
+                        }
+                        const c = (hash & 0x00FFFFFF).toString(16).toUpperCase();
+                        return '#' + '00000'.substring(0, 6 - c.length) + c;
+                    })()
+                };
+            });
 
             // Cargar Bloqueos desde Calendario Anual (Eventos)
             const eventosInst = await queryAll("SELECT * FROM eventos WHERE bloques IS NOT NULL");
