@@ -60,17 +60,20 @@ namespace Launcher {
             this.Load += async (s, e) => await CheckConnections();
         }
 
+        private static HttpClientHandler CreateHandler() {
+            var handler = new HttpClientHandler();
+            handler.ServerCertificateCustomValidationCallback = (message, cert, chain, errors) => true;
+            return handler;
+        }
+
         private async Task CheckConnections() {
             string localhostUrl = "http://localhost:9000";
             string localMdnsUrl = "http://plataforma.local:9000";
             string fallbackIpUrl = "http://192.168.3.16:9000";
             string gasDbUrl = "https://script.google.com/macros/s/AKfycbwzszh_oyXrFY8S5tQhg5_JkyXL7q97jVzYHgLnMn_K0-qVowwwel0hxhdZIIMi-YWD/exec";
 
-            HttpClientHandler handler = new HttpClientHandler();
-            handler.ServerCertificateCustomValidationCallback = (message, cert, chain, errors) => true;
-
             // 1. Probar conexiones locales con timeout ágil (1.5 segundos)
-            using (HttpClient localClient = new HttpClient(handler)) {
+            using (HttpClient localClient = new HttpClient(CreateHandler())) {
                 localClient.Timeout = TimeSpan.FromMilliseconds(1500);
 
                 statusLabel.Text = "Buscando servidor en este equipo...";
@@ -94,14 +97,15 @@ namespace Launcher {
 
             // 2. Si no responde en la red local, consultar acceso remoto por Túnel (Internet)
             statusLabel.Text = "Consultando acceso remoto (Internet)...";
-            using (HttpClient cloudClient = new HttpClient(handler)) {
-                cloudClient.Timeout = TimeSpan.FromSeconds(8);
+            using (HttpClient cloudClient = new HttpClient(CreateHandler())) {
+                cloudClient.Timeout = TimeSpan.FromSeconds(10);
                 try {
                     HttpResponseMessage response = await cloudClient.GetAsync(gasDbUrl + "?action=get_url");
                     if (response.IsSuccessStatusCode) {
                         string cfUrl = (await response.Content.ReadAsStringAsync()).Trim();
                         if (cfUrl.StartsWith("http", StringComparison.OrdinalIgnoreCase)) {
                             statusLabel.Text = "Conectando al túnel seguro...";
+                            // Probar conectividad al túnel
                             if (await TryConnect(cloudClient, cfUrl + "/api/ping") || await TryConnect(cloudClient, cfUrl + "/login.html")) {
                                 OpenUrl(cfUrl);
                                 return;
