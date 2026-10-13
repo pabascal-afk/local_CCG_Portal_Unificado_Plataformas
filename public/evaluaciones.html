@@ -809,6 +809,11 @@
         (configuracionGlobal.cursos || []).forEach(c => {
           selectCurso.innerHTML += `<option value="${c}">${c}</option>`;
         });
+        const vCursoFiltro = document.getElementById('filterCurso') ? document.getElementById('filterCurso').value : '';
+        if (vCursoFiltro && (configuracionGlobal.cursos || []).includes(vCursoFiltro)) {
+          selectCurso.value = vCursoFiltro;
+          actualizarAsignaturas();
+        }
         return;
       }
 
@@ -865,27 +870,46 @@
       const dictCurso = configuracionGlobal.asignaturasDict && configuracionGlobal.asignaturasDict[vCurso];
 
       if (dictCurso) {
-        let asignaturasDisponibles = [];
-
         if (userEsAdmin) {
-          asignaturasDisponibles = dictCurso[diaNorm] || dictCurso[diaSemanaGlobal] || dictCurso['_todas'] || [];
-          if (asignaturasDisponibles.length === 0 && dictCurso['_todas']) {
-            asignaturasDisponibles = dictCurso['_todas'];
+          const delDia = dictCurso[diaNorm] || dictCurso[diaSemanaGlobal] || [];
+          const todas = dictCurso['_todas'] || [];
+          const diasAsigMap = dictCurso['_diasAsig'] || {};
+          
+          let count = 0;
+          // 1. Asignaturas con clases programadas este día
+          delDia.forEach(a => {
+            selectAsig.innerHTML += `<option value="${a}">${a}</option>`;
+            count++;
+          });
+          
+          // 2. Asignaturas de otros días (para que el admin sepa que ese día no tienen clase habitual, pero pueda agendar igual)
+          const otrosDias = todas.filter(a => !delDia.includes(a));
+          otrosDias.forEach(a => {
+            const diasHabituales = diasAsigMap[a] || [];
+            const diasTxt = diasHabituales.length > 0 ? diasHabituales.join(', ') : 'otros días';
+            selectAsig.innerHTML += `<option value="${a}">${a} (Clases habituales: ${diasTxt})</option>`;
+            count++;
+          });
+
+          if (count === 1) {
+            selectAsig.value = (delDia.length === 1) ? delDia[0] : (otrosDias.length === 1 ? otrosDias[0] : '');
+          } else if (count === 0) {
+            selectAsig.innerHTML = '<option value="" disabled selected>(Sin asignaturas registradas)</option>';
           }
         } else {
           // Profesor: SOLO los ramos que tiene ESE DÍA según el horario
-          asignaturasDisponibles = dictCurso[diaNorm] || dictCurso[diaSemanaGlobal] || [];
-        }
+          const asignaturasDisponibles = dictCurso[diaNorm] || dictCurso[diaSemanaGlobal] || [];
 
-        if (asignaturasDisponibles && asignaturasDisponibles.length > 0) {
-          asignaturasDisponibles.forEach(a => {
-            selectAsig.innerHTML += `<option value="${a}">${a}</option>`;
-          });
-          if (asignaturasDisponibles.length === 1) {
-            selectAsig.value = asignaturasDisponibles[0];
+          if (asignaturasDisponibles && asignaturasDisponibles.length > 0) {
+            asignaturasDisponibles.forEach(a => {
+              selectAsig.innerHTML += `<option value="${a}">${a}</option>`;
+            });
+            if (asignaturasDisponibles.length === 1) {
+              selectAsig.value = asignaturasDisponibles[0];
+            }
+          } else {
+            selectAsig.innerHTML = '<option value="" disabled selected>(No tienes ramos este día en este curso)</option>';
           }
-        } else {
-          selectAsig.innerHTML = '<option value="" disabled selected>(No tienes ramos este día en este curso)</option>';
         }
       }
     }

@@ -83,6 +83,19 @@ router.post('/:functionName', async (req, res) => {
             const asigDict = {};
             const misAsignaturasPorCurso = {};
             const misDiasPorCurso = {};
+            const diasPorCursoAsig = {};
+            const todasAsigPorCurso = {};
+
+            const diasOrden = ['LUNES', 'MARTES', 'MIERCOLES', 'JUEVES', 'VIERNES', 'SABADO', 'DOMINGO'];
+            const diaNombreMap = {
+                'LUNES': 'Lunes',
+                'MARTES': 'Martes',
+                'MIERCOLES': 'Miércoles',
+                'JUEVES': 'Jueves',
+                'VIERNES': 'Viernes',
+                'SABADO': 'Sábado',
+                'DOMINGO': 'Domingo'
+            };
             
             allHorarios.forEach(h => {
                 if(h.curso) cursosSet.add(h.curso.trim());
@@ -93,50 +106,78 @@ router.post('/:functionName', async (req, res) => {
                 const a = h.asignatura ? h.asignatura.trim() : '';
                 const d = h.dia ? h.dia.trim().toUpperCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "") : '';
                 
-                if(!asigDict[c]) asigDict[c] = {};
+                if (!c || !a) return;
+
+                if (!asigDict[c]) asigDict[c] = {};
+                if (!todasAsigPorCurso[c]) todasAsigPorCurso[c] = new Set();
+                todasAsigPorCurso[c].add(a);
+
+                if (!diasPorCursoAsig[c]) diasPorCursoAsig[c] = {};
+                if (!diasPorCursoAsig[c][a]) diasPorCursoAsig[c][a] = new Set();
+                if (d) diasPorCursoAsig[c][a].add(d);
                 
                 const esMiClase = sonMismoProfesor(h.profesor, user);
-                if (esMiClase && c) {
+                if (esMiClase) {
                     misCursosSet.add(c);
                     if (!misAsignaturasPorCurso[c]) misAsignaturasPorCurso[c] = new Set();
-                    if (a) misAsignaturasPorCurso[c].add(a);
+                    misAsignaturasPorCurso[c].add(a);
                     if (!misDiasPorCurso[c]) misDiasPorCurso[c] = new Set();
                     if (d) misDiasPorCurso[c].add(d);
                 }
                 
-                // Si es admin, puede elegir cualquier asignatura cualquier día, así que guardamos todas en "TODAS"
-                if(isAdmin) {
-                   const dias = ['LUNES', 'MARTES', 'MIERCOLES', 'JUEVES', 'VIERNES'];
-                   dias.forEach(diaNormal => {
-                       if(!asigDict[c][diaNormal]) asigDict[c][diaNormal] = new Set();
-                       if(a) asigDict[c][diaNormal].add(a);
-                   });
+                if (isAdmin) {
+                    // Admin: guardamos la asignatura en el día real en que tiene clases en ese curso
+                    if (d) {
+                        if (!asigDict[c][d]) asigDict[c][d] = new Set();
+                        asigDict[c][d].add(a);
+                    }
                 } else {
-                   // Solo los del profe actual
-                   if(esMiClase) {
-                       if(!asigDict[c][d]) asigDict[c][d] = new Set();
-                       if(a) asigDict[c][d].add(a);
-                   }
+                    // Solo los del profe actual en el día real
+                    if (esMiClase && d) {
+                        if (!asigDict[c][d]) asigDict[c][d] = new Set();
+                        asigDict[c][d].add(a);
+                    }
                 }
             });
 
-            // Si es modo profesor, enriquecer cada uno de sus cursos con _todas y _dias
-            if (!isAdmin) {
-                for (let c in misAsignaturasPorCurso) {
-                    if (!asigDict[c]) asigDict[c] = {};
-                    asigDict[c]['_todas'] = misAsignaturasPorCurso[c];
-                    asigDict[c]['_dias'] = misDiasPorCurso[c];
+            // Convert Sets to Arrays and enrich with metadata
+            const finalDict = {};
+            for (let cur in asigDict) {
+                finalDict[cur] = {};
+                for (let dia in asigDict[cur]) {
+                    finalDict[cur][dia] = Array.from(asigDict[cur][dia]).sort();
+                }
+
+                if (isAdmin) {
+                    finalDict[cur]['_todas'] = Array.from(todasAsigPorCurso[cur] || []).sort();
+                    
+                    const diasMap = {};
+                    const curAsigs = todasAsigPorCurso[cur] || new Set();
+                    curAsigs.forEach(asigNombre => {
+                        const dSet = (diasPorCursoAsig[cur] && diasPorCursoAsig[cur][asigNombre]) ? diasPorCursoAsig[cur][asigNombre] : new Set();
+                        diasMap[asigNombre] = diasOrden.filter(diaKey => dSet.has(diaKey)).map(diaKey => diaNombreMap[diaKey] || diaKey);
+                    });
+                    finalDict[cur]['_diasAsig'] = diasMap;
+                } else {
+                    if (misAsignaturasPorCurso[cur]) {
+                        finalDict[cur]['_todas'] = Array.from(misAsignaturasPorCurso[cur]).sort();
+                    }
+                    if (misDiasPorCurso[cur]) {
+                        finalDict[cur]['_dias'] = Array.from(misDiasPorCurso[cur]).sort();
+                    }
                 }
             }
 
-            // Convert Sets to Arrays
-            const finalDict = {};
-            for(let cur in asigDict) {
-                finalDict[cur] = {};
-                for(let dia in asigDict[cur]) {
-                    finalDict[cur][dia] = Array.from(asigDict[cur][dia]);
+            // Asegurar que todos los cursos tengan entrada en finalDict
+            cursosSet.forEach(cur => {
+                if (!finalDict[cur]) {
+                    finalDict[cur] = {};
+                    if (isAdmin) {
+                        finalDict[cur]['_todas'] = [];
+                        finalDict[cur]['_diasAsig'] = {};
+                    }
                 }
-            }
+            });
 
             const cursosFinales = (!isAdmin && misCursosSet.size > 0)
                 ? Array.from(misCursosSet).sort()
