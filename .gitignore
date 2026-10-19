@@ -3,3 +3,4 @@
 server/db/colegio.db
 .DS_Store
 *.log
+*.exe.old
