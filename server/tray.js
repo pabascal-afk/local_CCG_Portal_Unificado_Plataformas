@@ -1,6 +1,8 @@
-﻿const SysTray = require('systray2').default;
+const SysTray = require('systray2').default;
 const { exec } = require('child_process');
 const os = require('os');
+const fs = require('fs');
+const path = require('path');
 
 function getLocalIp() {
     const interfaces = os.networkInterfaces();
@@ -16,9 +18,10 @@ function getLocalIp() {
 
 function initTray(port) {
     const localIp = getLocalIp();
-    
-    // A simple blue square base64 icon 
-    const icon = "AAABAAEAEBAAAAEAIABoBAAAFgAAACgAAAAQAAAAIAAAAAEAIAAAAAAAAAQAAAAAAAAAAAAAAAAAAAAAAADIMjL/yDIy/8gyMv/IMjL/yDIy/8gyMv/IMjL/yDIy/8gyMv/IMjL/yDIy/8gyMv/IMjL/yDIy/8gyMv/IMjL/yDIy/8gyMv/IMjL/yDIy/8gyMv/IMjL/yDIy/8gyMv/IMjL/yDIy/8gyMv/IMjL/yDIy/8gyMv/IMjL/yDIy/8gyMv/IMjL/yDIy/8gyMv/IMjL/yDIy/8gyMv/IMjL/yDIy/8gyMv/IMjL/yDIy/8gyMv/IMjL/yDIy/8gyMv/IMjL/yDIy/8gyMv/IMjL/yDIy/8gyMv/IMjL/yDIy/8gyMv/IMjL/yDIy/8gyMv/IMjL/yDIy/8gyMv/IMjL/yDIy/8gyMv/IMjL/yDIy/8gyMv/IMjL/yDIy/8gyMv/IMjL/yDIy/8gyMv/IMjL/yDIy/8gyMv/IMjL/yDIy/8gyMv/IMjL/yDIy/8gyMv/IMjL/yDIy/8gyMv/IMjL/yDIy/8gyMv/IMjL/yDIy/8gyMv/IMjL/yDIy/8gyMv/IMjL/yDIy/8gyMv/IMjL/yDIy/8gyMv/IMjL/yDIy/8gyMv/IMjL/yDIy/8gyMv/IMjL/yDIy/8gyMv/IMjL/yDIy/8gyMv/IMjL/yDIy/8gyMv/IMjL/yDIy/8gyMv/IMjL/yDIy/8gyMv/IMjL/yDIy/8gyMv/IMjL/yDIy/8gyMv/IMjL/yDIy/8gyMv/IMjL/yDIy/8gyMv/IMjL/yDIy/8gyMv/IMjL/yDIy/8gyMv/IMjL/yDIy/8gyMv/IMjL/yDIy/8gyMv/IMjL/yDIy/8gyMv/IMjL/yDIy/8gyMv/IMjL/yDIy/8gyMv/IMjL/yDIy/8gyMv/IMjL/yDIy/8gyMv/IMjL/yDIy/8gyMv/IMjL/yDIy/8gyMv/IMjL/yDIy/8gyMv/IMjL/yDIy/8gyMv/IMjL/yDIy/8gyMv/IMjL/yDIy/8gyMv/IMjL/yDIy/8gyMv/IMjL/yDIy/8gyMv/IMjL/yDIy/8gyMv/IMjL/yDIy/8gyMv/IMjL/yDIy/8gyMv/IMjL/yDIy/8gyMv/IMjL/yDIy/8gyMv/IMjL/yDIy/8gyMv/IMjL/yDIy/8gyMv/IMjL/yDIy/8gyMv/IMjL/yDIy/8gyMv/IMjL/yDIy/8gyMv/IMjL/yDIy/8gyMv/IMjL/yDIy/8gyMv/IMjL/yDIy/8gyMv/IMjL/yDIy/8gyMv/IMjL/yDIy/8gyMv/IMjL/yDIy/8gyMv/IMjL/yDIy/8gyMv/IMjL/yDIy/8gyMv/IMjL/yDIy/8gyMv/IMjL/yDIy/8gyMv/IMjL/yDIy/8gyMv/IMjL/yDIy/8gyMv/IMjL/yDIy/8gyMv/IMjL/AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA==";
+    const icoPath = path.join(__dirname, '..', 'app.ico');
+    const icon = fs.existsSync(icoPath)
+        ? fs.readFileSync(icoPath).toString('base64')
+        : "";
 
     const systray = new SysTray({
         menu: {
