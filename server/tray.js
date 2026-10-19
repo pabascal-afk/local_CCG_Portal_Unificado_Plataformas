@@ -16,12 +16,23 @@ function getLocalIp() {
     return '127.0.0.1';
 }
 
+function getIconBase64() {
+    try {
+        const iconTxt = path.join(__dirname, '..', 'icon.txt');
+        if (fs.existsSync(iconTxt)) {
+            return fs.readFileSync(iconTxt, 'utf8').trim();
+        }
+        const icoPath = path.join(__dirname, '..', 'app.ico');
+        if (fs.existsSync(icoPath)) {
+            return fs.readFileSync(icoPath).toString('base64');
+        }
+    } catch (e) {}
+    return "";
+}
+
 function initTray(port) {
     const localIp = getLocalIp();
-    const icoPath = path.join(__dirname, '..', 'app.ico');
-    const icon = fs.existsSync(icoPath)
-        ? fs.readFileSync(icoPath).toString('base64')
-        : "";
+    const icon = getIconBase64();
 
     const systray = new SysTray({
         menu: {
