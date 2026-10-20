@@ -174,7 +174,43 @@ const schemas = [
   `CREATE TABLE IF NOT EXISTS libro_config (
     clave TEXT PRIMARY KEY,
     valor TEXT
-  )`
+  )`,
+  `CREATE TABLE IF NOT EXISTS cola_correos (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    destinatario TEXT NOT NULL,
+    asunto TEXT NOT NULL,
+    cuerpo_html TEXT NOT NULL,
+    cuerpo_texto TEXT,
+    adjuntos TEXT DEFAULT '[]',
+    modulo TEXT NOT NULL,
+    tipo_plantilla TEXT,
+    estado TEXT DEFAULT 'pendiente',
+    intentos INTEGER DEFAULT 0,
+    max_intentos INTEGER DEFAULT 5,
+    ultimo_error TEXT,
+    proximo_intento DATETIME DEFAULT CURRENT_TIMESTAMP,
+    creado_en DATETIME DEFAULT CURRENT_TIMESTAMP,
+    enviado_en DATETIME,
+    actualizado_en DATETIME DEFAULT CURRENT_TIMESTAMP
+  )`,
+  `CREATE INDEX IF NOT EXISTS idx_cola_estado ON cola_correos(estado, proximo_intento)`,
+  `CREATE INDEX IF NOT EXISTS idx_cola_modulo ON cola_correos(modulo)`,
+  `CREATE INDEX IF NOT EXISTS idx_cola_creado ON cola_correos(creado_en)`,
+  `CREATE TABLE IF NOT EXISTS plantillas_correo (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    clave TEXT UNIQUE NOT NULL,
+    modulo TEXT NOT NULL,
+    nombre TEXT NOT NULL,
+    descripcion TEXT,
+    asunto TEXT NOT NULL,
+    saludo_tipo TEXT DEFAULT 'Buen día {{profesor_nombre}},',
+    cuerpo_html TEXT NOT NULL,
+    pie_tipo TEXT DEFAULT 'Colegio Cerro Grande - Plataforma Unificada',
+    variables_disponibles TEXT,
+    activo INTEGER DEFAULT 1,
+    actualizado_en DATETIME DEFAULT CURRENT_TIMESTAMP
+  )`,
+  `CREATE INDEX IF NOT EXISTS idx_plantillas_clave ON plantillas_correo(clave)`
 ];
 
 db.serialize(() => {
@@ -204,6 +240,15 @@ db.serialize(() => {
     db.run("INSERT OR IGNORE INTO libro_config (clave, valor) VALUES ('blacklist', '[]')", () => {});
     db.run("INSERT OR IGNORE INTO libro_config (clave, valor) VALUES ('dias_excluidos', '[]')", () => {});
     db.run("INSERT OR IGNORE INTO libro_config (clave, valor) VALUES ('destinatarios_admin', '[\"pabascal@colegiocerrogrande.cl\",\"jmera@colegiocerrogrande.cl\",\"paolapizarro@colegiocerrogrande.cl\",\"pgarciac@colegiocerrogrande.cl\",\"mdiaz@colegiocerrogrande.cl\",\"camilaaraya@colegiocerrogrande.cl\"]')", () => {});
+
+    try {
+        const mailer = require('../services/mailer');
+        mailer.inicializarTablasCorreo(() => {
+            console.log("Plantillas de correo y cola inicializadas correctamente.");
+        });
+    } catch(e) {
+        console.error("Error al sembrar plantillas de correo:", e.message);
+    }
 
     console.log("Base de datos colegio.db inicializada correctamente con el esquema final.");
 });

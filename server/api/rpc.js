@@ -2,8 +2,9 @@ const express = require('express');
 const router = express.Router();
 const sqlite3 = require('sqlite3').verbose();
 const nodemailer = require('nodemailer');
+const mailer = require('../services/mailer');
 const path = require('path');
-const transporter = nodemailer.createTransport({service: 'gmail', auth: {user: process.env.SMTP_USER, pass: process.env.SMTP_PASS}});
+const transporter = mailer.crearTransporter();
 const dbPath = path.join(__dirname, '../db/colegio.db');
 
 const queryAll = (query, params = []) => new Promise((resolve, reject) => {
@@ -729,21 +730,23 @@ router.post('/:functionName', async (req, res) => {
                     const confRows = await queryAll("SELECT valor FROM config_global WHERE clave = 'emails_activados'");
                const emailsActivados = confRows.length > 0 ? confRows[0].valor === 'true' : true;
                
-               if (emailsActivados && process.env.SMTP_USER && process.env.SMTP_PASS) {
+               if (emailsActivados) {
                          const htmlList = datos.externos.map(ex => `<li><b>Nombre:</b> ${ex.nombre} | <b>RUT:</b> ${ex.rut} | <b>Motivo:</b> ${ex.motivo}</li>`).join('');
-                         const htmlMsg = `<h3>Nuevos Invitados Externos Registrados</h3>
-                         <p>El usuario ${user.email} ha programado el evento <b>${datos.texto}</b> el día <b>${fecha}</b> y ha registrado el ingreso de las siguientes personas ajenas al establecimiento, las cuales requieren visación de Dirección:</p>
-                         <ul>${htmlList}</ul>`;
+                         const listaHtml = `<ul style="margin: 0; padding-left: 20px;">${htmlList}</ul>`;
+                         const directorEmail = process.env.DIRECTOR_EMAIL || 'direccion@colegio.edu';
 
-                         transporter.sendMail({
-                             from: '"Sistema Colegio" <' + process.env.SMTP_USER + '>',
-                             to: process.env.DIRECTOR_EMAIL || 'direccion@colegio.edu',
-                             subject: 'Alerta de Visitas Externas (Visación) - ' + datos.texto,
-                             html: htmlMsg
-                         }).catch(e => console.error("Error enviando mail:", e));
-                    } else {
-                         console.log("[MAIL MOCK] Correo a Dirección: Invitados externos registrados", datos.externos);
-                    }
+                         mailer.enviarConPlantilla({
+                             clave: 'evento_visitas_externas',
+                             variables: {
+                                 usuario_email: user.email,
+                                 evento_texto: datos.texto,
+                                 fecha: fecha,
+                                 lista_externos_html: listaHtml
+                             },
+                             destinatario: directorEmail,
+                             modulo: 'Calendario'
+                         }).catch(e => console.error("Error encolando mail visación externas:", e.message));
+               }
                }
 
                return res.json({ result: datos.idEditar ? "Evento editado exitosamente." : "Evento guardado exitosamente." });

@@ -5,6 +5,7 @@ const sqlite3 = require('sqlite3').verbose();
 const multer = require('multer');
 const xlsx = require('xlsx');
 const nodemailer = require('nodemailer');
+const mailer = require('../services/mailer');
 
 const dbPath = path.join(__dirname, '../db/colegio.db');
 const db = new sqlite3.Database(dbPath);
@@ -865,25 +866,17 @@ router.post('/enviar-alertas-docentes', async (req, res) => {
                 ? `<p style="color: #64748b; font-size: 12px; margin-top: -8px; margin-bottom: 15px;">Registrado en el reporte como: <i>${data.nombreOriginal}</i></p>`
                 : '';
             
-            const html = `
-                <div style="font-family: Arial, sans-serif; color: #333; max-width: 650px; margin: auto; padding: 20px; border: 1px solid #e2e8f0; border-radius: 8px;">
-                    <h3 style="color: #1e293b; margin-bottom: 4px;">Estimado/a ${data.nombre},</h3>
-                    ${aclaracionNombre}
-                    <p>Se han detectado las siguientes pendientes en el <b>Libro Digital</b> según el último reporte pedagógico:</p>
-                    ${tablaHtml}
-                    <p style="margin-top: 15px;">Por favor, regularizar en el sistema a la brevedad posible.</p>
-                    <p style="color: #64748b; font-size: 12px; margin-top: 25px;">
-                        Atentamente,<br>
-                        <b>Coordinación Pedagógica - Colegio Cerro Grande</b>
-                    </p>
-                </div>
-            `;
-            
-            await transporter.sendMail({
-                from: `"Libro Digital - Colegio Cerro Grande" <${process.env.SMTP_USER}>`,
-                to: data.email,
-                subject: `Pendientes Libro Digital - ${data.nombre}`,
-                html: html
+            await mailer.enviarConPlantilla({
+                clave: 'libro_alertas_docentes',
+                variables: {
+                    profesor_nombre: data.nombre,
+                    profesor_email: data.email,
+                    nombre_original: data.nombreOriginal,
+                    aclaracion_nombre: aclaracionNombre,
+                    tabla_pendientes_html: tablaHtml
+                },
+                destinatario: data.email,
+                modulo: 'Libro Digital'
             });
             enviados++;
         }
@@ -973,28 +966,19 @@ router.post('/enviar-resumen-admin', async (req, res) => {
             </table>
         `;
         
-        const html = `
-            <div style="font-family: Arial, sans-serif; color: #333; max-width: 700px; margin: auto; padding: 20px; border: 1px solid #e2e8f0; border-radius: 8px;">
-                <h2 style="color: #1e293b; margin-top: 0;">Resumen de Libro Digital - Coordinación</h2>
-                <div style="display: flex; gap: 15px; margin-bottom: 20px;">
-                    <p style="margin: 5px 0;">🚨 <b>Días totales sin clases creadas:</b> <span style="color: #dc2626;">${totalCriticos}</span></p>
-                    <p style="margin: 5px 0;">✍️ <b>Días totales con firmas pendientes:</b> <span style="color: #d97706;">${totalPendientes}</span></p>
-                </div>
-                ${profesConProblemas.length > 0 ? tablaHtml : '<p style="color: #10b981; font-weight: bold;">✅ No hay pendientes registrados en el sistema.</p>'}
-                <p style="color: #64748b; font-size: 12px; margin-top: 25px;">
-                    Generado automáticamente desde el módulo de Libro Digital de la Plataforma Unificada.
-                </p>
-            </div>
-        `;
-        
-        const transporter = crearTransporter();
+        const resumenTabla = profesConProblemas.length > 0 ? tablaHtml : '<p style="color: #10b981; font-weight: bold;">✅ No hay pendientes registrados en el sistema.</p>';
+
         for (const dest of destinatarios) {
             if (!dest || !dest.includes('@')) continue;
-            await transporter.sendMail({
-                from: `"Libro Digital - Coordinación" <${process.env.SMTP_USER}>`,
-                to: dest.trim(),
-                subject: `Resumen de Libro Digital - Colegio Cerro Grande`,
-                html: html
+            await mailer.enviarConPlantilla({
+                clave: 'libro_resumen_admin',
+                variables: {
+                    total_criticos: totalCriticos,
+                    total_pendientes: totalPendientes,
+                    tabla_resumen_html: resumenTabla
+                },
+                destinatario: dest.trim(),
+                modulo: 'Libro Digital'
             });
         }
         

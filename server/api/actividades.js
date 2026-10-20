@@ -1,4 +1,4 @@
-﻿const express = require('express');
+const express = require('express');
 const router = express.Router();
 const path = require('path');
 const sqlite3 = require('sqlite3').verbose();
@@ -41,13 +41,8 @@ db.serialize(() => {
 
 const queryGet = (query, params = []) => new Promise((res, rej) => db.get(query, params, (err, row) => { if (err) rej(err); else res(row); }));
 
-const transporter = nodemailer.createTransport({
-    host: process.env.SMTP_HOST || 'smtp.gmail.com',
-    port: parseInt(process.env.SMTP_PORT || '465'),
-    secure: (process.env.SMTP_SECURE === 'true' || !process.env.SMTP_SECURE),
-    auth: { user: process.env.SMTP_USER, pass: process.env.SMTP_PASS },
-    tls: { rejectUnauthorized: false }
-});
+const mailer = require('../services/mailer');
+const transporter = mailer.crearTransporter();
 
 // --- MATERIALES CRUD ---
 router.get('/materiales', async (req, res) => {
@@ -147,56 +142,53 @@ router.get('/aprobar', async (req, res) => {
             await run("UPDATE actividades SET estado = ? WHERE id = ?", [actEstado, requerimiento.actividad_id]);
             // Avisar al solicitante
             const act = await queryGet("SELECT * FROM actividades WHERE id = ?", [requerimiento.actividad_id]);
-            if (process.env.SMTP_USER) {
-                transporter.sendMail({
-                    from: `"Sistema Colegio" <${process.env.SMTP_USER}>`,
-                    to: act.solicitante_email,
-                    subject: `Solicitud de Actividad: ${actEstado}`,
-                    html: `<h3>Tu actividad "${act.titulo}" ha sido ${actEstado}.</h3><p>Fecha: ${act.fecha}</p>`
-                }).catch(()=>{});
+            if (act && act.solicitante_email) {
+                const colorEstado = actEstado === 'Aprobada' ? '#28a745' : '#dc3545';
+                mailer.enviarConPlantilla({
+                    clave: 'actividad_resultado_estado',
+                    variables: {
+                        solicitante: act.solicitante_email,
+                        titulo: act.titulo,
+                        fecha: act.fecha,
+                        estado: actEstado,
+                        color_estado: colorEstado
+                    },
+                    destinatario: act.solicitante_email,
+                    modulo: 'Actividades'
+                }).catch(e => console.error("Error encolando resultado actividad:", e.message));
             }
         }
         
         res.send(`
             <div style="text-align: center; font-family: sans-serif; padding: 50px;">
                 <h1 style="color: ${action === 'approve' ? 'green' : 'red'};">${action === 'approve' ? 'Aprobado' : 'Rechazado'}</h1>
-                <p>El recurso ha sido ${nuevoEstado.toLowerCase()} exitosamente. Ya puedes cerrar esta pestaA+a.</p>
+                <p>El recurso ha sido ${nuevoEstado.toLowerCase()} exitosamente. Ya puedes cerrar esta pestaña.</p>
             </div>
         `);
     } catch(e) { res.status(500).send("Error del servidor: " + e.message); }
 });
 
-// Función Auxiliar para enviar el correo con los botones mágicos
+// Función Auxiliar para enviar el correo con los botones de autorización
 function enviarCorreoAprobacion(dest, solicitante, titulo, fecha, bloques, desc_recurso, token) {
-    if (!process.env.SMTP_USER) return;
-    
-    // Obtener la URL base dinAmicamente podrIa ser complejo (ngrok, localhost, cloudflare).
-    // Se recomienda configurar BASE_URL en el .env, pero si no, asumimos la actual (esto es difIcil en emails).
-    // Usaremos process.env.GAS_TUNNEL_DB_URL o NGROK_DOMAIN si existe, pero como fallback ponemos una variable BASE_URL
+    if (!dest) return;
     let baseUrl = process.env.PUBLIC_URL || process.env.BASE_URL || 'http://localhost:9000';
-    
     const approveUrl = `${baseUrl}/api/actividades/aprobar?token=${token}&action=approve`;
     const rejectUrl = `${baseUrl}/api/actividades/aprobar?token=${token}&action=reject`;
     
-    transporter.sendMail({
-        from: `"Sistema Colegio" <${process.env.SMTP_USER}>`,
-        to: dest,
-        subject: `Requerimiento de AutorizaciA3n: ${titulo}`,
-        html: `
-            <div style="font-family: sans-serif;">
-                <h2>Nueva solicitud de actividad</h2>
-                <p><b>Solicitante:</b> ${solicitante}</p>
-                <p><b>Actividad:</b> ${titulo}</p>
-                <p><b>Fecha:</b> ${fecha} (Bloques: ${bloques})</p>
-                <hr>
-                <p>Se ha solicitado tu autorizaciA3n para el uso de:</p>
-                <h3>${desc_recurso}</h3>
-                <br>
-                <a href="${approveUrl}" style="background-color: #28a745; color: white; padding: 10px 20px; text-decoration: none; border-radius: 5px; font-weight: bold; margin-right: 10px;">Aprobar Uso</a>
-                <a href="${rejectUrl}" style="background-color: #dc3545; color: white; padding: 10px 20px; text-decoration: none; border-radius: 5px; font-weight: bold;">Rechazar</a>
-            </div>
-        `
-    }).catch(e => console.error("Error enviando email de autorizaciA3n", e));
+    mailer.enviarConPlantilla({
+        clave: 'actividad_solicitud_autorizacion',
+        variables: {
+            solicitante,
+            titulo,
+            fecha,
+            bloques,
+            desc_recurso,
+            enlace_aprobar: approveUrl,
+            enlace_rechazar: rejectUrl
+        },
+        destinatario: dest,
+        modulo: 'Actividades'
+    }).catch(e => console.error("Error encolando autorización actividad:", e.message));
 }
 
 // Obtener mis actividades

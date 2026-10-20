@@ -67,6 +67,11 @@
           <i class="bi bi-book-half"></i> Llenado de Libros
         </a>
       </li>
+      <li class="nav-item d-none" id="nav-correos-container">
+        <a href="#" class="nav-link" onclick="loadApp('correos', this)" id="nav-correos">
+          <i class="bi bi-envelope-at"></i> Centro de Correos
+        </a>
+      </li>
     </ul>
 
     <!-- Selector de Rol Activo (Exclusivo para usuarios Admin/Profesor duales) -->
@@ -103,7 +108,8 @@
       recursos: "/recursos.html",
       usuarios: "/usuarios.html",
       coordinadores: "/coordinadores.html",
-      libro: "/libro.html"
+      libro: "/libro.html",
+      correos: "/correos.html"
     };
     let contexto = {};
     
@@ -116,16 +122,18 @@
       `;
       
       const rolNorm = (ctx.rol || '').toLowerCase();
-      const esAdminActivo = rolNorm.includes('admin') || rolNorm.includes('directiv');
+      const esAdminActivo = rolNorm.includes('admin') || rolNorm.includes('directiv') || rolNorm.includes('coordinaci');
       
       if (esAdminActivo) {
         document.getElementById('nav-usuarios-container').classList.remove('d-none');
         document.getElementById('nav-coordinadores-container').classList.remove('d-none');
         if (document.getElementById('nav-libro-container')) document.getElementById('nav-libro-container').classList.remove('d-none');
+        if (document.getElementById('nav-correos-container')) document.getElementById('nav-correos-container').classList.remove('d-none');
       } else {
         document.getElementById('nav-usuarios-container').classList.add('d-none');
         document.getElementById('nav-coordinadores-container').classList.add('d-none');
         if (document.getElementById('nav-libro-container')) document.getElementById('nav-libro-container').classList.add('d-none');
+        if (document.getElementById('nav-correos-container')) document.getElementById('nav-correos-container').classList.add('d-none');
       }
       
       // Mostrar selector de rol SOLO si tiene permiso dual

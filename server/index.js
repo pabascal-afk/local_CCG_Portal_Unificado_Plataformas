@@ -6,40 +6,30 @@ const GoogleStrategy = require('passport-google-oauth20').Strategy;
 const sqlite3 = require('sqlite3').verbose();
 const path = require('path');
 const nodemailer = require('nodemailer');
-const transporter = nodemailer.createTransport({
-    host: process.env.SMTP_HOST || 'smtp.gmail.com',
-    port: parseInt(process.env.SMTP_PORT || '465'),
-    secure: (process.env.SMTP_SECURE === 'true' || !process.env.SMTP_SECURE),
-    auth: { user: process.env.SMTP_USER, pass: process.env.SMTP_PASS },
-    tls: { rejectUnauthorized: false }
-});
+const mailer = require('./services/mailer');
+const transporter = mailer.crearTransporter();
 
 async function enviarCorreoConfirmacion(reserva, profesorEmail) {
-    if (!process.env.SMTP_USER || !process.env.SMTP_PASS) {
-        console.log('[MAIL MOCK] Correo de confirmación no enviado porque faltan SMTP_USER o SMTP_PASS en .env. Datos:', reserva);
-        return;
-    }
-    const html = `
-        <h2>Reserva de Recurso Confirmada</h2>
-        <p>Hola, tu reserva se ha ingresado exitosamente en el sistema.</p>
-        <ul>
-            <li><b>Recurso:</b> ${reserva.recurso}</li>
-            <li><b>Fecha:</b> ${reserva.fecha}</li>
-            <li><b>Bloques:</b> ${reserva.bloques}</li>
-            <li><b>Motivo:</b> ${reserva.motivo}</li>
-        </ul>
-        <p>Gracias por usar la plataforma unificada.</p>
-    `;
+    if (!profesorEmail) return;
     try {
-        await transporter.sendMail({
-            from: '"Sistema Colegio" <' + process.env.SMTP_USER + '>',
-            to: profesorEmail,
-            subject: 'Confirmación de Reserva - ' + reserva.recurso,
-            html: html
+        db.get("SELECT nombre FROM usuarios WHERE email = ?", [profesorEmail], (err, u) => {
+            const nombreProf = (u && u.nombre) ? u.nombre : profesorEmail;
+            mailer.enviarConPlantilla({
+                clave: 'reserva_confirmada',
+                variables: {
+                    profesor_nombre: nombreProf,
+                    profesor_email: profesorEmail,
+                    recurso: reserva.recurso,
+                    fecha: reserva.fecha,
+                    bloques: reserva.bloques,
+                    motivo: reserva.motivo || 'Uso institucional'
+                },
+                destinatario: profesorEmail,
+                modulo: 'Recursos'
+            }).catch(e => console.error('Error encolando confirmación de reserva:', e.message));
         });
-        console.log('Correo enviado a:', profesorEmail);
     } catch(e) {
-        console.error('Error enviando correo:', e);
+        console.error('Error en enviarCorreoConfirmacion:', e);
     }
 }
 
@@ -93,6 +83,7 @@ db.serialize(() => {
     clave TEXT PRIMARY KEY,
     valor TEXT
   )`, () => {});
+  mailer.inicializarTablasCorreo();
 });
 
 app.use(cors());
@@ -637,35 +628,25 @@ async function validarReglasReserva(fecha, recursoNombre, bloques, profesor_emai
 }
 
 function enviarCorreoPeticionEspecial(reserva, recurso, token) {
-    if (!process.env.SMTP_USER || !recurso.responsable) return;
+    if (!recurso.responsable) return;
     let baseUrl = process.env.PUBLIC_URL || process.env.BASE_URL || 'http://localhost:9000';
     const approveUrl = `${baseUrl}/api/reservas/aprobar?token=${token}&action=approve`;
     const rejectUrl = `${baseUrl}/api/reservas/aprobar?token=${token}&action=reject`;
 
-    transporter.sendMail({
-        from: `"Sistema Colegio" <${process.env.SMTP_USER}>`,
-        to: recurso.responsable,
-        subject: `⚠️ Petición Especial de Reserva: ${recurso.nombre} (${reserva.fecha})`,
-        html: `
-            <div style="font-family: sans-serif; max-width: 600px; margin: auto; border: 1px solid #ddd; border-radius: 8px; padding: 25px;">
-                <h2 style="color: #d35400; margin-top: 0;">Petición Especial de Reserva</h2>
-                <p>El docente <b>${reserva.profesor_email}</b> ha solicitado bloques que superan el cupo semanal configurado para este recurso.</p>
-                <div style="background: #fdfbf7; border: 1px solid #f3e5ab; border-radius: 6px; padding: 15px; margin: 15px 0;">
-                    <p style="margin: 4px 0;"><b>Recurso:</b> ${recurso.nombre}</p>
-                    <p style="margin: 4px 0;"><b>Fecha:</b> ${reserva.fecha}</p>
-                    <p style="margin: 4px 0;"><b>Bloques Solicitados:</b> ${reserva.bloques}</p>
-                    <p style="margin: 4px 0;"><b>Motivo:</b> ${reserva.motivo}</p>
-                </div>
-                <p>Para autorizar o rechazar esta solicitud, utiliza los siguientes botones:</p>
-                <div style="margin-top: 25px; text-align: center;">
-                    <a href="${approveUrl}" style="background-color: #28a745; color: white; padding: 12px 24px; text-decoration: none; border-radius: 6px; font-weight: bold; margin-right: 15px; display: inline-block;">Aprobar Reserva</a>
-                    <a href="${rejectUrl}" style="background-color: #dc3545; color: white; padding: 12px 24px; text-decoration: none; border-radius: 6px; font-weight: bold; display: inline-block;">Rechazar</a>
-                </div>
-                <hr style="margin-top: 30px; border: none; border-top: 1px solid #eee;">
-                <small style="color: #7f8c8d;">Plataforma Escolar Unificada - Notificación Automática</small>
-            </div>
-        `
-    }).catch(err => console.error("Error enviando email de petición especial:", err));
+    mailer.enviarConPlantilla({
+        clave: 'reserva_peticion_especial',
+        variables: {
+            profesor_email: reserva.profesor_email,
+            recurso: recurso.nombre,
+            fecha: reserva.fecha,
+            bloques: reserva.bloques,
+            motivo: reserva.motivo || 'No especificado',
+            enlace_aprobar: approveUrl,
+            enlace_rechazar: rejectUrl
+        },
+        destinatario: recurso.responsable,
+        modulo: 'Recursos'
+    }).catch(err => console.error("Error encolando email de petición especial:", err.message));
 }
 
 // --- Reservas ---
@@ -692,21 +673,26 @@ app.get('/api/reservas/aprobar', (req, res) => {
             db.run("UPDATE reservas SET estado = ? WHERE id = ?", [nuevoEstado, reserva.id], (errUpd) => {
                 if (errUpd) return res.status(500).send("Error del servidor: " + errUpd.message);
 
-                if (process.env.SMTP_USER && reserva.profesor_email) {
-                    transporter.sendMail({
-                        from: `"Sistema Colegio" <${process.env.SMTP_USER}>`,
-                        to: reserva.profesor_email,
-                        subject: `Resultado Petición Especial: ${nuevoEstado} - ${reserva.recurso}`,
-                        html: `
-                            <div style="font-family: sans-serif; padding: 20px;">
-                                <h3>Tu petición especial de reserva ha sido ${nuevoEstado.toUpperCase()}.</h3>
-                                <p><b>Recurso:</b> ${reserva.recurso}</p>
-                                <p><b>Fecha:</b> ${reserva.fecha}</p>
-                                <p><b>Bloques:</b> ${reserva.bloques}</p>
-                                <p><b>Motivo:</b> ${reserva.motivo}</p>
-                            </div>
-                        `
-                    }).catch(()=>{});
+                if (reserva.profesor_email) {
+                    const colorEstado = (action === 'approve') ? '#28a745' : '#dc3545';
+                    db.get("SELECT nombre FROM usuarios WHERE email = ?", [reserva.profesor_email], (errU, u) => {
+                        const nombreProf = (u && u.nombre) ? u.nombre : reserva.profesor_email;
+                        mailer.enviarConPlantilla({
+                            clave: 'reserva_resultado_especial',
+                            variables: {
+                                profesor_nombre: nombreProf,
+                                profesor_email: reserva.profesor_email,
+                                recurso: reserva.recurso,
+                                fecha: reserva.fecha,
+                                bloques: reserva.bloques,
+                                motivo: reserva.motivo || 'No especificado',
+                                estado: nuevoEstado,
+                                color_estado: colorEstado
+                            },
+                            destinatario: reserva.profesor_email,
+                            modulo: 'Recursos'
+                        }).catch(e => console.error("Error encolando resultado petición especial:", e.message));
+                    });
                 }
 
                 res.send(`
@@ -902,16 +888,22 @@ app.delete('/api/reservas/:id', (req, res) => {
       if (diffDays <= 3) {
           db.get("SELECT responsable FROM recursos_config WHERE nombre = ?", [reserva.recurso], (err3, conf) => {
               const adminEmail = (conf && conf.responsable) ? conf.responsable : (process.env.SMTP_USER || 'admin@colegio.edu');
-              const dests = [reserva.profesor_email, adminEmail].filter(Boolean).join(', ');
+              const dests = [reserva.profesor_email, adminEmail].filter(Boolean);
               
-              if (process.env.SMTP_USER && process.env.SMTP_PASS) {
-                  transporter.sendMail({
-                      from: '"Sistema Colegio" <' + process.env.SMTP_USER + '>',
-                      to: dests,
-                      subject: "Cancelacion de Reserva Tardia: " + reserva.recurso,
-                      html: "<h3>Notificacion de Cancelacion Tardia</h3><p>Se ha cancelado una reserva faltando 3 dias o menos para la fecha.</p><ul><li><b>Recurso:</b> " + reserva.recurso + "</li><li><b>Fecha Original:</b> " + reserva.fecha + "</li><li><b>Bloques:</b> " + reserva.bloques + "</li><li><b>Docente:</b> " + reserva.profesor_email + "</li><li><b>Motivo/Uso:</b> " + reserva.motivo + "</li></ul><p><i>Este es un aviso automatico del sistema para registro administrativo.</i></p>"
-                  }).catch(e => console.error("Error enviando email de cancelacion:", e));
-              }
+              dests.forEach(dest => {
+                  mailer.enviarConPlantilla({
+                      clave: 'reserva_cancelacion_tardia',
+                      variables: {
+                          recurso: reserva.recurso,
+                          fecha: reserva.fecha,
+                          bloques: reserva.bloques,
+                          profesor_email: reserva.profesor_email,
+                          motivo: reserva.motivo || 'Cancelación tardía'
+                      },
+                      destinatario: dest,
+                      modulo: 'Recursos'
+                  }).catch(e => console.error("Error encolando email de cancelación tardía:", e.message));
+              });
           });
       }
       
@@ -1084,6 +1076,9 @@ app.use('/api/actividades', actividadesRouter);
 const libroRouter = require('./api/libro');
 app.use('/api/libro', libroRouter);
 
+const correosRouter = require('./api/correos');
+app.use('/api/correos', correosRouter);
+
 
 // --- Roles Config ---
 app.get('/api/roles', (req, res) => {
@@ -1127,7 +1122,15 @@ const { initTunnel } = require('./tunnel');
   try { await initTunnel(PORT); } catch(e) { console.error('Tunnel failed', e); }
 });
 
+// --- WORKER DE COLA DE CORREOS Y REINTENTOS (Cada 60 segundos) ---
+setInterval(() => {
+    mailer.procesarCola().catch(e => console.error('[MAILER WORKER INTERVAL ERROR]', e.message));
+}, 60000);
 
+// Disparar procesamiento inicial al arrancar
+setTimeout(() => {
+    mailer.procesarCola().catch(() => {});
+}, 3000);
 
 // --- CRONJOB RECORDATORIOS DE ACTIVIDADES ---
 const sqlite3_cron = require('sqlite3').verbose();
@@ -1136,7 +1139,7 @@ setInterval(() => {
     const ahora = new Date();
     // Ejecutar solo a las 08:00 AM (aprox, revisando cada 1 hora)
     if (ahora.getHours() === 8) {
-        // MaAA+ana:
+        // Mañana:
         const manana = new Date(ahora);
         manana.setDate(manana.getDate() + 1);
         const fechaStr = manana.toISOString().split('T')[0];
@@ -1147,22 +1150,17 @@ setInterval(() => {
                 dbCron.all("SELECT * FROM actividades_req WHERE actividad_id = ? AND estado = 'Autorizado'", [act.id], (e2, reqs) => {
                     if (e2 || !reqs) return;
                     reqs.forEach(req => {
-                        // Enviar correo recordatorio
-                        const nodemailer_cron = require('nodemailer');
-                        const transporter_cron = nodemailer_cron.createTransport({
-    host: process.env.SMTP_HOST || 'smtp.gmail.com',
-    port: parseInt(process.env.SMTP_PORT || '465'),
-    secure: (process.env.SMTP_SECURE === 'true' || !process.env.SMTP_SECURE),
-    auth: { user: process.env.SMTP_USER, pass: process.env.SMTP_PASS },
-    tls: { rejectUnauthorized: false }
-});
-                        if(process.env.SMTP_USER) {
-                            transporter_cron.sendMail({
-                                from: `"Sistema Colegio" <${process.env.SMTP_USER}>`,
-                                to: req.responsable_email,
-                                subject: `Recordatorio: Actividad MAA'ANA (${act.titulo})`,
-                                html: `<h3>Recordatorio Institucional</h3><p>MAA'ANA (${act.fecha}) se llevarA! a cabo la actividad "<b>${act.titulo}</b>" durante los bloques ${act.bloques}.</p><p>Recuerde tener listo el recurso solicitado que usted administra.</p>`
-                            }).catch(()=>{});
+                        if (req.responsable_email) {
+                            mailer.enviarConPlantilla({
+                                clave: 'actividad_recordatorio_cron',
+                                variables: {
+                                    titulo: act.titulo,
+                                    fecha: act.fecha,
+                                    bloques: act.bloques
+                                },
+                                destinatario: req.responsable_email,
+                                modulo: 'Actividades'
+                            }).catch(e => console.error("Error encolando recordatorio cron:", e.message));
                         }
                     });
                 });

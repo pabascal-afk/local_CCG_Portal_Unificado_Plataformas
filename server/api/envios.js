@@ -32,13 +32,8 @@ const storage = multer.diskStorage({
 });
 const upload = multer({ storage });
 
-const transporter = nodemailer.createTransport({
-    host: process.env.SMTP_HOST || 'smtp.gmail.com',
-    port: parseInt(process.env.SMTP_PORT || '465'),
-    secure: (process.env.SMTP_SECURE === 'true' || !process.env.SMTP_SECURE),
-    auth: { user: process.env.SMTP_USER, pass: process.env.SMTP_PASS },
-    tls: { rejectUnauthorized: false }
-});
+const mailer = require('../services/mailer');
+const transporter = mailer.crearTransporter();
 
 router.post('/enviar/:id', upload.single('archivo'), async (req, res) => {
     try {
@@ -67,11 +62,11 @@ router.post('/enviar/:id', upload.single('archivo'), async (req, res) => {
         await run("UPDATE evaluaciones SET estado_doc = 'Enviada', link_doc = ?, archivo_doc = ? WHERE id = ?", 
             [link_doc || null, archivoPath, id]);
             
-        // Send email
+        // Send email via mailer queue
         const confRows = await queryAll("SELECT valor FROM config_global WHERE clave = 'emails_activados'");
         const emailsActivados = confRows.length > 0 ? confRows[0].valor === 'true' : true;
         
-        if (emailsActivados && process.env.SMTP_USER && process.env.SMTP_PASS) {
+        if (emailsActivados && emailDestino) {
             let attachments = [];
             if (archivo) {
                 attachments.push({
@@ -79,27 +74,25 @@ router.post('/enviar/:id', upload.single('archivo'), async (req, res) => {
                     path: archivo.path
                 });
             }
+
+            const linkDocHtml = link_doc ? `<p style="margin: 12px 0;"><b>Enlace Google Docs:</b> <a href="${link_doc}" style="color: #2563eb;">${link_doc}</a></p>` : '';
             
-            const htmlMsg = `
-                <h3>Nueva Evaluación para Revisión/Impresión</h3>
-                <p>Hola ${nombreDestino},</p>
-                <p>El profesor <b>${ev.profesor_nombre}</b> ha enviado una evaluación para su revisión y/o impresión.</p>
-                <ul>
-                    <li><b>Curso:</b> ${ev.curso}</li>
-                    <li><b>Asignatura:</b> ${ev.asignatura}</li>
-                    <li><b>Fecha Programada:</b> ${ev.fecha}</li>
-                    <li><b>Tipo:</b> ${ev.tipo}</li>
-                </ul>
-                <p><b>Instrucciones del profesor:</b><br/>${instrucciones || 'Ninguna'}</p>
-                ${link_doc ? `<p><b>Enlace Google Docs:</b> <a href="${link_doc}">${link_doc}</a></p>` : ''}
-            `;
-            
-            await transporter.sendMail({
-                from: '"Sistema Colegio" <' + process.env.SMTP_USER + '>',
-                to: emailDestino,
-                subject: `Entrega Evaluación: ${ev.curso} - ${ev.asignatura}`,
-                html: htmlMsg,
-                attachments: attachments
+            await mailer.enviarConPlantilla({
+                clave: 'evaluacion_entrega',
+                variables: {
+                    coordinador_nombre: nombreDestino,
+                    profesor_nombre: ev.profesor_nombre,
+                    curso: ev.curso,
+                    asignatura: ev.asignatura,
+                    fecha: ev.fecha,
+                    tipo: ev.tipo,
+                    instrucciones: instrucciones || 'Ninguna',
+                    link_doc: link_doc || '',
+                    bloque_link_doc: linkDocHtml
+                },
+                destinatario: emailDestino,
+                adjuntos: attachments,
+                modulo: 'Evaluaciones'
             });
         }
         
