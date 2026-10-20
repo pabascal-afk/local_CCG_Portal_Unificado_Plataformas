@@ -59,11 +59,6 @@
           <i class="bi bi-people"></i> Gestión de Usuarios
         </a>
       </li>
-      <li class="nav-item d-none" id="nav-coordinadores-container">
-        <a href="#" class="nav-link" onclick="loadApp('coordinadores', this)" id="nav-coordinadores">
-          <i class="bi bi-envelope-paper"></i> Reglas de Envíos
-        </a>
-      </li>
       <li class="nav-item d-none" id="nav-libro-container">
         <a href="#" class="nav-link" onclick="loadApp('libro', this)" id="nav-libro">
           <i class="bi bi-book-half"></i> Llenado de Libros
@@ -109,7 +104,7 @@
       horarios: "/horarios.html",
       recursos: "/recursos.html",
       usuarios: "/usuarios.html",
-      coordinadores: "/coordinadores.html",
+      coordinadores: "/correos.html",
       libro: "/libro.html",
       correos: "/correos.html"
     };
@@ -128,14 +123,12 @@
       
       if (esAdminActivo) {
         document.getElementById('nav-usuarios-container').classList.remove('d-none');
-        document.getElementById('nav-coordinadores-container').classList.remove('d-none');
         if (document.getElementById('nav-libro-container')) document.getElementById('nav-libro-container').classList.remove('d-none');
         if (document.getElementById('nav-correos-container')) document.getElementById('nav-correos-container').classList.remove('d-none');
         if (document.getElementById('nav-horarios-container')) document.getElementById('nav-horarios-container').classList.remove('d-none');
         if (document.getElementById('opt-pref-horarios')) document.getElementById('opt-pref-horarios').classList.remove('d-none');
       } else {
         document.getElementById('nav-usuarios-container').classList.add('d-none');
-        document.getElementById('nav-coordinadores-container').classList.add('d-none');
         if (document.getElementById('nav-libro-container')) document.getElementById('nav-libro-container').classList.add('d-none');
         if (document.getElementById('nav-correos-container')) document.getElementById('nav-correos-container').classList.add('d-none');
         if (document.getElementById('nav-horarios-container')) document.getElementById('nav-horarios-container').classList.add('d-none');
