@@ -401,7 +401,20 @@
           <div class="col-md-6">
             <div class="card border-0 shadow-sm h-100">
               <div class="card-body p-4">
-                <h5 class="fw-bold mb-2"><i class="bi bi-calendar-x text-warning me-2"></i>Días Excluidos (Feriados / Paros)</h5>
+                <div class="d-flex justify-content-between align-items-center mb-2">
+                  <h5 class="fw-bold mb-0">
+                    <i class="bi bi-calendar-x text-warning me-2"></i>Días Excluidos (Feriados / Paros)
+                    <span class="badge bg-warning text-dark ms-1" id="badgeTotalFeriados">0</span>
+                  </h5>
+                  <div class="btn-group btn-group-sm">
+                    <button class="btn btn-outline-warning text-dark fw-semibold" onclick="abrirModalFechasMasivas()" title="Pegar lista de fechas masivas">
+                      <i class="bi bi-clipboard-plus me-1"></i> Carga Masiva
+                    </button>
+                    <button class="btn btn-outline-danger" onclick="limpiarTodosLosFeriados()" title="Eliminar todas las fechas excluidas">
+                      <i class="bi bi-trash"></i>
+                    </button>
+                  </div>
+                </div>
                 <p class="text-muted small mb-3">Fechas en las que no hubo clases ordinarias (feriados, suspensiones o eventos institucionales).</p>
 
                 <div class="input-group mb-3">
@@ -470,6 +483,40 @@
 
     </div>
 
+  </div>
+
+  <!-- MODAL DE CARGA MASIVA DE FECHAS EXCLUIDAS -->
+  <div class="modal fade" id="modalFechasMasivas" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered modal-lg">
+      <div class="modal-content border-0 shadow-lg">
+        <div class="modal-header bg-warning bg-opacity-25 border-0">
+          <h5 class="modal-title fw-bold text-dark">
+            <i class="bi bi-calendar2-range text-warning me-2"></i>Carga Masiva de Días Excluidos
+          </h5>
+          <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Cerrar"></button>
+        </div>
+        <div class="modal-body p-4">
+          <p class="text-muted small mb-2">
+            Pega tu lista de fechas (copiadas desde Excel, un archivo o mensaje). El sistema detecta automáticamente formatos como <code>DD/MM/YYYY</code> o <code>YYYY-MM-DD</code> separados por saltos de línea, comas o espacios.
+          </p>
+
+          <div class="mb-3">
+            <textarea id="txtFechasMasivas" class="form-control font-monospace" rows="10" placeholder="Pega aquí las fechas (una por línea o separadas por comas):&#10;03/04/2026&#10;16/04/2026&#10;01/05/2026&#10;21/05/2026..." oninput="analizarTextoFechasMasivas()"></textarea>
+          </div>
+
+          <div id="resumenAnalisisFechas" class="alert alert-light border small py-2 px-3 mb-0 d-flex justify-content-between align-items-center">
+            <span class="text-muted" id="textoResumenFechas">Pega o escribe las fechas en el cuadro superior.</span>
+            <span class="badge bg-secondary" id="badgeFechasDetectadas">0 detectadas</span>
+          </div>
+        </div>
+        <div class="modal-footer border-0 bg-light">
+          <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">Cancelar</button>
+          <button type="button" class="btn btn-warning fw-bold px-4" id="btnGuardarFechasMasivas" onclick="guardarFechasMasivas()" disabled>
+            <i class="bi bi-check2-circle me-1"></i>Incorporar Fechas
+          </button>
+        </div>
+      </div>
+    </div>
   </div>
 
   <!-- Scripts -->
@@ -912,16 +959,37 @@
       `).join('');
     }
 
+    function ordenarFechasDDMMYYYY(lista) {
+      if (!Array.isArray(lista)) return [];
+      return [...lista].sort((a, b) => {
+        const pa = String(a).split('/');
+        const pb = String(b).split('/');
+        if (pa.length === 3 && pb.length === 3) {
+          const da = new Date(parseInt(pa[2], 10), parseInt(pa[1], 10) - 1, parseInt(pa[0], 10));
+          const db = new Date(parseInt(pb[2], 10), parseInt(pb[1], 10) - 1, parseInt(pb[0], 10));
+          return da - db;
+        }
+        return String(a).localeCompare(String(b));
+      });
+    }
+
     function renderizarFeriados() {
       const cont = document.getElementById('listaFeriados');
+      const badgeTotal = document.getElementById('badgeTotalFeriados');
+      if (badgeTotal) badgeTotal.innerText = (configActual.dias_excluidos || []).length;
+
       if (!configActual.dias_excluidos || configActual.dias_excluidos.length === 0) {
         cont.innerHTML = '<span class="text-muted small">No hay fechas excluidas registradas.</span>';
         return;
       }
+      
+      // Ordenar cronológicamente para presentación limpia
+      configActual.dias_excluidos = ordenarFechasDDMMYYYY(configActual.dias_excluidos);
+
       cont.innerHTML = configActual.dias_excluidos.map((f, i) => `
         <span class="badge bg-white text-dark border p-2 d-flex align-items-center gap-2 shadow-sm">
           <i class="bi bi-calendar-event text-warning"></i> ${f}
-          <i class="bi bi-x-circle text-danger cursor-pointer" onclick="quitarFeriado(${i})"></i>
+          <i class="bi bi-x-circle text-danger cursor-pointer" onclick="quitarFeriado(${i})" title="Eliminar fecha"></i>
         </span>
       `).join('');
     }
@@ -980,6 +1048,7 @@
       const ddmmyyyy = `${partes[2]}/${partes[1]}/${partes[0]}`;
       if (!configActual.dias_excluidos.includes(ddmmyyyy)) {
         configActual.dias_excluidos.push(ddmmyyyy);
+        configActual.dias_excluidos = ordenarFechasDDMMYYYY(configActual.dias_excluidos);
         inp.value = '';
         renderizarFeriados();
         await guardarConfigServidor();
@@ -992,6 +1061,150 @@
       renderizarFeriados();
       await guardarConfigServidor();
       cargarDashboard();
+    }
+
+    function extraerFechasDeTexto(txt) {
+      if (!txt) return [];
+      const lineas = txt.split(/[\r\n,;]+/);
+      const fechasValidas = [];
+      const fechasSet = new Set();
+      
+      for (const l of lineas) {
+        const raw = l.trim();
+        if (!raw) continue;
+        
+        // Match DD/MM/YYYY o D/M/YYYY
+        const m1 = raw.match(/\b(\d{1,2})[\/\-](\d{1,2})[\/\-](\d{4})\b/);
+        if (m1) {
+          const d = String(m1[1]).padStart(2, '0');
+          const m = String(m1[2]).padStart(2, '0');
+          const y = m1[3];
+          const norm = `${d}/${m}/${y}`;
+          if (!fechasSet.has(norm)) {
+            fechasSet.add(norm);
+            fechasValidas.push(norm);
+          }
+          continue;
+        }
+        
+        // Match YYYY-MM-DD o YYYY/MM/DD
+        const m2 = raw.match(/\b(\d{4})[\/\-](\d{1,2})[\/\-](\d{1,2})\b/);
+        if (m2) {
+          const y = m2[1];
+          const m = String(m2[2]).padStart(2, '0');
+          const d = String(m2[3]).padStart(2, '0');
+          const norm = `${d}/${m}/${y}`;
+          if (!fechasSet.has(norm)) {
+            fechasSet.add(norm);
+            fechasValidas.push(norm);
+          }
+        }
+      }
+      return ordenarFechasDDMMYYYY(fechasValidas);
+    }
+
+    let fechasMasivasDetectadas = [];
+
+    function abrirModalFechasMasivas() {
+      const modalEl = document.getElementById('modalFechasMasivas');
+      const textarea = document.getElementById('txtFechasMasivas');
+      if (textarea) textarea.value = '';
+      fechasMasivasDetectadas = [];
+      analizarTextoFechasMasivas();
+      const modal = new bootstrap.Modal(modalEl);
+      modal.show();
+    }
+
+    function analizarTextoFechasMasivas() {
+      const txt = (document.getElementById('txtFechasMasivas').value || '').trim();
+      const badge = document.getElementById('badgeFechasDetectadas');
+      const resumen = document.getElementById('textoResumenFechas');
+      const btn = document.getElementById('btnGuardarFechasMasivas');
+
+      fechasMasivasDetectadas = extraerFechasDeTexto(txt);
+
+      const existentes = new Set(configActual.dias_excluidos || []);
+      const nuevas = fechasMasivasDetectadas.filter(f => !existentes.has(f));
+      const repetidas = fechasMasivasDetectadas.length - nuevas.length;
+
+      if (fechasMasivasDetectadas.length === 0) {
+        badge.className = 'badge bg-secondary';
+        badge.innerText = '0 detectadas';
+        resumen.innerHTML = '<span class="text-muted">Pega o escribe las fechas en el cuadro superior.</span>';
+        btn.disabled = true;
+      } else {
+        badge.className = 'badge bg-success';
+        badge.innerText = `${fechasMasivasDetectadas.length} detectadas`;
+
+        let detalle = `<b>${nuevas.length}</b> fecha(s) nueva(s)`;
+        if (repetidas > 0) {
+          detalle += ` (${repetidas} ya estaban en la lista)`;
+        }
+        resumen.innerHTML = `<span class="text-dark">${detalle}</span>`;
+        btn.disabled = (nuevas.length === 0);
+      }
+    }
+
+    async function guardarFechasMasivas() {
+      const existentes = new Set(configActual.dias_excluidos || []);
+      const nuevas = fechasMasivasDetectadas.filter(f => !existentes.has(f));
+
+      if (nuevas.length === 0) {
+        Swal.fire('Información', 'Todas las fechas ingresadas ya se encuentran en la lista.', 'info');
+        return;
+      }
+
+      configActual.dias_excluidos = ordenarFechasDDMMYYYY([
+        ...(configActual.dias_excluidos || []),
+        ...nuevas
+      ]);
+
+      const modalEl = document.getElementById('modalFechasMasivas');
+      const modalInstance = bootstrap.Modal.getInstance(modalEl);
+      if (modalInstance) modalInstance.hide();
+
+      renderizarFeriados();
+      await guardarConfigServidor();
+      cargarDashboard();
+
+      Swal.fire({
+        icon: 'success',
+        title: 'Fechas Incorporadas',
+        text: `Se agregaron ${nuevas.length} fecha(s) a los días excluidos.`,
+        timer: 2000,
+        showConfirmButton: false
+      });
+    }
+
+    async function limpiarTodosLosFeriados() {
+      if (!configActual.dias_excluidos || configActual.dias_excluidos.length === 0) {
+        Swal.fire('Información', 'La lista de fechas excluidas ya está vacía.', 'info');
+        return;
+      }
+
+      const { isConfirmed } = await Swal.fire({
+        title: '¿Vaciar todas las fechas excluidas?',
+        text: `Se eliminarán las ${configActual.dias_excluidos.length} fechas configuradas como feriados/paros.`,
+        icon: 'warning',
+        showCancelButton: true,
+        confirmButtonColor: '#dc2626',
+        confirmButtonText: 'Sí, vaciar lista',
+        cancelButtonText: 'Cancelar'
+      });
+
+      if (!isConfirmed) return;
+
+      configActual.dias_excluidos = [];
+      renderizarFeriados();
+      await guardarConfigServidor();
+      cargarDashboard();
+
+      Swal.fire({
+        icon: 'success',
+        title: 'Lista Vaciada',
+        timer: 1500,
+        showConfirmButton: false
+      });
     }
 
     async function agregarDestinatario() {
