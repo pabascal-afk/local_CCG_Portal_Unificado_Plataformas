@@ -205,6 +205,12 @@
         </button>
       </li>
       <li class="nav-item">
+        <button class="nav-link" id="tab-alias" data-bs-toggle="tab" data-bs-target="#pane-alias" type="button">
+          <i class="bi bi-person-bounding-box me-1"></i> Unificación de Docentes
+          <span class="badge bg-danger ms-1" id="badgeDocentesSinVincular" style="display: none;">0</span>
+        </button>
+      </li>
+      <li class="nav-item">
         <button class="nav-link" id="tab-config" data-bs-toggle="tab" data-bs-target="#pane-config" type="button">
           <i class="bi bi-gear me-1"></i> Configuración y Alertas
         </button>
@@ -372,6 +378,82 @@
       </div>
 
       <!-- ============================================== -->
+      <!-- PESTAÑA: UNIFICACIÓN DE DOCENTES               -->
+      <!-- ============================================== -->
+      <div class="tab-pane fade" id="pane-alias" role="tabpanel">
+        <div class="card border-0 shadow-sm mb-4">
+          <div class="card-body p-4">
+            <div class="d-flex flex-column flex-md-row justify-content-between align-items-md-center gap-3 mb-3">
+              <div>
+                <h5 class="fw-bold mb-1">
+                  <i class="bi bi-person-bounding-box text-primary me-2"></i>Unificación de Nombres de Profesores
+                </h5>
+                <p class="text-muted small mb-0">
+                  Correspondencia entre nombres del Libro Digital (dos nombres, dos apellidos) y los usuarios de la plataforma (nombre y apellido).
+                </p>
+              </div>
+              <div class="d-flex gap-2 align-items-center flex-wrap">
+                <button class="btn btn-primary fw-bold" onclick="ejecutarAutoVinculacion()" id="btnAutoVincular" title="Asocia automáticamente docentes con alta coincidencia de nombre y correo">
+                  <i class="bi bi-magic me-1"></i> Auto-vincular Docentes
+                </button>
+                <button class="btn btn-outline-secondary" onclick="abrirModalNuevoAlias()">
+                  <i class="bi bi-plus-lg me-1"></i> Mapeo Manual
+                </button>
+                <button class="btn btn-outline-primary" onclick="cargarAliasDocentes()" title="Recargar lista">
+                  <i class="bi bi-arrow-clockwise"></i>
+                </button>
+              </div>
+            </div>
+
+            <!-- Controles de Búsqueda y Filtros -->
+            <div class="row g-3 align-items-center mb-3 pt-3 border-top">
+              <div class="col-md-5">
+                <div class="input-group">
+                  <span class="input-group-text bg-white"><i class="bi bi-search text-muted"></i></span>
+                  <input type="text" id="filtroTextoAlias" class="form-control" placeholder="Buscar docente por nombre o correo..." oninput="renderizarTablaAlias()">
+                </div>
+              </div>
+              <div class="col-md-3">
+                <select id="filtroEstadoAlias" class="form-select" onchange="renderizarTablaAlias()">
+                  <option value="todos">Todos los docentes</option>
+                  <option value="sin_vincular">⚠️ Pendientes de vincular</option>
+                  <option value="vinculados">✅ Vinculados con plataforma</option>
+                </select>
+              </div>
+              <div class="col-md-4 text-md-end">
+                <span class="badge bg-light text-dark border p-2 fw-semibold" id="resumenContadorAlias">
+                  Cargando información...
+                </span>
+              </div>
+            </div>
+
+            <!-- Tabla de Mapeos -->
+            <div class="table-responsive border rounded" style="max-height: 520px; overflow-y: auto;">
+              <table class="table table-hover align-middle mb-0" id="tablaAliasDocentes">
+                <thead class="table-light sticky-top">
+                  <tr>
+                    <th style="width: 32%;">Docente en Libro Digital (Reporte Excel)</th>
+                    <th style="width: 16%;">Estado</th>
+                    <th style="width: 36%;">Docente Plataforma (Usuario asignado & Correo)</th>
+                    <th style="width: 16%;" class="text-end">Acciones</th>
+                  </tr>
+                </thead>
+                <tbody id="tablaAliasBody">
+                  <tr>
+                    <td colspan="4" class="text-center py-4 text-muted">
+                      <div class="spinner-border spinner-border-sm text-primary me-2"></div>
+                      Cargando lista de docentes...
+                    </td>
+                  </tr>
+                </tbody>
+              </table>
+            </div>
+
+          </div>
+        </div>
+      </div>
+
+      <!-- ============================================== -->
       <!-- PESTAÑA 3: CONFIGURACIÓN Y NOTIFICACIONES      -->
       <!-- ============================================== -->
       <div class="tab-pane fade" id="pane-config" role="tabpanel">
@@ -519,6 +601,44 @@
     </div>
   </div>
 
+  <!-- MODAL MANUAL DE VINCULACIÓN DE DOCENTE -->
+  <div class="modal fade" id="modalNuevoAlias" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered">
+      <div class="modal-content border-0 shadow-lg">
+        <div class="modal-header bg-primary text-white border-0">
+          <h5 class="modal-title fw-bold">
+            <i class="bi bi-person-plus me-2"></i>Vincular Docente Manualmente
+          </h5>
+          <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+        </div>
+        <div class="modal-body p-4">
+          <div class="mb-3">
+            <label class="form-label fw-bold small text-muted">Nombre Completo en Reporte (Libro Digital)</label>
+            <input type="text" id="modalInReporte" class="form-control font-monospace" placeholder="Ej: CAMILA ANDREA ARAYA CASTILLO">
+            <small class="text-muted">Nombre tal como figura en los archivos Excel del Libro Digital.</small>
+          </div>
+          <div class="mb-3">
+            <label class="form-label fw-bold small text-muted">Usuario en la Plataforma</label>
+            <select id="modalSelectUsuario" class="form-select" onchange="alCambiarUsuarioModal()">
+              <option value="">-- Seleccionar usuario de la plataforma --</option>
+            </select>
+          </div>
+          <div class="mb-3">
+            <label class="form-label fw-bold small text-muted">Correo Electrónico Institucional</label>
+            <input type="email" id="modalInEmail" class="form-control" placeholder="docente@colegiocerrogrande.cl">
+            <small class="text-muted">Correo al que se enviarán las notificaciones individuales de firmas/clases.</small>
+          </div>
+        </div>
+        <div class="modal-footer border-0 bg-light">
+          <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">Cancelar</button>
+          <button type="button" class="btn btn-primary fw-bold px-4" onclick="guardarAliasDesdeModal()">
+            <i class="bi bi-check2 me-1"></i>Guardar Vinculación
+          </button>
+        </div>
+      </div>
+    </div>
+  </div>
+
   <!-- Scripts -->
   <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
   <script>
@@ -531,6 +651,7 @@
     document.addEventListener('DOMContentLoaded', () => {
       cargarDashboard();
       cargarConfiguracion();
+      cargarAliasDocentes();
       setupDropzone();
     });
 
@@ -624,7 +745,11 @@
         const esPend = item.Pendiente;
 
         if (filtroProblemas && !esCrit && !esPend) return;
-        if (busqueda && !item.Profesor.toLowerCase().includes(busqueda)) return;
+        if (busqueda) {
+          const matchProf = item.Profesor.toLowerCase().includes(busqueda);
+          const matchOrig = (item.ProfesorOriginal || '').toLowerCase().includes(busqueda);
+          if (!matchProf && !matchOrig) return;
+        }
 
         const info = procesarFecha(item.Fecha);
         if (mesSeleccionado && String(info.mesId) !== String(mesSeleccionado)) return;
@@ -664,6 +789,12 @@
         const nombresProfesores = Object.keys(mesInfo.profesores).sort();
 
         nombresProfesores.forEach(prof => {
+          const primerReg = (mesInfo.profesores[prof] && mesInfo.profesores[prof][0]) || {};
+          const nombreOrig = primerReg.ProfesorOriginal;
+          const subReporte = (nombreOrig && nombreOrig !== prof)
+            ? `<span class="badge bg-light text-secondary border fw-normal ms-2" title="Nombre registrado en el archivo Excel del Libro Digital"><i class="bi bi-file-earmark-spreadsheet me-1"></i>Reporte: ${nombreOrig}</span>`
+            : '';
+
           const filas = mesInfo.profesores[prof].map(reg => {
             const crit = reg.Critico;
             const pend = reg.Pendiente;
@@ -702,7 +833,10 @@
           profHtml += `
             <div class="profesor-card">
               <div class="profesor-header">
-                <span><i class="bi bi-person-badge text-primary me-2"></i>${prof}</span>
+                <div class="d-flex align-items-center flex-wrap gap-1">
+                  <span><i class="bi bi-person-badge text-primary me-2"></i><b>${prof}</b></span>
+                  ${subReporte}
+                </div>
                 <span class="badge bg-secondary-subtle text-secondary">${mesInfo.profesores[prof].length} días</span>
               </div>
               ${filas}
@@ -1305,6 +1439,348 @@
         if (!res.ok) throw new Error(data.error);
         Swal.fire('Eliminado', data.message, 'success');
         cargarDashboard();
+      } catch (err) {
+        Swal.fire('Error', err.message, 'error');
+      }
+    }
+
+    // ==============================================
+    // LOGICA UNIFICACIÓN DE DOCENTES (ALIAS)
+    // ==============================================
+
+    let listaDocentesGlobal = [];
+    let listaUsuariosGlobal = [];
+
+    async function cargarAliasDocentes() {
+      try {
+        const res = await fetch('/api/libro/alias');
+        if (!res.ok) return;
+        const data = await res.json();
+        
+        listaDocentesGlobal = data.docentes || [];
+        listaUsuariosGlobal = data.usuarios || [];
+
+        // Actualizar badge en la pestaña
+        const badgeSinVincular = document.getElementById('badgeDocentesSinVincular');
+        if (badgeSinVincular) {
+          if (data.sinVincular > 0) {
+            badgeSinVincular.style.display = 'inline-block';
+            badgeSinVincular.innerText = data.sinVincular;
+          } else {
+            badgeSinVincular.style.display = 'none';
+          }
+        }
+
+        // Actualizar resumen textual
+        const resumen = document.getElementById('resumenContadorAlias');
+        if (resumen) {
+          resumen.innerHTML = `<b>${data.vinculados}</b> de <b>${data.total}</b> vinculados (${data.sinVincular} pendientes)`;
+        }
+
+        // Poblar selector del modal manual
+        const selectModal = document.getElementById('modalSelectUsuario');
+        if (selectModal) {
+          selectModal.innerHTML = '<option value="">-- Seleccionar usuario de la plataforma --</option>' +
+            listaUsuariosGlobal.map(u => `<option value="${u.id}" data-email="${u.email || ''}" data-nombre="${u.nombre}">${u.nombre} (${u.email || 'sin correo'})</option>`).join('');
+        }
+
+        renderizarTablaAlias();
+      } catch (err) {
+        console.error('Error cargando alias de docentes:', err);
+      }
+    }
+
+    function renderizarTablaAlias() {
+      const tbody = document.getElementById('tablaAliasBody');
+      if (!tbody) return;
+
+      const filtroTexto = (document.getElementById('filtroTextoAlias')?.value || '').toLowerCase().trim();
+      const filtroEstado = document.getElementById('filtroEstadoAlias')?.value || 'todos';
+
+      const filtrados = listaDocentesGlobal.filter(d => {
+        if (filtroEstado === 'sin_vincular' && d.vinculado) return false;
+        if (filtroEstado === 'vinculados' && !d.vinculado) return false;
+        if (filtroTexto) {
+          const matchReporte = d.nombreReporte.toLowerCase().includes(filtroTexto);
+          const matchPlat = (d.nombrePlataforma || '').toLowerCase().includes(filtroTexto);
+          const matchMail = (d.email || '').toLowerCase().includes(filtroTexto);
+          if (!matchReporte && !matchPlat && !matchMail) return false;
+        }
+        return true;
+      });
+
+      if (filtrados.length === 0) {
+        tbody.innerHTML = `
+          <tr>
+            <td colspan="4" class="text-center py-4 text-muted">
+              <i class="bi bi-info-circle me-1"></i>No se encontraron docentes con los criterios seleccionados.
+            </td>
+          </tr>
+        `;
+        return;
+      }
+
+      let html = '';
+      filtrados.forEach((d, idx) => {
+        const esVinc = d.vinculado;
+        const tieneSugerencia = !esVinc && d.origen === 'sugerido';
+        
+        let badgeEstado = '';
+        if (esVinc) {
+          const origenLabel = d.origen === 'manual' ? 'Manual' : 'Automático';
+          badgeEstado = `<span class="badge bg-success-subtle text-success border border-success-subtle fw-semibold" title="Docente enlazado correctamente"><i class="bi bi-check-circle-fill me-1"></i>Vinculado (${origenLabel})</span>`;
+        } else if (tieneSugerencia) {
+          badgeEstado = `<span class="badge bg-primary-subtle text-primary border border-primary-subtle fw-semibold" title="Coincidencia sugerida: ${d.nombrePlataforma}"><i class="bi bi-magic me-1"></i>Sugerencia lista</span>`;
+        } else {
+          badgeEstado = `<span class="badge bg-warning-subtle text-dark border border-warning-subtle fw-semibold" title="No se ha vinculado con la plataforma"><i class="bi bi-exclamation-triangle-fill text-warning me-1"></i>Sin vincular</span>`;
+        }
+
+        // Generar opciones de usuarios para el selector
+        const optionsUsers = listaUsuariosGlobal.map(u => {
+          const selected = (d.usuarioId && d.usuarioId === u.id) || (!d.usuarioId && d.nombrePlataforma === u.nombre) ? 'selected' : '';
+          return `<option value="${u.id}" data-email="${u.email || ''}" data-nombre="${u.nombre}" ${selected}>${u.nombre} (${u.email || ''})</option>`;
+        }).join('');
+
+        const emailMostrado = d.email || '';
+
+        html += `
+          <tr class="${!esVinc ? 'table-warning bg-opacity-25' : ''}">
+            <td>
+              <div class="fw-bold font-monospace text-dark text-break">${d.nombreReporte}</div>
+              <small class="text-muted"><i class="bi bi-file-earmark-excel me-1"></i>Nombre en reporte</small>
+            </td>
+            <td>${badgeEstado}</td>
+            <td>
+              <div class="d-flex flex-column gap-1">
+                <select class="form-select form-select-sm" id="selUser_${idx}" onchange="alCambiarSelectFila(${idx})">
+                  <option value="">-- Seleccionar usuario plataforma --</option>
+                  ${optionsUsers}
+                </select>
+                <div class="input-group input-group-sm">
+                  <span class="input-group-text bg-white"><i class="bi bi-envelope text-muted"></i></span>
+                  <input type="email" class="form-control form-control-sm" id="inEmail_${idx}" value="${emailMostrado}" placeholder="correo@colegiocerrogrande.cl">
+                </div>
+              </div>
+            </td>
+            <td class="text-end">
+              <div class="btn-group btn-group-sm">
+                <button type="button" class="btn btn-sm ${esVinc ? 'btn-outline-primary' : 'btn-success fw-bold'}" onclick="guardarFilaAlias(${idx})" title="Guardar correspondencia">
+                  <i class="bi bi-check-lg me-1"></i>${esVinc ? 'Actualizar' : 'Vincular'}
+                </button>
+                ${esVinc && d.id ? `
+                  <button type="button" class="btn btn-sm btn-outline-danger" onclick="eliminarFilaAlias(${d.id}, '${encodeURIComponent(d.nombreReporte)}')" title="Quitar vinculación">
+                    <i class="bi bi-x-lg"></i>
+                  </button>
+                ` : ''}
+              </div>
+            </td>
+          </tr>
+        `;
+      });
+
+      tbody.innerHTML = html;
+    }
+
+    function alCambiarSelectFila(idx) {
+      const sel = document.getElementById(`selUser_${idx}`);
+      const inEmail = document.getElementById(`inEmail_${idx}`);
+      if (!sel || !inEmail) return;
+      const opt = sel.options[sel.selectedIndex];
+      if (opt && opt.value) {
+        const mail = opt.getAttribute('data-email') || '';
+        inEmail.value = mail;
+      }
+    }
+
+    async function guardarFilaAlias(idx) {
+      const filtroTexto = (document.getElementById('filtroTextoAlias')?.value || '').toLowerCase().trim();
+      const filtroEstado = document.getElementById('filtroEstadoAlias')?.value || 'todos';
+
+      const filtrados = listaDocentesGlobal.filter(d => {
+        if (filtroEstado === 'sin_vincular' && d.vinculado) return false;
+        if (filtroEstado === 'vinculados' && !d.vinculado) return false;
+        if (filtroTexto) {
+          const matchReporte = d.nombreReporte.toLowerCase().includes(filtroTexto);
+          const matchPlat = (d.nombrePlataforma || '').toLowerCase().includes(filtroTexto);
+          const matchMail = (d.email || '').toLowerCase().includes(filtroTexto);
+          if (!matchReporte && !matchPlat && !matchMail) return false;
+        }
+        return true;
+      });
+
+      const d = filtrados[idx];
+      if (!d) return;
+
+      const sel = document.getElementById(`selUser_${idx}`);
+      const inEmail = document.getElementById(`inEmail_${idx}`);
+      const opt = sel ? sel.options[sel.selectedIndex] : null;
+
+      if (!opt || !opt.value) {
+        Swal.fire('Atención', 'Por favor selecciona un usuario de la plataforma para vincular.', 'warning');
+        return;
+      }
+
+      const nombrePlataforma = opt.getAttribute('data-nombre') || '';
+      const email = inEmail ? inEmail.value.trim() : (opt.getAttribute('data-email') || '');
+      const usuarioId = parseInt(opt.value, 10);
+
+      try {
+        const res = await fetch('/api/libro/alias', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            nombre_reporte: d.nombreReporte,
+            nombre_plataforma: nombrePlataforma,
+            email: email,
+            usuario_id: usuarioId
+          })
+        });
+
+        const data = await res.json();
+        if (!res.ok) throw new Error(data.error || 'Error al guardar');
+
+        await cargarAliasDocentes();
+        cargarDashboard();
+
+        Swal.fire({
+          icon: 'success',
+          title: 'Docente Vinculado',
+          text: `"${d.nombreReporte}" quedó vinculado a "${nombrePlataforma}".`,
+          timer: 1800,
+          showConfirmButton: false
+        });
+      } catch (err) {
+        Swal.fire('Error', err.message, 'error');
+      }
+    }
+
+    async function eliminarFilaAlias(id, encodedNombre) {
+      const nombreReporte = decodeURIComponent(encodedNombre || '');
+      const { isConfirmed } = await Swal.fire({
+        title: '¿Desvincular Docente?',
+        text: `Se quitará la correspondencia para "${nombreReporte}".`,
+        icon: 'warning',
+        showCancelButton: true,
+        confirmButtonColor: '#dc2626',
+        confirmButtonText: 'Sí, desvincular',
+        cancelButtonText: 'Cancelar'
+      });
+      if (!isConfirmed) return;
+
+      try {
+        const res = await fetch(`/api/libro/alias/${id}`, { method: 'DELETE' });
+        const data = await res.json();
+        if (!res.ok) throw new Error(data.error || 'Error al eliminar');
+
+        await cargarAliasDocentes();
+        cargarDashboard();
+
+        Swal.fire({
+          icon: 'success',
+          title: 'Desvinculado',
+          timer: 1500,
+          showConfirmButton: false
+        });
+      } catch (err) {
+        Swal.fire('Error', err.message, 'error');
+      }
+    }
+
+    async function ejecutarAutoVinculacion() {
+      Swal.fire({
+        title: 'Auto-vinculando docentes...',
+        text: 'Analizando correspondencia inteligente con los usuarios de la plataforma...',
+        allowOutsideClick: false,
+        didOpen: () => Swal.showLoading()
+      });
+
+      try {
+        const res = await fetch('/api/libro/alias/auto-vincular', { method: 'POST' });
+        const data = await res.json();
+        if (!res.ok) throw new Error(data.error || 'Error en auto-vinculación');
+
+        await cargarAliasDocentes();
+        cargarDashboard();
+
+        Swal.fire({
+          icon: 'success',
+          title: 'Auto-vinculación Completada',
+          html: `${data.message}${data.noCoincidentes && data.noCoincidentes.length > 0 ? `<br><br><small class="text-muted">Docentes pendientes sin coincidencia automática: ${data.noCoincidentes.length}</small>` : ''}`,
+          confirmButtonText: 'Entendido'
+        });
+      } catch (err) {
+        Swal.fire('Error', err.message, 'error');
+      }
+    }
+
+    function abrirModalNuevoAlias() {
+      const modalEl = document.getElementById('modalNuevoAlias');
+      document.getElementById('modalInReporte').value = '';
+      document.getElementById('modalSelectUsuario').value = '';
+      document.getElementById('modalInEmail').value = '';
+      const modal = new bootstrap.Modal(modalEl);
+      modal.show();
+    }
+
+    function alCambiarUsuarioModal() {
+      const sel = document.getElementById('modalSelectUsuario');
+      const inEmail = document.getElementById('modalInEmail');
+      const opt = sel ? sel.options[sel.selectedIndex] : null;
+      if (opt && opt.value) {
+        inEmail.value = opt.getAttribute('data-email') || '';
+      }
+    }
+
+    async function guardarAliasDesdeModal() {
+      const inRep = document.getElementById('modalInReporte');
+      const sel = document.getElementById('modalSelectUsuario');
+      const inEmail = document.getElementById('modalInEmail');
+
+      const nombreReporte = (inRep?.value || '').trim();
+      const opt = sel ? sel.options[sel.selectedIndex] : null;
+
+      if (!nombreReporte) {
+        Swal.fire('Atención', 'Ingresa el nombre completo tal como figura en el reporte Excel.', 'warning');
+        return;
+      }
+      if (!opt || !opt.value) {
+        Swal.fire('Atención', 'Selecciona el usuario de la plataforma correspondiente.', 'warning');
+        return;
+      }
+
+      const nombrePlataforma = opt.getAttribute('data-nombre') || '';
+      const email = inEmail ? inEmail.value.trim() : (opt.getAttribute('data-email') || '');
+      const usuarioId = parseInt(opt.value, 10);
+
+      try {
+        const res = await fetch('/api/libro/alias', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            nombre_reporte: nombreReporte,
+            nombre_plataforma: nombrePlataforma,
+            email: email,
+            usuario_id: usuarioId
+          })
+        });
+
+        const data = await res.json();
+        if (!res.ok) throw new Error(data.error || 'Error al guardar');
+
+        const modalEl = document.getElementById('modalNuevoAlias');
+        const modalInstance = bootstrap.Modal.getInstance(modalEl);
+        if (modalInstance) modalInstance.hide();
+
+        await cargarAliasDocentes();
+        cargarDashboard();
+
+        Swal.fire({
+          icon: 'success',
+          title: 'Docente Vinculado',
+          text: `"${nombreReporte}" vinculado a "${nombrePlataforma}".`,
+          timer: 2000,
+          showConfirmButton: false
+        });
       } catch (err) {
         Swal.fire('Error', err.message, 'error');
       }

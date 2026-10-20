@@ -119,40 +119,161 @@ function parsearReporteExcel(filePath, blacklist = [], diasExcluidos = []) {
     return { diasDetectados, filas };
 }
 
+function normalizarTexto(str) {
+    return (str || '')
+        .toString()
+        .toLowerCase()
+        .normalize('NFD')
+        .replace(/[\u0300-\u036f]/g, '')
+        .replace(/[^a-z0-9\s]/g, ' ')
+        .trim()
+        .replace(/\s+/g, ' ');
+}
+
+function resolverCoincidencia(nombreReporte, listaUsuarios) {
+    if (!nombreReporte) return null;
+    const repNorm = normalizarTexto(nombreReporte);
+    const repTokens = repNorm.split(' ').filter(t => t.length > 1);
+    const repTokenSet = new Set(repTokens);
+
+    const mapaPorNombre = new Map();
+    listaUsuarios.forEach(u => {
+        const normN = normalizarTexto(u.nombre);
+        if (!mapaPorNombre.has(normN)) {
+            mapaPorNombre.set(normN, u);
+        } else {
+            const existente = mapaPorNombre.get(normN);
+            if ((existente.email || '').includes('noreply') && !(u.email || '').includes('noreply')) {
+                mapaPorNombre.set(normN, u);
+            }
+        }
+    });
+
+    const usuariosUnicos = Array.from(mapaPorNombre.values());
+
+    for (const u of usuariosUnicos) {
+        if (normalizarTexto(u.nombre) === repNorm) {
+            return { usuario: u, confianza: 1.0, metodo: 'exacto' };
+        }
+    }
+
+    const candidatos = [];
+
+    for (const u of usuariosUnicos) {
+        const uNorm = normalizarTexto(u.nombre);
+        const uTokens = uNorm.split(' ').filter(t => t.length > 1);
+        if (uTokens.length === 0) continue;
+
+        const tokensEncontrados = uTokens.filter(t => repTokenSet.has(t));
+        const proporcionUsuario = tokensEncontrados.length / uTokens.length;
+
+        if (proporcionUsuario === 1.0) {
+            let bonusEmail = 0;
+            if (u.email) {
+                const prefix = u.email.split('@')[0].toLowerCase();
+                if (repNorm.replace(/\s+/g, '').includes(prefix)) {
+                    bonusEmail = 0.1;
+                }
+            }
+            candidatos.push({
+                usuario: u,
+                score: 1.0 + (tokensEncontrados.length * 0.1) + bonusEmail,
+                tokensCoincidentes: tokensEncontrados.length
+            });
+        }
+    }
+
+    if (candidatos.length === 1) {
+        return { usuario: candidatos[0].usuario, confianza: 0.95, metodo: 'tokens_unico' };
+    }
+
+    if (candidatos.length > 1) {
+        candidatos.sort((a, b) => b.score - a.score);
+        if (candidatos[0].score > candidatos[1].score) {
+            return { usuario: candidatos[0].usuario, confianza: 0.85, metodo: 'tokens_mejor' };
+        }
+    }
+
+    return null;
+}
+
 /**
- * Guarda las filas en la base de datos SQLite con upsert atómico.
+ * Guarda las filas en la base de datos SQLite con upsert atómico y resolución de nombres.
  */
 function guardarEnBD(filas) {
     return new Promise((resolve, reject) => {
-        db.serialize(() => {
-            db.run("BEGIN TRANSACTION");
-            const stmt = db.prepare(`
-                INSERT INTO libro_registros (
-                    fecha, profesor, profesor_normalizado, creadas, requeridas,
-                    contenido, asistencia, firma, critico, archivo_origen, actualizado_en
-                ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, CURRENT_TIMESTAMP)
-                ON CONFLICT(fecha, profesor_normalizado) DO UPDATE SET
-                    profesor = excluded.profesor,
-                    creadas = excluded.creadas,
-                    requeridas = excluded.requeridas,
-                    contenido = excluded.contenido,
-                    asistencia = excluded.asistencia,
-                    firma = excluded.firma,
-                    critico = excluded.critico,
-                    archivo_origen = excluded.archivo_origen,
-                    actualizado_en = CURRENT_TIMESTAMP
-            `);
-            
-            for (const f of filas) {
-                stmt.run(
-                    f.fecha, f.profesor, f.profesor_normalizado, f.creadas, f.requeridas,
-                    f.contenido, f.asistencia, f.firma, f.critico, f.archivo_origen
-                );
-            }
-            stmt.finalize();
-            db.run("COMMIT", (err) => {
-                if (err) reject(err);
-                else resolve(filas.length);
+        db.all("SELECT id, nombre, email FROM usuarios", [], (errU, usuarios) => {
+            if (errU) return reject(errU);
+            db.all("SELECT * FROM libro_alias_docentes", [], (errA, aliasList) => {
+                if (errA) aliasList = [];
+                const aliasMap = new Map();
+                (aliasList || []).forEach(a => aliasMap.set(normalizarTexto(a.nombre_reporte), a));
+
+                db.serialize(() => {
+                    db.run("BEGIN TRANSACTION");
+                    const stmt = db.prepare(`
+                        INSERT INTO libro_registros (
+                            fecha, profesor, profesor_normalizado, creadas, requeridas,
+                            contenido, asistencia, firma, critico, archivo_origen,
+                            profesor_plataforma, profesor_email, usuario_id, actualizado_en
+                        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, CURRENT_TIMESTAMP)
+                        ON CONFLICT(fecha, profesor_normalizado) DO UPDATE SET
+                            profesor = excluded.profesor,
+                            creadas = excluded.creadas,
+                            requeridas = excluded.requeridas,
+                            contenido = excluded.contenido,
+                            asistencia = excluded.asistencia,
+                            firma = excluded.firma,
+                            critico = excluded.critico,
+                            archivo_origen = excluded.archivo_origen,
+                            profesor_plataforma = excluded.profesor_plataforma,
+                            profesor_email = excluded.profesor_email,
+                            usuario_id = excluded.usuario_id,
+                            actualizado_en = CURRENT_TIMESTAMP
+                    `);
+                    
+                    const stmtAlias = db.prepare(`
+                        INSERT INTO libro_alias_docentes (
+                            nombre_reporte, nombre_normalizado, usuario_id, nombre_plataforma, email, origen, actualizado_en
+                        ) VALUES (?, ?, ?, ?, ?, 'auto', CURRENT_TIMESTAMP)
+                        ON CONFLICT(nombre_reporte) DO NOTHING
+                    `);
+
+                    for (const f of filas) {
+                        const norm = normalizarTexto(f.profesor);
+                        let platNombre = null;
+                        let mail = null;
+                        let uId = null;
+
+                        if (aliasMap.has(norm)) {
+                            const al = aliasMap.get(norm);
+                            platNombre = al.nombre_plataforma;
+                            mail = al.email;
+                            uId = al.usuario_id;
+                        } else {
+                            const match = resolverCoincidencia(f.profesor, usuarios);
+                            if (match) {
+                                platNombre = match.usuario.nombre;
+                                mail = match.usuario.email;
+                                uId = match.usuario.id;
+                                aliasMap.set(norm, { nombre_plataforma: platNombre, email: mail, usuario_id: uId });
+                                stmtAlias.run(f.profesor, norm, uId, platNombre, mail);
+                            }
+                        }
+
+                        stmt.run(
+                            f.fecha, f.profesor, f.profesor_normalizado, f.creadas, f.requeridas,
+                            f.contenido, f.asistencia, f.firma, f.critico, f.archivo_origen,
+                            platNombre, mail, uId
+                        );
+                    }
+                    stmt.finalize();
+                    stmtAlias.finalize();
+                    db.run("COMMIT", (err) => {
+                        if (err) reject(err);
+                        else resolve(filas.length);
+                    });
+                });
             });
         });
     });

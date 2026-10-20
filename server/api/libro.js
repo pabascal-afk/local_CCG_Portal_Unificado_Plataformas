@@ -52,6 +52,96 @@ const authMiddleware = (req, res, next) => {
 router.use(authMiddleware);
 
 // ==========================================
+// UNIFICACIÓN Y RESOLUCIÓN DE NOMBRES DOCENTES
+// ==========================================
+
+function normalizarTexto(str) {
+    return (str || '')
+        .toString()
+        .toLowerCase()
+        .normalize('NFD')
+        .replace(/[\u0300-\u036f]/g, '')
+        .replace(/[^a-z0-9\s]/g, ' ')
+        .trim()
+        .replace(/\s+/g, ' ');
+}
+
+/**
+ * Resuelve la correspondencia entre un nombre completo del reporte (dos nombres, dos apellidos)
+ * y los usuarios registrados en la plataforma (nombre y apellido).
+ */
+function resolverCoincidencia(nombreReporte, listaUsuarios) {
+    if (!nombreReporte) return null;
+    const repNorm = normalizarTexto(nombreReporte);
+    const repTokens = repNorm.split(' ').filter(t => t.length > 1);
+    const repTokenSet = new Set(repTokens);
+
+    // Deduplicar usuarios por nombre normalizado, dando prioridad a cuentas con correos personales
+    const mapaPorNombre = new Map();
+    listaUsuarios.forEach(u => {
+        const normN = normalizarTexto(u.nombre);
+        if (!mapaPorNombre.has(normN)) {
+            mapaPorNombre.set(normN, u);
+        } else {
+            const existente = mapaPorNombre.get(normN);
+            if ((existente.email || '').includes('noreply') && !(u.email || '').includes('noreply')) {
+                mapaPorNombre.set(normN, u);
+            }
+        }
+    });
+
+    const usuariosUnicos = Array.from(mapaPorNombre.values());
+
+    // 1. Coincidencia exacta de string
+    for (const u of usuariosUnicos) {
+        if (normalizarTexto(u.nombre) === repNorm) {
+            return { usuario: u, confianza: 1.0, metodo: 'exacto' };
+        }
+    }
+
+    // 2. Token subset matching (para dos nombres y dos apellidos en cualquier orden: Nombres Apellidos o Apellidos Nombres)
+    const candidatos = [];
+
+    for (const u of usuariosUnicos) {
+        const uNorm = normalizarTexto(u.nombre);
+        const uTokens = uNorm.split(' ').filter(t => t.length > 1);
+        if (uTokens.length === 0) continue;
+
+        const tokensEncontrados = uTokens.filter(t => repTokenSet.has(t));
+        const proporcionUsuario = tokensEncontrados.length / uTokens.length;
+
+        // Si todos los tokens del usuario de la plataforma están contenidos en el nombre completo del reporte
+        if (proporcionUsuario === 1.0) {
+            let bonusEmail = 0;
+            if (u.email) {
+                const prefix = u.email.split('@')[0].toLowerCase();
+                if (repNorm.replace(/\s+/g, '').includes(prefix)) {
+                    bonusEmail = 0.1;
+                }
+            }
+            candidatos.push({
+                usuario: u,
+                score: 1.0 + (tokensEncontrados.length * 0.1) + bonusEmail,
+                tokensCoincidentes: tokensEncontrados.length
+            });
+        }
+    }
+
+    if (candidatos.length === 1) {
+        return { usuario: candidatos[0].usuario, confianza: 0.95, metodo: 'tokens_unico' };
+    }
+
+    if (candidatos.length > 1) {
+        candidatos.sort((a, b) => b.score - a.score);
+        if (candidatos[0].score > candidatos[1].score) {
+            return { usuario: candidatos[0].usuario, confianza: 0.85, metodo: 'tokens_mejor' };
+        }
+    }
+
+    return null;
+}
+
+// ==========================================
 // UTILIDADES DE PROCESAMIENTO Y FECHAS
 // ==========================================
 
@@ -251,6 +341,52 @@ router.post('/procesar-archivo', upload.single('archivo'), async (req, res) => {
             });
         }
         
+        // Cargar usuarios y alias previos para resolver nombres de docentes
+        const usuarios = await queryAll("SELECT id, nombre, email, rol FROM usuarios");
+        const aliasGuardados = await queryAll("SELECT * FROM libro_alias_docentes");
+        const aliasMap = new Map();
+        aliasGuardados.forEach(a => aliasMap.set(normalizarTexto(a.nombre_reporte), a));
+
+        // Resolver docentes únicos del archivo
+        const resolucionDocentes = new Map();
+        const docentesUnicos = Array.from(new Set(filasExtraidas.map(f => f.profesor)));
+        for (const nombreDocente of docentesUnicos) {
+            const norm = normalizarTexto(nombreDocente);
+            if (aliasMap.has(norm)) {
+                const a = aliasMap.get(norm);
+                resolucionDocentes.set(norm, {
+                    nombre_plataforma: a.nombre_plataforma,
+                    email: a.email,
+                    usuario_id: a.usuario_id
+                });
+            } else {
+                const match = resolverCoincidencia(nombreDocente, usuarios);
+                if (match) {
+                    const info = {
+                        nombre_plataforma: match.usuario.nombre,
+                        email: match.usuario.email,
+                        usuario_id: match.usuario.id
+                    };
+                    resolucionDocentes.set(norm, info);
+                    // Persistir automáticamente el alias
+                    try {
+                        await run(`
+                            INSERT INTO libro_alias_docentes (
+                                nombre_reporte, nombre_normalizado, usuario_id, nombre_plataforma, email, origen, actualizado_en
+                            ) VALUES (?, ?, ?, ?, ?, 'auto', CURRENT_TIMESTAMP)
+                            ON CONFLICT(nombre_reporte) DO NOTHING
+                        `, [nombreDocente.trim(), norm, info.usuario_id, info.nombre_plataforma, info.email]);
+                    } catch (e) {}
+                } else {
+                    resolucionDocentes.set(norm, {
+                        nombre_plataforma: null,
+                        email: null,
+                        usuario_id: null
+                    });
+                }
+            }
+        }
+
         // Determinar cuáles ya existían para estadísticas precisas
         const fechasSet = Array.from(new Set(filasExtraidas.map(f => f.fecha)));
         const placeholders = fechasSet.map(() => '?').join(',');
@@ -263,7 +399,7 @@ router.post('/procesar-archivo', upload.single('archivo'), async (req, res) => {
         let nuevos = 0;
         let actualizados = 0;
         
-        // Guardar cada registro con UPSERT atómico
+        // Guardar cada registro con UPSERT atómico incorporando datos unificados
         await run("BEGIN TRANSACTION");
         try {
             for (const f of filasExtraidas) {
@@ -275,11 +411,15 @@ router.post('/procesar-archivo', upload.single('archivo'), async (req, res) => {
                     setExistentes.add(key);
                 }
                 
+                const norm = normalizarTexto(f.profesor);
+                const infoDocente = resolucionDocentes.get(norm) || {};
+                
                 await run(`
                     INSERT INTO libro_registros (
                         fecha, profesor, profesor_normalizado, creadas, requeridas,
-                        contenido, asistencia, firma, critico, archivo_origen, actualizado_en
-                    ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, CURRENT_TIMESTAMP)
+                        contenido, asistencia, firma, critico, archivo_origen,
+                        profesor_plataforma, profesor_email, usuario_id, actualizado_en
+                    ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, CURRENT_TIMESTAMP)
                     ON CONFLICT(fecha, profesor_normalizado) DO UPDATE SET
                         profesor = excluded.profesor,
                         creadas = excluded.creadas,
@@ -289,10 +429,16 @@ router.post('/procesar-archivo', upload.single('archivo'), async (req, res) => {
                         firma = excluded.firma,
                         critico = excluded.critico,
                         archivo_origen = excluded.archivo_origen,
+                        profesor_plataforma = excluded.profesor_plataforma,
+                        profesor_email = excluded.profesor_email,
+                        usuario_id = excluded.usuario_id,
                         actualizado_en = CURRENT_TIMESTAMP
                 `, [
                     f.fecha, f.profesor, f.profesor_normalizado, f.creadas, f.requeridas,
-                    f.contenido, f.asistencia, f.firma, f.critico, f.archivo_origen
+                    f.contenido, f.asistencia, f.firma, f.critico, f.archivo_origen,
+                    infoDocente.nombre_plataforma || null,
+                    infoDocente.email || null,
+                    infoDocente.usuario_id || null
                 ]);
             }
             await run("COMMIT");
@@ -333,19 +479,22 @@ router.get('/dashboard', async (req, res) => {
             } catch (e) {}
         });
         
-        const blacklistNorm = blacklist.map(b => String(b).trim().toLowerCase());
+        const blacklistNorm = blacklist.map(b => normalizarTexto(b));
         const diasExcluidosNorm = diasExcluidos.map(d => formatearFechaTexto(d));
         
         const todos = await queryAll(`
             SELECT id, fecha, profesor, profesor_normalizado, creadas, requeridas,
-                   contenido, asistencia, firma, critico, archivo_origen, actualizado_en
+                   contenido, asistencia, firma, critico, archivo_origen,
+                   profesor_plataforma, profesor_email, usuario_id, actualizado_en
             FROM libro_registros
             ORDER BY id ASC
         `);
         
         // Filtrar en memoria por si se agregaron nuevos exentos posteriormente
         const filtrados = todos.filter(item => {
-            if (blacklistNorm.includes(item.profesor_normalizado)) return false;
+            const pNorm = normalizarTexto(item.profesor);
+            const pPlatNorm = normalizarTexto(item.profesor_plataforma);
+            if (blacklistNorm.includes(pNorm) || (pPlatNorm && blacklistNorm.includes(pPlatNorm))) return false;
             if (diasExcluidosNorm.includes(formatearFechaTexto(item.fecha))) return false;
             if (item.requeridas <= 0) return false;
             return true;
@@ -357,7 +506,8 @@ router.get('/dashboard', async (req, res) => {
         const profesoresSet = new Set();
         
         const registrosFormateados = filtrados.map(r => {
-            profesoresSet.add(r.profesor);
+            const nombreMostrado = r.profesor_plataforma || r.profesor;
+            profesoresSet.add(nombreMostrado);
             const esCrit = r.critico === 1 || (r.requeridas > 0 && r.creadas === 0);
             const esPend = !esCrit && (r.firma < r.requeridas);
             
@@ -368,7 +518,12 @@ router.get('/dashboard', async (req, res) => {
             return {
                 id: r.id,
                 Fecha: r.fecha,
-                Profesor: r.profesor,
+                Profesor: nombreMostrado,
+                ProfesorOriginal: r.profesor,
+                ProfesorPlataforma: r.profesor_plataforma || '',
+                ProfesorEmail: r.profesor_email || '',
+                UsuarioId: r.usuario_id || null,
+                EstaVinculado: !!r.profesor_plataforma,
                 Creadas: r.creadas,
                 Requeridas: r.requeridas,
                 Contenido: r.contenido,
@@ -421,6 +576,191 @@ router.delete('/registros', async (req, res) => {
 });
 
 // ==========================================
+// ENDPOINTS DE UNIFICACIÓN / ALIAS DOCENTES
+// ==========================================
+
+// Lista todos los nombres detectados en reportes, su estado de vinculación y sugerencias
+router.get('/alias', async (req, res) => {
+    try {
+        const usuarios = await queryAll("SELECT id, nombre, email, rol FROM usuarios ORDER BY nombre ASC");
+        const aliasGuardados = await queryAll("SELECT * FROM libro_alias_docentes ORDER BY nombre_plataforma ASC");
+        const distinctProfesores = await queryAll("SELECT DISTINCT profesor FROM libro_registros ORDER BY profesor ASC");
+        
+        const aliasMap = new Map();
+        aliasGuardados.forEach(a => aliasMap.set(normalizarTexto(a.nombre_reporte), a));
+        
+        const todosReportes = new Set();
+        distinctProfesores.forEach(p => todosReportes.add(p.profesor));
+        aliasGuardados.forEach(a => todosReportes.add(a.nombre_reporte));
+        
+        const listaDocentes = [];
+        for (const nombreReporte of todosReportes) {
+            const norm = normalizarTexto(nombreReporte);
+            if (aliasMap.has(norm)) {
+                const a = aliasMap.get(norm);
+                listaDocentes.push({
+                    id: a.id,
+                    nombreReporte: a.nombre_reporte,
+                    nombrePlataforma: a.nombre_plataforma,
+                    email: a.email,
+                    usuarioId: a.usuario_id,
+                    origen: a.origen || 'auto',
+                    vinculado: true,
+                    actualizadoEn: a.actualizado_en
+                });
+            } else {
+                const match = resolverCoincidencia(nombreReporte, usuarios);
+                listaDocentes.push({
+                    id: null,
+                    nombreReporte: nombreReporte,
+                    nombrePlataforma: match ? match.usuario.nombre : null,
+                    email: match ? match.usuario.email : null,
+                    usuarioId: match ? match.usuario.id : null,
+                    origen: match ? 'sugerido' : 'sin_vincular',
+                    vinculado: false,
+                    confianza: match ? match.confianza : 0,
+                    metodo: match ? match.metodo : null
+                });
+            }
+        }
+        
+        listaDocentes.sort((a, b) => a.nombreReporte.localeCompare(b.nombreReporte));
+        
+        res.json({
+            docentes: listaDocentes,
+            usuarios: usuarios,
+            total: listaDocentes.length,
+            vinculados: listaDocentes.filter(d => d.vinculado).length,
+            sinVincular: listaDocentes.filter(d => !d.vinculado).length
+        });
+    } catch (err) {
+        console.error('Error obteniendo alias de docentes:', err);
+        res.status(500).json({ error: err.message });
+    }
+});
+
+// Guardar o actualizar un mapeo manual de docente
+router.post('/alias', async (req, res) => {
+    try {
+        const { nombre_reporte, nombre_plataforma, email, usuario_id } = req.body;
+        if (!nombre_reporte || !nombre_plataforma) {
+            return res.status(400).json({ error: 'Faltan campos obligatorios: nombre_reporte y nombre_plataforma.' });
+        }
+        
+        const norm = normalizarTexto(nombre_reporte);
+        const platNombre = nombre_plataforma.trim();
+        const mail = (email || '').trim();
+        const uId = usuario_id ? parseInt(usuario_id, 10) : null;
+        
+        await run(`
+            INSERT INTO libro_alias_docentes (
+                nombre_reporte, nombre_normalizado, usuario_id, nombre_plataforma, email, origen, actualizado_en
+            ) VALUES (?, ?, ?, ?, ?, 'manual', CURRENT_TIMESTAMP)
+            ON CONFLICT(nombre_reporte) DO UPDATE SET
+                nombre_normalizado = excluded.nombre_normalizado,
+                usuario_id = excluded.usuario_id,
+                nombre_plataforma = excluded.nombre_plataforma,
+                email = excluded.email,
+                origen = 'manual',
+                actualizado_en = CURRENT_TIMESTAMP
+        `, [nombre_reporte.trim(), norm, uId, platNombre, mail]);
+        
+        // Actualizar registros existentes en libro_registros
+        await run(`
+            UPDATE libro_registros
+            SET profesor_plataforma = ?, profesor_email = ?, usuario_id = ?
+            WHERE profesor = ? OR profesor_normalizado = ?
+        `, [platNombre, mail, uId, nombre_reporte.trim(), norm]);
+        
+        res.json({
+            success: true,
+            message: `Docente "${nombre_reporte}" vinculado con éxito a "${platNombre}".`
+        });
+    } catch (err) {
+        console.error('Error guardando alias de docente:', err);
+        res.status(500).json({ error: err.message });
+    }
+});
+
+// Disparador de auto-vinculación masiva inteligente
+router.post('/alias/auto-vincular', async (req, res) => {
+    try {
+        const usuarios = await queryAll("SELECT id, nombre, email FROM usuarios");
+        const distinctProfesores = await queryAll("SELECT DISTINCT profesor FROM libro_registros");
+        const aliasGuardados = await queryAll("SELECT nombre_reporte FROM libro_alias_docentes");
+        const aliasSet = new Set(aliasGuardados.map(a => normalizarTexto(a.nombre_reporte)));
+        
+        let vinculados = 0;
+        const noCoincidentes = [];
+        
+        for (const row of distinctProfesores) {
+            const rep = row.profesor;
+            const norm = normalizarTexto(rep);
+            if (aliasSet.has(norm)) continue;
+            
+            const match = resolverCoincidencia(rep, usuarios);
+            if (match) {
+                await run(`
+                    INSERT INTO libro_alias_docentes (
+                        nombre_reporte, nombre_normalizado, usuario_id, nombre_plataforma, email, origen, actualizado_en
+                    ) VALUES (?, ?, ?, ?, ?, 'auto', CURRENT_TIMESTAMP)
+                    ON CONFLICT(nombre_reporte) DO UPDATE SET
+                        nombre_normalizado = excluded.nombre_normalizado,
+                        usuario_id = excluded.usuario_id,
+                        nombre_plataforma = excluded.nombre_plataforma,
+                        email = excluded.email,
+                        origen = 'auto',
+                        actualizado_en = CURRENT_TIMESTAMP
+                `, [rep.trim(), norm, match.usuario.id, match.usuario.nombre, match.usuario.email]);
+                
+                await run(`
+                    UPDATE libro_registros
+                    SET profesor_plataforma = ?, profesor_email = ?, usuario_id = ?
+                    WHERE profesor = ? OR profesor_normalizado = ?
+                `, [match.usuario.nombre, match.usuario.email, match.usuario.id, rep.trim(), norm]);
+                
+                aliasSet.add(norm);
+                vinculados++;
+            } else {
+                noCoincidentes.push(rep);
+            }
+        }
+        
+        res.json({
+            success: true,
+            vinculados,
+            totalRevisados: distinctProfesores.length,
+            noCoincidentes,
+            message: `Se vincularon automáticamente ${vinculados} docentes con la plataforma.`
+        });
+    } catch (err) {
+        console.error('Error en auto-vinculación de docentes:', err);
+        res.status(500).json({ error: err.message });
+    }
+});
+
+// Eliminar un alias específico
+router.delete('/alias/:id', async (req, res) => {
+    try {
+        const id = req.params.id;
+        const rows = await queryAll("SELECT nombre_reporte, nombre_normalizado FROM libro_alias_docentes WHERE id = ?", [id]);
+        if (rows.length > 0) {
+            const item = rows[0];
+            await run("DELETE FROM libro_alias_docentes WHERE id = ?", [id]);
+            await run(`
+                UPDATE libro_registros
+                SET profesor_plataforma = NULL, profesor_email = NULL, usuario_id = NULL
+                WHERE profesor = ? OR profesor_normalizado = ?
+            `, [item.nombre_reporte, item.nombre_normalizado]);
+        }
+        res.json({ success: true, message: 'Vinculación de docente eliminada correctamente.' });
+    } catch (err) {
+        console.error('Error eliminando alias:', err);
+        res.status(500).json({ error: err.message });
+    }
+});
+
+// ==========================================
 // ENDPOINTS DE CORREO (SMTP CENTRALIZADO)
 // ==========================================
 
@@ -446,29 +786,43 @@ router.post('/enviar-alertas-docentes', async (req, res) => {
         
         const transporter = crearTransporter();
         const registros = await queryAll("SELECT * FROM libro_registros WHERE critico = 1 OR firma < requeridas");
-        const usuarios = await queryAll("SELECT email, nombre FROM usuarios");
+        const usuarios = await queryAll("SELECT id, nombre, email FROM usuarios");
+        const aliasRows = await queryAll("SELECT * FROM libro_alias_docentes");
         
         if (registros.length === 0) {
             return res.json({ success: true, enviados: 0, message: 'No hay docentes con pendientes para notificar.' });
         }
         
-        // Mapear correo por nombre normalizado
-        const normalize = (str) => (str || '').normalize("NFD").replace(/[\u0300-\u036f]/g, "").toLowerCase().trim();
-        const emailMap = new Map();
-        usuarios.forEach(u => {
-            if (u.email) {
-                emailMap.set(normalize(u.nombre), u.email);
-            }
-        });
+        const aliasMap = new Map();
+        aliasRows.forEach(a => aliasMap.set(normalizarTexto(a.nombre_reporte), a));
         
-        // Agrupar faltas por docente
+        // Agrupar faltas por docente unificado
         const faltasPorDocente = new Map();
         registros.forEach(r => {
-            const key = normalize(r.profesor);
+            let nombrePlat = r.profesor_plataforma;
+            let mail = r.profesor_email;
+            
+            if (!mail) {
+                const norm = normalizarTexto(r.profesor);
+                if (aliasMap.has(norm)) {
+                    const al = aliasMap.get(norm);
+                    nombrePlat = al.nombre_plataforma;
+                    mail = al.email;
+                } else {
+                    const m = resolverCoincidencia(r.profesor, usuarios);
+                    if (m) {
+                        nombrePlat = m.usuario.nombre;
+                        mail = m.usuario.email;
+                    }
+                }
+            }
+            
+            const key = (nombrePlat || r.profesor).toUpperCase().trim();
             if (!faltasPorDocente.has(key)) {
                 faltasPorDocente.set(key, {
-                    nombre: r.profesor,
-                    email: emailMap.get(key) || null,
+                    nombre: nombrePlat || r.profesor,
+                    nombreOriginal: r.profesor,
+                    email: mail || null,
                     faltas: []
                 });
             }
@@ -480,7 +834,7 @@ router.post('/enviar-alertas-docentes', async (req, res) => {
         
         for (const [key, data] of faltasPorDocente.entries()) {
             if (!data.email) {
-                noEncontrados.push(data.nombre);
+                noEncontrados.push(data.nombreOriginal);
                 continue;
             }
             
@@ -507,9 +861,14 @@ router.post('/enviar-alertas-docentes', async (req, res) => {
             });
             tablaHtml += `</table>`;
             
+            const aclaracionNombre = (data.nombreOriginal !== data.nombre) 
+                ? `<p style="color: #64748b; font-size: 12px; margin-top: -8px; margin-bottom: 15px;">Registrado en el reporte como: <i>${data.nombreOriginal}</i></p>`
+                : '';
+            
             const html = `
                 <div style="font-family: Arial, sans-serif; color: #333; max-width: 650px; margin: auto; padding: 20px; border: 1px solid #e2e8f0; border-radius: 8px;">
-                    <h3 style="color: #1e293b;">Estimado/a ${data.nombre},</h3>
+                    <h3 style="color: #1e293b; margin-bottom: 4px;">Estimado/a ${data.nombre},</h3>
+                    ${aclaracionNombre}
                     <p>Se han detectado las siguientes pendientes en el <b>Libro Digital</b> según el último reporte pedagógico:</p>
                     ${tablaHtml}
                     <p style="margin-top: 15px;">Por favor, regularizar en el sistema a la brevedad posible.</p>
@@ -566,13 +925,19 @@ router.post('/enviar-resumen-admin', async (req, res) => {
         
         const resumenProfesores = {};
         registros.forEach(f => {
-            if (!resumenProfesores[f.profesor]) {
-                resumenProfesores[f.profesor] = { sinCrear: 0, sinFirmar: 0 };
+            const profVisible = f.profesor_plataforma || f.profesor;
+            if (!resumenProfesores[profVisible]) {
+                resumenProfesores[profVisible] = {
+                    nombre: profVisible,
+                    nombreOriginal: f.profesor,
+                    sinCrear: 0,
+                    sinFirmar: 0
+                };
             }
             if (f.critico === 1 || f.creadas === 0) {
-                resumenProfesores[f.profesor].sinCrear++;
+                resumenProfesores[profVisible].sinCrear++;
             } else if (f.firma < f.requeridas) {
-                resumenProfesores[f.profesor].sinFirmar++;
+                resumenProfesores[profVisible].sinFirmar++;
             }
         });
         
@@ -582,11 +947,15 @@ router.post('/enviar-resumen-admin', async (req, res) => {
             
         let filasTabla = '';
         profesConProblemas.forEach(prof => {
-            const sc = resumenProfesores[prof].sinCrear;
-            const sf = resumenProfesores[prof].sinFirmar;
+            const data = resumenProfesores[prof];
+            const sc = data.sinCrear;
+            const sf = data.sinFirmar;
+            const sub = (data.nombreOriginal && data.nombreOriginal !== data.nombre)
+                ? `<br><small style="color: #64748b; font-size: 11px;">(Reporte: ${data.nombreOriginal})</small>`
+                : '';
             filasTabla += `
                 <tr>
-                    <td style="padding: 8px;">${prof}</td>
+                    <td style="padding: 8px;"><b>${data.nombre}</b>${sub}</td>
                     <td style="padding: 8px; text-align: center; color: ${sc > 0 ? '#dc2626' : '#64748b'}; font-weight: ${sc > 0 ? 'bold' : 'normal'};">${sc}</td>
                     <td style="padding: 8px; text-align: center; color: ${sf > 0 ? '#d97706' : '#64748b'}; font-weight: ${sf > 0 ? 'bold' : 'normal'};">${sf}</td>
                 </tr>

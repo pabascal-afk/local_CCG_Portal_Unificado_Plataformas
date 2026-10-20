@@ -152,11 +152,25 @@ const schemas = [
     firma INTEGER DEFAULT 0,
     critico INTEGER DEFAULT 0,
     archivo_origen TEXT,
+    profesor_plataforma TEXT,
+    profesor_email TEXT,
+    usuario_id INTEGER,
     actualizado_en DATETIME DEFAULT CURRENT_TIMESTAMP,
     UNIQUE(fecha, profesor_normalizado) ON CONFLICT REPLACE
   )`,
   `CREATE INDEX IF NOT EXISTS idx_libro_fecha ON libro_registros(fecha)`,
   `CREATE INDEX IF NOT EXISTS idx_libro_prof ON libro_registros(profesor_normalizado)`,
+  `CREATE TABLE IF NOT EXISTS libro_alias_docentes (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    nombre_reporte TEXT UNIQUE NOT NULL,
+    nombre_normalizado TEXT NOT NULL,
+    usuario_id INTEGER,
+    nombre_plataforma TEXT NOT NULL,
+    email TEXT,
+    origen TEXT DEFAULT 'auto',
+    actualizado_en DATETIME DEFAULT CURRENT_TIMESTAMP
+  )`,
+  `CREATE INDEX IF NOT EXISTS idx_alias_reporte ON libro_alias_docentes(nombre_normalizado)`,
   `CREATE TABLE IF NOT EXISTS libro_config (
     clave TEXT PRIMARY KEY,
     valor TEXT
@@ -176,6 +190,9 @@ db.serialize(() => {
     db.run("ALTER TABLE config_tipos_evaluacion ADD COLUMN orden INTEGER DEFAULT 0", () => {});
     db.run("ALTER TABLE recursos_config ADD COLUMN reglas_reserva TEXT DEFAULT '{}'", () => {});
     db.run("ALTER TABLE reservas ADD COLUMN token_aprobacion TEXT", () => {});
+    db.run("ALTER TABLE libro_registros ADD COLUMN profesor_plataforma TEXT", () => {});
+    db.run("ALTER TABLE libro_registros ADD COLUMN profesor_email TEXT", () => {});
+    db.run("ALTER TABLE libro_registros ADD COLUMN usuario_id INTEGER", () => {});
     db.run("INSERT OR IGNORE INTO config_global (clave, valor) VALUES ('emails_activados', 'true')", () => {});
 
     db.run("INSERT OR IGNORE INTO config_tipos_evaluacion (nombre, es_prueba) VALUES ('📝 Prueba', 1)", () => {});

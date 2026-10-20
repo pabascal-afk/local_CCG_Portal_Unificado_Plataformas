@@ -69,9 +69,26 @@ db.serialize(() => {
     firma INTEGER DEFAULT 0,
     critico INTEGER DEFAULT 0,
     archivo_origen TEXT,
+    profesor_plataforma TEXT,
+    profesor_email TEXT,
+    usuario_id INTEGER,
     actualizado_en DATETIME DEFAULT CURRENT_TIMESTAMP,
     UNIQUE(fecha, profesor_normalizado) ON CONFLICT REPLACE
   )`, () => {});
+  db.run("ALTER TABLE libro_registros ADD COLUMN profesor_plataforma TEXT", () => {});
+  db.run("ALTER TABLE libro_registros ADD COLUMN profesor_email TEXT", () => {});
+  db.run("ALTER TABLE libro_registros ADD COLUMN usuario_id INTEGER", () => {});
+  db.run(`CREATE TABLE IF NOT EXISTS libro_alias_docentes (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    nombre_reporte TEXT UNIQUE NOT NULL,
+    nombre_normalizado TEXT NOT NULL,
+    usuario_id INTEGER,
+    nombre_plataforma TEXT NOT NULL,
+    email TEXT,
+    origen TEXT DEFAULT 'auto',
+    actualizado_en DATETIME DEFAULT CURRENT_TIMESTAMP
+  )`, () => {});
+  db.run("CREATE INDEX IF NOT EXISTS idx_alias_reporte ON libro_alias_docentes(nombre_normalizado)", () => {});
   db.run(`CREATE TABLE IF NOT EXISTS libro_config (
     clave TEXT PRIMARY KEY,
     valor TEXT
