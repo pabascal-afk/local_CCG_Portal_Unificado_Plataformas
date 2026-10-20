@@ -1244,6 +1244,7 @@ namespace CCGServerManager
                         UnlockManagerExeBeforeGit(srv.FolderPath);
                         RunCommandWithLogs("git", "config http.sslVerify false", srv.FolderPath, generalLogBox);
                         RunCommandWithLogs("git", "fetch origin " + targetBranch, srv.FolderPath, generalLogBox);
+                        RunCommandWithLogs("git", "checkout -B " + targetBranch + " origin/" + targetBranch, srv.FolderPath, generalLogBox);
                         int resetCode = RunCommandWithLogs("git", "reset --hard origin/" + targetBranch, srv.FolderPath, generalLogBox);
                         if (resetCode != 0)
                         {
