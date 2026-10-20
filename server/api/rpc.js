@@ -758,24 +758,55 @@ router.post('/:functionName', async (req, res) => {
              return res.json({ result: "Evento eliminado." });
         }
 
-        // ================= VISOR HORARIOS =================
+        // ================= VISOR Y GESTIÓN DE HORARIOS =================
         if (functionName === 'getHorariosData') {
+             const r = (user.rol || '').toLowerCase().trim();
+             const esAdminOCoord = r.includes('admin') || r.includes('directiv') || r.includes('coordinaci');
+             if (!esAdminOCoord) {
+                 return res.status(403).json({ error: "Acceso denegado: El Visor de Horarios es exclusivo para Administración y Coordinación." });
+             }
              const data = await queryAll("SELECT * FROM horarios");
              if (data.length === 0) {
-                 // Mock data si no hay nada para que la tabla no de error
-                 return res.json({ result: [
-                     { 'Día': 'Lunes', Curso: '1A', Bloque: '1', Asignatura: 'Matematicas', Profesor: 'Admin Dev' },
-                     { 'Día': 'Lunes', Curso: '1A', Bloque: '2', Asignatura: 'Lenguaje', Profesor: 'Juan Perez' }
-                 ]});
+                 return res.json({ result: [] });
              }
              const horarios = data.map(h => ({
                  'Día': h.dia,
                  'Curso': h.curso,
-                 'Bloque': h.bloque.toString(),
+                 'Bloque': h.bloque ? h.bloque.toString() : '',
                  'Asignatura': h.asignatura,
                  'Profesor': h.profesor
              }));
              return res.json({ result: horarios });
+        }
+
+        if (functionName === 'actualizarRegistroMasivo') {
+             const r = (user.rol || '').toLowerCase().trim();
+             const esAdminOCoord = r.includes('admin') || r.includes('directiv') || r.includes('coordinaci');
+             if (!esAdminOCoord) {
+                 return res.status(403).json({ error: "Acceso denegado: La gestión de horarios es exclusiva para Administración y Coordinación." });
+             }
+             const [columna, valorActual, nuevoValor] = args;
+             const colMap = { 'Profesor': 'profesor', 'Asignatura': 'asignatura', 'Curso': 'curso' };
+             const colDb = colMap[columna];
+             if (colDb) {
+                 await run(`UPDATE horarios SET ${colDb} = ? WHERE ${colDb} = ?`, [nuevoValor, valorActual]);
+             }
+             return res.json({ result: "Actualizado masivamente" });
+        }
+
+        if (functionName === 'actualizarRegistroUnico') {
+             const r = (user.rol || '').toLowerCase().trim();
+             const esAdminOCoord = r.includes('admin') || r.includes('directiv') || r.includes('coordinaci');
+             if (!esAdminOCoord) {
+                 return res.status(403).json({ error: "Acceso denegado: La gestión de horarios es exclusiva para Administración y Coordinación." });
+             }
+             const [curso, dia, bloque, columna, nuevoValor] = args;
+             const colMap = { 'Profesor': 'profesor', 'Asignatura': 'asignatura', 'Curso': 'curso' };
+             const colDb = colMap[columna];
+             if (colDb) {
+                 await run(`UPDATE horarios SET ${colDb} = ? WHERE curso = ? AND dia = ? AND bloque = ?`, [nuevoValor, curso, dia, bloque]);
+             }
+             return res.json({ result: "Actualizado registro único" });
         }
 
         throw new Error(`Función no implementada: ${functionName}`);

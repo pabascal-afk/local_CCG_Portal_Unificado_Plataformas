@@ -323,7 +323,7 @@
 
   <!-- ACCESOS RÁPIDOS A 1 CLIC -->
   <div class="row g-3 mb-4">
-    <div class="col-sm-6 col-lg-3">
+    <div class="col-sm-6 col-lg-4 quick-access-col">
       <div class="quick-card" onclick="irA('evaluaciones')">
         <div class="quick-icon" style="background: #eff6ff; color: #2563eb;">
           <i class="bi bi-journal-check"></i>
@@ -334,7 +334,7 @@
         </div>
       </div>
     </div>
-    <div class="col-sm-6 col-lg-3">
+    <div class="col-sm-6 col-lg-4 quick-access-col">
       <div class="quick-card" onclick="irA('recursos')">
         <div class="quick-icon" style="background: #f0fdf4; color: #16a34a;">
           <i class="bi bi-building"></i>
@@ -345,7 +345,7 @@
         </div>
       </div>
     </div>
-    <div class="col-sm-6 col-lg-3">
+    <div class="col-sm-6 col-lg-4 quick-access-col">
       <div class="quick-card" onclick="irA('calendario')">
         <div class="quick-icon" style="background: #fefce8; color: #ca8a04;">
           <i class="bi bi-calendar-event"></i>
@@ -356,7 +356,7 @@
         </div>
       </div>
     </div>
-    <div class="col-sm-6 col-lg-3">
+    <div class="col-sm-6 col-lg-3 d-none" id="col-quick-horarios">
       <div class="quick-card" onclick="irA('horarios')">
         <div class="quick-icon" style="background: #faf5ff; color: #9333ea;">
           <i class="bi bi-clock-history"></i>
@@ -668,7 +668,7 @@
         usuarioActual = data.usuario || {};
         
         const rolNorm = (usuarioActual.rol || '').toLowerCase();
-        esAdmin = rolNorm.includes('admin') || rolNorm.includes('directiv');
+        esAdmin = rolNorm.includes('admin') || rolNorm.includes('directiv') || rolNorm.includes('coordinaci');
 
         // 1. Mostrar nombre de usuario
         const nombreMostrar = usuarioActual.nombre || (usuarioActual.email ? usuarioActual.email.split('@')[0] : 'Docente');
@@ -678,15 +678,27 @@
         const badgeCont = document.getElementById('badge-rol-container');
         const btnToggleRol = document.getElementById('btn-toggle-rol');
         const btnToggleRolText = document.getElementById('btn-toggle-rol-text');
+        const colHorarios = document.getElementById('col-quick-horarios');
+        const quickCols = document.querySelectorAll('.quick-access-col');
 
         if (esAdmin) {
           badgeCont.innerHTML = `<span class="role-badge admin"><i class="bi bi-shield-fill-check"></i> Vista Administrador</span>`;
           document.getElementById('admin-tools-card').classList.remove('d-none');
           document.getElementById('btnNuevoAviso').classList.remove('d-none');
+          if (colHorarios) colHorarios.classList.remove('d-none');
+          quickCols.forEach(c => {
+            c.classList.remove('col-lg-4');
+            c.classList.add('col-lg-3');
+          });
         } else {
           badgeCont.innerHTML = `<span class="role-badge docente"><i class="bi bi-person-workspace"></i> Vista Profesor</span>`;
           document.getElementById('admin-tools-card').classList.add('d-none');
           document.getElementById('btnNuevoAviso').classList.add('d-none');
+          if (colHorarios) colHorarios.classList.add('d-none');
+          quickCols.forEach(c => {
+            c.classList.remove('col-lg-3');
+            c.classList.add('col-lg-4');
+          });
         }
 
         // Si el usuario tiene permisos duales (Admin + Profesor)

@@ -41,9 +41,11 @@
       </li>
       <li class="nav-item">
         <a href="#" class="nav-link" onclick="loadApp('actividades', this)" id="nav-actividades">
-            <i class="bi bi-briefcase"></i> Gestión de Actividades
-          </a>
-          <a href="#" class="nav-link" onclick="loadApp('horarios', this)" id="nav-horarios">
+          <i class="bi bi-briefcase"></i> Gestión de Actividades
+        </a>
+      </li>
+      <li class="nav-item d-none" id="nav-horarios-container">
+        <a href="#" class="nav-link" onclick="loadApp('horarios', this)" id="nav-horarios">
           <i class="bi bi-clock-history"></i> Visor de Horarios
         </a>
       </li>
@@ -129,11 +131,23 @@
         document.getElementById('nav-coordinadores-container').classList.remove('d-none');
         if (document.getElementById('nav-libro-container')) document.getElementById('nav-libro-container').classList.remove('d-none');
         if (document.getElementById('nav-correos-container')) document.getElementById('nav-correos-container').classList.remove('d-none');
+        if (document.getElementById('nav-horarios-container')) document.getElementById('nav-horarios-container').classList.remove('d-none');
+        if (document.getElementById('opt-pref-horarios')) document.getElementById('opt-pref-horarios').classList.remove('d-none');
       } else {
         document.getElementById('nav-usuarios-container').classList.add('d-none');
         document.getElementById('nav-coordinadores-container').classList.add('d-none');
         if (document.getElementById('nav-libro-container')) document.getElementById('nav-libro-container').classList.add('d-none');
         if (document.getElementById('nav-correos-container')) document.getElementById('nav-correos-container').classList.add('d-none');
+        if (document.getElementById('nav-horarios-container')) document.getElementById('nav-horarios-container').classList.add('d-none');
+        if (document.getElementById('opt-pref-horarios')) document.getElementById('opt-pref-horarios').classList.add('d-none');
+        if (document.getElementById('selectPrefTab') && document.getElementById('selectPrefTab').value === 'horarios') {
+          document.getElementById('selectPrefTab').value = 'dashboard';
+        }
+        // Si el usuario estaba visualizando horarios y pasa a vista profesor, redirigir a dashboard
+        const frame = document.getElementById('appFrame');
+        if (frame && frame.src && frame.src.includes('horarios.html')) {
+          loadApp('dashboard', document.getElementById('nav-dashboard'));
+        }
       }
       
       // Mostrar selector de rol SOLO si tiene permiso dual
@@ -249,7 +263,7 @@
                  <option value="dashboard">Inicio / Muro</option>
                  <option value="evaluaciones">Calendario de Pruebas</option>
                  <option value="calendario">Calendario Académico</option>
-                 <option value="horarios">Visor de Horarios</option>
+                 <option value="horarios" id="opt-pref-horarios">Visor de Horarios</option>
                  <option value="recursos">Reserva de Recursos</option>
               </select>
               <small class="text-muted">Esta pestaña se abrirá automáticamente al iniciar sesión.</small>
