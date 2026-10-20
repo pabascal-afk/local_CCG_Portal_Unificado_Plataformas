@@ -210,6 +210,16 @@ router.post('/cola/:id/reintentar', async (req, res) => {
     }
 });
 
+// 5b. Reintentar todos los correos fallidos de una vez
+router.post('/cola/reintentar-fallidos', async (req, res) => {
+    try {
+        const count = await mailer.reintentarTodosFallidos();
+        res.json({ success: true, count, message: `${count} correo(s) fallido(s) reprogramados para reintento inmediato.` });
+    } catch (err) {
+        res.status(500).json({ error: err.message });
+    }
+});
+
 // 6. Eliminar un correo de la cola
 router.delete('/cola/:id', async (req, res) => {
     try {

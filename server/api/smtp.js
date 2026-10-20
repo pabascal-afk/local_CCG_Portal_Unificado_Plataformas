@@ -1,8 +1,9 @@
-﻿const express = require('express');
+const express = require('express');
 const router = express.Router();
 const fs = require('fs');
 const path = require('path');
 const nodemailer = require('nodemailer');
+const mailer = require('../services/mailer');
 
 const envPath = path.join(__dirname, '../../.env');
 
@@ -53,6 +54,15 @@ router.post('/', (req, res) => {
     if (pass) {
         updateEnvVar('SMTP_PASS', pass);
     }
+
+    // Si se configuraron credenciales, desbloquear correos pendientes que estaban esperando SMTP
+    if (user && (pass || process.env.SMTP_PASS)) {
+        const db = mailer.getDb();
+        db.run("UPDATE cola_correos SET proximo_intento = datetime('now') WHERE estado = 'pendiente' AND ultimo_error LIKE '%SMTP%'", () => {
+            mailer.procesarCola().catch(() => {});
+        });
+    }
+
     res.json({ success: true, message: 'Configuración guardada' });
 });
 

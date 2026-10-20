@@ -368,7 +368,10 @@ function crearTransporter() {
             user: process.env.SMTP_USER,
             pass: process.env.SMTP_PASS
         },
-        tls: { rejectUnauthorized: false }
+        tls: { rejectUnauthorized: false },
+        connectionTimeout: 15000,
+        greetingTimeout: 10000,
+        socketTimeout: 30000
     });
 }
 
@@ -527,6 +530,7 @@ async function enviarConPlantilla({ clave, variables = {}, destinatario, adjunto
 // Worker de Procesamiento y Reintentos Automáticos
 // -------------------------------------------------------------
 let estaProcesando = false;
+let ultimoInicioProceso = 0;
 
 // Tiempos de reintento según intentos fallidos (retroceso exponencial):
 // 1 fallo -> +1 minuto
@@ -543,20 +547,41 @@ function calcularProximoIntento(intentos) {
 }
 
 async function procesarCola(limitePorLote = 15) {
-    if (estaProcesando) return { procesados: 0, mensaje: 'Worker ya en ejecución' };
+    if (estaProcesando) {
+        // Safeguard: si han pasado más de 120 segundos, asumir timeout de red y liberar
+        if (Date.now() - ultimoInicioProceso > 120000) {
+            console.warn('[MAILER] Worker bloqueado por más de 120s, reiniciando estado.');
+            estaProcesando = false;
+        } else {
+            return { procesados: 0, mensaje: 'Worker ya en ejecución' };
+        }
+    }
     estaProcesando = true;
+    ultimoInicioProceso = Date.now();
 
     const database = getDb();
 
     try {
-        // Verificar si hay configuración SMTP básica
+        // 1. Verificar si el envío de correos está activado globalmente
+        const confRows = await new Promise((resolve) => {
+            database.all("SELECT valor FROM config_global WHERE clave = 'emails_activados'", (err, rows) => {
+                resolve(rows || []);
+            });
+        });
+        const emailsActivados = confRows.length > 0 ? confRows[0].valor === 'true' : true;
+        if (!emailsActivados) {
+            estaProcesando = false;
+            return { procesados: 0, pausado: true, mensaje: 'Envío de correos pausado por configuración global.' };
+        }
+
+        // 2. Verificar si hay configuración SMTP básica
         const tieneSmtp = Boolean(process.env.SMTP_USER && process.env.SMTP_PASS);
         
-        // Obtener correos pendientes cuyo proximo_intento sea menor o igual al momento actual
+        // 3. Obtener correos pendientes cuyo proximo_intento sea menor o igual al momento actual (en UTC)
         const pendientes = await new Promise((resolve, reject) => {
             database.all(
                 `SELECT * FROM cola_correos 
-                 WHERE estado = 'pendiente' AND datetime(proximo_intento) <= datetime('now', 'localtime')
+                 WHERE estado = 'pendiente' AND (datetime(proximo_intento) <= datetime('now') OR proximo_intento IS NULL)
                  ORDER BY id ASC LIMIT ?`,
                 [limitePorLote],
                 (err, rows) => err ? reject(err) : resolve(rows || [])
@@ -577,15 +602,14 @@ async function procesarCola(limitePorLote = 15) {
             const maxIntentos = item.max_intentos || 5;
 
             if (!tieneSmtp) {
-                // Si no hay SMTP configurado en el servidor, registrar advertencia y postergar
-                const errDesc = 'Credenciales SMTP_USER / SMTP_PASS no configuradas en variables de entorno';
-                const estadoFinal = nuevoIntento >= maxIntentos ? 'fallido' : 'pendiente';
-                const prox = calcularProximoIntento(nuevoIntento);
+                // Si no hay SMTP configurado en el servidor, registrar advertencia y postergar sin quemar intentos
+                const errDesc = 'Servidor SMTP no configurado (Ingresar credenciales en Configuración SMTP)';
+                const prox = new Date(Date.now() + 5 * 60 * 1000).toISOString().replace('T', ' ').substring(0, 19);
 
                 await new Promise(r => {
                     database.run(
-                        `UPDATE cola_correos SET intentos = ?, ultimo_error = ?, estado = ?, proximo_intento = ?, actualizado_en = CURRENT_TIMESTAMP WHERE id = ?`,
-                        [nuevoIntento, errDesc, estadoFinal, prox, item.id],
+                        `UPDATE cola_correos SET ultimo_error = ?, proximo_intento = ?, actualizado_en = CURRENT_TIMESTAMP WHERE id = ?`,
+                        [errDesc, prox, item.id],
                         r
                     );
                 });
@@ -681,6 +705,27 @@ function reintentarCorreo(id) {
     });
 }
 
+function reintentarTodosFallidos() {
+    return new Promise((resolve, reject) => {
+        const database = getDb();
+        database.run(
+            `UPDATE cola_correos 
+             SET estado = 'pendiente', intentos = 0, proximo_intento = CURRENT_TIMESTAMP, actualizado_en = CURRENT_TIMESTAMP 
+             WHERE estado = 'fallido'`,
+            function(err) {
+                if (err) return reject(err);
+                const count = this.changes;
+                if (count > 0) {
+                    setImmediate(() => {
+                        procesarCola().catch(console.error);
+                    });
+                }
+                resolve(count);
+            }
+        );
+    });
+}
+
 function eliminarDeCola(id) {
     return new Promise((resolve, reject) => {
         const database = getDb();
@@ -712,7 +757,7 @@ function obtenerMetricasCola() {
         const database = getDb();
         const sql = `SELECT 
             SUM(CASE WHEN estado = 'pendiente' THEN 1 ELSE 0 END) as pendientes,
-            SUM(CASE WHEN estado = 'enviado' AND date(enviado_en) = date('now', 'localtime') THEN 1 ELSE 0 END) as enviados_hoy,
+            SUM(CASE WHEN estado = 'enviado' AND date(enviado_en, 'localtime') = date('now', 'localtime') THEN 1 ELSE 0 END) as enviados_hoy,
             SUM(CASE WHEN estado = 'fallido' THEN 1 ELSE 0 END) as fallidos,
             COUNT(*) as total
             FROM cola_correos`;
@@ -742,6 +787,7 @@ module.exports = {
     enviarConPlantilla,
     procesarCola,
     reintentarCorreo,
+    reintentarTodosFallidos,
     eliminarDeCola,
     limpiarCola,
     obtenerMetricasCola

@@ -241,16 +241,19 @@
                 <option value="Calendario">Calendario</option>
               </select>
             </div>
-            <div class="col-md-4">
+            <div class="col-md-3">
               <label class="form-label small fw-bold text-secondary mb-1">Buscar (Destinatario o Asunto):</label>
               <div class="input-group input-group-sm">
                 <input type="text" id="filtro-cola-busqueda" class="form-control" placeholder="ej. profesor@colegio.cl" onkeyup="if(event.key==='Enter') cargarCola(1)">
                 <button class="btn btn-outline-secondary" onclick="cargarCola(1)"><i class="bi bi-search"></i></button>
               </div>
             </div>
-            <div class="col-md-2 d-flex align-items-end justify-content-end">
-              <button class="btn btn-outline-danger btn-sm fw-semibold w-100" onclick="limpiarColaModal()">
-                <i class="bi bi-trash3"></i> Limpiar Antiguos
+            <div class="col-md-3 d-flex align-items-end justify-content-end gap-2">
+              <button class="btn btn-outline-warning text-dark btn-sm fw-semibold" id="btn-reintentar-todos" onclick="reintentarTodosFallidos()" title="Reprogramar todos los correos fallidos para reintento">
+                <i class="bi bi-arrow-repeat"></i> Reintentar Fallidos
+              </button>
+              <button class="btn btn-outline-danger btn-sm fw-semibold" onclick="limpiarColaModal()">
+                <i class="bi bi-trash3"></i> Limpiar
               </button>
             </div>
           </div>
@@ -927,7 +930,14 @@
           if (c.estado === 'enviado') badgeEstado = '<span class="badge bg-success"><i class="bi bi-check-lg"></i> Enviado</span>';
           if (c.estado === 'fallido') badgeEstado = '<span class="badge bg-danger"><i class="bi bi-x-circle"></i> Fallido</span>';
 
-          const fechaProceso = c.enviado_en || c.proximo_intento || c.creado_en || '-';
+          let fechaHtml = '';
+          if (c.estado === 'enviado') {
+            fechaHtml = `<div class="text-success"><i class="bi bi-check2"></i> ${formatearFechaLocal(c.enviado_en)}</div>`;
+          } else if (c.estado === 'pendiente') {
+            fechaHtml = `<div class="text-dark"><i class="bi bi-hourglass-split text-warning"></i> Próx: ${formatearFechaLocal(c.proximo_intento)}</div>`;
+          } else {
+            fechaHtml = `<div class="text-danger"><i class="bi bi-x-octagon"></i> Falló: ${formatearFechaLocal(c.actualizado_en || c.creado_en)}</div>`;
+          }
 
           html += `
             <tr>
@@ -941,9 +951,9 @@
               <td>
                 <span class="badge ${c.intentos > 0 ? 'bg-secondary' : 'bg-light text-dark border'}">${c.intentos} / ${c.max_intentos}</span>
               </td>
-              <td class="small text-secondary font-monospace" style="font-size: 0.8rem;">
-                ${fechaProceso}
-                ${c.ultimo_error ? `<div class="text-danger text-truncate" style="max-width: 150px;" title="${c.ultimo_error}"><i class="bi bi-exclamation-triangle"></i> ${c.ultimo_error}</div>` : ''}
+              <td class="small font-monospace" style="font-size: 0.8rem;">
+                ${fechaHtml}
+                ${c.ultimo_error ? `<div class="text-danger text-truncate mt-1" style="max-width: 170px;" title="${escapeHtml(c.ultimo_error)}"><i class="bi bi-exclamation-triangle"></i> ${escapeHtml(c.ultimo_error)}</div>` : ''}
               </td>
               <td class="text-end">
                 <button class="btn btn-sm btn-outline-primary p-1 px-2" title="Ver correo completo" onclick="verCorreoCompleto(${c.id})">
@@ -978,6 +988,23 @@
       }
     }
 
+    function formatearFechaLocal(fechaStr) {
+      if (!fechaStr) return '-';
+      try {
+        const s = String(fechaStr).trim();
+        const utcIso = s.includes('T') ? s : s.replace(' ', 'T') + 'Z';
+        const d = new Date(utcIso);
+        if (isNaN(d.getTime())) return fechaStr;
+        return d.toLocaleString('es-CL', {
+          day: '2-digit', month: '2-digit', year: 'numeric',
+          hour: '2-digit', minute: '2-digit', second: '2-digit',
+          hour12: false
+        });
+      } catch(e) {
+        return fechaStr;
+      }
+    }
+
     async function procesarColaManual() {
       Swal.fire({
         title: 'Procesando Cola...',
@@ -991,15 +1018,54 @@
         const data = await res.json();
         Swal.close();
         if (data.success) {
-          Swal.fire({
-            icon: 'success',
-            title: 'Cola Procesada',
-            text: `Se procesaron ${data.resultado.procesados} correos (${data.resultado.enviados || 0} enviados, ${data.resultado.fallidos || 0} con error).`,
-            timer: 3000
-          });
+          if (data.resultado.pausado) {
+            Swal.fire({
+              icon: 'warning',
+              title: 'Envío Global Pausado',
+              text: data.resultado.mensaje || 'El envío de correos está pausado en "Reglas de Envío".'
+            });
+          } else {
+            Swal.fire({
+              icon: 'success',
+              title: 'Cola Procesada',
+              text: `Se procesaron ${data.resultado.procesados} correos (${data.resultado.enviados || 0} enviados, ${data.resultado.fallidos || 0} con error).`,
+              timer: 3000
+            });
+          }
           cargarTodo();
         } else {
           Swal.fire('Error', data.error, 'error');
+        }
+      } catch(e) {
+        Swal.fire('Error', e.message, 'error');
+      }
+    }
+
+    async function reintentarTodosFallidos() {
+      const confirm = await Swal.fire({
+        title: '¿Reintentar correos fallidos?',
+        text: 'Se restablecerá el contador de reintentos y se programarán para despacho inmediato.',
+        icon: 'question',
+        showCancelButton: true,
+        confirmButtonText: 'Sí, reintentar todos',
+        cancelButtonText: 'Cancelar'
+      });
+
+      if (!confirm.isConfirmed) return;
+
+      try {
+        const res = await fetch('/api/correos/cola/reintentar-fallidos', { method: 'POST' });
+        const data = await res.json();
+        if (data.success) {
+          Swal.fire({
+            icon: 'success',
+            title: 'Reintentos Programados',
+            text: data.message,
+            timer: 2500
+          });
+          cargarTodo();
+        } else {
+          Swal.fire('Error', data.error || 'Error al reprogramar correos', 'error');
         }
       } catch(e) {
         Swal.fire('Error', e.message, 'error');
