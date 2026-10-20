@@ -1228,24 +1228,27 @@ namespace CCGServerManager
                     srv.BusyText = "DESCARGANDO GITHUB (GIT PULL)...";
                     this.BeginInvoke((Action)UpdateAllStatuses);
 
+                    string targetBranch = srv.Id == "PRUEBAS" ? "pruebas-ccg" : "main";
+
                     if (!Directory.Exists(srv.FolderPath) || !Directory.Exists(Path.Combine(srv.FolderPath, ".git")))
                     {
-                        AppendLog(generalLogBox, "[2/4] Carpeta no inicializada con Git. Clonando repositorio...");
+                        AppendLog(generalLogBox, string.Format("[2/4] Carpeta no inicializada con Git. Clonando repositorio (rama {0})...", targetBranch));
                         Directory.CreateDirectory(srv.FolderPath);
                         RunCommandWithLogs("git", "config --global http.sslVerify false", srv.FolderPath, generalLogBox);
-                        RunCommandWithLogs("git", string.Format("clone {0} \"{1}\"", srv.RepoUrl, srv.FolderPath), Path.GetDirectoryName(srv.FolderPath), generalLogBox);
+                        string cloneArgs = string.Format("clone -b {0} {1} \"{2}\"", targetBranch, srv.RepoUrl, srv.FolderPath);
+                        RunCommandWithLogs("git", cloneArgs, Path.GetDirectoryName(srv.FolderPath), generalLogBox);
                     }
                     else
                     {
-                        AppendLog(generalLogBox, "[2/4] Descargando últimos cambios desde GitHub (origin/main)...");
+                        AppendLog(generalLogBox, string.Format("[2/4] Descargando últimos cambios desde GitHub (origin/{0})...", targetBranch));
                         UnlockManagerExeBeforeGit(srv.FolderPath);
                         RunCommandWithLogs("git", "config http.sslVerify false", srv.FolderPath, generalLogBox);
-                        RunCommandWithLogs("git", "fetch origin main", srv.FolderPath, generalLogBox);
-                        int resetCode = RunCommandWithLogs("git", "reset --hard origin/main", srv.FolderPath, generalLogBox);
+                        RunCommandWithLogs("git", "fetch origin " + targetBranch, srv.FolderPath, generalLogBox);
+                        int resetCode = RunCommandWithLogs("git", "reset --hard origin/" + targetBranch, srv.FolderPath, generalLogBox);
                         if (resetCode != 0)
                         {
                             UnlockManagerExeBeforeGit(srv.FolderPath);
-                            RunCommandWithLogs("git", "checkout -f origin/main", srv.FolderPath, generalLogBox);
+                            RunCommandWithLogs("git", "checkout -f origin/" + targetBranch, srv.FolderPath, generalLogBox);
                         }
                     }
 
