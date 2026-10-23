@@ -117,6 +117,8 @@ router.get('/horarios', async (req, res) => {
     }
 });
 
+const auditoria = require('../services/auditoria');
+
 // POST Agendar
 router.post('/agendar', async (req, res) => {
     const { fecha, curso, asignatura, tipo, recurso, detalles } = req.body;
@@ -153,6 +155,18 @@ router.post('/agendar', async (req, res) => {
                 [resId, nuevoId, fecha, "1,2", recurso, curso, `Prueba de ${asignatura}`, user.email]
             );
         }
+
+        auditoria.registrarAuditoria({
+            req,
+            usuario: user,
+            modulo: 'Evaluaciones',
+            accion: 'Agendar Evaluación',
+            nivel: 'info',
+            entidad: 'evaluaciones',
+            entidad_id: nuevoId,
+            descripcion: `Evaluación agendada: ${tipo} de ${asignatura} en ${curso} (${fecha})`,
+            detalles: { id: nuevoId, fecha, curso, asignatura, tipo, recurso }
+        });
 
         res.json({ message: "Evaluación agendada exitosamente." });
     } catch (e) {

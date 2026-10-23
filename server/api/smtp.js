@@ -4,6 +4,7 @@ const fs = require('fs');
 const path = require('path');
 const nodemailer = require('nodemailer');
 const mailer = require('../services/mailer');
+const auditoria = require('../services/auditoria');
 
 const envPath = path.join(__dirname, '../../.env');
 
@@ -62,6 +63,14 @@ router.post('/', (req, res) => {
             mailer.procesarCola().catch(() => {});
         });
     }
+
+    auditoria.registrarAuditoria({
+        req,
+        modulo: 'Centro de Correos',
+        accion: 'Configurar SMTP',
+        nivel: 'info',
+        descripcion: `Configuración de servidor SMTP actualizada: ${host}:${port} (${user})`
+    });
 
     res.json({ success: true, message: 'Configuración guardada' });
 });

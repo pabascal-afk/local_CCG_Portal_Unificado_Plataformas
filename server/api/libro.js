@@ -6,6 +6,7 @@ const multer = require('multer');
 const xlsx = require('xlsx');
 const nodemailer = require('nodemailer');
 const mailer = require('../services/mailer');
+const auditoria = require('../services/auditoria');
 
 const dbPath = path.join(__dirname, '../db/colegio.db');
 const db = new sqlite3.Database(dbPath);
@@ -299,6 +300,16 @@ router.post('/config', async (req, res) => {
         if (destinatarios_admin !== undefined) {
             await run("INSERT INTO libro_config (clave, valor) VALUES ('destinatarios_admin', ?) ON CONFLICT(clave) DO UPDATE SET valor=excluded.valor", [JSON.stringify(destinatarios_admin)]);
         }
+
+        auditoria.registrarAuditoria({
+            req,
+            modulo: 'Libro de Clases',
+            accion: 'Guardar Configuración',
+            nivel: 'info',
+            descripcion: `Configuración actualizada de Libro de Clases (Días excluidos, lista negra y/o destinatarios)`,
+            detalles: { blacklist, dias_excluidos, destinatarios_admin }
+        });
+
         res.json({ success: true, message: 'Configuración guardada correctamente.' });
     } catch (err) {
         res.status(500).json({ error: err.message });
@@ -536,6 +547,15 @@ router.get('/dashboard', async (req, res) => {
             };
         });
         
+        auditoria.registrarAuditoria({
+            req,
+            modulo: 'Libro de Clases',
+            accion: 'Carga de Archivo Libro',
+            nivel: 'info',
+            descripcion: `Carga de reporte de libro: "${nombreArchivo}" (${registrosFormateados.length} registros procesados)`,
+            detalles: { archivo: nombreArchivo, totalRegistros: registrosFormateados.length, criticos: countCriticos, pendientes: countPendientes }
+        });
+
         res.json({
             metricas: {
                 totalRegistros: registrosFormateados.length,
@@ -560,14 +580,35 @@ router.delete('/registros', async (req, res) => {
         const { modo, fecha, archivo } = req.query;
         if (modo === 'todo') {
             await run("DELETE FROM libro_registros");
+            auditoria.registrarAuditoria({
+                req,
+                modulo: 'Libro de Clases',
+                accion: 'Vaciar Registros Libro',
+                nivel: 'warning',
+                descripcion: 'Se vaciaron todos los registros del libro digital de clases'
+            });
             return res.json({ success: true, message: 'Se eliminaron todos los registros del libro digital.' });
         }
         if (fecha) {
             await run("DELETE FROM libro_registros WHERE fecha = ?", [fecha]);
+            auditoria.registrarAuditoria({
+                req,
+                modulo: 'Libro de Clases',
+                accion: 'Eliminar Registros Fecha',
+                nivel: 'warning',
+                descripcion: `Registros de libro eliminados para la fecha ${fecha}`
+            });
             return res.json({ success: true, message: `Registros de la fecha ${fecha} eliminados.` });
         }
         if (archivo) {
             await run("DELETE FROM libro_registros WHERE archivo_origen = ?", [archivo]);
+            auditoria.registrarAuditoria({
+                req,
+                modulo: 'Libro de Clases',
+                accion: 'Eliminar Registros Archivo',
+                nivel: 'warning',
+                descripcion: `Registros del archivo "${archivo}" eliminados de la base de datos`
+            });
             return res.json({ success: true, message: `Registros del archivo ${archivo} eliminados.` });
         }
         res.status(400).json({ error: 'Debe especificar el parámetro "modo=todo", "fecha" o "archivo".' });
@@ -673,6 +714,15 @@ router.post('/alias', async (req, res) => {
             WHERE profesor = ? OR profesor_normalizado = ?
         `, [platNombre, mail, uId, nombre_reporte.trim(), norm]);
         
+        auditoria.registrarAuditoria({
+            req,
+            modulo: 'Libro de Clases',
+            accion: 'Vincular Alias Docente',
+            nivel: 'info',
+            descripcion: `Mapeo docente guardado: "${nombre_reporte}" vinculado a "${platNombre}" (${mail})`,
+            detalles: { reporte: nombre_reporte, plataforma: platNombre, email: mail, usuario_id: uId }
+        });
+
         res.json({
             success: true,
             message: `Docente "${nombre_reporte}" vinculado con éxito a "${platNombre}".`
@@ -727,6 +777,15 @@ router.post('/alias/auto-vincular', async (req, res) => {
             }
         }
         
+        auditoria.registrarAuditoria({
+            req,
+            modulo: 'Libro de Clases',
+            accion: 'Auto-vinculación Inteligente',
+            nivel: 'info',
+            descripcion: `Auto-vinculación de docentes ejecutada: ${vinculados} vinculados, ${noCoincidentes.length} sin coincidencia`,
+            detalles: { vinculados, noCoincidentes }
+        });
+
         res.json({
             success: true,
             vinculados,
@@ -753,6 +812,14 @@ router.delete('/alias/:id', async (req, res) => {
                 SET profesor_plataforma = NULL, profesor_email = NULL, usuario_id = NULL
                 WHERE profesor = ? OR profesor_normalizado = ?
             `, [item.nombre_reporte, item.nombre_normalizado]);
+
+            auditoria.registrarAuditoria({
+                req,
+                modulo: 'Libro de Clases',
+                accion: 'Eliminar Alias Docente',
+                nivel: 'warning',
+                descripcion: `Mapeo de docente "${item.nombre_reporte}" eliminado (ID: ${id})`
+            });
         }
         res.json({ success: true, message: 'Vinculación de docente eliminada correctamente.' });
     } catch (err) {
@@ -881,6 +948,15 @@ router.post('/enviar-alertas-docentes', async (req, res) => {
             enviados++;
         }
         
+        auditoria.registrarAuditoria({
+            req,
+            modulo: 'Libro de Clases',
+            accion: 'Envío Alertas Docentes',
+            nivel: 'info',
+            descripcion: `Notificaciones de pendientes de libro enviadas a ${enviados} docentes (${noEncontrados.length} sin correo)`,
+            detalles: { enviados, sinCorreo: noEncontrados }
+        });
+
         res.json({
             success: true,
             enviados,
@@ -982,6 +1058,15 @@ router.post('/enviar-resumen-admin', async (req, res) => {
             });
         }
         
+        auditoria.registrarAuditoria({
+            req,
+            modulo: 'Libro de Clases',
+            accion: 'Envío Resumen Coordinación',
+            nivel: 'info',
+            descripcion: `Resumen de estado de libros de clase enviado a ${destinatarios.length} directivos/coordinadores`,
+            detalles: { destinatarios, totalCriticos, totalPendientes }
+        });
+
         res.json({
             success: true,
             destinatarios,

@@ -33,6 +33,7 @@ const storage = multer.diskStorage({
 const upload = multer({ storage });
 
 const mailer = require('../services/mailer');
+const auditoria = require('../services/auditoria');
 const transporter = mailer.crearTransporter();
 
 router.post('/enviar/:id', upload.single('archivo'), async (req, res) => {
@@ -96,6 +97,17 @@ router.post('/enviar/:id', upload.single('archivo'), async (req, res) => {
             });
         }
         
+        auditoria.registrarAuditoria({
+            req,
+            modulo: 'Evaluaciones',
+            accion: 'Envío a Coordinación',
+            nivel: 'info',
+            entidad: 'evaluaciones',
+            entidad_id: id,
+            descripcion: `Evaluación de ${ev.asignatura} (${ev.curso}) enviada para revisión a ${nombreDestino} (${emailDestino})`,
+            detalles: { id, curso: ev.curso, asignatura: ev.asignatura, profesor: ev.profesor_nombre, coordinador: emailDestino, link_doc, tieneArchivo: !!archivo }
+        });
+
         res.json({message: "Enviado correctamente a " + emailDestino});
     } catch (e) {
         console.error(e);
@@ -117,6 +129,15 @@ router.post('/coordinadores', async (req, res) => {
         const { email, nombre, curso_regla, asignatura_regla } = req.body;
         await run("INSERT INTO coordinadores_areas (email, nombre, curso_regla, asignatura_regla) VALUES (?, ?, ?, ?)", 
             [email, nombre, curso_regla, asignatura_regla]);
+
+        auditoria.registrarAuditoria({
+            req,
+            modulo: 'Centro de Correos',
+            accion: 'Crear Regla Coordinador',
+            nivel: 'info',
+            descripcion: `Regla de enrutamiento añadida: ${nombre} (${email}) para [Curso: ${curso_regla}, Asig: ${asignatura_regla}]`
+        });
+
         res.json({message: "Coordinador añadido"});
     } catch (e) {
         res.status(500).json({error: e.message});
@@ -126,6 +147,15 @@ router.post('/coordinadores', async (req, res) => {
 router.delete('/coordinadores/:id', async (req, res) => {
     try {
         await run("DELETE FROM coordinadores_areas WHERE id = ?", [req.params.id]);
+
+        auditoria.registrarAuditoria({
+            req,
+            modulo: 'Centro de Correos',
+            accion: 'Eliminar Regla Coordinador',
+            nivel: 'warning',
+            descripcion: `Regla de enrutamiento de coordinador eliminada (ID: ${req.params.id})`
+        });
+
         res.json({message: "Coordinador eliminado"});
     } catch (e) {
         res.status(500).json({error: e.message});

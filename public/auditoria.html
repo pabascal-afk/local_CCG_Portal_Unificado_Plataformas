@@ -1,0 +1,784 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Auditoría y Bitácora Global de Acciones - Colegio Cerro Grande</title>
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.1/font/bootstrap-icons.css">
+  <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+  <style>
+    body {
+      background-color: #f1f5f9;
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+      color: #1e293b;
+      padding-bottom: 60px;
+    }
+    .metric-card {
+      border-radius: 12px;
+      border: 1px solid #e2e8f0;
+      background: #ffffff;
+      box-shadow: 0 2px 6px rgba(0,0,0,0.03);
+      transition: transform 0.15s ease, box-shadow 0.15s ease;
+    }
+    .metric-card:hover {
+      transform: translateY(-2px);
+      box-shadow: 0 6px 14px rgba(0,0,0,0.06);
+    }
+    .card-custom {
+      border-radius: 12px;
+      border: 1px solid #e2e8f0;
+      background: #ffffff;
+      box-shadow: 0 2px 8px rgba(0,0,0,0.03);
+    }
+    .btn-quick-date {
+      font-size: 0.8rem;
+      padding: 4px 10px;
+      border-radius: 6px;
+      font-weight: 500;
+    }
+    .btn-quick-date.active {
+      background-color: #2563eb;
+      color: #ffffff;
+      border-color: #2563eb;
+    }
+    /* Badges de Módulos */
+    .badge-mod-evaluaciones { background-color: #fef3c7; color: #92400e; border: 1px solid #fde68a; }
+    .badge-mod-recursos { background-color: #dbeafe; color: #1e40af; border: 1px solid #bfdbfe; }
+    .badge-mod-calendario { background-color: #f3e8ff; color: #6b21a8; border: 1px solid #e9d5ff; }
+    .badge-mod-actividades { background-color: #dcfce7; color: #166534; border: 1px solid #bbf7d0; }
+    .badge-mod-libro { background-color: #e0e7ff; color: #3730a3; border: 1px solid #c7d2fe; }
+    .badge-mod-correos { background-color: #fee2e2; color: #991b1b; border: 1px solid #fecaca; }
+    .badge-mod-usuarios { background-color: #ccfbf1; color: #115e59; border: 1px solid #99f6e4; }
+    .badge-mod-seguridad { background-color: #fef08a; color: #854d0e; border: 1px solid #fde047; }
+    .badge-mod-horarios { background-color: #fae8ff; color: #86198f; border: 1px solid #f5d0fe; }
+    .badge-mod-general { background-color: #f1f5f9; color: #475569; border: 1px solid #e2e8f0; }
+
+    /* Badges de Severidad */
+    .badge-lvl-info { background-color: #e0f2fe; color: #0369a1; border: 1px solid #bae6fd; }
+    .badge-lvl-success { background-color: #dcfce7; color: #15803d; border: 1px solid #bbf7d0; }
+    .badge-lvl-warning { background-color: #fef9c3; color: #a16207; border: 1px solid #fef08a; }
+    .badge-lvl-danger { background-color: #fee2e2; color: #b91c1c; border: 1px solid #fecaca; }
+
+    .table-hover tbody tr:hover {
+      background-color: #f8fafc;
+    }
+    .log-details-pre {
+      background-color: #0f172a;
+      color: #38bdf8;
+      border-radius: 8px;
+      padding: 14px;
+      font-size: 0.82rem;
+      max-height: 320px;
+      overflow-y: auto;
+    }
+  </style>
+</head>
+<body>
+
+  <div class="container-fluid px-4 py-4">
+
+    <!-- CABECERA -->
+    <div class="d-flex flex-wrap justify-content-between align-items-center mb-4 pb-2 border-bottom">
+      <div>
+        <h3 class="fw-bold mb-1 d-flex align-items-center">
+          <i class="bi bi-shield-check text-primary me-2"></i> Auditoría y Registro Global de Acciones
+          <span class="badge bg-primary-subtle text-primary border border-primary-subtle fs-6 ms-3">
+            Bitácora del Sistema
+          </span>
+        </h3>
+        <p class="text-secondary small mb-0">
+          Supervisión integral de actividades, agendamientos, reservas, avisos y operaciones administrativas con trazabilidad de usuario e IP.
+        </p>
+      </div>
+      <div class="d-flex gap-2 mt-3 mt-md-0">
+        <button class="btn btn-outline-secondary btn-sm" onclick="cargarLogs()" id="btnRefrescar" title="Recargar eventos">
+          <i class="bi bi-arrow-clockwise me-1"></i> Actualizar
+        </button>
+        <button class="btn btn-outline-dark btn-sm" onclick="exportarLogs('csv')" title="Descargar como CSV">
+          <i class="bi bi-file-earmark-text me-1"></i> Exportar CSV
+        </button>
+        <button class="btn btn-success btn-sm fw-semibold shadow-sm" onclick="exportarLogs('xlsx')" title="Descargar reporte completo en Microsoft Excel">
+          <i class="bi bi-file-earmark-excel-fill me-1"></i> Exportar Excel (.xlsx)
+        </button>
+      </div>
+    </div>
+
+    <!-- TARJETAS DE INDICADORES (KPIS) -->
+    <div class="row g-3 mb-4">
+      <div class="col-sm-6 col-lg-3">
+        <div class="metric-card p-3 d-flex align-items-center">
+          <div class="rounded-3 p-3 bg-primary bg-opacity-10 text-primary me-3">
+            <i class="bi bi-journal-text fs-3"></i>
+          </div>
+          <div>
+            <span class="text-secondary small fw-semibold text-uppercase">Total Acciones</span>
+            <h3 class="fw-bold mb-0 text-dark" id="kpiTotal">0</h3>
+            <small class="text-muted" style="font-size: 0.75rem;">Historial completo</small>
+          </div>
+        </div>
+      </div>
+
+      <div class="col-sm-6 col-lg-3">
+        <div class="metric-card p-3 d-flex align-items-center">
+          <div class="rounded-3 p-3 bg-info bg-opacity-10 text-info me-3">
+            <i class="bi bi-calendar-event fs-3"></i>
+          </div>
+          <div>
+            <span class="text-secondary small fw-semibold text-uppercase">Acciones Hoy</span>
+            <h3 class="fw-bold mb-0 text-info" id="kpiHoy">0</h3>
+            <small class="text-muted" style="font-size: 0.75rem;">Jornada actual</small>
+          </div>
+        </div>
+      </div>
+
+      <div class="col-sm-6 col-lg-3">
+        <div class="metric-card p-3 d-flex align-items-center">
+          <div class="rounded-3 p-3 bg-warning bg-opacity-10 text-warning me-3">
+            <i class="bi bi-exclamation-triangle fs-3"></i>
+          </div>
+          <div>
+            <span class="text-secondary small fw-semibold text-uppercase">Advertencias / Críticos</span>
+            <h3 class="fw-bold mb-0 text-warning" id="kpiCriticos">0</h3>
+            <small class="text-muted" style="font-size: 0.75rem;">Cancelaciones y alertas</small>
+          </div>
+        </div>
+      </div>
+
+      <div class="col-sm-6 col-lg-3">
+        <div class="metric-card p-3 d-flex align-items-center">
+          <div class="rounded-3 p-3 bg-success bg-opacity-10 text-success me-3">
+            <i class="bi bi-diagram-3 fs-3"></i>
+          </div>
+          <div>
+            <span class="text-secondary small fw-semibold text-uppercase">Módulo Más Activo</span>
+            <h4 class="fw-bold mb-0 text-success text-truncate" id="kpiModuloLider" style="max-width: 170px;" title="-">-</h4>
+            <small class="text-muted" id="kpiModuloCount" style="font-size: 0.75rem;">0 operaciones</small>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- PANEL DE FILTROS AVANZADOS -->
+    <div class="card-custom p-3 mb-4">
+      <div class="d-flex flex-wrap justify-content-between align-items-center mb-3">
+        <div class="d-flex align-items-center gap-2">
+          <span class="fw-bold text-dark small text-uppercase"><i class="bi bi-funnel text-primary me-1"></i> Filtros de Búsqueda</span>
+        </div>
+        <div class="d-flex align-items-center gap-1 flex-wrap">
+          <span class="text-muted small me-1">Rango rápido:</span>
+          <button type="button" class="btn btn-outline-secondary btn-quick-date" onclick="setQuickDate('hoy', this)">Hoy</button>
+          <button type="button" class="btn btn-outline-secondary btn-quick-date" onclick="setQuickDate('7dias', this)">Últimos 7 días</button>
+          <button type="button" class="btn btn-outline-secondary btn-quick-date" onclick="setQuickDate('mes', this)">Este mes</button>
+          <button type="button" class="btn btn-outline-secondary btn-quick-date active" onclick="setQuickDate('todo', this)">Todo</button>
+          <button type="button" class="btn btn-link btn-sm text-danger text-decoration-none ms-2" onclick="limpiarFiltros()" title="Restablecer filtros">
+            <i class="bi bi-arrow-counterclockwise"></i> Limpiar
+          </button>
+        </div>
+      </div>
+
+      <div class="row g-2">
+        <div class="col-md-2">
+          <label class="form-label text-muted small mb-1">Fecha Desde</label>
+          <input type="date" id="filtroDesde" class="form-control form-control-sm" onchange="aplicarFiltros()">
+        </div>
+        <div class="col-md-2">
+          <label class="form-label text-muted small mb-1">Fecha Hasta</label>
+          <input type="date" id="filtroHasta" class="form-control form-control-sm" onchange="aplicarFiltros()">
+        </div>
+        <div class="col-md-2">
+          <label class="form-label text-muted small mb-1">Módulo</label>
+          <select id="filtroModulo" class="form-select form-select-sm" onchange="aplicarFiltros()">
+            <option value="">Todos los módulos</option>
+            <option value="Evaluaciones">Evaluaciones</option>
+            <option value="Recursos">Recursos</option>
+            <option value="Calendario">Calendario</option>
+            <option value="Actividades">Actividades</option>
+            <option value="Horarios">Horarios</option>
+            <option value="Libro de Clases">Libro de Clases</option>
+            <option value="Centro de Correos">Centro de Correos</option>
+            <option value="Usuarios">Usuarios</option>
+            <option value="Tablón de Avisos">Tablón de Avisos</option>
+            <option value="Seguridad">Seguridad / Auth</option>
+            <option value="General">General</option>
+          </select>
+        </div>
+        <div class="col-md-2">
+          <label class="form-label text-muted small mb-1">Nivel / Severidad</label>
+          <select id="filtroNivel" class="form-select form-select-sm" onchange="aplicarFiltros()">
+            <option value="">Todas las severidades</option>
+            <option value="info">ℹ️ Informativo (info)</option>
+            <option value="success">✅ Éxito (success)</option>
+            <option value="warning">⚠️ Advertencia (warning)</option>
+            <option value="danger">🚨 Crítico (danger)</option>
+          </select>
+        </div>
+        <div class="col-md-4">
+          <label class="form-label text-muted small mb-1">Búsqueda Rápida</label>
+          <div class="input-group input-group-sm">
+            <span class="input-group-text bg-white"><i class="bi bi-search text-muted"></i></span>
+            <input type="text" id="filtroBusqueda" class="form-control form-control-sm" placeholder="Buscar por usuario, correo, acción, descripción o IP..." oninput="onBusquedaInput()">
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- TABLA DE LOGS -->
+    <div class="card-custom overflow-hidden mb-4">
+      <div class="d-flex flex-wrap justify-content-between align-items-center p-3 border-bottom bg-white">
+        <div class="d-flex align-items-center gap-2">
+          <span class="fw-bold text-dark"><i class="bi bi-list-columns-reverse text-primary me-1"></i> Registros de Auditoría</span>
+          <span class="badge bg-light text-secondary border" id="badgeTotalLogs">0 registros</span>
+        </div>
+        <div class="d-flex align-items-center gap-3">
+          <div class="d-flex align-items-center gap-2">
+            <span class="text-muted small">Por página:</span>
+            <select id="selectLimite" class="form-select form-select-sm" style="width: 75px;" onchange="cambiarLimite(this.value)">
+              <option value="20" selected>20</option>
+              <option value="50">50</option>
+              <option value="100">100</option>
+            </select>
+          </div>
+          <span class="text-secondary small" id="indicadorPaginacion">Cargando...</span>
+        </div>
+      </div>
+
+      <div class="table-responsive">
+        <table class="table table-hover align-middle mb-0" style="font-size: 0.88rem;">
+          <thead class="table-light text-secondary" style="font-size: 0.78rem; text-transform: uppercase; letter-spacing: 0.5px;">
+            <tr>
+              <th style="width: 170px;">Fecha y Hora</th>
+              <th style="width: 220px;">Usuario / Origen</th>
+              <th style="width: 140px;">Módulo</th>
+              <th style="width: 180px;">Acción</th>
+              <th>Descripción</th>
+              <th style="width: 100px;" class="text-center">Nivel</th>
+              <th style="width: 80px;" class="text-center">Detalle</th>
+            </tr>
+          </thead>
+          <tbody id="tablaLogsBody">
+            <tr>
+              <td colspan="7" class="text-center py-5 text-secondary">
+                <div class="spinner-border spinner-border-sm text-primary mb-2" role="status"></div>
+                <div>Cargando bitácora de auditoría...</div>
+              </td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+
+      <!-- PAGINACIÓN -->
+      <div class="d-flex justify-content-between align-items-center p-3 border-top bg-white" id="contenedorPaginacion">
+        <span class="text-muted small" id="resumenPaginacion">Mostrando página 1</span>
+        <div class="d-flex gap-2">
+          <button class="btn btn-outline-secondary btn-sm" id="btnPagAnterior" onclick="cambiarPagina(-1)" disabled>
+            <i class="bi bi-chevron-left me-1"></i> Anterior
+          </button>
+          <button class="btn btn-outline-secondary btn-sm" id="btnPagSiguiente" onclick="cambiarPagina(1)" disabled>
+            Siguiente <i class="bi bi-chevron-right ms-1"></i>
+          </button>
+        </div>
+      </div>
+    </div>
+
+  </div>
+
+  <!-- MODAL VER DETALLE DEL EVENTO -->
+  <div class="modal fade" id="modalDetalleLog" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-lg modal-dialog-centered">
+      <div class="modal-content card-custom">
+        <div class="modal-header border-bottom py-3">
+          <h5 class="modal-title fw-bold text-dark d-flex align-items-center">
+            <i class="bi bi-shield-shaded text-primary me-2"></i> Detalle del Registro de Auditoría #<span id="detId">-</span>
+          </h5>
+          <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Cerrar"></button>
+        </div>
+        <div class="modal-body p-4">
+          <div class="row g-3 mb-3">
+            <div class="col-md-6">
+              <label class="text-muted small fw-semibold">Fecha y Hora (Chile)</label>
+              <div class="fw-bold" id="detFecha">-</div>
+            </div>
+            <div class="col-md-6">
+              <label class="text-muted small fw-semibold">Severidad / Nivel</label>
+              <div id="detNivel">-</div>
+            </div>
+            <div class="col-md-6">
+              <label class="text-muted small fw-semibold">Módulo del Sistema</label>
+              <div id="detModulo">-</div>
+            </div>
+            <div class="col-md-6">
+              <label class="text-muted small fw-semibold">Acción Realizada</label>
+              <div class="fw-bold" id="detAccion">-</div>
+            </div>
+            <div class="col-md-6">
+              <label class="text-muted small fw-semibold">Usuario Responsable</label>
+              <div class="fw-bold text-primary" id="detUsuario">-</div>
+              <small class="text-muted" id="detEmail">-</small>
+            </div>
+            <div class="col-md-6">
+              <label class="text-muted small fw-semibold">Rol del Usuario</label>
+              <div><span class="badge bg-secondary" id="detRol">-</span></div>
+            </div>
+            <div class="col-md-6">
+              <label class="text-muted small fw-semibold">Dirección IP</label>
+              <div class="font-monospace text-dark" id="detIp">-</div>
+            </div>
+            <div class="col-md-6">
+              <label class="text-muted small fw-semibold">Entidad / ID Afectado</label>
+              <div id="detEntidad" class="font-monospace text-secondary">-</div>
+            </div>
+          </div>
+
+          <div class="mb-3">
+            <label class="text-muted small fw-semibold">Descripción Semántica</label>
+            <div class="p-3 bg-light rounded border text-dark" id="detDescripcion" style="font-size: 0.95rem;">-</div>
+          </div>
+
+          <div>
+            <div class="d-flex justify-content-between align-items-center mb-1">
+              <label class="text-muted small fw-semibold">Detalles Estructurados / Parámetros</label>
+              <button class="btn btn-link btn-sm text-primary text-decoration-none p-0" onclick="copiarDetallesJson()">
+                <i class="bi bi-clipboard me-1"></i> Copiar JSON
+              </button>
+            </div>
+            <pre class="log-details-pre m-0" id="detJson">{}</pre>
+          </div>
+        </div>
+        <div class="modal-footer border-top py-2">
+          <button type="button" class="btn btn-secondary btn-sm" data-bs-dismiss="modal">Cerrar</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    let logsActuales = [];
+    let logSeleccionado = null;
+    let modalDetalleObj = null;
+    let debounceTimer = null;
+
+    // Estado de filtros y paginación
+    const estado = {
+      pagina: 1,
+      limite: 20,
+      total: 0,
+      totalPaginas: 1,
+      desde: '',
+      hasta: '',
+      modulo: '',
+      nivel: '',
+      buscar: ''
+    };
+
+    document.addEventListener('DOMContentLoaded', () => {
+      modalDetalleObj = new bootstrap.Modal(document.getElementById('modalDetalleLog'));
+      cargarKpis();
+      cargarLogs();
+    });
+
+    // -------------------------------------------------------------
+    // Carga de Tarjetas KPI
+    // -------------------------------------------------------------
+    async function cargarKpis() {
+      try {
+        const res = await fetch('/api/auditoria/kpis');
+        if (!res.ok) return;
+        const kpis = await res.json();
+        document.getElementById('kpiTotal').innerText = Number(kpis.total || 0).toLocaleString('es-CL');
+        document.getElementById('kpiHoy').innerText = Number(kpis.hoy || 0).toLocaleString('es-CL');
+        document.getElementById('kpiCriticos').innerText = Number(kpis.criticos || 0).toLocaleString('es-CL');
+        
+        if (kpis.moduloLider && kpis.moduloLider.modulo) {
+          document.getElementById('kpiModuloLider').innerText = kpis.moduloLider.modulo;
+          document.getElementById('kpiModuloLider').title = kpis.moduloLider.modulo;
+          document.getElementById('kpiModuloCount').innerText = `${kpis.moduloLider.total} eventos`;
+        } else {
+          document.getElementById('kpiModuloLider').innerText = 'Ninguno';
+          document.getElementById('kpiModuloCount').innerText = '0 eventos';
+        }
+      } catch (e) {
+        console.error('Error cargando KPIs:', e);
+      }
+    }
+
+    // -------------------------------------------------------------
+    // Carga Paginada de Logs
+    // -------------------------------------------------------------
+    async function cargarLogs() {
+      const btnRefrescar = document.getElementById('btnRefrescar');
+      btnRefrescar.disabled = true;
+      btnRefrescar.innerHTML = '<span class="spinner-border spinner-border-sm me-1"></span> Cargando...';
+
+      const params = new URLSearchParams({
+        pagina: estado.pagina,
+        limite: estado.limite
+      });
+      if (estado.desde) params.append('desde', estado.desde);
+      if (estado.hasta) params.append('hasta', estado.hasta);
+      if (estado.modulo) params.append('modulo', estado.modulo);
+      if (estado.nivel) params.append('nivel', estado.nivel);
+      if (estado.buscar) params.append('buscar', estado.buscar);
+
+      try {
+        const res = await fetch(`/api/auditoria?${params.toString()}`);
+        if (!res.ok) {
+          const errData = await res.json();
+          throw new Error(errData.error || 'Error al obtener bitácora.');
+        }
+
+        const data = await res.json();
+        logsActuales = data.logs || [];
+        estado.total = data.total || 0;
+        estado.totalPaginas = data.totalPaginas || 1;
+
+        renderizarTabla();
+        actualizarPaginacion();
+      } catch (err) {
+        console.error('Error al cargar logs:', err);
+        document.getElementById('tablaLogsBody').innerHTML = `
+          <tr>
+            <td colspan="7" class="text-center py-4 text-danger">
+              <i class="bi bi-exclamation-octagon fs-4 d-block mb-1"></i>
+              ${err.message}
+            </td>
+          </tr>
+        `;
+      } finally {
+        btnRefrescar.disabled = false;
+        btnRefrescar.innerHTML = '<i class="bi bi-arrow-clockwise me-1"></i> Actualizar';
+      }
+    }
+
+    // -------------------------------------------------------------
+    // Renderizado de Filas de la Tabla
+    // -------------------------------------------------------------
+    function renderizarTabla() {
+      const tbody = document.getElementById('tablaLogsBody');
+      if (!logsActuales || logsActuales.length === 0) {
+        tbody.innerHTML = `
+          <tr>
+            <td colspan="7" class="text-center py-5 text-secondary">
+              <i class="bi bi-inbox fs-2 text-muted d-block mb-2"></i>
+              No se encontraron registros que coincidan con los filtros aplicados.
+            </td>
+          </tr>
+        `;
+        return;
+      }
+
+      let html = '';
+      logsActuales.forEach((log, index) => {
+        const fechaFormateada = formatearFechaHoraChile(log.fecha_hora);
+        const badgeModulo = obtenerBadgeModulo(log.modulo);
+        const badgeNivel = obtenerBadgeNivel(log.nivel);
+        const nombreUsuario = log.usuario_nombre || (log.usuario_email ? log.usuario_email.split('@')[0] : 'Sistema');
+
+        html += `
+          <tr>
+            <td class="text-nowrap">
+              <div class="fw-semibold text-dark">${fechaFormateada.fecha}</div>
+              <small class="text-muted font-monospace">${fechaFormateada.hora}</small>
+            </td>
+            <td>
+              <div class="d-flex align-items-center">
+                <div class="avatar-sm rounded-circle bg-light border text-primary fw-bold me-2 d-flex align-items-center justify-content-center" style="width: 32px; height: 32px; font-size: 0.8rem; flex-shrink: 0;">
+                  ${obtenerIniciales(nombreUsuario)}
+                </div>
+                <div class="overflow-hidden">
+                  <div class="fw-semibold text-dark text-truncate" title="${nombreUsuario}">${nombreUsuario}</div>
+                  <div class="text-muted small text-truncate" style="font-size: 0.75rem;" title="${log.usuario_email || 'sistema'}">
+                    ${log.usuario_email || 'sistema'}
+                  </div>
+                </div>
+              </div>
+            </td>
+            <td>${badgeModulo}</td>
+            <td>
+              <span class="fw-semibold text-dark">${log.accion}</span>
+            </td>
+            <td>
+              <div class="text-secondary text-break" style="max-width: 480px;">
+                ${log.descripcion}
+              </div>
+            </td>
+            <td class="text-center">${badgeNivel}</td>
+            <td class="text-center">
+              <button class="btn btn-sm btn-outline-primary py-1 px-2" onclick="verDetalleLog(${index})" title="Ver registro completo">
+                <i class="bi bi-eye"></i>
+              </button>
+            </td>
+          </tr>
+        `;
+      });
+
+      tbody.innerHTML = html;
+      document.getElementById('badgeTotalLogs').innerText = `${estado.total.toLocaleString('es-CL')} eventos`;
+    }
+
+    // -------------------------------------------------------------
+    // Ayudantes de Formateo y Badges
+    // -------------------------------------------------------------
+    function formatearFechaHoraChile(fechaStr) {
+      if (!fechaStr) return { fecha: '-', hora: '-' };
+      try {
+        const d = new Date(fechaStr);
+        // Formato chileno
+        const dia = String(d.getDate()).padStart(2, '0');
+        const mes = String(d.getMonth() + 1).padStart(2, '0');
+        const anio = d.getFullYear();
+        const horas = String(d.getHours()).padStart(2, '0');
+        const minutos = String(d.getMinutes()).padStart(2, '0');
+        const segundos = String(d.getSeconds()).padStart(2, '0');
+        return {
+          fecha: `${dia}/${mes}/${anio}`,
+          hora: `${horas}:${minutos}:${segundos}`
+        };
+      } catch(e) {
+        return { fecha: fechaStr, hora: '' };
+      }
+    }
+
+    function obtenerIniciales(str) {
+      if (!str) return 'U';
+      const parts = str.trim().split(' ');
+      if (parts.length >= 2) return (parts[0][0] + parts[1][0]).toUpperCase();
+      return str.slice(0, 2).toUpperCase();
+    }
+
+    function obtenerBadgeModulo(mod) {
+      const m = (mod || 'General').toLowerCase().trim();
+      let clase = 'badge-mod-general';
+      let icon = 'bi-folder';
+
+      if (m.includes('eval')) { clase = 'badge-mod-evaluaciones'; icon = 'bi-journal-check'; }
+      else if (m.includes('recur')) { clase = 'badge-mod-recursos'; icon = 'bi-building'; }
+      else if (m.includes('calen')) { clase = 'badge-mod-calendario'; icon = 'bi-calendar-event'; }
+      else if (m.includes('activ')) { clase = 'badge-mod-actividades'; icon = 'bi-briefcase'; }
+      else if (m.includes('libr')) { clase = 'badge-mod-libro'; icon = 'bi-book'; }
+      else if (m.includes('corr')) { clase = 'badge-mod-correos'; icon = 'bi-envelope-at'; }
+      else if (m.includes('usuar')) { clase = 'badge-mod-usuarios'; icon = 'bi-people'; }
+      else if (m.includes('segur') || m.includes('auth')) { clase = 'badge-mod-seguridad'; icon = 'bi-shield-lock'; }
+      else if (m.includes('horar')) { clase = 'badge-mod-horarios'; icon = 'bi-clock-history'; }
+      else if (m.includes('tabl')) { clase = 'badge-mod-evaluaciones'; icon = 'bi-megaphone'; }
+
+      return `<span class="badge ${clase} px-2 py-1"><i class="bi ${icon} me-1"></i>${mod}</span>`;
+    }
+
+    function obtenerBadgeNivel(nivel) {
+      const n = (nivel || 'info').toLowerCase().trim();
+      if (n === 'danger' || n === 'error') return '<span class="badge badge-lvl-danger px-2 py-1"><i class="bi bi-x-circle-fill me-1"></i>Crítico</span>';
+      if (n === 'warning' || n === 'warn') return '<span class="badge badge-lvl-warning px-2 py-1"><i class="bi bi-exclamation-triangle-fill me-1"></i>Aviso</span>';
+      if (n === 'success') return '<span class="badge badge-lvl-success px-2 py-1"><i class="bi bi-check-circle-fill me-1"></i>Éxito</span>';
+      return '<span class="badge badge-lvl-info px-2 py-1"><i class="bi bi-info-circle-fill me-1"></i>Info</span>';
+    }
+
+    // -------------------------------------------------------------
+    // Paginación y Controles
+    // -------------------------------------------------------------
+    function actualizarPaginacion() {
+      const desdeIdx = estado.total === 0 ? 0 : (estado.pagina - 1) * estado.limite + 1;
+      const hastaIdx = Math.min(estado.pagina * estado.limite, estado.total);
+      
+      document.getElementById('indicadorPaginacion').innerText = `Mostrando ${desdeIdx}-${hastaIdx} de ${estado.total}`;
+      document.getElementById('resumenPaginacion').innerText = `Página ${estado.pagina} de ${estado.totalPaginas}`;
+
+      document.getElementById('btnPagAnterior').disabled = (estado.pagina <= 1);
+      document.getElementById('btnPagSiguiente').disabled = (estado.pagina >= estado.totalPaginas);
+    }
+
+    function cambiarPagina(delta) {
+      const nueva = estado.pagina + delta;
+      if (nueva >= 1 && nueva <= estado.totalPaginas) {
+        estado.pagina = nueva;
+        cargarLogs();
+      }
+    }
+
+    function cambiarLimite(nuevoLimite) {
+      estado.limite = parseInt(nuevoLimite, 10);
+      estado.pagina = 1;
+      cargarLogs();
+    }
+
+    // -------------------------------------------------------------
+    // Manejo de Filtros
+    // -------------------------------------------------------------
+    function setQuickDate(tipo, btn) {
+      document.querySelectorAll('.btn-quick-date').forEach(b => b.classList.remove('active'));
+      if (btn) btn.classList.add('active');
+
+      const hoy = new Date();
+      const fHoyStr = hoy.toISOString().split('T')[0];
+
+      if (tipo === 'hoy') {
+        estado.desde = fHoyStr;
+        estado.hasta = fHoyStr;
+      } else if (tipo === '7dias') {
+        const d7 = new Date();
+        d7.setDate(hoy.getDate() - 7);
+        estado.desde = d7.toISOString().split('T')[0];
+        estado.hasta = fHoyStr;
+      } else if (tipo === 'mes') {
+        const primeroMes = new Date(hoy.getFullYear(), hoy.getMonth(), 1);
+        estado.desde = primeroMes.toISOString().split('T')[0];
+        estado.hasta = fHoyStr;
+      } else {
+        // Todo
+        estado.desde = '';
+        estado.hasta = '';
+      }
+
+      document.getElementById('filtroDesde').value = estado.desde;
+      document.getElementById('filtroHasta').value = estado.hasta;
+      estado.pagina = 1;
+      cargarLogs();
+    }
+
+    function aplicarFiltros() {
+      estado.desde = document.getElementById('filtroDesde').value;
+      estado.hasta = document.getElementById('filtroHasta').value;
+      estado.modulo = document.getElementById('filtroModulo').value;
+      estado.nivel = document.getElementById('filtroNivel').value;
+      estado.pagina = 1;
+      cargarLogs();
+    }
+
+    function onBusquedaInput() {
+      clearTimeout(debounceTimer);
+      debounceTimer = setTimeout(() => {
+        estado.buscar = document.getElementById('filtroBusqueda').value.trim();
+        estado.pagina = 1;
+        cargarLogs();
+      }, 350);
+    }
+
+    function limpiarFiltros() {
+      estado.desde = '';
+      estado.hasta = '';
+      estado.modulo = '';
+      estado.nivel = '';
+      estado.buscar = '';
+      estado.pagina = 1;
+
+      document.getElementById('filtroDesde').value = '';
+      document.getElementById('filtroHasta').value = '';
+      document.getElementById('filtroModulo').value = '';
+      document.getElementById('filtroNivel').value = '';
+      document.getElementById('filtroBusqueda').value = '';
+
+      document.querySelectorAll('.btn-quick-date').forEach(b => b.classList.remove('active'));
+      const btnTodo = document.querySelector('.btn-quick-date:last-of-type');
+      if (btnTodo) btnTodo.classList.add('active');
+
+      cargarLogs();
+    }
+
+    // -------------------------------------------------------------
+    // Modal de Detalle
+    // -------------------------------------------------------------
+    function verDetalleLog(index) {
+      const log = logsActuales[index];
+      if (!log) return;
+      logSeleccionado = log;
+
+      document.getElementById('detId').innerText = log.id;
+      const f = formatearFechaHoraChile(log.fecha_hora);
+      document.getElementById('detFecha').innerText = `${f.fecha} a las ${f.hora}`;
+      document.getElementById('detNivel').innerHTML = obtenerBadgeNivel(log.nivel);
+      document.getElementById('detModulo').innerHTML = obtenerBadgeModulo(log.modulo);
+      document.getElementById('detAccion').innerText = log.accion;
+      document.getElementById('detUsuario').innerText = log.usuario_nombre || (log.usuario_email ? log.usuario_email.split('@')[0] : 'Sistema');
+      document.getElementById('detEmail').innerText = log.usuario_email || 'Sin correo asociado';
+      document.getElementById('detRol').innerText = log.usuario_rol || 'General';
+      document.getElementById('detIp').innerText = log.ip || '127.0.0.1 (Local)';
+      document.getElementById('detEntidad').innerText = log.entidad ? `${log.entidad} (ID: ${log.entidad_id || '-'})` : 'N/A';
+      document.getElementById('detDescripcion').innerText = log.descripcion || '-';
+
+      let parsedJson = {};
+      if (log.detalles) {
+        try {
+          parsedJson = typeof log.detalles === 'string' ? JSON.parse(log.detalles) : log.detalles;
+        } catch(e) {
+          parsedJson = { raw: log.detalles };
+        }
+      }
+      document.getElementById('detJson').innerText = JSON.stringify(parsedJson, null, 2);
+
+      modalDetalleObj.show();
+    }
+
+    function copiarDetallesJson() {
+      if (!logSeleccionado) return;
+      const jsonText = document.getElementById('detJson').innerText;
+      navigator.clipboard.writeText(jsonText).then(() => {
+        Swal.mixin({
+          toast: true,
+          position: 'top-end',
+          showConfirmButton: false,
+          timer: 2000
+        }).fire({
+          icon: 'success',
+          title: 'JSON copiado al portapapeles'
+        });
+      });
+    }
+
+    // -------------------------------------------------------------
+    // Exportación a Excel (.xlsx) y CSV
+    // -------------------------------------------------------------
+    function exportarLogs(formato) {
+      const params = new URLSearchParams();
+      params.append('formato', formato);
+      if (estado.desde) params.append('desde', estado.desde);
+      if (estado.hasta) params.append('hasta', estado.hasta);
+      if (estado.modulo) params.append('modulo', estado.modulo);
+      if (estado.nivel) params.append('nivel', estado.nivel);
+      if (estado.buscar) params.append('buscar', estado.buscar);
+
+      Swal.fire({
+        title: 'Generando archivo...',
+        text: `Exportando bitácora a formato ${formato.toUpperCase()}`,
+        allowOutsideClick: false,
+        didOpen: () => {
+          Swal.showLoading();
+        }
+      });
+
+      // Disparar descarga en una ventana oculta o con fetch blob
+      fetch(`/api/auditoria/exportar?${params.toString()}`)
+        .then(res => {
+          if (!res.ok) throw new Error('Error al generar la exportación.');
+          return res.blob();
+        })
+        .then(blob => {
+          const url = window.URL.createObjectURL(blob);
+          const a = document.createElement('a');
+          a.style.display = 'none';
+          a.href = url;
+          const fechaHoy = new Date().toISOString().split('T')[0];
+          a.download = `Auditoria_ColegioCerroGrande_${fechaHoy}.${formato}`;
+          document.body.appendChild(a);
+          a.click();
+          window.URL.revokeObjectURL(url);
+          Swal.close();
+
+          Swal.mixin({
+            toast: true,
+            position: 'top-end',
+            showConfirmButton: false,
+            timer: 3000,
+            timerProgressBar: true
+          }).fire({
+            icon: 'success',
+            title: `Reporte ${formato.toUpperCase()} descargado con éxito`
+          });
+        })
+        .catch(err => {
+          Swal.fire('Error al exportar', err.message, 'error');
+        });
+    }
+  </script>
+</body>
+</html>

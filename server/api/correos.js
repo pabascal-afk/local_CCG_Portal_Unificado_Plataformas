@@ -1,6 +1,7 @@
 const express = require('express');
 const router = express.Router();
 const mailer = require('../services/mailer');
+const auditoria = require('../services/auditoria');
 
 // Verificación de rol administrativo o coordinación
 function esAdminOCoordinacion(user) {
@@ -204,6 +205,17 @@ router.post('/cola/:id/reintentar', async (req, res) => {
     try {
         const ok = await mailer.reintentarCorreo(req.params.id);
         if (!ok) return res.status(404).json({ error: 'Correo no encontrado en la cola.' });
+
+        auditoria.registrarAuditoria({
+            req,
+            modulo: 'Centro de Correos',
+            accion: 'Reintentar Correo',
+            nivel: 'info',
+            entidad: 'cola_correos',
+            entidad_id: req.params.id,
+            descripcion: `Correo ID ${req.params.id} reprogramado para reintento inmediato`
+        });
+
         res.json({ success: true, message: 'Correo reprogramado para reintento inmediato.' });
     } catch (err) {
         res.status(500).json({ error: err.message });
@@ -214,6 +226,15 @@ router.post('/cola/:id/reintentar', async (req, res) => {
 router.post('/cola/reintentar-fallidos', async (req, res) => {
     try {
         const count = await mailer.reintentarTodosFallidos();
+
+        auditoria.registrarAuditoria({
+            req,
+            modulo: 'Centro de Correos',
+            accion: 'Reintentar Correos Fallidos',
+            nivel: 'info',
+            descripcion: `Se reprogramaron ${count} correos fallidos para reintento inmediato`
+        });
+
         res.json({ success: true, count, message: `${count} correo(s) fallido(s) reprogramados para reintento inmediato.` });
     } catch (err) {
         res.status(500).json({ error: err.message });
@@ -225,6 +246,17 @@ router.delete('/cola/:id', async (req, res) => {
     try {
         const ok = await mailer.eliminarDeCola(req.params.id);
         if (!ok) return res.status(404).json({ error: 'Correo no encontrado.' });
+
+        auditoria.registrarAuditoria({
+            req,
+            modulo: 'Centro de Correos',
+            accion: 'Eliminar de Cola',
+            nivel: 'warning',
+            entidad: 'cola_correos',
+            entidad_id: req.params.id,
+            descripcion: `Correo ID ${req.params.id} eliminado de la cola de envíos`
+        });
+
         res.json({ success: true, message: 'Correo eliminado de la cola.' });
     } catch (err) {
         res.status(500).json({ error: err.message });
@@ -236,6 +268,15 @@ router.post('/cola/limpiar', async (req, res) => {
     try {
         const dias = parseInt(req.body.dias) || 15;
         const eliminados = await mailer.limpiarCola(dias);
+
+        auditoria.registrarAuditoria({
+            req,
+            modulo: 'Centro de Correos',
+            accion: 'Limpiar Cola de Correos',
+            nivel: 'info',
+            descripcion: `Limpieza de cola: ${eliminados} correos antiguos de más de ${dias} días eliminados`
+        });
+
         res.json({ success: true, eliminados, message: `Se limpiaron ${eliminados} correos antiguos de más de ${dias} días.` });
     } catch (err) {
         res.status(500).json({ error: err.message });
@@ -281,6 +322,18 @@ router.put('/plantillas/:clave', (req, res) => {
     db.run(sql, [asunto, saludo_tipo || '', cuerpo_html, pie_tipo || '', req.params.clave], function(err) {
         if (err) return res.status(500).json({ error: err.message });
         if (this.changes === 0) return res.status(404).json({ error: 'Plantilla no encontrada.' });
+
+        auditoria.registrarAuditoria({
+            req,
+            modulo: 'Centro de Correos',
+            accion: 'Modificar Plantilla de Correo',
+            nivel: 'info',
+            entidad: 'plantillas_correo',
+            entidad_id: req.params.clave,
+            descripcion: `Plantilla de correo modificada: "${req.params.clave}" (Asunto: ${asunto})`,
+            detalles: { clave: req.params.clave, asunto, saludo_tipo, pie_tipo }
+        });
+
         res.json({ success: true, message: 'Plantilla actualizada exitosamente.' });
     });
 });
@@ -298,6 +351,17 @@ router.post('/plantillas/:clave/restaurar', async (req, res) => {
 
     db.run(sql, [def.asunto, def.saludo_tipo, def.cuerpo_html, def.pie_tipo, def.variables_disponibles, clave], function(err) {
         if (err) return res.status(500).json({ error: err.message });
+
+        auditoria.registrarAuditoria({
+            req,
+            modulo: 'Centro de Correos',
+            accion: 'Restaurar Plantilla de Correo',
+            nivel: 'warning',
+            entidad: 'plantillas_correo',
+            entidad_id: clave,
+            descripcion: `Plantilla de correo restaurada a valores de fábrica: "${clave}"`
+        });
+
         res.json({ success: true, plantilla: def, message: 'Plantilla restaurada a los valores predeterminados de fábrica.' });
     });
 });

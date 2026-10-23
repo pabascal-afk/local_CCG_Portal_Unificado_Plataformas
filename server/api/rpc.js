@@ -3,6 +3,7 @@ const router = express.Router();
 const sqlite3 = require('sqlite3').verbose();
 const nodemailer = require('nodemailer');
 const mailer = require('../services/mailer');
+const auditoria = require('../services/auditoria');
 const path = require('path');
 const transporter = mailer.crearTransporter();
 const dbPath = path.join(__dirname, '../db/colegio.db');
@@ -469,6 +470,19 @@ router.post('/:functionName', async (req, res) => {
                     [resId, nuevoId, datos.fecha, "1,2", datos.recurso, datos.curso, `Prueba de ${datos.asignatura}`, user.email]
                 );
             }
+
+            auditoria.registrarAuditoria({
+                req,
+                usuario: user,
+                modulo: 'Evaluaciones',
+                accion: 'Agendar Evaluación',
+                nivel: 'info',
+                entidad: 'evaluaciones',
+                entidad_id: nuevoId,
+                descripcion: `Evaluación agendada: ${datos.tipo} de ${datos.asignatura} para el curso ${datos.curso} (${datos.fecha})${profeNombre ? ` - Docente: ${profeNombre}` : ''}`,
+                detalles: { id: nuevoId, fecha: datos.fecha, curso: datos.curso, asignatura: datos.asignatura, tipo: datos.tipo, recurso: datos.recurso, profesor: profeNombre, temario: datos.temario }
+            });
+
             return res.json({ result: "Evaluación agendada exitosamente." });
         }
 
@@ -619,14 +633,29 @@ router.post('/:functionName', async (req, res) => {
                     [nId, datos.fecha, c, datos.asignatura, datos.tipo, datos.recurso, profeEmail, profeNombre, datos.detalles || '', datos.temario || datos.detalles || '']
                 );
             }
+
+            auditoria.registrarAuditoria({
+                req,
+                usuario: user,
+                modulo: 'Evaluaciones',
+                accion: 'Editar Evaluación',
+                nivel: 'info',
+                entidad: 'evaluaciones',
+                entidad_id: idEditar || oldEval.id,
+                descripcion: `Evaluación modificada: ${datos.tipo} de ${datos.asignatura} en ${datos.curso} (${datos.fecha})`,
+                detalles: { id: idEditar || oldEval.id, anterior: oldEval, nuevo: datos }
+            });
+
             return res.json({ result: "Evaluación editada exitosamente." });
         }
 
         if (functionName === 'eliminarEvaluacion' || functionName === 'eliminarEvaluacionBackend') {
              const { id, fechaStr } = args[0];
              const oldRows = await queryAll("SELECT * FROM evaluaciones WHERE id = ?", [id]);
+             let infoEval = null;
              if (oldRows.length > 0) {
                  const oldEval = oldRows[0];
+                 infoEval = oldEval;
                  const isElective = oldEval.asignatura.toUpperCase().includes('(ELECTIVO');
                  if (isElective) {
                      await run("DELETE FROM evaluaciones WHERE fecha = ? AND asignatura = ? AND tipo = ?", [oldEval.fecha, oldEval.asignatura, oldEval.tipo]);
@@ -637,6 +666,21 @@ router.post('/:functionName', async (req, res) => {
                  await run("DELETE FROM evaluaciones WHERE id = ?", [id]);
              }
              await run("DELETE FROM reservas WHERE id_evaluacion = ?", [id]); // This might leave orphaned resource bookings for electives, but it's fine for now or we ignore it
+
+             auditoria.registrarAuditoria({
+                 req,
+                 usuario: user,
+                 modulo: 'Evaluaciones',
+                 accion: 'Eliminar Evaluación',
+                 nivel: 'warning',
+                 entidad: 'evaluaciones',
+                 entidad_id: id,
+                 descripcion: infoEval 
+                     ? `Evaluación eliminada: ${infoEval.tipo} de ${infoEval.asignatura} en ${infoEval.curso} (${infoEval.fecha})`
+                     : `Evaluación eliminada (ID: ${id})`,
+                 detalles: { id, evaluacion: infoEval }
+             });
+
              return res.json({ result: "Evaluación eliminada correctamente." });
         }
 
@@ -749,12 +793,36 @@ router.post('/:functionName', async (req, res) => {
                }
                }
 
+               auditoria.registrarAuditoria({
+                   req,
+                   usuario: user,
+                   modulo: 'Calendario',
+                   accion: datos.idEditar ? 'Modificar Evento' : 'Crear Evento Institucional',
+                   nivel: datos.bloquea ? 'warning' : 'info',
+                   entidad: 'eventos',
+                   entidad_id: datos.idEditar ? String(datos.idEditar) : null,
+                   descripcion: `Evento de calendario ${datos.idEditar ? 'modificado' : 'creado'}: "${datos.texto}" (${fecha}) - Categoría: ${datos.tipo}${datos.bloquea ? ' [BLOQUEO ACTIVO]' : ''}`,
+                   detalles: { id: datos.idEditar, fecha, titulo: datos.texto, categoria: datos.tipo, bloquea: !!datos.bloquea, cursos: datos.cursos, recurso: datos.recurso }
+               });
+
                return res.json({ result: datos.idEditar ? "Evento editado exitosamente." : "Evento guardado exitosamente." });
         }
         
         if (functionName === 'borrarEvento') {
              const id = args[0];
              await run("DELETE FROM eventos WHERE id = ?", [id]);
+
+             auditoria.registrarAuditoria({
+                 req,
+                 usuario: user,
+                 modulo: 'Calendario',
+                 accion: 'Eliminar Evento Institucional',
+                 nivel: 'warning',
+                 entidad: 'eventos',
+                 entidad_id: String(id),
+                 descripcion: `Evento institucional eliminado del calendario (ID: ${id})`
+             });
+
              return res.json({ result: "Evento eliminado." });
         }
 
@@ -790,6 +858,14 @@ router.post('/:functionName', async (req, res) => {
              const colDb = colMap[columna];
              if (colDb) {
                  await run(`UPDATE horarios SET ${colDb} = ? WHERE ${colDb} = ?`, [nuevoValor, valorActual]);
+                 auditoria.registrarAuditoria({
+                     req,
+                     usuario: user,
+                     modulo: 'Horarios',
+                     accion: 'Actualización Masiva',
+                     nivel: 'info',
+                     descripcion: `Actualización masiva en horarios [${columna}]: "${valorActual}" -> "${nuevoValor}"`
+                 });
              }
              return res.json({ result: "Actualizado masivamente" });
         }
@@ -805,6 +881,14 @@ router.post('/:functionName', async (req, res) => {
              const colDb = colMap[columna];
              if (colDb) {
                  await run(`UPDATE horarios SET ${colDb} = ? WHERE curso = ? AND dia = ? AND bloque = ?`, [nuevoValor, curso, dia, bloque]);
+                 auditoria.registrarAuditoria({
+                     req,
+                     usuario: user,
+                     modulo: 'Horarios',
+                     accion: 'Actualización Registro Único',
+                     nivel: 'info',
+                     descripcion: `Modificación en horario de ${curso} (${dia}, Bloque ${bloque}): ${columna} cambiado a "${nuevoValor}"`
+                 });
              }
              return res.json({ result: "Actualizado registro único" });
         }

@@ -250,6 +250,15 @@ db.serialize(() => {
         console.error("Error al sembrar plantillas de correo:", e.message);
     }
 
+    try {
+        const auditoria = require('../services/auditoria');
+        auditoria.inicializarTablaAuditoria(() => {
+            console.log("Tabla e índices de auditoría inicializados correctamente.");
+        });
+    } catch(e) {
+        console.error("Error al inicializar tabla de auditoría:", e.message);
+    }
+
     console.log("Base de datos colegio.db inicializada correctamente con el esquema final.");
 });
 

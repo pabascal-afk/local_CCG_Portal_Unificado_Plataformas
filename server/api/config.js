@@ -1,7 +1,8 @@
-﻿const express = require('express');
+const express = require('express');
 const router = express.Router();
 const sqlite3 = require('sqlite3').verbose();
 const path = require('path');
+const auditoria = require('../services/auditoria');
 const dbPath = path.join(__dirname, '../db/colegio.db');
 
 const queryAll = (query, params = []) => new Promise((resolve, reject) => {
@@ -34,9 +35,17 @@ router.get('/emails', async (req, res) => {
 
 router.post('/emails', async (req, res) => {
     try {
-        // Only admins should do this (in real app add role check)
         const { activados } = req.body;
         await run("UPDATE config_global SET valor = ? WHERE clave = 'emails_activados'", [activados ? 'true' : 'false']);
+
+        auditoria.registrarAuditoria({
+            req,
+            modulo: 'Centro de Correos',
+            accion: activados ? 'Activar Envíos de Correo' : 'Pausar Envíos de Correo',
+            nivel: activados ? 'info' : 'warning',
+            descripcion: `Sistema global de correos fue ${activados ? 'activado' : 'pausado'} por el administrador`
+        });
+
         res.json({ message: "Configuración actualizada" });
     } catch (e) {
         res.status(500).json({ error: e.message });
@@ -78,6 +87,17 @@ router.post('/tipos-evaluacion', async (req, res) => {
         let nextOrden = 0;
         if (maxOrdenRow.length > 0 && maxOrdenRow[0].maxO !== null) nextOrden = maxOrdenRow[0].maxO + 1;
         const id = await run("INSERT INTO config_tipos_evaluacion (nombre, es_prueba, orden) VALUES (?, ?, ?)", [nombre, es_prueba ? 1 : 0, nextOrden]);
+
+        auditoria.registrarAuditoria({
+            req,
+            modulo: 'Evaluaciones',
+            accion: 'Crear Tipo de Evaluación',
+            nivel: 'info',
+            entidad: 'config_tipos_evaluacion',
+            entidad_id: String(id),
+            descripcion: `Nuevo tipo de evaluación configurado: "${nombre}" (Cuenta como prueba: ${es_prueba ? 'Sí' : 'No'})`
+        });
+
         res.json({ id, message: "Tipo agregado" });
     } catch (e) {
         res.status(500).json({ error: e.message });
@@ -87,6 +107,17 @@ router.post('/tipos-evaluacion', async (req, res) => {
 router.delete('/tipos-evaluacion/:id', async (req, res) => {
     try {
         await run("DELETE FROM config_tipos_evaluacion WHERE id = ?", [req.params.id]);
+
+        auditoria.registrarAuditoria({
+            req,
+            modulo: 'Evaluaciones',
+            accion: 'Eliminar Tipo de Evaluación',
+            nivel: 'warning',
+            entidad: 'config_tipos_evaluacion',
+            entidad_id: String(req.params.id),
+            descripcion: `Tipo de evaluación eliminado (ID: ${req.params.id})`
+        });
+
         res.json({ message: "Tipo eliminado" });
     } catch (e) {
         res.status(500).json({ error: e.message });
@@ -97,6 +128,17 @@ router.put('/tipos-evaluacion/:id', async (req, res) => {
     try {
         const { nombre, es_prueba } = req.body;
         await run("UPDATE config_tipos_evaluacion SET nombre = ?, es_prueba = ? WHERE id = ?", [nombre, es_prueba ? 1 : 0, req.params.id]);
+
+        auditoria.registrarAuditoria({
+            req,
+            modulo: 'Evaluaciones',
+            accion: 'Modificar Tipo de Evaluación',
+            nivel: 'info',
+            entidad: 'config_tipos_evaluacion',
+            entidad_id: String(req.params.id),
+            descripcion: `Tipo de evaluación modificado: "${nombre}" (Cuenta como prueba: ${es_prueba ? 'Sí' : 'No'})`
+        });
+
         res.json({ message: "Tipo actualizado" });
     } catch (e) {
         res.status(500).json({ error: e.message });

@@ -42,6 +42,7 @@ db.serialize(() => {
 const queryGet = (query, params = []) => new Promise((res, rej) => db.get(query, params, (err, row) => { if (err) rej(err); else res(row); }));
 
 const mailer = require('../services/mailer');
+const auditoria = require('../services/auditoria');
 const transporter = mailer.crearTransporter();
 
 // --- MATERIALES CRUD ---
@@ -111,6 +112,17 @@ router.post('/solicitar', async (req, res) => {
             await run("UPDATE actividades SET estado = 'Aprobada' WHERE id = ?", [actividad_id]);
         }
         
+        auditoria.registrarAuditoria({
+            req,
+            modulo: 'Actividades',
+            accion: 'Solicitar Actividad',
+            nivel: 'info',
+            entidad: 'actividades',
+            entidad_id: actividad_id,
+            descripcion: `Solicitud de actividad creada: "${titulo}" para el ${fecha} (Bloques: ${bloques})`,
+            detalles: { id: actividad_id, titulo, fecha, bloques, solicitante }
+        });
+
         res.json({message: "Solicitud de actividad enviada correctamente."});
     } catch(e) {
         res.status(500).json({error: e.message});
@@ -159,6 +171,17 @@ router.get('/aprobar', async (req, res) => {
             }
         }
         
+        auditoria.registrarAuditoria({
+            usuario: { email: requerimiento.responsable_email },
+            modulo: 'Actividades',
+            accion: action === 'approve' ? 'Autorizar Requerimiento' : 'Rechazar Requerimiento',
+            nivel: action === 'approve' ? 'success' : 'warning',
+            entidad: 'actividades_req',
+            entidad_id: requerimiento.id,
+            descripcion: `Requerimiento de actividad ${requerimiento.actividad_id} fue ${nuevoEstado.toLowerCase()} por ${requerimiento.responsable_email}`,
+            detalles: { requerimiento_id: requerimiento.id, nuevoEstado, estadoActividad: actEstado }
+        });
+
         res.send(`
             <div style="text-align: center; font-family: sans-serif; padding: 50px;">
                 <h1 style="color: ${action === 'approve' ? 'green' : 'red'};">${action === 'approve' ? 'Aprobado' : 'Rechazado'}</h1>
@@ -210,6 +233,17 @@ router.delete('/:id', async (req, res) => {
         const id = req.params.id;
         await run('DELETE FROM actividades_req WHERE actividad_id = ?', [id]);
         await run('DELETE FROM actividades WHERE id = ?', [id]);
+
+        auditoria.registrarAuditoria({
+            req,
+            modulo: 'Actividades',
+            accion: 'Eliminar Actividad',
+            nivel: 'warning',
+            entidad: 'actividades',
+            entidad_id: id,
+            descripcion: `Actividad institucional eliminada (ID: ${id})`
+        });
+
         res.json({success: true});
     } catch(e) {
         console.error(e);

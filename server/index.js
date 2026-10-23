@@ -7,6 +7,7 @@ const sqlite3 = require('sqlite3').verbose();
 const path = require('path');
 const nodemailer = require('nodemailer');
 const mailer = require('./services/mailer');
+const auditoria = require('./services/auditoria');
 const transporter = mailer.crearTransporter();
 
 async function enviarCorreoConfirmacion(reserva, profesorEmail) {
@@ -84,6 +85,7 @@ db.serialize(() => {
     valor TEXT
   )`, () => {});
   mailer.inicializarTablasCorreo();
+  auditoria.inicializarTablaAuditoria();
 });
 
 app.use(cors());
@@ -325,10 +327,28 @@ app.post('/api/auth/cambiar-rol', (req, res) => {
   req.session.rolActivo = nuevoRol;
   req.user.rol = nuevoRol;
 
+  auditoria.registrarAuditoria({
+      req,
+      modulo: 'Seguridad',
+      accion: 'Cambio de Modo Activo',
+      nivel: 'info',
+      descripcion: `Usuario alternó su vista activa a "${nuevoRol}"`,
+      detalles: { rolAnterior: rolOrig, nuevoRol }
+  });
+
   res.json({ success: true, rolActivo: nuevoRol });
 });
 
 app.get('/api/auth/logout', (req, res) => {
+  if (req.user) {
+    auditoria.registrarAuditoria({
+        req,
+        modulo: 'Seguridad',
+        accion: 'Cierre de Sesión',
+        nivel: 'info',
+        descripcion: `Cierre de sesión de ${req.user.nombre || req.user.email}`
+    });
+  }
   req.logout(() => {
     res.redirect('/login.html');
   });
@@ -355,11 +375,27 @@ app.post('/api/auth/local', (req, res) => {
         }
         
         if (row.pin !== pin) {
+            auditoria.registrarAuditoria({
+                req,
+                usuario: { email: email.toLowerCase(), nombre: row.nombre, rol: row.rol },
+                modulo: 'Seguridad',
+                accion: 'Fallo de Autenticación PIN',
+                nivel: 'warning',
+                descripcion: `Intento de acceso local fallido con PIN incorrecto para ${email}`
+            });
             return res.status(401).json({ error: 'PIN local incorrecto.' });
         }
         
         req.login(row, (err) => {
             if (err) return res.status(500).json({ error: 'Error interno de sesión.' });
+            auditoria.registrarAuditoria({
+                req,
+                usuario: row,
+                modulo: 'Seguridad',
+                accion: 'Inicio de Sesión PIN',
+                nivel: 'info',
+                descripcion: `Inicio de sesión exitoso por PIN local de emergencia (${row.nombre} - ${row.email})`
+            });
             return res.json({ success: true, redirect: '/' });
         });
     });
@@ -441,13 +477,33 @@ app.post('/api/usuarios', (req, res) => {
   const { email, nombre, rol } = req.body;
   db.run("INSERT INTO usuarios (email, nombre, rol) VALUES (?, ?, ?) ON CONFLICT(email) DO UPDATE SET nombre=excluded.nombre, rol=excluded.rol", [email, nombre, rol], function(err) {
     if (err) return res.status(500).json({error: err.message});
+    auditoria.registrarAuditoria({
+      req,
+      modulo: 'Usuarios',
+      accion: 'Guardar Usuario',
+      nivel: 'info',
+      entidad: 'usuarios',
+      entidad_id: email,
+      descripcion: `Docente/usuario guardado: "${nombre}" (${email}) con rol [${rol}]`,
+      detalles: { email, nombre, rol }
+    });
     res.json({ message: 'Usuario guardado' });
   });
 });
 
 app.delete('/api/usuarios/:email', (req, res) => {
-  db.run("DELETE FROM usuarios WHERE email = ?", [req.params.email], function(err) {
+  const emailEliminar = req.params.email;
+  db.run("DELETE FROM usuarios WHERE email = ?", [emailEliminar], function(err) {
     if (err) return res.status(500).json({error: err.message});
+    auditoria.registrarAuditoria({
+      req,
+      modulo: 'Usuarios',
+      accion: 'Eliminar Usuario',
+      nivel: 'warning',
+      entidad: 'usuarios',
+      entidad_id: emailEliminar,
+      descripcion: `Usuario eliminado del sistema: ${emailEliminar}`
+    });
     res.json({ message: 'Usuario eliminado' });
   });
 });
@@ -472,7 +528,18 @@ app.post('/api/recursos/config', (req, res) => {
   db.run("INSERT INTO recursos_config (nombre, responsable, duracion_bloque, horario_inicio, horario_fin, disponibilidad) VALUES (?, ?, ?, ?, ?, ?)",
     [nombre, responsable, duracion_bloque || 45, horario_inicio || '08:00', horario_fin || '18:00', dispStr], function(err) {
     if (err) return res.status(500).json({error: err.message});
-    res.json({ message: 'Recurso creado', id: this.lastID });
+    const nuevoId = this.lastID;
+    auditoria.registrarAuditoria({
+      req,
+      modulo: 'Recursos',
+      accion: 'Crear Recurso',
+      nivel: 'info',
+      entidad: 'recursos_config',
+      entidad_id: String(nuevoId),
+      descripcion: `Nuevo recurso físico creado: "${nombre}" (Encargado: ${responsable})`,
+      detalles: { id: nuevoId, nombre, responsable, duracion_bloque }
+    });
+    res.json({ message: 'Recurso creado', id: nuevoId });
   });
 });
 
@@ -485,6 +552,16 @@ app.put('/api/recursos/config/:id', (req, res) => {
   db.run("UPDATE recursos_config SET disponibilidad = COALESCE(?, disponibilidad), bloques_agrupados = COALESCE(?, bloques_agrupados), horarios_exactos = ?, bloqueos_fechas = COALESCE(?, bloqueos_fechas), reglas_reserva = COALESCE(?, reglas_reserva) WHERE id = ?", 
       [disponibilidad ? JSON.stringify(disponibilidad) : null, bloques_agrupados ? JSON.stringify(bloques_agrupados) : null, horarios_exactos !== undefined ? horarios_exactos : null, bloqueos_fechas ? JSON.stringify(bloqueos_fechas) : null, reglas_reserva ? JSON.stringify(reglas_reserva) : null, req.params.id], function(err) {
     if (err) return res.status(500).json({error: err.message});
+    auditoria.registrarAuditoria({
+      req,
+      modulo: 'Recursos',
+      accion: 'Modificar Configuración Recurso',
+      nivel: 'info',
+      entidad: 'recursos_config',
+      entidad_id: String(req.params.id),
+      descripcion: `Parámetros y reglas de reserva modificados para recurso ID ${req.params.id}`,
+      detalles: { id: req.params.id, reglas_reserva }
+    });
     res.json({ message: 'Configuración actualizada' });
   });
 });
@@ -496,6 +573,15 @@ app.delete('/api/recursos/config/:id', (req, res) => {
 
   db.run("DELETE FROM recursos_config WHERE id = ?", [req.params.id], function(err) {
     if (err) return res.status(500).json({error: err.message});
+    auditoria.registrarAuditoria({
+      req,
+      modulo: 'Recursos',
+      accion: 'Eliminar Recurso',
+      nivel: 'warning',
+      entidad: 'recursos_config',
+      entidad_id: String(req.params.id),
+      descripcion: `Recurso físico eliminado del sistema (ID: ${req.params.id})`
+    });
     res.json({ message: 'Recurso eliminado correctamente' });
   });
 });
@@ -673,6 +759,17 @@ app.get('/api/reservas/aprobar', (req, res) => {
             db.run("UPDATE reservas SET estado = ? WHERE id = ?", [nuevoEstado, reserva.id], (errUpd) => {
                 if (errUpd) return res.status(500).send("Error del servidor: " + errUpd.message);
 
+                auditoria.registrarAuditoria({
+                    usuario: { email: reserva.profesor_email },
+                    modulo: 'Recursos',
+                    accion: action === 'approve' ? 'Aprobar Petición Especial' : 'Rechazar Petición Especial',
+                    nivel: action === 'approve' ? 'success' : 'warning',
+                    entidad: 'reservas',
+                    entidad_id: reserva.id,
+                    descripcion: `Petición especial para recurso "${reserva.recurso}" (${reserva.fecha}) fue ${nuevoEstado.toLowerCase()}`,
+                    detalles: { reserva_id: reserva.id, recurso: reserva.recurso, fecha: reserva.fecha, estado: nuevoEstado }
+                });
+
                 if (reserva.profesor_email) {
                     const colorEstado = (action === 'approve') ? '#28a745' : '#dc3545';
                     db.get("SELECT nombre FROM usuarios WHERE email = ?", [reserva.profesor_email], (errU, u) => {
@@ -760,13 +857,26 @@ app.post('/api/reservas', async (req, res) => {
                 const estado = validacion.esPeticionEspecial ? 'Pendiente' : 'Aprobada';
                 const token = validacion.esPeticionEspecial ? Math.random().toString(36).substr(2, 15) : null;
 
-                db.run("INSERT INTO reservas (id, fecha, bloques, recurso, motivo, profesor_email, estado, token_aprobacion) VALUES (?, ?, ?, ?, ?, ?, ?, ?)", 
+                  db.run("INSERT INTO reservas (id, fecha, bloques, recurso, motivo, profesor_email, estado, token_aprobacion) VALUES (?, ?, ?, ?, ?, ?, ?, ?)", 
                   [id, fecha, bloques.join(','), recurso, motivo, profesor_email, estado, token], function(err) {
                   if (err) return res.status(500).json({error: err.message});
                   
                   if (validacion.esPeticionEspecial) {
                       enviarCorreoPeticionEspecial({ fecha, recurso, bloques: bloques.join(','), motivo, profesor_email }, validacion.recurso, token);
                   }
+
+                  auditoria.registrarAuditoria({
+                      req,
+                      modulo: 'Recursos',
+                      accion: validacion.esPeticionEspecial ? 'Solicitud Petición Especial' : 'Crear Reserva',
+                      nivel: validacion.esPeticionEspecial ? 'warning' : 'info',
+                      entidad: 'reservas',
+                      entidad_id: id,
+                      descripcion: validacion.esPeticionEspecial
+                          ? `Petición especial enviada para "${recurso}" el ${fecha} (Bloques: ${bloques.join(',')})`
+                          : `Reserva agendada en "${recurso}" para el ${fecha} (Bloques: ${bloques.join(',')})`,
+                      detalles: { id, recurso, fecha, bloques, motivo, estado }
+                  });
 
                   res.json({ 
                       message: validacion.esPeticionEspecial 
@@ -848,6 +958,18 @@ app.put('/api/reservas/:id', async (req, res) => {
                     db.run("UPDATE reservas SET fecha = ?, bloques = ?, recurso = ?, motivo = ?, estado = ?, token_aprobacion = ? WHERE id = ?",
                         [fecha, bloques.join(','), recurso, motivo, nuevoEstado, token, req.params.id], function(errUpd) {
                         if (errUpd) return res.status(500).json({ error: errUpd.message });
+
+                        auditoria.registrarAuditoria({
+                            req,
+                            modulo: 'Recursos',
+                            accion: 'Modificar Reserva',
+                            nivel: 'info',
+                            entidad: 'reservas',
+                            entidad_id: req.params.id,
+                            descripcion: `Reserva ID ${req.params.id} actualizada para "${recurso}" el ${fecha} (Bloques: ${bloques.join(',')})`,
+                            detalles: { id: req.params.id, anterior: currentRes, nuevo: { fecha, recurso, bloques, motivo, estado: nuevoEstado } }
+                        });
+
                         res.json({ 
                             message: validacion.esPeticionEspecial 
                                 ? 'Reserva actualizada como petición especial (sujeta a confirmación).' 
@@ -885,6 +1007,17 @@ app.delete('/api/reservas/:id', (req, res) => {
     db.run("UPDATE reservas SET estado = 'Cancelada' WHERE id = ?", [req.params.id], function(err2) {
       if (err2) return res.status(500).json({error: err2.message});
       
+      auditoria.registrarAuditoria({
+          req,
+          modulo: 'Recursos',
+          accion: 'Cancelar Reserva',
+          nivel: 'warning',
+          entidad: 'reservas',
+          entidad_id: req.params.id,
+          descripcion: `Reserva cancelada para "${reserva.recurso}" el ${reserva.fecha} (${reserva.profesor_email})`,
+          detalles: { reserva }
+      });
+
       if (diffDays <= 3) {
           db.get("SELECT responsable FROM recursos_config WHERE nombre = ?", [reserva.recurso], (err3, conf) => {
               const adminEmail = (conf && conf.responsable) ? conf.responsable : (process.env.SMTP_USER || 'admin@colegio.edu');
@@ -1003,7 +1136,18 @@ app.post('/api/avisos', (req, res) => {
     const autor = req.isAuthenticated() ? (req.user.nombre || req.user.email) : 'Administración';
     db.run("INSERT INTO avisos_muro (titulo, mensaje, autor, importancia) VALUES (?, ?, ?, ?)", [titulo, mensaje, autor, importancia || 'Normal'], function(err) {
         if (err) return res.status(500).json({error: err.message});
-        res.json({ message: 'Aviso publicado exitosamente', id: this.lastID });
+        const nuevoId = this.lastID;
+        auditoria.registrarAuditoria({
+            req,
+            modulo: 'Tablón de Avisos',
+            accion: 'Publicar Aviso',
+            nivel: (importancia === 'Alta') ? 'warning' : 'info',
+            entidad: 'avisos_muro',
+            entidad_id: String(nuevoId),
+            descripcion: `Aviso publicado: "${titulo}" (Prioridad: ${importancia || 'Normal'})`,
+            detalles: { id: nuevoId, titulo, importancia }
+        });
+        res.json({ message: 'Aviso publicado exitosamente', id: nuevoId });
     });
 });
 
@@ -1016,6 +1160,15 @@ app.delete('/api/avisos/:id', (req, res) => {
     }
     db.run("DELETE FROM avisos_muro WHERE id = ?", [req.params.id], function(err) {
         if (err) return res.status(500).json({error: err.message});
+        auditoria.registrarAuditoria({
+            req,
+            modulo: 'Tablón de Avisos',
+            accion: 'Eliminar Aviso',
+            nivel: 'warning',
+            entidad: 'avisos_muro',
+            entidad_id: String(req.params.id),
+            descripcion: `Aviso eliminado del tablón general (ID: ${req.params.id})`
+        });
         res.json({ message: 'Aviso borrado' });
     });
 });
@@ -1079,6 +1232,9 @@ app.use('/api/libro', libroRouter);
 const correosRouter = require('./api/correos');
 app.use('/api/correos', correosRouter);
 
+const auditoriaRouter = require('./api/auditoria');
+app.use('/api/auditoria', auditoriaRouter);
+
 
 // --- Roles Config ---
 app.get('/api/roles', (req, res) => {
@@ -1092,7 +1248,18 @@ app.post('/api/roles', (req, res) => {
     const { nombre, permisos } = req.body;
     db.run("INSERT INTO roles_config (nombre, permisos) VALUES (?, ?)", [nombre, JSON.stringify(permisos)], function(err) {
         if (err) return res.status(500).json({error: err.message});
-        res.json({ message: 'Rol creado', id: this.lastID });
+        const nuevoId = this.lastID;
+        auditoria.registrarAuditoria({
+            req,
+            modulo: 'Seguridad',
+            accion: 'Crear Rol de Usuario',
+            nivel: 'info',
+            entidad: 'roles_config',
+            entidad_id: String(nuevoId),
+            descripcion: `Nuevo perfil de permisos creado: "${nombre}"`,
+            detalles: { id: nuevoId, nombre, permisos }
+        });
+        res.json({ message: 'Rol creado', id: nuevoId });
     });
 });
 
@@ -1100,6 +1267,16 @@ app.put('/api/roles/:id', (req, res) => {
     const { nombre, permisos } = req.body;
     db.run("UPDATE roles_config SET nombre = ?, permisos = ? WHERE id = ?", [nombre, JSON.stringify(permisos), req.params.id], function(err) {
         if (err) return res.status(500).json({error: err.message});
+        auditoria.registrarAuditoria({
+            req,
+            modulo: 'Seguridad',
+            accion: 'Modificar Permisos de Rol',
+            nivel: 'info',
+            entidad: 'roles_config',
+            entidad_id: String(req.params.id),
+            descripcion: `Permisos del rol "${nombre}" (ID: ${req.params.id}) modificados`,
+            detalles: { id: req.params.id, nombre, permisos }
+        });
         res.json({ message: 'Rol actualizado' });
     });
 });
@@ -1107,6 +1284,15 @@ app.put('/api/roles/:id', (req, res) => {
 app.delete('/api/roles/:id', (req, res) => {
     db.run("DELETE FROM roles_config WHERE id = ?", [req.params.id], function(err) {
         if (err) return res.status(500).json({error: err.message});
+        auditoria.registrarAuditoria({
+            req,
+            modulo: 'Seguridad',
+            accion: 'Eliminar Rol de Usuario',
+            nivel: 'warning',
+            entidad: 'roles_config',
+            entidad_id: String(req.params.id),
+            descripcion: `Rol de usuario eliminado (ID: ${req.params.id})`
+        });
         res.json({ message: 'Rol eliminado' });
     });
 });
