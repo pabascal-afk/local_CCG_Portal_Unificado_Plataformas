@@ -210,7 +210,101 @@ const schemas = [
     activo INTEGER DEFAULT 1,
     actualizado_en DATETIME DEFAULT CURRENT_TIMESTAMP
   )`,
-  `CREATE INDEX IF NOT EXISTS idx_plantillas_clave ON plantillas_correo(clave)`
+  `CREATE INDEX IF NOT EXISTS idx_plantillas_clave ON plantillas_correo(clave)`,
+
+  `CREATE TABLE IF NOT EXISTS curriculo_planes (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    anio INTEGER NOT NULL,
+    tipo TEXT NOT NULL DEFAULT 'MINEDUC',
+    nivel TEXT NOT NULL,
+    asignatura TEXT NOT NULL,
+    descripcion TEXT,
+    activo INTEGER DEFAULT 1,
+    actualizado_en DATETIME DEFAULT CURRENT_TIMESTAMP,
+    UNIQUE(anio, nivel, asignatura, tipo)
+  )`,
+  `CREATE INDEX IF NOT EXISTS idx_curr_nivel_asig ON curriculo_planes(anio, nivel, asignatura)`,
+  `CREATE TABLE IF NOT EXISTS curriculo_objetivos (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    plan_id INTEGER NOT NULL,
+    tipo_objetivo TEXT DEFAULT 'OA',
+    eje_unidad TEXT,
+    codigo TEXT NOT NULL,
+    descripcion TEXT NOT NULL,
+    indicadores_sugeridos TEXT,
+    categoria TEXT DEFAULT 'Basal',
+    orden INTEGER DEFAULT 0,
+    activo INTEGER DEFAULT 1,
+    FOREIGN KEY (plan_id) REFERENCES curriculo_planes(id) ON DELETE CASCADE
+  )`,
+  `CREATE INDEX IF NOT EXISTS idx_curr_obj_plan ON curriculo_objetivos(plan_id, codigo)`,
+  `CREATE TABLE IF NOT EXISTS planificaciones (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    anio INTEGER NOT NULL,
+    curso TEXT NOT NULL,
+    asignatura TEXT NOT NULL,
+    plan_curricular_id INTEGER,
+    titulo TEXT NOT NULL,
+    docente_responsable TEXT,
+    docentes_colaboradores TEXT DEFAULT '[]',
+    estado TEXT DEFAULT 'En edición',
+    visado_por TEXT,
+    visado_fecha DATETIME,
+    visado_comentario TEXT,
+    metas_anuales TEXT,
+    horas_anuales INTEGER DEFAULT 0,
+    creado_por TEXT,
+    creado_en DATETIME DEFAULT CURRENT_TIMESTAMP,
+    actualizado_en DATETIME DEFAULT CURRENT_TIMESTAMP,
+    UNIQUE(anio, curso, asignatura)
+  )`,
+  `CREATE INDEX IF NOT EXISTS idx_plan_curso_asig ON planificaciones(anio, curso, asignatura)`,
+  `CREATE TABLE IF NOT EXISTS planificaciones_unidades (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    planificacion_id INTEGER NOT NULL,
+    numero_unidad INTEGER NOT NULL,
+    nombre_unidad TEXT NOT NULL,
+    semestre INTEGER DEFAULT 1,
+    fecha_inicio TEXT,
+    fecha_fin TEXT,
+    horas_estimadas INTEGER DEFAULT 0,
+    oas_seleccionados TEXT DEFAULT '[]',
+    oats_seleccionados TEXT DEFAULT '[]',
+    habilidades TEXT,
+    actitudes TEXT,
+    indicadores_evaluacion TEXT,
+    instrumentos_evaluacion TEXT,
+    desglose_semanal TEXT DEFAULT '[]',
+    orden INTEGER DEFAULT 0,
+    FOREIGN KEY (planificacion_id) REFERENCES planificaciones(id) ON DELETE CASCADE
+  )`,
+  `CREATE INDEX IF NOT EXISTS idx_plan_unid ON planificaciones_unidades(planificacion_id, numero_unidad)`,
+  `CREATE TABLE IF NOT EXISTS planificaciones_versiones (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    planificacion_id INTEGER NOT NULL,
+    version_numero TEXT NOT NULL,
+    mensaje TEXT NOT NULL,
+    autor_email TEXT NOT NULL,
+    autor_nombre TEXT NOT NULL,
+    contenido_completo TEXT NOT NULL,
+    tipo_snapshot TEXT DEFAULT 'checkpoint',
+    creado_en DATETIME DEFAULT CURRENT_TIMESTAMP,
+    FOREIGN KEY (planificacion_id) REFERENCES planificaciones(id) ON DELETE CASCADE
+  )`,
+  `CREATE INDEX IF NOT EXISTS idx_plan_vers ON planificaciones_versiones(planificacion_id, creado_en)`,
+  `CREATE TABLE IF NOT EXISTS planificaciones_observaciones (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    planificacion_id INTEGER NOT NULL,
+    seccion TEXT DEFAULT 'general',
+    autor_email TEXT NOT NULL,
+    autor_nombre TEXT NOT NULL,
+    autor_rol TEXT NOT NULL,
+    comentario TEXT NOT NULL,
+    resuelto INTEGER DEFAULT 0,
+    creado_en DATETIME DEFAULT CURRENT_TIMESTAMP,
+    FOREIGN KEY (planificacion_id) REFERENCES planificaciones(id) ON DELETE CASCADE
+  )`,
+  `CREATE INDEX IF NOT EXISTS idx_plan_obs ON planificaciones_observaciones(planificacion_id)`
 ];
 
 db.serialize(() => {
@@ -259,7 +353,15 @@ db.serialize(() => {
         console.error("Error al inicializar tabla de auditoría:", e.message);
     }
 
-    console.log("Base de datos colegio.db inicializada correctamente con el esquema final.");
+    try {
+        const curriculoSeed = require('../services/curriculo_seed');
+        curriculoSeed.inicializarCurriculo(db, () => {
+            console.log("Catálogo curricular MINEDUC inicializado correctamente.");
+            console.log("Base de datos colegio.db inicializada correctamente con el esquema final.");
+            db.close();
+        });
+    } catch(e) {
+        console.error("Error al inicializar currículo:", e.message);
+        db.close();
+    }
 });
-
-db.close();

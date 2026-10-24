@@ -86,6 +86,10 @@ db.serialize(() => {
   )`, () => {});
   mailer.inicializarTablasCorreo();
   auditoria.inicializarTablaAuditoria();
+  try {
+    const curriculoSeed = require('./services/curriculo_seed');
+    curriculoSeed.inicializarCurriculo(db, () => {});
+  } catch(e) {}
 });
 
 app.use(cors());
@@ -1234,6 +1238,9 @@ app.use('/api/correos', correosRouter);
 
 const auditoriaRouter = require('./api/auditoria');
 app.use('/api/auditoria', auditoriaRouter);
+
+const planificacionRouter = require('./api/planificacion');
+app.use('/api/planificacion', planificacionRouter);
 
 
 // --- Roles Config ---

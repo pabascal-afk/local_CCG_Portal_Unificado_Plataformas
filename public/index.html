@@ -44,6 +44,11 @@
           <i class="bi bi-briefcase"></i> Gestión de Actividades
         </a>
       </li>
+      <li class="nav-item">
+        <a href="#" class="nav-link" onclick="loadApp('planificacion', this)" id="nav-planificacion">
+          <i class="bi bi-journal-bookmark"></i> Planificación Curricular
+        </a>
+      </li>
       <li class="nav-item d-none" id="nav-horarios-container">
         <a href="#" class="nav-link" onclick="loadApp('horarios', this)" id="nav-horarios">
           <i class="bi bi-clock-history"></i> Visor de Horarios
@@ -112,7 +117,8 @@
       coordinadores: "/correos.html",
       libro: "/libro.html",
       correos: "/correos.html",
-      auditoria: "/auditoria.html"
+      auditoria: "/auditoria.html",
+      planificacion: "/planificacion.html"
     };
     let contexto = {};
     
@@ -268,6 +274,7 @@
                  <option value="calendario">Calendario Académico</option>
                  <option value="horarios" id="opt-pref-horarios">Visor de Horarios</option>
                  <option value="recursos">Reserva de Recursos</option>
+                 <option value="planificacion">Planificación Curricular</option>
                  <option value="auditoria" id="opt-pref-auditoria" class="d-none">Auditoría y Logs</option>
               </select>
               <small class="text-muted">Esta pestaña se abrirá automáticamente al iniciar sesión.</small>

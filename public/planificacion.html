@@ -1,0 +1,1706 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Planificación Curricular & Cobertura Académica - Colegio Cerro Grande</title>
+  
+  <!-- Bootstrap 5 CSS & Icons -->
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.1/font/bootstrap-icons.css">
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+
+  <style>
+    :root {
+      --primary-color: #0f172a;
+      --accent-color: #2563eb;
+      --bg-color: #f8fafc;
+      --border-color: #e2e8f0;
+      --text-main: #1e293b;
+      --text-muted: #64748b;
+    }
+
+    body {
+      font-family: 'Inter', sans-serif;
+      background-color: var(--bg-color);
+      color: var(--text-main);
+      padding: 24px;
+      margin: 0;
+    }
+
+    .card-custom {
+      background: #ffffff;
+      border: 1px solid var(--border-color);
+      border-radius: 12px;
+      box-shadow: 0 1px 3px rgba(0,0,0,0.03);
+    }
+
+    .nav-tabs .nav-link {
+      font-weight: 600;
+      color: var(--text-muted);
+      border: none;
+      padding: 12px 20px;
+      border-bottom: 2px solid transparent;
+      border-radius: 0;
+    }
+    .nav-tabs .nav-link.active {
+      color: var(--accent-color);
+      border-bottom-color: var(--accent-color);
+      background: transparent;
+    }
+
+    .kpi-card {
+      padding: 16px 20px;
+      border-radius: 12px;
+      background: #ffffff;
+      border: 1px solid var(--border-color);
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      box-shadow: 0 1px 3px rgba(0,0,0,0.02);
+    }
+    .kpi-val {
+      font-size: 1.8rem;
+      font-weight: 700;
+      line-height: 1.1;
+    }
+    .kpi-lbl {
+      font-size: 0.8rem;
+      color: var(--text-muted);
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+      font-weight: 600;
+      margin-top: 4px;
+    }
+
+    .course-card {
+      transition: all 0.2s ease;
+      cursor: pointer;
+      border: 1px solid var(--border-color);
+    }
+    .course-card:hover {
+      transform: translateY(-2px);
+      box-shadow: 0 6px 18px rgba(0,0,0,0.06);
+      border-color: #cbd5e1;
+    }
+
+    .badge-estado-edicion {
+      background-color: #fef3c7;
+      color: #92400e;
+      border: 1px solid #fde68a;
+    }
+    .badge-estado-visada {
+      background-color: #d1fae5;
+      color: #065f46;
+      border: 1px solid #a7f3d0;
+    }
+    .badge-estado-sin {
+      background-color: #f1f5f9;
+      color: #64748b;
+      border: 1px solid #e2e8f0;
+    }
+
+    .badge-oa-basal {
+      background-color: #eff6ff;
+      color: #1d4ed8;
+      border: 1px solid #bfdbfe;
+      font-size: 0.75rem;
+    }
+    .badge-oa-comp {
+      background-color: #f5f3ff;
+      color: #6d28d9;
+      border: 1px solid #ddd6fe;
+      font-size: 0.75rem;
+    }
+
+    /* Línea de tiempo tipo Git */
+    .timeline {
+      position: relative;
+      padding-left: 28px;
+    }
+    .timeline::before {
+      content: '';
+      position: absolute;
+      left: 10px;
+      top: 5px;
+      bottom: 5px;
+      width: 2px;
+      background: #e2e8f0;
+    }
+    .timeline-item {
+      position: relative;
+      margin-bottom: 20px;
+    }
+    .timeline-dot {
+      position: absolute;
+      left: -28px;
+      top: 4px;
+      width: 18px;
+      height: 18px;
+      border-radius: 50%;
+      background: #3b82f6;
+      border: 3px solid #ffffff;
+      box-shadow: 0 0 0 2px #bfdbfe;
+    }
+    .timeline-dot.visado {
+      background: #10b981;
+      box-shadow: 0 0 0 2px #a7f3d0;
+    }
+
+    /* Estilos de Impresión Oficial */
+    @media print {
+      body {
+        background: #ffffff !important;
+        padding: 0 !important;
+        color: #000000 !important;
+        font-size: 11pt;
+      }
+      .no-print, .nav-tabs, .btn, .input-group, #filtroBusqueda, .modal {
+        display: none !important;
+      }
+      .print-only {
+        display: block !important;
+      }
+      .card-custom {
+        border: 1px solid #cccccc !important;
+        box-shadow: none !important;
+        page-break-inside: avoid;
+        margin-bottom: 20px;
+      }
+      .page-break {
+        page-break-before: always;
+      }
+    }
+    .print-only {
+      display: none;
+    }
+  </style>
+</head>
+<body>
+
+  <!-- ENCABEZADO DE IMPRESIÓN OFICIAL (Solo visible al imprimir) -->
+  <div class="print-only mb-4 border-bottom pb-3">
+    <div class="d-flex justify-content-between align-items-center">
+      <div>
+        <h4 class="fw-bold mb-0 text-uppercase">Colegio Cerro Grande</h4>
+        <div class="small text-muted">Unidad Técnica Pedagógica • Plataforma Unificada</div>
+        <div class="small text-muted">La Serena, Chile</div>
+      </div>
+      <div class="text-end">
+        <h5 class="fw-bold mb-0 text-primary">PLANIFICACIÓN CURRICULAR OFICIAL</h5>
+        <div class="small fw-semibold" id="printFechaImpresion">Año Escolar 2026</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- CABECERA INSTITUCIONAL WEB -->
+  <div class="d-flex flex-wrap justify-content-between align-items-center mb-4 gap-3 no-print">
+    <div>
+      <h4 class="fw-bold text-dark mb-1">
+        <i class="bi bi-journal-bookmark text-primary me-2"></i>Planificación Curricular & Cobertura Académica
+      </h4>
+      <p class="text-muted small mb-0">
+        Gestión anual y por unidades MINEDUC, control de versiones colaborativo y medición analítica de avance.
+      </p>
+    </div>
+
+    <div class="d-flex align-items-center gap-2">
+      <div class="input-group input-group-sm" style="width: 140px;">
+        <span class="input-group-text bg-white"><i class="bi bi-calendar3"></i></span>
+        <select id="selectAnio" class="form-select form-select-sm" onchange="cambiarAnio(this.value)">
+          <option value="2026" selected>Año 2026</option>
+          <option value="2025">Año 2025</option>
+        </select>
+      </div>
+
+      <button class="btn btn-sm btn-outline-primary" onclick="recargarDatos()">
+        <i class="bi bi-arrow-clockwise"></i> Actualizar
+      </button>
+
+      <button class="btn btn-sm btn-primary" onclick="abrirModalNuevaPlanificacion()">
+        <i class="bi bi-plus-lg"></i> Nueva Planificación
+      </button>
+    </div>
+  </div>
+
+  <!-- PESTAÑAS DE NAVEGACIÓN PRINCIPAL -->
+  <ul class="nav nav-tabs mb-4 no-print" id="mainTabs" role="tablist">
+    <li class="nav-item">
+      <button class="nav-link active" data-bs-toggle="tab" data-bs-target="#tab-mis-planes" type="button">
+        <i class="bi bi-person-workspace me-1"></i> Mis Cursos y Planificaciones
+      </button>
+    </li>
+    <li class="nav-item" id="nav-item-matriz">
+      <button class="nav-link" data-bs-toggle="tab" data-bs-target="#tab-matriz" type="button">
+        <i class="bi bi-table me-1"></i> Matriz del Colegio & Visado
+      </button>
+    </li>
+    <li class="nav-item" id="nav-item-cobertura">
+      <button class="nav-link" data-bs-toggle="tab" data-bs-target="#tab-cobertura" type="button">
+        <i class="bi bi-speedometer2 me-1"></i> Dashboard de Cobertura Curricular
+      </button>
+    </li>
+    <li class="nav-item" id="nav-item-curriculo">
+      <button class="nav-link" data-bs-toggle="tab" data-bs-target="#tab-curriculo" type="button">
+        <i class="bi bi-collection me-1"></i> Catálogo MINEDUC & Planes Propios
+      </button>
+    </li>
+  </ul>
+
+  <!-- CONTENIDO DE PESTAÑAS -->
+  <div class="tab-content" id="mainTabContent">
+
+    <!-- 1. MIS PLANIFICACIONES (VISTA DOCENTE) -->
+    <div class="tab-pane fade show active" id="tab-mis-planes" role="tabpanel">
+      <div class="d-flex justify-content-between align-items-center mb-3">
+        <h6 class="fw-bold text-secondary text-uppercase mb-0" style="font-size: 0.8rem; letter-spacing: 0.5px;">
+          <i class="bi bi-clock-history me-1"></i> Carga Horaria y Asignaciones del Docente
+        </h6>
+        <span class="badge bg-light text-secondary border" id="badgeTotalAsignaciones">0 cursos detectados</span>
+      </div>
+
+      <div class="row g-3 mb-4" id="misCursosContainer">
+        <!-- Render dinámico de tarjetas de cursos del profesor -->
+      </div>
+    </div>
+
+    <!-- 2. MATRIZ DE PLANIFICACIONES DEL COLEGIO & VISADO (COORDINACIÓN) -->
+    <div class="tab-pane fade" id="tab-matriz" role="tabpanel">
+      <div class="card-custom p-3 mb-4 no-print">
+        <div class="row g-3">
+          <div class="col-md-4">
+            <label class="form-label text-muted small mb-1">Filtrar por Curso</label>
+            <select id="filtroCursoMatriz" class="form-select form-select-sm" onchange="cargarMatrizColegio()">
+              <option value="todos">Todos los cursos</option>
+            </select>
+          </div>
+          <div class="col-md-4">
+            <label class="form-label text-muted small mb-1">Filtrar por Estado de Visado</label>
+            <select id="filtroEstadoMatriz" class="form-select form-select-sm" onchange="cargarMatrizColegio()">
+              <option value="todos">Todos los estados</option>
+              <option value="Visada">Visada</option>
+              <option value="En edición">En edición</option>
+            </select>
+          </div>
+          <div class="col-md-4">
+            <label class="form-label text-muted small mb-1">Búsqueda rápida</label>
+            <div class="input-group input-group-sm">
+              <span class="input-group-text bg-white"><i class="bi bi-search text-muted"></i></span>
+              <input type="text" id="filtroBusquedaMatriz" class="form-control" placeholder="Buscar por asignatura o docente..." oninput="filtrarTablaMatriz()">
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div class="card-custom overflow-hidden mb-4">
+        <div class="table-responsive">
+          <table class="table table-hover align-middle mb-0" style="font-size: 0.88rem;">
+            <thead class="table-light text-secondary" style="font-size: 0.78rem; text-transform: uppercase;">
+              <tr>
+                <th>Curso</th>
+                <th>Asignatura</th>
+                <th>Docente Responsable</th>
+                <th class="text-center">Unidades</th>
+                <th class="text-center">Cobertura OAs</th>
+                <th class="text-center">Estado</th>
+                <th>Visado Por</th>
+                <th class="text-end">Acciones</th>
+              </tr>
+            </thead>
+            <tbody id="tablaMatrizBody">
+              <!-- Render dinámico -->
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+
+    <!-- 3. DASHBOARD DE COBERTURA CURRICULAR -->
+    <div class="tab-pane fade" id="tab-cobertura" role="tabpanel">
+      <!-- Tarjetas KPI -->
+      <div class="row g-3 mb-4">
+        <div class="col-sm-6 col-lg-3">
+          <div class="kpi-card">
+            <div>
+              <div class="kpi-val text-primary" id="kpiCobPromedio">0%</div>
+              <div class="kpi-lbl">Promedio Cobertura OAs</div>
+            </div>
+            <i class="bi bi-bullseye fs-1 text-primary opacity-50"></i>
+          </div>
+        </div>
+        <div class="col-sm-6 col-lg-3">
+          <div class="kpi-card">
+            <div>
+              <div class="kpi-val text-success" id="kpiCobVisadas">0</div>
+              <div class="kpi-lbl">Planificaciones Visadas</div>
+            </div>
+            <i class="bi bi-check2-circle fs-1 text-success opacity-50"></i>
+          </div>
+        </div>
+        <div class="col-sm-6 col-lg-3">
+          <div class="kpi-card">
+            <div>
+              <div class="kpi-val text-warning" id="kpiCobPendientes">0</div>
+              <div class="kpi-lbl">Pendientes de Visado</div>
+            </div>
+            <i class="bi bi-clock fs-1 text-warning opacity-50"></i>
+          </div>
+        </div>
+        <div class="col-sm-6 col-lg-3">
+          <div class="kpi-card">
+            <div>
+              <div class="kpi-val text-danger" id="kpiCobAlerta">0</div>
+              <div class="kpi-lbl">Cursos en Alerta (&lt;50%)</div>
+            </div>
+            <i class="bi bi-exclamation-triangle fs-1 text-danger opacity-50"></i>
+          </div>
+        </div>
+      </div>
+
+      <!-- Matriz de Cobertura con Semáforos -->
+      <div class="card-custom overflow-hidden mb-4">
+        <div class="p-3 border-bottom bg-white d-flex justify-content-between align-items-center">
+          <span class="fw-bold text-dark"><i class="bi bi-speedometer2 text-primary me-2"></i>Semáforo de Cobertura Curricular por Curso y Asignatura</span>
+          <div class="d-flex align-items-center gap-3">
+            <span class="small text-muted"><span class="badge bg-success me-1">🟢 &ge;80%</span> Al día</span>
+            <span class="small text-muted"><span class="badge bg-warning text-dark me-1">🟡 50-79%</span> Parcial</span>
+            <span class="small text-muted"><span class="badge bg-danger me-1">🔴 &lt;50%</span> Crítico</span>
+          </div>
+        </div>
+        <div class="table-responsive">
+          <table class="table table-hover align-middle mb-0" style="font-size: 0.88rem;">
+            <thead class="table-light text-secondary" style="font-size: 0.78rem; text-transform: uppercase;">
+              <tr>
+                <th>Curso</th>
+                <th>Asignatura</th>
+                <th>Docente</th>
+                <th>Semáforo</th>
+                <th style="width: 250px;">Cobertura OAs Planificados</th>
+                <th class="text-center">OAs Basales</th>
+                <th class="text-center">Evals. Calendario</th>
+                <th class="text-center">Estado</th>
+              </tr>
+            </thead>
+            <tbody id="tablaCoberturaBody">
+              <!-- Render dinámico -->
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+
+    <!-- 4. CATÁLOGO MINEDUC & PLANES PROPIOS -->
+    <div class="tab-pane fade" id="tab-curriculo" role="tabpanel">
+      <div class="d-flex justify-content-between align-items-center mb-3">
+        <div>
+          <h6 class="fw-bold text-dark mb-0"><i class="bi bi-collection text-primary me-1"></i> Catálogo de Planes y Programas Vigentes</h6>
+          <p class="small text-muted mb-0">Consulta los Objetivos de Aprendizaje oficiales y gestiona planes propios del establecimiento.</p>
+        </div>
+        <div class="d-flex gap-2" id="adminCurriculoBtns">
+          <button class="btn btn-sm btn-outline-success" onclick="abrirModalImportarCurriculo()">
+            <i class="bi bi-file-earmark-spreadsheet me-1"></i> Actualizar MINEDUC (Excel)
+          </button>
+          <button class="btn btn-sm btn-outline-primary" onclick="abrirModalPlanPropio()">
+            <i class="bi bi-plus-circle me-1"></i> Crear Plan Propio
+          </button>
+        </div>
+      </div>
+
+      <div class="card-custom p-3 mb-4">
+        <div class="row g-3">
+          <div class="col-md-4">
+            <label class="form-label text-muted small mb-1">Nivel Educativo</label>
+            <select id="filtroNivelCurriculo" class="form-select form-select-sm" onchange="cargarObjetivosCurriculo()">
+              <option value="">Todos los niveles</option>
+              <option value="1° Básico">1° Básico</option>
+              <option value="2° Básico">2° Básico</option>
+              <option value="3° Básico">3° Básico</option>
+              <option value="4° Básico">4° Básico</option>
+              <option value="5° Básico">5° Básico</option>
+              <option value="6° Básico">6° Básico</option>
+              <option value="7° Básico">7° Básico</option>
+              <option value="8° Básico">8° Básico</option>
+              <option value="I° Medio">I° Medio</option>
+              <option value="II° Medio">II° Medio</option>
+              <option value="III° Medio">III° Medio</option>
+              <option value="IV° Medio">IV° Medio</option>
+            </select>
+          </div>
+          <div class="col-md-4">
+            <label class="form-label text-muted small mb-1">Asignatura</label>
+            <select id="filtroAsigCurriculo" class="form-select form-select-sm" onchange="cargarObjetivosCurriculo()">
+              <option value="">Todas las asignaturas</option>
+              <option value="LENGUAJE Y COMUNICACION">Lenguaje y Comunicación</option>
+              <option value="LENGUA Y LITERATURA">Lengua y Literatura</option>
+              <option value="MATEMATICA">Matemática</option>
+              <option value="CIENCIAS NATURALES">Ciencias Naturales</option>
+              <option value="HISTORIA, GEOGRAFIA Y CIENCIAS SOCIALES">Historia y Geografía</option>
+              <option value="INGLES">Inglés</option>
+              <option value="BIOLOGIA">Biología</option>
+              <option value="QUIMICA">Química</option>
+              <option value="FISICA">Física</option>
+              <option value="EDUCACION CIUDADANA">Educación Ciudadana</option>
+            </select>
+          </div>
+          <div class="col-md-4">
+            <label class="form-label text-muted small mb-1">Búsqueda en OAs</label>
+            <input type="text" id="filtroTextoCurriculo" class="form-control form-control-sm" placeholder="Buscar por código o palabra clave..." oninput="cargarObjetivosCurriculo()">
+          </div>
+        </div>
+      </div>
+
+      <div class="card-custom overflow-hidden mb-4">
+        <div class="table-responsive">
+          <table class="table table-hover align-middle mb-0" style="font-size: 0.88rem;">
+            <thead class="table-light text-secondary" style="font-size: 0.78rem; text-transform: uppercase;">
+              <tr>
+                <th style="width: 100px;">Nivel</th>
+                <th style="width: 180px;">Asignatura</th>
+                <th style="width: 140px;">Eje</th>
+                <th style="width: 90px;">Código</th>
+                <th style="width: 110px;">Priorización</th>
+                <th>Descripción Oficial del Objetivo de Aprendizaje (OA)</th>
+              </tr>
+            </thead>
+            <tbody id="tablaCurriculoBody">
+              <!-- Render dinámico -->
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+
+  </div>
+
+  <!-- ============================================================== -->
+  <!-- MODAL EDITOR DE PLANIFICACIÓN INTEGRAL (PANTALLA COMPLETA)     -->
+  <!-- ============================================================== -->
+  <div class="modal fade" id="modalEditorPlan" tabindex="-1" data-bs-backdrop="static">
+    <div class="modal-dialog modal-fullscreen">
+      <div class="modal-content">
+        <!-- Header del Editor -->
+        <div class="modal-header bg-dark text-white py-2 px-3">
+          <div class="d-flex align-items-center gap-3">
+            <button type="button" class="btn btn-sm btn-outline-light" data-bs-dismiss="modal">
+              <i class="bi bi-arrow-left"></i> Volver
+            </button>
+            <div>
+              <h6 class="modal-title fw-bold mb-0" id="editorTituloPlan">Cargando Planificación...</h6>
+              <div class="small text-secondary" id="editorSubtituloPlan">Curso • Asignatura • Año</div>
+            </div>
+            <span class="badge" id="editorBadgeEstado">En edición</span>
+          </div>
+
+          <div class="d-flex align-items-center gap-2">
+            <button class="btn btn-sm btn-outline-light" onclick="guardarBorradorActual(false)">
+              <i class="bi bi-save"></i> Guardar Borrador
+            </button>
+            <button class="btn btn-sm btn-light" onclick="abrirModalCheckpoint()">
+              <i class="bi bi-git"></i> Guardar Versión Hito
+            </button>
+            <button class="btn btn-sm btn-outline-info" onclick="exportarExcelPlanActivo()">
+              <i class="bi bi-file-earmark-excel"></i> Excel
+            </button>
+            <button class="btn btn-sm btn-outline-warning" onclick="imprimirPlanActivo()">
+              <i class="bi bi-printer"></i> Imprimir / PDF
+            </button>
+            <div id="btnVisadoContainer">
+              <!-- Render botón de visado para UTP -->
+            </div>
+          </div>
+        </div>
+
+        <div class="modal-body p-4 bg-light">
+          <!-- Pestañas internas del Editor -->
+          <ul class="nav nav-pills mb-4 bg-white p-2 rounded border" id="editorTabs">
+            <li class="nav-item">
+              <button class="nav-link active" data-bs-toggle="pill" data-bs-target="#edit-anual" type="button">
+                <i class="bi bi-journal-text me-1"></i> 1. Plan Anual
+              </button>
+            </li>
+            <li class="nav-item">
+              <button class="nav-link" data-bs-toggle="pill" data-bs-target="#edit-unidades" type="button">
+                <i class="bi bi-collection-play me-1"></i> 2. Unidades de Aprendizaje & Desglose Semanal
+              </button>
+            </li>
+            <li class="nav-item">
+              <button class="nav-link" data-bs-toggle="pill" data-bs-target="#edit-versiones" type="button">
+                <i class="bi bi-clock-history me-1"></i> 3. Historial de Versiones (Tipo Git)
+              </button>
+            </li>
+            <li class="nav-item">
+              <button class="nav-link" data-bs-toggle="pill" data-bs-target="#edit-observaciones" type="button">
+                <i class="bi bi-chat-left-dots me-1"></i> 4. Observaciones & Feedback UTP
+              </button>
+            </li>
+          </ul>
+
+          <div class="tab-content">
+            <!-- 1. PESTAÑA PLAN ANUAL -->
+            <div class="tab-pane fade show active" id="edit-anual">
+              <div class="card-custom p-4 mb-4">
+                <h6 class="fw-bold text-dark border-bottom pb-2 mb-3"><i class="bi bi-info-circle text-primary me-2"></i>Datos Generales del Plan Anual</h6>
+                <div class="row g-3">
+                  <div class="col-md-6">
+                    <label class="form-label small fw-semibold">Título de la Planificación</label>
+                    <input type="text" id="inputPlanTitulo" class="form-control form-control-sm">
+                  </div>
+                  <div class="col-md-3">
+                    <label class="form-label small fw-semibold">Horas Pedagógicas Anuales</label>
+                    <input type="number" id="inputPlanHoras" class="form-control form-control-sm" value="152">
+                  </div>
+                  <div class="col-md-3">
+                    <label class="form-label small fw-semibold">Docente Responsable</label>
+                    <input type="text" id="inputPlanDocente" class="form-control form-control-sm">
+                  </div>
+                  <div class="col-12">
+                    <label class="form-label small fw-semibold">Docentes Colaboradores (Equipo / Co-docencia)</label>
+                    <input type="text" id="inputPlanColaboradores" class="form-control form-control-sm" placeholder="Ej: maria.perez@colegio.edu, juan.araya@colegio.edu">
+                    <div class="form-text small">Los profesores agregados podrán ver y editar esta planificación colaborativamente.</div>
+                  </div>
+                  <div class="col-12">
+                    <label class="form-label small fw-semibold">Metas Institucionales y Objetivos Anuales de la Asignatura</label>
+                    <textarea id="inputPlanMetas" class="form-control" rows="4" placeholder="Describa los propósitos formativos, metas de logro y énfasis curriculares del año..."></textarea>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            <!-- 2. PESTAÑA UNIDADES & DESGLOSE SEMANAL -->
+            <div class="tab-pane fade" id="edit-unidades">
+              <div class="d-flex justify-content-between align-items-center mb-3">
+                <h6 class="fw-bold text-dark mb-0"><i class="bi bi-stack text-primary me-2"></i>Unidades Pedagógicas Programadas</h6>
+                <button class="btn btn-sm btn-primary" onclick="agregarNuevaUnidad()">
+                  <i class="bi bi-plus-circle me-1"></i> Agregar Unidad
+                </button>
+              </div>
+
+              <div id="unidadesAcordeonContainer">
+                <!-- Render dinámico de acordeón de unidades -->
+              </div>
+            </div>
+
+            <!-- 3. PESTAÑA HISTORIAL DE VERSIONES (TIPO GIT) -->
+            <div class="tab-pane fade" id="edit-versiones">
+              <div class="card-custom p-4 mb-4">
+                <div class="d-flex justify-content-between align-items-center border-bottom pb-2 mb-3">
+                  <div>
+                    <h6 class="fw-bold text-dark mb-0"><i class="bi bi-git text-primary me-2"></i>Línea de Tiempo de Versiones y Restauración</h6>
+                    <p class="small text-muted mb-0">Cada versión representa un punto de control con autor, fecha y snapshot completo.</p>
+                  </div>
+                  <button class="btn btn-sm btn-outline-primary" onclick="abrirModalCheckpoint()">
+                    <i class="bi bi-plus-lg me-1"></i> Guardar Versión Hito
+                  </button>
+                </div>
+
+                <div class="timeline" id="timelineVersionesContainer">
+                  <!-- Render dinámico de checkpoints -->
+                </div>
+              </div>
+            </div>
+
+            <!-- 4. PESTAÑA OBSERVACIONES Y FEEDBACK UTP -->
+            <div class="tab-pane fade" id="edit-observaciones">
+              <div class="card-custom p-4 mb-4">
+                <h6 class="fw-bold text-dark border-bottom pb-2 mb-3"><i class="bi bi-chat-quote text-primary me-2"></i>Retroalimentación y Comentarios de Coordinación</h6>
+                
+                <div id="listaObservacionesContainer" class="mb-4" style="max-height: 400px; overflow-y: auto;">
+                  <!-- Render dinámico de comentarios -->
+                </div>
+
+                <div class="border-top pt-3">
+                  <label class="form-label small fw-semibold">Agregar Observación / Comentario</label>
+                  <textarea id="inputNuevoComentario" class="form-control form-control-sm mb-2" rows="3" placeholder="Escriba sus comentarios u observaciones pedagógicas..."></textarea>
+                  <button class="btn btn-sm btn-primary" onclick="enviarObservacion()">
+                    <i class="bi bi-send me-1"></i> Enviar Comentario
+                  </button>
+                </div>
+              </div>
+            </div>
+
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ============================================================== -->
+  <!-- MODAL: SELECTOR DE OBJETIVOS DE APRENDIZAJE (OA MINEDUC)        -->
+  <!-- ============================================================== -->
+  <div class="modal fade" id="modalSelectorOAs" tabindex="-1">
+    <div class="modal-dialog modal-lg modal-dialog-scrollable">
+      <div class="modal-content">
+        <div class="modal-header bg-primary text-white">
+          <h6 class="modal-title fw-bold"><i class="bi bi-check2-square me-2"></i>Seleccionar Objetivos de Aprendizaje (MINEDUC)</h6>
+          <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+        </div>
+        <div class="modal-body p-3">
+          <div class="row g-2 mb-3">
+            <div class="col-md-6">
+              <select id="filtroEjeModalOA" class="form-select form-select-sm" onchange="renderizarModalOAs()">
+                <option value="todos">Todos los ejes temáticos</option>
+              </select>
+            </div>
+            <div class="col-md-6">
+              <input type="text" id="filtroTextoModalOA" class="form-control form-control-sm" placeholder="Buscar OA por código o palabra..." oninput="renderizarModalOAs()">
+            </div>
+          </div>
+
+          <div id="listaModalOAsContainer" style="max-height: 450px; overflow-y: auto;">
+            <!-- Render dinámico con checkboxes -->
+          </div>
+        </div>
+        <div class="modal-footer">
+          <button type="button" class="btn btn-sm btn-secondary" data-bs-dismiss="modal">Cancelar</button>
+          <button type="button" class="btn btn-sm btn-primary" onclick="confirmarSeleccionOAs()">
+            <i class="bi bi-check-lg"></i> Asignar OAs a la Unidad
+          </button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ============================================================== -->
+  <!-- MODAL: NUEVA PLANIFICACIÓN                                      -->
+  <!-- ============================================================== -->
+  <div class="modal fade" id="modalNuevaPlan" tabindex="-1">
+    <div class="modal-dialog">
+      <div class="modal-content">
+        <div class="modal-header">
+          <h6 class="modal-title fw-bold"><i class="bi bi-journal-plus text-primary me-2"></i>Iniciar Nueva Planificación</h6>
+          <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+        </div>
+        <div class="modal-body">
+          <div class="mb-3">
+            <label class="form-label small fw-semibold">Curso</label>
+            <select id="selectNuevoCurso" class="form-select form-select-sm"></select>
+          </div>
+          <div class="mb-3">
+            <label class="form-label small fw-semibold">Asignatura</label>
+            <select id="selectNuevaAsignatura" class="form-select form-select-sm"></select>
+          </div>
+          <div class="mb-3">
+            <label class="form-label small fw-semibold">Título Inicial</label>
+            <input type="text" id="inputNuevoTitulo" class="form-control form-control-sm" placeholder="Planificación Anual Matemática 3° Básico A (2026)">
+          </div>
+        </div>
+        <div class="modal-footer">
+          <button type="button" class="btn btn-sm btn-secondary" data-bs-dismiss="modal">Cancelar</button>
+          <button type="button" class="btn btn-sm btn-primary" onclick="crearPlanificacionSubmit()">
+            Crear Planificación
+          </button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ============================================================== -->
+  <!-- MODAL: CHECKPOINT DE VERSIÓN (TIPO GIT)                        -->
+  <!-- ============================================================== -->
+  <div class="modal fade" id="modalCheckpoint" tabindex="-1">
+    <div class="modal-dialog">
+      <div class="modal-content">
+        <div class="modal-header">
+          <h6 class="modal-title fw-bold"><i class="bi bi-git text-primary me-2"></i>Crear Checkpoint de Versión</h6>
+          <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+        </div>
+        <div class="modal-body">
+          <label class="form-label small fw-semibold">Mensaje de la Versión</label>
+          <input type="text" id="inputMensajeCheckpoint" class="form-control form-control-sm" placeholder="Ej: V1.1: Agregadas adecuaciones DUA y OAs para Unidad 2">
+          <div class="form-text small mt-1">Se guardará una instantánea íntegra del plan, sus unidades y actividades semanales para poder volver a ella en cualquier momento.</div>
+        </div>
+        <div class="modal-footer">
+          <button type="button" class="btn btn-sm btn-secondary" data-bs-dismiss="modal">Cancelar</button>
+          <button type="button" class="btn btn-sm btn-primary" onclick="guardarCheckpointSubmit()">
+            Guardar Versión
+          </button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Scripts -->
+  <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+
+  <script>
+    // Estado global de la aplicación
+    let usuarioActual = {};
+    let anioActivo = 2026;
+    let datosDocente = {};
+    let planActivo = null;
+    let unidadEditandoIndex = null;
+    let oasDisponiblesModal = [];
+    let oasSeleccionadosTemp = new Set();
+    let modalEditorObj = null;
+    let modalOAsObj = null;
+    let modalNuevaPlanObj = null;
+    let modalCheckpointObj = null;
+
+    document.addEventListener('DOMContentLoaded', async () => {
+      modalEditorObj = new bootstrap.Modal(document.getElementById('modalEditorPlan'));
+      modalOAsObj = new bootstrap.Modal(document.getElementById('modalSelectorOAs'));
+      modalNuevaPlanObj = new bootstrap.Modal(document.getElementById('modalNuevaPlan'));
+      modalCheckpointObj = new bootstrap.Modal(document.getElementById('modalCheckpoint'));
+
+      await cargarUsuario();
+      await recargarDatos();
+    });
+
+    async function cargarUsuario() {
+      try {
+        const res = await fetch('/api/auth/me');
+        if (res.ok) {
+          usuarioActual = await res.json();
+          const rol = (usuarioActual.rol || '').toLowerCase();
+          const esAdminOCoord = rol.includes('admin') || rol.includes('directiv') || rol.includes('coordinaci');
+          
+          if (!esAdminOCoord) {
+            document.getElementById('nav-item-matriz').classList.add('d-none');
+            document.getElementById('adminCurriculoBtns').classList.add('d-none');
+          }
+        }
+      } catch (e) {
+        console.error('Error cargando usuario:', e);
+      }
+    }
+
+    async function recargarDatos() {
+      await cargarMisCursos();
+      await cargarMatrizColegio();
+      await cargarDashboardCobertura();
+      await cargarObjetivosCurriculo();
+    }
+
+    function cambiarAnio(anio) {
+      anioActivo = parseInt(anio);
+      recargarDatos();
+    }
+
+    // -------------------------------------------------------------
+    // 1. CARGA DE MIS CURSOS Y ASIGNACIONES
+    // -------------------------------------------------------------
+    async function cargarMisCursos() {
+      const cont = document.getElementById('misCursosContainer');
+      cont.innerHTML = '<div class="col-12 text-center py-4 text-muted"><span class="spinner-border spinner-border-sm me-2"></span>Cargando asignaciones...</div>';
+
+      try {
+        const res = await fetch(`/api/planificacion/cursos-docente?anio=${anioActivo}`);
+        if (!res.ok) throw new Error('Error al consultar cursos.');
+        datosDocente = await res.json();
+
+        // Llenar selectores del modal de nueva planificación
+        const selCurso = document.getElementById('selectNuevoCurso');
+        selCurso.innerHTML = (datosDocente.todosLosCursos || []).map(c => `<option value="${c}">${c}</option>`).join('');
+        const selAsig = document.getElementById('selectNuevaAsignatura');
+        selAsig.innerHTML = (datosDocente.todasLasAsignaturas || []).map(a => `<option value="${a}">${a}</option>`).join('');
+
+        // Llenar filtro de matriz
+        const fMatriz = document.getElementById('filtroCursoMatriz');
+        fMatriz.innerHTML = '<option value="todos">Todos los cursos</option>' + 
+          (datosDocente.todosLosCursos || []).map(c => `<option value="${c}">${c}</option>`).join('');
+
+        const asignaciones = datosDocente.misAsignaciones || [];
+        document.getElementById('badgeTotalAsignaciones').innerText = `${asignaciones.length} asignaciones docentes`;
+
+        if (asignaciones.length === 0) {
+          cont.innerHTML = `
+            <div class="col-12 text-center py-5">
+              <i class="bi bi-journal-x fs-1 text-muted d-block mb-2"></i>
+              <h6 class="text-secondary">No se detectaron cursos asignados para el año ${anioActivo} en su horario.</h6>
+              <p class="small text-muted mb-3">Puede iniciar una planificación manualmente para cualquier curso del establecimiento.</p>
+              <button class="btn btn-sm btn-primary" onclick="abrirModalNuevaPlanificacion()"><i class="bi bi-plus-lg me-1"></i>Crear Planificación</button>
+            </div>
+          `;
+          return;
+        }
+
+        cont.innerHTML = asignaciones.map(a => {
+          let badgeEstado = '<span class="badge badge-estado-sin">Sin iniciar</span>';
+          let btnAccion = `<button class="btn btn-sm btn-outline-primary w-100" onclick="iniciarPlanDesdeCurso('${a.curso}', '${a.asignatura}')"><i class="bi bi-plus-circle me-1"></i> Iniciar Planificación</button>`;
+
+          if (a.planificacion_id) {
+            if (a.estado === 'Visada') {
+              badgeEstado = '<span class="badge badge-estado-visada"><i class="bi bi-check-circle me-1"></i>Visada</span>';
+            } else {
+              badgeEstado = '<span class="badge badge-estado-edicion"><i class="bi bi-pencil me-1"></i>En edición</span>';
+            }
+            btnAccion = `<button class="btn btn-sm btn-primary w-100" onclick="abrirEditorPlan(${a.planificacion_id})"><i class="bi bi-pencil-square me-1"></i> Abrir Editor</button>`;
+          }
+
+          return `
+            <div class="col-md-6 col-lg-4">
+              <div class="card card-custom course-card h-100 p-3 d-flex flex-column justify-content-between">
+                <div>
+                  <div class="d-flex justify-content-between align-items-center mb-2">
+                    <span class="badge bg-light text-dark border font-monospace" style="font-size: 0.75rem;">${a.curso}</span>
+                    ${badgeEstado}
+                  </div>
+                  <h6 class="fw-bold text-dark mb-1 text-truncate" title="${a.asignatura}">${a.asignatura}</h6>
+                  <p class="small text-muted mb-3">${a.nivel} • ${a.total_unidades} unidades planificadas</p>
+                </div>
+                <div>
+                  ${btnAccion}
+                </div>
+              </div>
+            </div>
+          `;
+        }).join('');
+
+      } catch (err) {
+        cont.innerHTML = `<div class="col-12 text-center text-danger py-4">${err.message}</div>`;
+      }
+    }
+
+    // -------------------------------------------------------------
+    // 2. CARGA DE MATRIZ DEL COLEGIO & VISADO
+    // -------------------------------------------------------------
+    let planesMatrizCache = [];
+    async function cargarMatrizColegio() {
+      const tbody = document.getElementById('tablaMatrizBody');
+      const curso = document.getElementById('filtroCursoMatriz').value;
+      const estado = document.getElementById('filtroEstadoMatriz').value;
+
+      try {
+        const res = await fetch(`/api/planificacion?anio=${anioActivo}&curso=${curso}&estado=${estado}`);
+        if (!res.ok) throw new Error('Error cargando matriz.');
+        planesMatrizCache = await res.json();
+        renderizarTablaMatriz(planesMatrizCache);
+      } catch (e) {
+        tbody.innerHTML = `<tr><td colspan="8" class="text-center text-danger py-4">${e.message}</td></tr>`;
+      }
+    }
+
+    function filtrarTablaMatriz() {
+      const q = (document.getElementById('filtroBusquedaMatriz').value || '').toLowerCase();
+      const filtrados = planesMatrizCache.filter(p => 
+        (p.curso || '').toLowerCase().includes(q) ||
+        (p.asignatura || '').toLowerCase().includes(q) ||
+        (p.docente_responsable || '').toLowerCase().includes(q)
+      );
+      renderizarTablaMatriz(filtrados);
+    }
+
+    function renderizarTablaMatriz(planes) {
+      const tbody = document.getElementById('tablaMatrizBody');
+      if (!planes || planes.length === 0) {
+        tbody.innerHTML = '<tr><td colspan="8" class="text-center text-muted py-4">No se encontraron planificaciones registradas con los filtros seleccionados.</td></tr>';
+        return;
+      }
+
+      tbody.innerHTML = planes.map(p => {
+        const badge = (p.estado === 'Visada') 
+          ? '<span class="badge badge-estado-visada"><i class="bi bi-check-circle me-1"></i>Visada</span>'
+          : '<span class="badge badge-estado-edicion"><i class="bi bi-pencil me-1"></i>En edición</span>';
+
+        return `
+          <tr>
+            <td class="fw-bold">${p.curso}</td>
+            <td>${p.asignatura}</td>
+            <td><i class="bi bi-person text-secondary me-1"></i>${p.docente_responsable}</td>
+            <td class="text-center"><span class="badge bg-light text-dark border">${p.total_unidades}</span></td>
+            <td class="text-center">
+              <span class="fw-bold">${p.cobertura_oas_pct || 0}%</span>
+              <div class="progress mt-1" style="height: 4px;">
+                <div class="progress-bar ${p.cobertura_oas_pct >= 80 ? 'bg-success' : (p.cobertura_oas_pct >= 50 ? 'bg-warning' : 'bg-danger')}" style="width: ${p.cobertura_oas_pct || 0}%;"></div>
+              </div>
+            </td>
+            <td class="text-center">${badge}</td>
+            <td class="small text-muted">${p.visado_por ? p.visado_por.split('@')[0] : '-'}</td>
+            <td class="text-end">
+              <button class="btn btn-sm btn-outline-primary py-0 px-2" onclick="abrirEditorPlan(${p.id})">
+                <i class="bi bi-eye"></i> Ver
+              </button>
+            </td>
+          </tr>
+        `;
+      }).join('');
+    }
+
+    // -------------------------------------------------------------
+    // 3. DASHBOARD DE COBERTURA CURRICULAR
+    // -------------------------------------------------------------
+    async function cargarDashboardCobertura() {
+      try {
+        const res = await fetch(`/api/planificacion/cobertura/colegio?anio=${anioActivo}`);
+        if (!res.ok) return;
+        const data = await res.json();
+        const k = data.kpis || {};
+
+        document.getElementById('kpiCobPromedio').innerText = `${k.promedio_cobertura_oas || 0}%`;
+        document.getElementById('kpiCobVisadas').innerText = k.visadas || 0;
+        document.getElementById('kpiCobPendientes').innerText = k.pendientes_visado || 0;
+        document.getElementById('kpiCobAlerta').innerText = k.en_alerta_roja || 0;
+
+        const tbody = document.getElementById('tablaCoberturaBody');
+        tbody.innerHTML = (data.filas || []).map(r => {
+          let semBadge = '<span class="badge bg-success">🟢 Al día</span>';
+          if (r.semaforo === 'Amarillo') semBadge = '<span class="badge bg-warning text-dark">🟡 Parcial</span>';
+          else if (r.semaforo === 'Rojo') semBadge = '<span class="badge bg-danger">🔴 Crítico</span>';
+
+          return `
+            <tr>
+              <td class="fw-bold">${r.curso}</td>
+              <td>${r.asignatura}</td>
+              <td class="small text-muted">${r.docente_responsable}</td>
+              <td>${semBadge}</td>
+              <td>
+                <div class="d-flex justify-content-between small mb-1">
+                  <span>${r.oas_cubiertos} de ${r.oas_totales_programa} OAs</span>
+                  <span class="fw-bold">${r.cobertura_oas_pct}%</span>
+                </div>
+                <div class="progress" style="height: 6px;">
+                  <div class="progress-bar ${r.cobertura_oas_pct >= 80 ? 'bg-success' : (r.cobertura_oas_pct >= 50 ? 'bg-warning' : 'bg-danger')}" style="width: ${r.cobertura_oas_pct}%"></div>
+                </div>
+              </td>
+              <td class="text-center font-monospace">${r.cobertura_basales_pct}%</td>
+              <td class="text-center"><span class="badge bg-light text-primary border">${r.evaluaciones_calendarizadas}</span></td>
+              <td class="text-center"><span class="badge ${r.estado === 'Visada' ? 'bg-success-subtle text-success border border-success-subtle' : 'bg-light text-muted border'}">${r.estado}</span></td>
+            </tr>
+          `;
+        }).join('');
+
+      } catch (e) {
+        console.error('Error cargando dashboard cobertura:', e);
+      }
+    }
+
+    // -------------------------------------------------------------
+    // 4. CATÁLOGO MINEDUC & PLANES PROPIOS
+    // -------------------------------------------------------------
+    async function cargarObjetivosCurriculo() {
+      const nivel = document.getElementById('filtroNivelCurriculo').value;
+      const asignatura = document.getElementById('filtroAsigCurriculo').value;
+      const q = document.getElementById('filtroTextoCurriculo').value;
+
+      try {
+        const res = await fetch(`/api/planificacion/curriculo/objetivos?anio=${anioActivo}&nivel=${encodeURIComponent(nivel)}&asignatura=${encodeURIComponent(asignatura)}&q=${encodeURIComponent(q)}`);
+        if (!res.ok) return;
+        const oas = await res.json();
+        const tbody = document.getElementById('tablaCurriculoBody');
+
+        if (oas.length === 0) {
+          tbody.innerHTML = '<tr><td colspan="6" class="text-center text-muted py-4">No se encontraron Objetivos de Aprendizaje con los filtros aplicados.</td></tr>';
+          return;
+        }
+
+        tbody.innerHTML = oas.map(o => `
+          <tr>
+            <td><span class="badge bg-light text-dark border">${o.nivel}</span></td>
+            <td class="small fw-semibold">${o.asignatura}</td>
+            <td class="small text-muted">${o.eje_unidad || 'General'}</td>
+            <td class="fw-bold font-monospace text-primary">${o.codigo}</td>
+            <td><span class="badge ${o.categoria === 'Basal' ? 'badge-oa-basal' : 'badge-oa-comp'}">${o.categoria}</span></td>
+            <td class="small">${o.descripcion}</td>
+          </tr>
+        `).join('');
+
+      } catch (e) {
+        console.error('Error cargando catálogo:', e);
+      }
+    }
+
+    // -------------------------------------------------------------
+    // 5. EDITOR DE PLANIFICACIÓN (PANTALLA COMPLETA)
+    // -------------------------------------------------------------
+    async function abrirEditorPlan(planId) {
+      try {
+        Swal.showLoading();
+        const res = await fetch(`/api/planificacion/${planId}`);
+        if (!res.ok) throw new Error('No se pudo cargar la planificación.');
+        planActivo = await res.json();
+        Swal.close();
+
+        // Render datos de cabecera
+        document.getElementById('editorTituloPlan').innerText = planActivo.titulo;
+        document.getElementById('editorSubtituloPlan').innerText = `${planActivo.curso} • ${planActivo.asignatura} • Año Escolar ${planActivo.anio}`;
+        
+        const bEstado = document.getElementById('editorBadgeEstado');
+        if (planActivo.estado === 'Visada') {
+          bEstado.className = 'badge badge-estado-visada';
+          bEstado.innerHTML = '<i class="bi bi-check-circle me-1"></i>Visada';
+        } else {
+          bEstado.className = 'badge badge-estado-edicion';
+          bEstado.innerHTML = '<i class="bi bi-pencil me-1"></i>En edición';
+        }
+
+        // Botón de visado para UTP/Admin
+        const btnVisadoCont = document.getElementById('btnVisadoContainer');
+        const rolNorm = (usuarioActual.rol || '').toLowerCase();
+        const esAdminOCoord = rolNorm.includes('admin') || rolNorm.includes('directiv') || rolNorm.includes('coordinaci');
+        
+        if (esAdminOCoord) {
+          if (planActivo.estado === 'Visada') {
+            btnVisadoCont.innerHTML = `<button class="btn btn-sm btn-outline-warning" onclick="cambiarVisadoSubmit('En edición')"><i class="bi bi-arrow-counterclockwise"></i> Reabrir Edición</button>`;
+          } else {
+            btnVisadoCont.innerHTML = `<button class="btn btn-sm btn-success" onclick="cambiarVisadoSubmit('Visada')"><i class="bi bi-check2-circle"></i> Visar Planificación</button>`;
+          }
+        } else {
+          btnVisadoCont.innerHTML = '';
+        }
+
+        // Llenar campos Plan Anual
+        document.getElementById('inputPlanTitulo').value = planActivo.titulo || '';
+        document.getElementById('inputPlanHoras').value = planActivo.horas_anuales || 152;
+        document.getElementById('inputPlanDocente').value = planActivo.docente_responsable || '';
+        document.getElementById('inputPlanColaboradores').value = (planActivo.docentes_colaboradores || []).join(', ');
+        document.getElementById('inputPlanMetas').value = planActivo.metas_anuales || '';
+
+        // Render Unidades
+        renderizarUnidadesAcordeon();
+
+        // Render Versiones
+        renderizarTimelineVersiones();
+
+        // Render Observaciones
+        renderizarObservaciones();
+
+        modalEditorObj.show();
+      } catch (err) {
+        Swal.fire('Error', err.message, 'error');
+      }
+    }
+
+    function renderizarUnidadesAcordeon() {
+      const cont = document.getElementById('unidadesAcordeonContainer');
+      const unidades = planActivo.unidades || [];
+
+      if (unidades.length === 0) {
+        cont.innerHTML = `
+          <div class="text-center py-4 bg-white rounded border">
+            <i class="bi bi-collection text-muted fs-2 d-block mb-2"></i>
+            <p class="text-muted small mb-3">No hay unidades registradas en esta planificación.</p>
+            <button class="btn btn-sm btn-outline-primary" onclick="agregarNuevaUnidad()"><i class="bi bi-plus-lg me-1"></i>Crear Unidad 1</button>
+          </div>
+        `;
+        return;
+      }
+
+      cont.innerHTML = `
+        <div class="accordion" id="acordeonUnidades">
+          ${unidades.map((u, idx) => `
+            <div class="accordion-item mb-3 border rounded shadow-sm">
+              <h2 class="accordion-header">
+                <button class="accordion-button ${idx === 0 ? '' : 'collapsed'}" type="button" data-bs-toggle="collapse" data-bs-target="#collapseUnidad${idx}">
+                  <span class="badge bg-primary me-2">U${u.numero_unidad}</span>
+                  <span class="fw-bold me-3">${u.nombre_unidad}</span>
+                  <span class="badge bg-light text-secondary border me-2">Semestre ${u.semestre}</span>
+                  <span class="small text-muted me-auto">${u.horas_estimadas || 0} hrs</span>
+                  <span class="badge bg-info-subtle text-info border border-info-subtle me-3">${(u.oas_seleccionados || []).length} OAs asignados</span>
+                </button>
+              </h2>
+              <div id="collapseUnidad${idx}" class="accordion-collapse collapse ${idx === 0 ? 'show' : ''}" data-bs-parent="#acordeonUnidades">
+                <div class="accordion-body bg-light p-4">
+                  <div class="row g-3 mb-4 bg-white p-3 rounded border">
+                    <div class="col-md-6">
+                      <label class="form-label small fw-semibold">Nombre de la Unidad</label>
+                      <input type="text" class="form-control form-control-sm" value="${u.nombre_unidad}" onchange="actualizarCampoUnidad(${idx}, 'nombre_unidad', this.value)">
+                    </div>
+                    <div class="col-md-2">
+                      <label class="form-label small fw-semibold">Semestre</label>
+                      <select class="form-select form-select-sm" onchange="actualizarCampoUnidad(${idx}, 'semestre', this.value)">
+                        <option value="1" ${u.semestre == 1 ? 'selected' : ''}>1° Semestre</option>
+                        <option value="2" ${u.semestre == 2 ? 'selected' : ''}>2° Semestre</option>
+                      </select>
+                    </div>
+                    <div class="col-md-2">
+                      <label class="form-label small fw-semibold">Fecha Inicio</label>
+                      <input type="date" class="form-control form-control-sm" value="${u.fecha_inicio || ''}" onchange="actualizarCampoUnidad(${idx}, 'fecha_inicio', this.value)">
+                    </div>
+                    <div class="col-md-2">
+                      <label class="form-label small fw-semibold">Fecha Término</label>
+                      <input type="date" class="form-control form-control-sm" value="${u.fecha_fin || ''}" onchange="actualizarCampoUnidad(${idx}, 'fecha_fin', this.value)">
+                    </div>
+                  </div>
+
+                  <!-- OBJETIVOS DE APRENDIZAJE SELECCIONADOS -->
+                  <div class="bg-white p-3 rounded border mb-4">
+                    <div class="d-flex justify-content-between align-items-center mb-3">
+                      <h6 class="fw-bold text-dark mb-0"><i class="bi bi-bullseye text-primary me-2"></i>Objetivos de Aprendizaje (OAs) Asignados</h6>
+                      <button class="btn btn-sm btn-outline-primary" onclick="abrirModalSelectorOAs(${idx})">
+                        <i class="bi bi-plus-circle me-1"></i> Seleccionar OAs MINEDUC
+                      </button>
+                    </div>
+                    <div class="d-flex flex-wrap gap-2" id="chipsOAsUnidad${idx}">
+                      ${(u.oas_seleccionados || []).length > 0 ? (u.oas_seleccionados || []).map(o => {
+                        const cod = (typeof o === 'object') ? o.codigo : o;
+                        const cat = (typeof o === 'object' && o.categoria) ? o.categoria : 'Basal';
+                        return `
+                          <span class="badge ${cat === 'Basal' ? 'badge-oa-basal' : 'badge-oa-comp'} p-2 d-flex align-items-center gap-2">
+                            <span>${cod} (${cat})</span>
+                            <i class="bi bi-x-circle cursor-pointer" onclick="quitarOAUnidad(${idx}, '${cod}')"></i>
+                          </span>
+                        `;
+                      }).join('') : '<span class="text-muted small">No se han asignado OAs a esta unidad todavía.</span>'}
+                    </div>
+                  </div>
+
+                  <!-- HABILIDADES, ACTITUDES, INDICADORES Y EVALUACIÓN -->
+                  <div class="row g-3 mb-4 bg-white p-3 rounded border">
+                    <div class="col-md-6">
+                      <label class="form-label small fw-semibold">Habilidades Disciplinares</label>
+                      <textarea class="form-control form-control-sm" rows="3" placeholder="Ej: Resolver problemas, modelar, argumentar..." onchange="actualizarCampoUnidad(${idx}, 'habilidades', this.value)">${u.habilidades || ''}</textarea>
+                    </div>
+                    <div class="col-md-6">
+                      <label class="form-label small fw-semibold">Actitudes & OATs</label>
+                      <textarea class="form-control form-control-sm" rows="3" placeholder="Ej: Demostrar curiosidad e interés, rigor y perseverancia..." onchange="actualizarCampoUnidad(${idx}, 'actitudes', this.value)">${u.actitudes || ''}</textarea>
+                    </div>
+                    <div class="col-md-6">
+                      <label class="form-label small fw-semibold">Indicadores de Evaluación</label>
+                      <textarea class="form-control form-control-sm" rows="3" placeholder="Indicadores observables de logro..." onchange="actualizarCampoUnidad(${idx}, 'indicadores_evaluacion', this.value)">${u.indicadores_evaluacion || ''}</textarea>
+                    </div>
+                    <div class="col-md-6">
+                      <label class="form-label small fw-semibold">Instrumentos de Evaluación</label>
+                      <textarea class="form-control form-control-sm" rows="3" placeholder="Ej: Rúbrica de proceso, prueba escrita, lista de cotejo..." onchange="actualizarCampoUnidad(${idx}, 'instrumentos_evaluacion', this.value)">${u.instrumentos_evaluacion || ''}</textarea>
+                    </div>
+                  </div>
+
+                  <!-- DESGLOSE SEMANAL (CLASE A CLASE SIMPLIFICADO) -->
+                  <div class="bg-white p-3 rounded border">
+                    <div class="d-flex justify-content-between align-items-center mb-3">
+                      <div>
+                        <h6 class="fw-bold text-dark mb-0"><i class="bi bi-calendar-week text-primary me-2"></i>Desglose Semanal de Clases & DUA</h6>
+                        <span class="small text-muted">Planificación de actividades formativas (Inicio, Desarrollo, Cierre) y adecuaciones.</span>
+                      </div>
+                      <button class="btn btn-sm btn-outline-secondary" onclick="agregarSemanaAUnidad(${idx})">
+                        <i class="bi bi-plus-lg me-1"></i> Agregar Semana
+                      </button>
+                    </div>
+
+                    <div class="table-responsive">
+                      <table class="table table-bordered table-sm align-middle" style="font-size: 0.82rem;">
+                        <thead class="table-light text-secondary">
+                          <tr>
+                            <th style="width: 70px;">Semana</th>
+                            <th style="width: 140px;">Fechas</th>
+                            <th style="width: 180px;">Tema / Contenido</th>
+                            <th>Actividades Formativas (Inicio-Desarrollo-Cierre)</th>
+                            <th style="width: 160px;">Recursos</th>
+                            <th style="width: 180px;">Adecuaciones DUA</th>
+                            <th style="width: 40px;"></th>
+                          </tr>
+                        </thead>
+                        <tbody>
+                          ${(u.desglose_semanal || []).map((s, sIdx) => `
+                            <tr>
+                              <td class="text-center fw-bold">Sem ${s.semana || (sIdx + 1)}</td>
+                              <td>
+                                <input type="date" class="form-control form-control-sm p-1 mb-1" value="${s.fecha_inicio || ''}" onchange="actualizarCampoSemana(${idx}, ${sIdx}, 'fecha_inicio', this.value)">
+                                <input type="date" class="form-control form-control-sm p-1" value="${s.fecha_fin || ''}" onchange="actualizarCampoSemana(${idx}, ${sIdx}, 'fecha_fin', this.value)">
+                              </td>
+                              <td>
+                                <input type="text" class="form-control form-control-sm" value="${s.tema || ''}" placeholder="Contenido..." onchange="actualizarCampoSemana(${idx}, ${sIdx}, 'tema', this.value)">
+                              </td>
+                              <td>
+                                <textarea class="form-control form-control-sm" rows="2" placeholder="Inicio, Desarrollo y Cierre..." onchange="actualizarCampoSemana(${idx}, ${sIdx}, 'actividades_formativas', this.value)">${s.actividades_formativas || ''}</textarea>
+                              </td>
+                              <td>
+                                <textarea class="form-control form-control-sm" rows="2" placeholder="Guías, data..." onchange="actualizarCampoSemana(${idx}, ${sIdx}, 'recursos', this.value)">${s.recursos || ''}</textarea>
+                              </td>
+                              <td>
+                                <textarea class="form-control form-control-sm" rows="2" placeholder="Estrategias DUA..." onchange="actualizarCampoSemana(${idx}, ${sIdx}, 'dua_adecuaciones', this.value)">${s.dua_adecuaciones || ''}</textarea>
+                              </td>
+                              <td class="text-center">
+                                <button class="btn btn-sm text-danger p-0" onclick="eliminarSemana(${idx}, ${sIdx})"><i class="bi bi-trash"></i></button>
+                              </td>
+                            </tr>
+                          `).join('')}
+                        </tbody>
+                      </table>
+                    </div>
+                  </div>
+
+                  <div class="text-end mt-3">
+                    <button class="btn btn-sm btn-outline-danger" onclick="eliminarUnidad(${idx})"><i class="bi bi-trash me-1"></i>Eliminar esta Unidad</button>
+                  </div>
+                </div>
+              </div>
+            </div>
+          `).join('')}
+        </div>
+      `;
+    }
+
+    function agregarNuevaUnidad() {
+      const unidades = planActivo.unidades || [];
+      const num = unidades.length + 1;
+      unidades.push({
+        numero_unidad: num,
+        nombre_unidad: `Unidad ${num}`,
+        semestre: num <= 2 ? 1 : 2,
+        horas_estimadas: 38,
+        oas_seleccionados: [],
+        oats_seleccionados: [],
+        habilidades: '',
+        actitudes: '',
+        indicadores_evaluacion: '',
+        instrumentos_evaluacion: '',
+        desglose_semanal: [
+          { semana: 1, tema: '', actividades_formativas: '', recursos: '', dua_adecuaciones: '' }
+        ]
+      });
+      renderizarUnidadesAcordeon();
+    }
+
+    function eliminarUnidad(index) {
+      Swal.fire({
+        title: '¿Eliminar unidad?',
+        text: 'Se removerán las actividades y OAs asociados a esta unidad.',
+        icon: 'warning',
+        showCancelButton: true,
+        confirmButtonText: 'Sí, eliminar',
+        cancelButtonText: 'Cancelar'
+      }).then(r => {
+        if (r.isConfirmed) {
+          planActivo.unidades.splice(index, 1);
+          renderizarUnidadesAcordeon();
+        }
+      });
+    }
+
+    function actualizarCampoUnidad(uIdx, campo, valor) {
+      if (planActivo && planActivo.unidades && planActivo.unidades[uIdx]) {
+        planActivo.unidades[uIdx][campo] = valor;
+      }
+    }
+
+    function agregarSemanaAUnidad(uIdx) {
+      const u = planActivo.unidades[uIdx];
+      u.desglose_semanal = u.desglose_semanal || [];
+      const num = u.desglose_semanal.length + 1;
+      u.desglose_semanal.push({
+        semana: num,
+        tema: '',
+        actividades_formativas: '',
+        recursos: '',
+        dua_adecuaciones: ''
+      });
+      renderizarUnidadesAcordeon();
+    }
+
+    function eliminarSemana(uIdx, sIdx) {
+      planActivo.unidades[uIdx].desglose_semanal.splice(sIdx, 1);
+      renderizarUnidadesAcordeon();
+    }
+
+    function actualizarCampoSemana(uIdx, sIdx, campo, valor) {
+      if (planActivo.unidades[uIdx].desglose_semanal[sIdx]) {
+        planActivo.unidades[uIdx].desglose_semanal[sIdx][campo] = valor;
+      }
+    }
+
+    // -------------------------------------------------------------
+    // SELECTOR MODAL DE OAs MINEDUC
+    // -------------------------------------------------------------
+    function abrirModalSelectorOAs(uIdx) {
+      unidadEditandoIndex = uIdx;
+      oasDisponiblesModal = planActivo.oas_disponibles || [];
+      
+      const u = planActivo.unidades[uIdx];
+      oasSeleccionadosTemp = new Set((u.oas_seleccionados || []).map(o => (typeof o === 'object') ? o.codigo : o));
+
+      // Llenar selector de ejes
+      const ejes = Array.from(new Set(oasDisponiblesModal.map(o => o.eje_unidad || 'General')));
+      const selEje = document.getElementById('filtroEjeModalOA');
+      selEje.innerHTML = '<option value="todos">Todos los ejes temáticos</option>' +
+        ejes.map(e => `<option value="${e}">${e}</option>`).join('');
+
+      renderizarModalOAs();
+      modalOAsObj.show();
+    }
+
+    function renderizarModalOAs() {
+      const ejeFiltro = document.getElementById('filtroEjeModalOA').value;
+      const q = (document.getElementById('filtroTextoModalOA').value || '').toLowerCase();
+      const cont = document.getElementById('listaModalOAsContainer');
+
+      const filtrados = oasDisponiblesModal.filter(o => {
+        const matchesEje = (ejeFiltro === 'todos') || (o.eje_unidad === ejeFiltro);
+        const matchesQ = !q || (o.codigo || '').toLowerCase().includes(q) || (o.descripcion || '').toLowerCase().includes(q);
+        return matchesEje && matchesQ;
+      });
+
+      if (filtrados.length === 0) {
+        cont.innerHTML = '<div class="text-center text-muted py-4">No hay OAs disponibles con los filtros aplicados.</div>';
+        return;
+      }
+
+      cont.innerHTML = filtrados.map(o => {
+        const isChecked = oasSeleccionadosTemp.has(o.codigo);
+        return `
+          <div class="form-check p-3 mb-2 border rounded ${isChecked ? 'bg-primary-subtle border-primary' : 'bg-white'}">
+            <input class="form-check-input" type="checkbox" id="chkOA_${o.id}" value="${o.codigo}" ${isChecked ? 'checked' : ''} onchange="toggleOASeleccion('${o.codigo}', this.checked)">
+            <label class="form-check-label w-100 cursor-pointer" for="chkOA_${o.id}">
+              <div class="d-flex justify-content-between align-items-center mb-1">
+                <span class="fw-bold font-monospace text-primary">${o.codigo}</span>
+                <div>
+                  <span class="badge ${o.categoria === 'Basal' ? 'badge-oa-basal' : 'badge-oa-comp'} me-1">${o.categoria}</span>
+                  <span class="badge bg-light text-secondary border">${o.eje_unidad || 'General'}</span>
+                </div>
+              </div>
+              <p class="small text-muted mb-0">${o.descripcion}</p>
+            </label>
+          </div>
+        `;
+      }).join('');
+    }
+
+    function toggleOASeleccion(codigo, checked) {
+      if (checked) oasSeleccionadosTemp.add(codigo);
+      else oasSeleccionadosTemp.delete(codigo);
+    }
+
+    function confirmarSeleccionOAs() {
+      if (unidadEditandoIndex !== null && planActivo.unidades[unidadEditandoIndex]) {
+        const u = planActivo.unidades[unidadEditandoIndex];
+        const nuevosOAs = [];
+        oasDisponiblesModal.forEach(o => {
+          if (oasSeleccionadosTemp.has(o.codigo)) {
+            nuevosOAs.push({
+              codigo: o.codigo,
+              categoria: o.categoria,
+              descripcion: o.descripcion
+            });
+          }
+        });
+        u.oas_seleccionados = nuevosOAs;
+        renderizarUnidadesAcordeon();
+        modalOAsObj.hide();
+      }
+    }
+
+    function quitarOAUnidad(uIdx, codigo) {
+      const u = planActivo.unidades[uIdx];
+      u.oas_seleccionados = (u.oas_seleccionados || []).filter(o => {
+        const c = (typeof o === 'object') ? o.codigo : o;
+        return c !== codigo;
+      });
+      renderizarUnidadesAcordeon();
+    }
+
+    // -------------------------------------------------------------
+    // GUARDAR BORRADOR & CHECKPOINT DE VERSIÓN
+    // -------------------------------------------------------------
+    async function guardarBorradorActual(mostrarToast = true) {
+      try {
+        const payload = {
+          titulo: document.getElementById('inputPlanTitulo').value,
+          horas_anuales: parseInt(document.getElementById('inputPlanHoras').value) || 152,
+          docente_responsable: document.getElementById('inputPlanDocente').value,
+          docentes_colaboradores: (document.getElementById('inputPlanColaboradores').value || '').split(',').map(s => s.trim()).filter(Boolean),
+          metas_anuales: document.getElementById('inputPlanMetas').value,
+          unidades: planActivo.unidades
+        };
+
+        const res = await fetch(`/api/planificacion/${planActivo.id}`, {
+          method: 'PUT',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(payload)
+        });
+
+        if (!res.ok) throw new Error('Error al guardar borrador.');
+        if (mostrarToast) {
+          Swal.fire({
+            toast: true,
+            position: 'top-end',
+            icon: 'success',
+            title: 'Borrador guardado',
+            showConfirmButton: false,
+            timer: 2000
+          });
+        }
+      } catch (err) {
+        Swal.fire('Error', err.message, 'error');
+      }
+    }
+
+    function abrirModalCheckpoint() {
+      document.getElementById('inputMensajeCheckpoint').value = '';
+      modalCheckpointObj.show();
+    }
+
+    async function guardarCheckpointSubmit() {
+      const mensaje = document.getElementById('inputMensajeCheckpoint').value.trim();
+      if (!mensaje) {
+        Swal.fire('Atención', 'Por favor ingrese un mensaje descriptivo para la versión.', 'warning');
+        return;
+      }
+
+      await guardarBorradorActual(false);
+
+      try {
+        const res = await fetch(`/api/planificacion/${planActivo.id}/checkpoint`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ mensaje })
+        });
+        if (!res.ok) throw new Error('Error guardando versión.');
+        modalCheckpointObj.hide();
+        Swal.fire('Versión Guardada', 'Se ha generado un nuevo punto de restauración tipo Git.', 'success');
+        
+        // Recargar detalle para actualizar versiones
+        const fresh = await fetch(`/api/planificacion/${planActivo.id}`).then(r => r.json());
+        planActivo.versiones = fresh.versiones;
+        renderizarTimelineVersiones();
+      } catch (err) {
+        Swal.fire('Error', err.message, 'error');
+      }
+    }
+
+    function renderizarTimelineVersiones() {
+      const cont = document.getElementById('timelineVersionesContainer');
+      const versiones = planActivo.versiones || [];
+
+      if (versiones.length === 0) {
+        cont.innerHTML = '<div class="text-muted small">No hay versiones registradas aún.</div>';
+        return;
+      }
+
+      cont.innerHTML = versiones.map(v => `
+        <div class="timeline-item">
+          <div class="timeline-dot ${v.tipo_snapshot === 'visado' ? 'visado' : ''}"></div>
+          <div class="d-flex justify-content-between align-items-center">
+            <span class="fw-bold text-primary font-monospace">${v.version_numero}</span>
+            <span class="small text-muted">${new Date(v.creado_en).toLocaleString('es-CL')}</span>
+          </div>
+          <div class="fw-semibold text-dark my-1">${v.mensaje}</div>
+          <div class="small text-muted d-flex justify-content-between align-items-center">
+            <span><i class="bi bi-person me-1"></i>${v.autor_nombre} (${v.autor_email})</span>
+            <button class="btn btn-sm btn-outline-danger py-0 px-2" style="font-size: 0.75rem;" onclick="restaurarVersionSubmit(${v.id}, '${v.version_numero}')">
+              <i class="bi bi-arrow-counterclockwise"></i> Restaurar
+            </button>
+          </div>
+        </div>
+      `).join('');
+    }
+
+    async function restaurarVersionSubmit(versionId, numVersion) {
+      Swal.fire({
+        title: `¿Restaurar versión ${numVersion}?`,
+        text: 'La planificación actual será reemplazada por el contenido exacto de este snapshot.',
+        icon: 'warning',
+        showCancelButton: true,
+        confirmButtonText: 'Sí, restaurar',
+        cancelButtonText: 'Cancelar'
+      }).then(async r => {
+        if (r.isConfirmed) {
+          try {
+            const res = await fetch(`/api/planificacion/${planActivo.id}/restaurar-version`, {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({ version_id: versionId })
+            });
+            if (!res.ok) throw new Error('Error restaurando versión.');
+            Swal.fire('Restaurada', `La planificación se restauró a la versión ${numVersion}.`, 'success');
+            abrirEditorPlan(planActivo.id);
+          } catch (err) {
+            Swal.fire('Error', err.message, 'error');
+          }
+        }
+      });
+    }
+
+    // -------------------------------------------------------------
+    // VISADO Y OBSERVACIONES
+    // -------------------------------------------------------------
+    async function cambiarVisadoSubmit(nuevoEstado) {
+      const { value: comentario } = await Swal.fire({
+        title: nuevoEstado === 'Visada' ? 'Visar Planificación' : 'Reabrir a Edición',
+        input: 'textarea',
+        inputLabel: 'Comentario u observaciones para el equipo docente:',
+        inputPlaceholder: nuevoEstado === 'Visada' ? 'Aprobada formalmente por UTP.' : 'Indique las modificaciones solicitadas...',
+        showCancelButton: true,
+        confirmButtonText: 'Confirmar'
+      });
+
+      if (comentario !== undefined) {
+        try {
+          const res = await fetch(`/api/planificacion/${planActivo.id}/visado`, {
+            method: 'PUT',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ estado: nuevoEstado, comentario })
+          });
+          if (!res.ok) throw new Error('Error al cambiar estado.');
+          Swal.fire('Éxito', `Planificación actualizada a '${nuevoEstado}'.`, 'success');
+          abrirEditorPlan(planActivo.id);
+          recargarDatos();
+        } catch (err) {
+          Swal.fire('Error', err.message, 'error');
+        }
+      }
+    }
+
+    function renderizarObservaciones() {
+      const cont = document.getElementById('listaObservacionesContainer');
+      const obs = planActivo.observaciones || [];
+
+      if (obs.length === 0) {
+        cont.innerHTML = '<div class="text-muted small">No hay observaciones registradas.</div>';
+        return;
+      }
+
+      cont.innerHTML = obs.map(o => `
+        <div class="p-3 mb-2 bg-white rounded border">
+          <div class="d-flex justify-content-between align-items-center mb-1">
+            <span class="fw-bold text-dark"><i class="bi bi-chat-left-text me-1 text-primary"></i>${o.autor_nombre} (${o.autor_rol})</span>
+            <span class="small text-muted">${new Date(o.creado_en).toLocaleString('es-CL')}</span>
+          </div>
+          <p class="small text-secondary mb-0">${o.comentario}</p>
+        </div>
+      `).join('');
+    }
+
+    async function enviarObservacion() {
+      const comentario = document.getElementById('inputNuevoComentario').value.trim();
+      if (!comentario) return;
+
+      try {
+        const res = await fetch(`/api/planificacion/${planActivo.id}/observaciones`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ comentario, seccion: 'general' })
+        });
+        if (!res.ok) throw new Error('Error enviando comentario.');
+        document.getElementById('inputNuevoComentario').value = '';
+        const fresh = await fetch(`/api/planificacion/${planActivo.id}`).then(r => r.json());
+        planActivo.observaciones = fresh.observaciones;
+        renderizarObservaciones();
+      } catch (err) {
+        Swal.fire('Error', err.message, 'error');
+      }
+    }
+
+    // -------------------------------------------------------------
+    // EXPORTACIÓN EXCEL & IMPRESIÓN
+    // -------------------------------------------------------------
+    function exportarExcelPlanActivo() {
+      if (planActivo) {
+        window.open(`/api/planificacion/${planActivo.id}/exportar-excel`, '_blank');
+      }
+    }
+
+    function imprimirPlanActivo() {
+      window.print();
+    }
+
+    // -------------------------------------------------------------
+    // MODALES AUXILIARES
+    // -------------------------------------------------------------
+    function abrirModalNuevaPlanificacion() {
+      document.getElementById('inputNuevoTitulo').value = '';
+      modalNuevaPlanObj.show();
+    }
+
+    function iniciarPlanDesdeCurso(curso, asignatura) {
+      document.getElementById('selectNuevoCurso').value = curso;
+      document.getElementById('selectNuevaAsignatura').value = asignatura;
+      document.getElementById('inputNuevoTitulo').value = `Planificación Anual ${asignatura} - ${curso} (${anioActivo})`;
+      modalNuevaPlanObj.show();
+    }
+
+    async function crearPlanificacionSubmit() {
+      const curso = document.getElementById('selectNuevoCurso').value;
+      const asignatura = document.getElementById('selectNuevaAsignatura').value;
+      const titulo = document.getElementById('inputNuevoTitulo').value.trim();
+
+      try {
+        const res = await fetch('/api/planificacion', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ anio: anioActivo, curso, asignatura, titulo })
+        });
+        const data = await res.json();
+        if (!res.ok) throw new Error(data.error || 'Error creando planificación.');
+
+        modalNuevaPlanObj.hide();
+        Swal.fire('Plan Creado', 'Abriendo editor de planificación...', 'success');
+        await recargarDatos();
+        abrirEditorPlan(data.id);
+      } catch (err) {
+        Swal.fire('Error', err.message, 'error');
+      }
+    }
+
+    function abrirModalImportarCurriculo() {
+      Swal.fire({
+        title: 'Actualizar Planes MINEDUC (Excel)',
+        html: `
+          <p class="small text-muted">Seleccione una planilla Excel (.xlsx) con columnas: <code>Nivel, Asignatura, Codigo, Descripcion, Eje, Categoria</code></p>
+          <input type="file" id="swalFileCurriculo" class="form-control form-control-sm mb-2" accept=".xlsx,.csv">
+        `,
+        showCancelButton: true,
+        confirmButtonText: 'Subir e Importar',
+        preConfirm: () => {
+          const file = document.getElementById('swalFileCurriculo').files[0];
+          if (!file) {
+            Swal.showValidationMessage('Debe seleccionar un archivo Excel');
+          }
+          return file;
+        }
+      }).then(async r => {
+        if (r.isConfirmed && r.value) {
+          const formData = new FormData();
+          formData.append('archivo', r.value);
+          formData.append('anio', anioActivo);
+          try {
+            Swal.showLoading();
+            const res = await fetch('/api/planificacion/curriculo/importar', {
+              method: 'POST',
+              body: formData
+            });
+            const data = await res.json();
+            if (!res.ok) throw new Error(data.error);
+            Swal.fire('Éxito', data.mensaje, 'success');
+            cargarObjetivosCurriculo();
+          } catch (e) {
+            Swal.fire('Error', e.message, 'error');
+          }
+        }
+      });
+    }
+
+    function abrirModalPlanPropio() {
+      Swal.fire({
+        title: 'Crear Plan Propio del Establecimiento',
+        html: `
+          <div class="text-start">
+            <label class="small fw-semibold mb-1">Nivel Educativo</label>
+            <input type="text" id="swalNivelPropio" class="form-control form-control-sm mb-2" placeholder="Ej: 3° Básico o Media">
+            <label class="small fw-semibold mb-1">Nombre de la Asignatura Propia</label>
+            <input type="text" id="swalAsigPropia" class="form-control form-control-sm mb-2" placeholder="Ej: Formación Valórica Institucional">
+            <label class="small fw-semibold mb-1">Descripción</label>
+            <textarea id="swalDescPropia" class="form-control form-control-sm" rows="2" placeholder="Propósito del plan propio..."></textarea>
+          </div>
+        `,
+        showCancelButton: true,
+        confirmButtonText: 'Crear Plan Propio',
+        preConfirm: () => {
+          const nivel = document.getElementById('swalNivelPropio').value.trim();
+          const asignatura = document.getElementById('swalAsigPropia').value.trim();
+          const descripcion = document.getElementById('swalDescPropia').value.trim();
+          if (!nivel || !asignatura) {
+            Swal.showValidationMessage('Nivel y Asignatura son obligatorios');
+          }
+          return { nivel, asignatura, descripcion };
+        }
+      }).then(async r => {
+        if (r.isConfirmed && r.value) {
+          try {
+            const res = await fetch('/api/planificacion/curriculo/propio', {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({ ...r.value, anio: anioActivo })
+            });
+            const data = await res.json();
+            if (!res.ok) throw new Error(data.error);
+            Swal.fire('Creado', data.mensaje, 'success');
+            cargarObjetivosCurriculo();
+          } catch (e) {
+            Swal.fire('Error', e.message, 'error');
+          }
+        }
+      });
+    }
+  </script>
+</body>
+</html>
