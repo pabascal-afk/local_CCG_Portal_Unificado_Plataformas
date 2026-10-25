@@ -1,0 +1,7 @@
+{
+  "version": "1.2.0",
+  "minVersion": "1.0.0",
+  "downloadUrl": "https://raw.githubusercontent.com/pabascal-afk/local_CCG_Portal_Unificado_Plataformas/main/Lanzador_Plataforma.exe",
+  "fecha": "2026-10-25",
+  "notas": "Detección inteligente de plataforma, verificación de salud de túnel y auto-actualizador."
+}

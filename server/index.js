@@ -173,8 +173,38 @@ app.use((req, res, next) => {
 // Archivos estáticos del frontend
 app.use(express.static(path.join(__dirname, '../public')));
 
-// Ping para comprobación de estado del túnel
-app.get('/api/ping', (req, res) => res.send('pong'));
+// Ping y comprobación de identidad de la plataforma
+app.get('/api/ping', (req, res) => {
+  if (req.query.format === 'text') {
+    return res.send('pong');
+  }
+  res.json({
+    status: 'ok',
+    message: 'pong',
+    app: 'plataforma_unificada',
+    nombre: 'Plataforma Unificada - Colegio Cerro Grande',
+    version: '1.2.0',
+    timestamp: new Date().toISOString()
+  });
+});
+
+app.get('/api/health', (req, res) => {
+  res.json({
+    status: 'ok',
+    app: 'plataforma_unificada',
+    nombre: 'Plataforma Unificada - Colegio Cerro Grande',
+    version: '1.2.0',
+    timestamp: new Date().toISOString()
+  });
+});
+
+app.get('/api/launcher/version', (req, res) => {
+  res.json({
+    app: 'plataforma_unificada',
+    version: '1.2.0',
+    downloadUrl: 'https://raw.githubusercontent.com/pabascal-afk/local_CCG_Portal_Unificado_Plataformas/main/Lanzador_Plataforma.exe'
+  });
+});
 
 function esDominioInstitucional(email) {
   if (!email || typeof email !== 'string') return false;
