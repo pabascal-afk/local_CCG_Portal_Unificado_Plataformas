@@ -110,26 +110,31 @@ function normalizarAsignaturaMineduc(asig, nivel = '') {
 // 1. Obtener Cursos y Carga Horaria del Docente
 // -------------------------------------------------------------
 async function obtenerCursosDocente(usuarioEmail, usuarioNombre, anio = 2026) {
+    if (typeof usuarioNombre === 'number' || (typeof usuarioNombre === 'string' && !isNaN(parseInt(usuarioNombre)) && arguments.length === 2)) {
+        anio = usuarioNombre;
+        usuarioNombre = usuarioEmail;
+    }
     const anioNum = parseInt(anio) || 2026;
     
-    // 1. Cursos donde el profesor figura en la malla de horarios
+    // 1. Cursos donde el profesor figura en la malla de horarios del año consultado
     const qDocente = `
         SELECT DISTINCT curso, asignatura, profesor 
         FROM horarios 
-        WHERE (
+        WHERE (anno = ? OR (anno IS NULL AND ? = 2026))
+          AND (
             LOWER(profesor) LIKE '%' || LOWER(?) || '%' 
             OR LOWER(?) LIKE '%' || LOWER(profesor) || '%'
-        ) AND curso IS NOT NULL AND TRIM(curso) != ''
+          ) AND curso IS NOT NULL AND TRIM(curso) != ''
         ORDER BY curso ASC, asignatura ASC
     `;
-    const misCursosHorario = await queryAll(qDocente, [usuarioNombre || usuarioEmail, usuarioNombre || usuarioEmail]);
+    const misCursosHorario = await queryAll(qDocente, [anioNum, anioNum, usuarioNombre || usuarioEmail, usuarioNombre || usuarioEmail]);
 
-    // 2. Todos los cursos y asignaturas disponibles en el colegio
+    // 2. Todos los cursos y asignaturas disponibles en el colegio para el año
     const todosCursosRows = await queryAll(`
         SELECT DISTINCT curso FROM (
-            SELECT curso FROM horarios WHERE curso IS NOT NULL AND TRIM(curso) != ''
+            SELECT curso FROM horarios WHERE (anno = ? OR (anno IS NULL AND ? = 2026)) AND curso IS NOT NULL AND TRIM(curso) != ''
             UNION
-            SELECT curso FROM evaluaciones WHERE curso IS NOT NULL AND TRIM(curso) != ''
+            SELECT curso FROM evaluaciones WHERE curso IS NOT NULL AND TRIM(curso) != '' AND (strftime('%Y', fecha) = ? OR strftime('%Y', fecha) IS NULL)
         ) ORDER BY 
           CASE 
             WHEN curso LIKE '%KINDER%' THEN 1
@@ -147,17 +152,17 @@ async function obtenerCursosDocente(usuarioEmail, usuarioNombre, anio = 2026) {
             WHEN curso LIKE '%IV°%' THEN 13
             ELSE 20
           END, curso ASC
-    `);
+    `, [anioNum, anioNum, String(anioNum)]);
     const todosLosCursos = todosCursosRows.map(r => r.curso);
 
     const todasAsignaturasRows = await queryAll(`
         SELECT DISTINCT asignatura FROM horarios 
-        WHERE asignatura IS NOT NULL AND TRIM(asignatura) != ''
+        WHERE (anno = ? OR (anno IS NULL AND ? = 2026)) AND asignatura IS NOT NULL AND TRIM(asignatura) != ''
         ORDER BY asignatura ASC
-    `);
+    `, [anioNum, anioNum]);
     const todasLasAsignaturas = todasAsignaturasRows.map(r => r.asignatura);
 
-    // 3. Planificaciones existentes para el año
+    // 3. Planificaciones existentes para el año activo
     const planificacionesExistentes = await queryAll(`
         SELECT p.id, p.anio, p.curso, p.asignatura, p.titulo, p.docente_responsable, 
                p.docentes_colaboradores, p.cursos_vinculados, p.estado, p.visado_por, p.visado_fecha, p.actualizado_en,
@@ -183,10 +188,25 @@ async function obtenerCursosDocente(usuarioEmail, usuarioNombre, anio = 2026) {
         });
     });
 
+    // 4. Planificaciones del año anterior (para sugerir promoción/importación con 1 clic)
+    const annoAnterior = anioNum - 1;
+    const planesPrevios = await queryAll(`
+        SELECT p.id, p.anio, p.curso, p.asignatura, p.titulo, p.estado,
+               (SELECT COUNT(*) FROM planificaciones_unidades u WHERE u.planificacion_id = p.id) as total_unidades
+        FROM planificaciones p
+        WHERE p.anio = ?
+    `, [annoAnterior]);
+    const prevMap = {};
+    planesPrevios.forEach(p => {
+        prevMap[`${p.curso}___${normalizar(p.asignatura)}`] = p;
+    });
+
     // Enriquecer la carga horaria del docente con el estado de su planificación
     const misAsignaciones = misCursosHorario.map(c => {
         const k = `${c.curso}___${normalizar(c.asignatura)}`;
         const plan = planMap[k] || null;
+        const prevPlan = prevMap[k] || null;
+
         return {
             curso: c.curso,
             asignatura: c.asignatura,
@@ -198,12 +218,19 @@ async function obtenerCursosDocente(usuarioEmail, usuarioNombre, anio = 2026) {
             actualizado_en: plan ? plan.actualizado_en : null,
             es_vinculado: plan ? !!plan.es_vinculado : false,
             curso_principal: plan ? plan.curso_principal : null,
-            cursos_vinculados: plan ? plan.cursos_vinculados_arr : []
+            cursos_vinculados: plan ? plan.cursos_vinculados_arr : [],
+            // Datos del año anterior para botón de importación
+            tiene_plan_anterior: !plan && !!prevPlan,
+            plan_anterior_id: prevPlan ? prevPlan.id : null,
+            plan_anterior_anno: prevPlan ? prevPlan.anio : null,
+            plan_anterior_titulo: prevPlan ? prevPlan.titulo : null,
+            plan_anterior_unidades: prevPlan ? prevPlan.total_unidades : 0
         };
     });
 
     return {
         anio: anioNum,
+        anno: anioNum,
         misAsignaciones,
         todosLosCursos,
         todasLasAsignaturas
@@ -784,6 +811,34 @@ async function desvincularCurso(planId, cursoDesvincular, { crearCopia = false }
 }
 
 // -------------------------------------------------------------
+// 5e. Promover Planificación Individual desde Año Anterior
+// -------------------------------------------------------------
+async function promoverPlanificacionIndividual(planIdOrigen, annoDestino, usuario) {
+    const annosService = require('./annos');
+    const orig = await queryGet(`SELECT id, anio, curso, asignatura FROM planificaciones WHERE id = ?`, [planIdOrigen]);
+    if (!orig) throw new Error("Planificación de origen no encontrada.");
+
+    const dest = parseInt(annoDestino);
+    if (!dest) throw new Error("Debe especificar el año de destino.");
+
+    const res = await annosService.promoverPlanificacionesInteranual(
+        orig.anio,
+        dest,
+        { planIds: [planIdOrigen], soloVisadas: false },
+        usuario
+    );
+
+    const nuevo = await queryGet(`SELECT id FROM planificaciones WHERE anio = ? AND curso = ? AND asignatura = ?`, [dest, orig.curso, orig.asignatura]);
+    return {
+        id: nuevo ? nuevo.id : null,
+        nuevoPlanId: nuevo ? nuevo.id : null,
+        mensaje: nuevo 
+            ? `Planificación promovida exitosamente al Año ${dest}.` 
+            : res.mensaje
+    };
+}
+
+// -------------------------------------------------------------
 // 6. Control de Versiones Tipo Git (Checkpoints y Restauración)
 // -------------------------------------------------------------
 async function crearCheckpointVersion(planificacionId, mensaje, usuario, tipo = 'checkpoint') {
@@ -1239,6 +1294,7 @@ module.exports = {
     clonarPlanificacion,
     vincularCurso,
     desvincularCurso,
+    promoverPlanificacionIndividual,
     crearCheckpointVersion,
     restaurarVersion,
     cambiarEstadoVisado,

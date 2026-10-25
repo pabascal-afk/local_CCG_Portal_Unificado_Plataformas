@@ -110,7 +110,8 @@ router.get('/', async (req, res) => {
 // GET Horarios
 router.get('/horarios', async (req, res) => {
     try {
-        const rows = await queryAll("SELECT * FROM horarios");
+        const anno = parseInt(req.query.anno || req.query.anio) || 2026;
+        const rows = await queryAll("SELECT * FROM horarios WHERE (anno = ? OR (anno IS NULL AND ? = 2026))", [anno, anno]);
         res.json(rows);
     } catch (e) {
         res.status(500).json({ error: e.message });

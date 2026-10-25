@@ -833,7 +833,8 @@ router.post('/:functionName', async (req, res) => {
              if (!esAdminOCoord) {
                  return res.status(403).json({ error: "Acceso denegado: El Visor de Horarios es exclusivo para Administración y Coordinación." });
              }
-             const data = await queryAll("SELECT * FROM horarios");
+             const annoFiltro = (args && args[0]) ? parseInt(args[0]) : 2026;
+             const data = await queryAll("SELECT * FROM horarios WHERE (anno = ? OR (anno IS NULL AND ? = 2026))", [annoFiltro, annoFiltro]);
              if (data.length === 0) {
                  return res.json({ result: [] });
              }
@@ -842,7 +843,8 @@ router.post('/:functionName', async (req, res) => {
                  'Curso': h.curso,
                  'Bloque': h.bloque ? h.bloque.toString() : '',
                  'Asignatura': h.asignatura,
-                 'Profesor': h.profesor
+                 'Profesor': h.profesor,
+                 'Año': h.anno || 2026
              }));
              return res.json({ result: horarios });
         }
@@ -853,18 +855,19 @@ router.post('/:functionName', async (req, res) => {
              if (!esAdminOCoord) {
                  return res.status(403).json({ error: "Acceso denegado: La gestión de horarios es exclusiva para Administración y Coordinación." });
              }
-             const [columna, valorActual, nuevoValor] = args;
+             const [columna, valorActual, nuevoValor, annoParam] = args;
+             const anno = annoParam ? parseInt(annoParam) : 2026;
              const colMap = { 'Profesor': 'profesor', 'Asignatura': 'asignatura', 'Curso': 'curso' };
              const colDb = colMap[columna];
              if (colDb) {
-                 await run(`UPDATE horarios SET ${colDb} = ? WHERE ${colDb} = ?`, [nuevoValor, valorActual]);
+                 await run(`UPDATE horarios SET ${colDb} = ? WHERE ${colDb} = ? AND (anno = ? OR (anno IS NULL AND ? = 2026))`, [nuevoValor, valorActual, anno, anno]);
                  auditoria.registrarAuditoria({
                      req,
                      usuario: user,
                      modulo: 'Horarios',
                      accion: 'Actualización Masiva',
                      nivel: 'info',
-                     descripcion: `Actualización masiva en horarios [${columna}]: "${valorActual}" -> "${nuevoValor}"`
+                     descripcion: `Actualización masiva en horarios [${columna}] (${anno}): "${valorActual}" -> "${nuevoValor}"`
                  });
              }
              return res.json({ result: "Actualizado masivamente" });
@@ -876,18 +879,19 @@ router.post('/:functionName', async (req, res) => {
              if (!esAdminOCoord) {
                  return res.status(403).json({ error: "Acceso denegado: La gestión de horarios es exclusiva para Administración y Coordinación." });
              }
-             const [curso, dia, bloque, columna, nuevoValor] = args;
+             const [curso, dia, bloque, columna, nuevoValor, annoParam] = args;
+             const anno = annoParam ? parseInt(annoParam) : 2026;
              const colMap = { 'Profesor': 'profesor', 'Asignatura': 'asignatura', 'Curso': 'curso' };
              const colDb = colMap[columna];
              if (colDb) {
-                 await run(`UPDATE horarios SET ${colDb} = ? WHERE curso = ? AND dia = ? AND bloque = ?`, [nuevoValor, curso, dia, bloque]);
+                 await run(`UPDATE horarios SET ${colDb} = ? WHERE curso = ? AND dia = ? AND bloque = ? AND (anno = ? OR (anno IS NULL AND ? = 2026))`, [nuevoValor, curso, dia, bloque, anno, anno]);
                  auditoria.registrarAuditoria({
                      req,
                      usuario: user,
                      modulo: 'Horarios',
                      accion: 'Actualización Registro Único',
                      nivel: 'info',
-                     descripcion: `Modificación en horario de ${curso} (${dia}, Bloque ${bloque}): ${columna} cambiado a "${nuevoValor}"`
+                     descripcion: `Modificación en horario de ${curso} (${dia}, Bloque ${bloque}, Año ${anno}): ${columna} cambiado a "${nuevoValor}"`
                  });
              }
              return res.json({ result: "Actualizado registro único" });

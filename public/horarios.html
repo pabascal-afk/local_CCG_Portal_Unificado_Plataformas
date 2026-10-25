@@ -60,6 +60,7 @@
   <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
   <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.1/font/bootstrap-icons.css">
   <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
   <style>
     body { background-color: #f8f9fa; font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; }
     .header-panel { background: #2c3e50; color: white; padding: 2rem 0; margin-bottom: 2rem; border-bottom: 4px solid #18bc9c; }
@@ -110,13 +111,21 @@
 
 <div class="header-panel text-center">
   <h1>Coordinación Pedagógica</h1>
-  <p>Gestión de Horarios Escolares 2026</p>
+  <p id="headerSubtituloHorarios">Gestión de Horarios Escolares 2026</p>
 </div>
 
 <div class="container-fluid px-4">
   <div class="row mb-4">
     <div class="col-md-12">
       <div class="bg-white p-3 rounded shadow-sm d-flex flex-wrap gap-3 align-items-center">
+        <div style="min-width: 180px;">
+          <div class="input-group">
+            <span class="input-group-text bg-white"><i class="bi bi-calendar3"></i></span>
+            <select id="selectAnnoHorario" class="form-select fw-bold border-primary text-primary" onchange="cambiarAnnoHorarios(this.value)">
+              <option value="2026">Año Escolar 2026</option>
+            </select>
+          </div>
+        </div>
         <div class="flex-grow-1">
           <select id="selectCurso" class="form-select" onchange="renderizar()"><option value="">Todos los Cursos</option></select>
         </div>
@@ -126,8 +135,11 @@
         <div class="flex-grow-1">
           <select id="selectAsignatura" class="form-select" onchange="renderizar()"><option value="">Todas las Asignaturas</option></select>
         </div>
-        <div>
-          <button class="btn btn-outline-secondary w-100" onclick="resetFiltros()">Limpiar</button>
+        <div class="d-flex gap-2">
+          <button class="btn btn-outline-secondary" onclick="resetFiltros()">Limpiar</button>
+          <button class="btn btn-outline-primary" onclick="abrirModalClonarHorarios()" title="Clonar Horarios de otro Año">
+            <i class="bi bi-copy me-1"></i> Clonar Año
+          </button>
         </div>
       </div>
     </div>
@@ -165,6 +177,7 @@
 
 <script>
   let DB_HORARIOS = [];
+  let annoHorarioActivo = 2026;
   let editorContexto = {};
   let colorAsignaturas = {}; // Nuevo diccionario para guardar colores únicos
   const modalEl = new bootstrap.Modal(document.getElementById('editorModal'));
@@ -219,20 +232,108 @@
       console.warn('No se pudo verificar rol en horarios:', e);
     }
 
+    try {
+      const resAnnos = await fetch('/api/annos');
+      if (resAnnos.ok) {
+        const annos = await resAnnos.json();
+        const selA = document.getElementById('selectAnnoHorario');
+        if (annos && annos.length > 0) {
+          selA.innerHTML = annos.map(a => {
+            const lbl = a.estado === 'Activo' ? ' (Activo)' : (a.estado === 'Cerrado' ? ' (Cerrado)' : ' (En preparación)');
+            return `<option value="${a.anno}">Año Escolar ${a.anno}${lbl}</option>`;
+          }).join('');
+          const act = annos.find(a => a.estado === 'Activo') || annos[0];
+          annoHorarioActivo = act.anno;
+          selA.value = annoHorarioActivo;
+        }
+      }
+    } catch(e) {
+      console.warn('Error cargando catálogo de años:', e);
+    }
+    actualizarTituloHeader();
+    cargarHorariosAnno(annoHorarioActivo);
+  };
+
+  
+  function actualizarTituloHeader() {
+    const el = document.getElementById('headerSubtituloHorarios');
+    if (el) el.innerText = `Gestión de Horarios Escolares ${annoHorarioActivo}`;
+  }
+
+  function cambiarAnnoHorarios(anno) {
+    annoHorarioActivo = parseInt(anno);
+    actualizarTituloHeader();
+    cargarHorariosAnno(annoHorarioActivo);
+  }
+
+  function cargarHorariosAnno(anno) {
+    document.getElementById('loading').style.display = 'block';
+    document.getElementById('visorGrid').innerHTML = '';
+    
+    // Limpiar selectores previos
+    document.getElementById('selectCurso').innerHTML = '<option value="">Todos los Cursos</option>';
+    document.getElementById('selectProfesor').innerHTML = '<option value="">Todos los Profesores</option>';
+    document.getElementById('selectAsignatura').innerHTML = '<option value="">Todas las Asignaturas</option>';
+
     google.script.run.withSuccessHandler(data => {
-      DB_HORARIOS = data;
+      DB_HORARIOS = data || [];
       poblarFiltrosBase();
       document.getElementById('loading').style.display = 'none';
       if (!data || data.length === 0) {
-        document.getElementById('visorGrid').innerHTML = '<div class="alert alert-warning text-center">No se encontraron datos en la base de datos de horarios.</div>';
+        document.getElementById('visorGrid').innerHTML = `<div class="alert alert-warning text-center">No se encontraron bloques de horario registrados para el Año Escolar ${anno}. Puede clonarlos desde otro año con el botón "Clonar Año".</div>`;
         return;
       }
       renderizar();
     }).withFailureHandler(error => {
       document.getElementById('loading').style.display = 'none';
       document.getElementById('visorGrid').innerHTML = '<div class="alert alert-danger text-center">Error al cargar datos: ' + error.message + '</div>';
-    }).getHorariosData();
-  };
+    }).getHorariosData(anno);
+  }
+
+  async function abrirModalClonarHorarios() {
+    let opcionesAnnos = {};
+    try {
+      const res = await fetch('/api/annos');
+      if (res.ok) {
+        const annos = await res.json();
+        annos.filter(a => a.anno !== annoHorarioActivo).forEach(a => {
+          opcionesAnnos[a.anno] = `Año Escolar ${a.anno} (${a.estado})`;
+        });
+      }
+    } catch(e){}
+    if (Object.keys(opcionesAnnos).length === 0) {
+      opcionesAnnos['2026'] = 'Año Escolar 2026';
+    }
+
+    const { value: annoOrigen } = await Swal.fire({
+      title: `Clonar Horarios hacia el Año ${annoHorarioActivo}`,
+      html: `<p class="small text-muted mb-3">Duplica la estructura de cursos, días, bloques y docentes para iniciar el nuevo ciclo lectivo.</p>`,
+      input: 'select',
+      inputOptions: opcionesAnnos,
+      inputPlaceholder: 'Selecciona el año de origen',
+      showCancelButton: true,
+      confirmButtonText: 'Clonar Malla Horaria',
+      cancelButtonText: 'Cancelar'
+    });
+
+    if (!annoOrigen) return;
+
+    try {
+      Swal.showLoading();
+      const res = await fetch(`/api/annos/${annoHorarioActivo}/clonar-horarios`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ anno_origen: parseInt(annoOrigen) })
+      });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error);
+
+      Swal.fire('¡Horarios Clonados!', data.mensaje, 'success');
+      cargarHorariosAnno(annoHorarioActivo);
+    } catch(err) {
+      Swal.fire('Error', err.message, 'error');
+    }
+  }
 
   function poblarFiltrosBase() {
     const cursos = [...new Set(DB_HORARIOS.map(h => h.Curso))].sort();
@@ -343,9 +444,9 @@
 
     // Enviar a Google Sheets (Asíncrono)
     if (esMasivo) {
-      google.script.run.actualizarRegistroMasivo(columna, valorActual, nuevoValor);
+      google.script.run.actualizarRegistroMasivo(columna, valorActual, nuevoValor, annoHorarioActivo);
     } else {
-      google.script.run.actualizarRegistroUnico(curso, dia, bloque, columna, nuevoValor);
+      google.script.run.actualizarRegistroUnico(curso, dia, bloque, columna, nuevoValor, annoHorarioActivo);
     }
 
     renderizar();

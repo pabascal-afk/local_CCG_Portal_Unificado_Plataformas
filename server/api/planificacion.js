@@ -267,6 +267,17 @@ router.post('/:id/desvincular', async (req, res) => {
     }
 });
 
+// 10e. Promover planificación individual al nuevo año escolar
+router.post('/:id/promover', async (req, res) => {
+    try {
+        const annoDestino = req.body.annoDestino || req.body.anno_destino || req.body.anioDestino || req.body.anio_destino || 2027;
+        const resultado = await planificacion.promoverPlanificacionIndividual(req.params.id, annoDestino, req.user);
+        res.json(resultado);
+    } catch (e) {
+        res.status(400).json({ error: e.message });
+    }
+});
+
 // 11. Crear Checkpoint de Versión ("Tipo Git")
 router.post('/:id/checkpoint', async (req, res) => {
     try {

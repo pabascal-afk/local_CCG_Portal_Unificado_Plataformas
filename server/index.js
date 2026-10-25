@@ -96,6 +96,26 @@ db.serialize(() => {
   db.run("ALTER TABLE curriculo_objetivos ADD COLUMN unidad_sugerida TEXT DEFAULT 'Unidad 1'", () => {});
   db.run("ALTER TABLE planificaciones ADD COLUMN cursos_vinculados TEXT DEFAULT '[]'", () => {});
   db.run("ALTER TABLE planificaciones_unidades ADD COLUMN tags TEXT DEFAULT '[]'", () => {});
+  db.run("ALTER TABLE horarios ADD COLUMN anno INTEGER DEFAULT 2026", () => {});
+  db.run("ALTER TABLE usuarios ADD COLUMN activo INTEGER DEFAULT 1", () => {});
+  db.run(`CREATE TABLE IF NOT EXISTS annos_escolares (
+    anno INTEGER PRIMARY KEY,
+    nombre TEXT NOT NULL,
+    estado TEXT NOT NULL DEFAULT 'Activo',
+    fecha_inicio TEXT NOT NULL,
+    fecha_fin TEXT NOT NULL,
+    fecha_termino_primer_semestre TEXT,
+    fecha_inicio_segundo_semestre TEXT,
+    dias_habiles_estimados INTEGER DEFAULT 180,
+    descripcion TEXT,
+    creado_en DATETIME DEFAULT CURRENT_TIMESTAMP,
+    actualizado_en DATETIME DEFAULT CURRENT_TIMESTAMP
+  )`, () => {});
+  db.run("INSERT OR IGNORE INTO config_global (clave, valor) VALUES ('anno_activo_predeterminado', '2026')", () => {});
+  db.run(`INSERT OR IGNORE INTO annos_escolares 
+    (anno, nombre, estado, fecha_inicio, fecha_fin, fecha_termino_primer_semestre, fecha_inicio_segundo_semestre, descripcion)
+    VALUES 
+    (2026, 'Año Escolar 2026', 'Activo', '2026-03-02', '2026-12-18', '2026-07-03', '2026-07-27', 'Año escolar en curso')`, () => {});
   mailer.inicializarTablasCorreo();
   auditoria.inicializarTablaAuditoria();
   try {
@@ -1253,6 +1273,10 @@ app.use('/api/auditoria', auditoriaRouter);
 
 const planificacionRouter = require('./api/planificacion');
 app.use('/api/planificacion', planificacionRouter);
+
+const annosRouter = require('./api/annos');
+app.use('/api/annos', annosRouter);
+app.use('/api/anos', annosRouter);
 
 
 // --- Roles Config ---

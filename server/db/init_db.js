@@ -304,7 +304,20 @@ const schemas = [
     creado_en DATETIME DEFAULT CURRENT_TIMESTAMP,
     FOREIGN KEY (planificacion_id) REFERENCES planificaciones(id) ON DELETE CASCADE
   )`,
-  `CREATE INDEX IF NOT EXISTS idx_plan_obs ON planificaciones_observaciones(planificacion_id)`
+  `CREATE INDEX IF NOT EXISTS idx_plan_obs ON planificaciones_observaciones(planificacion_id)`,
+  `CREATE TABLE IF NOT EXISTS annos_escolares (
+      anno INTEGER PRIMARY KEY,
+      nombre TEXT NOT NULL,
+      estado TEXT NOT NULL DEFAULT 'Activo',
+      fecha_inicio TEXT NOT NULL,
+      fecha_fin TEXT NOT NULL,
+      fecha_termino_primer_semestre TEXT,
+      fecha_inicio_segundo_semestre TEXT,
+      dias_habiles_estimados INTEGER DEFAULT 180,
+      descripcion TEXT,
+      creado_en DATETIME DEFAULT CURRENT_TIMESTAMP,
+      actualizado_en DATETIME DEFAULT CURRENT_TIMESTAMP
+    )`
 ];
 
 db.serialize(() => {
@@ -327,7 +340,14 @@ db.serialize(() => {
     db.run("ALTER TABLE curriculo_objetivos ADD COLUMN unidad_sugerida TEXT DEFAULT 'Unidad 1'", () => {});
     db.run("ALTER TABLE planificaciones ADD COLUMN cursos_vinculados TEXT DEFAULT '[]'", () => {});
     db.run("ALTER TABLE planificaciones_unidades ADD COLUMN tags TEXT DEFAULT '[]'", () => {});
+    db.run("ALTER TABLE horarios ADD COLUMN anno INTEGER DEFAULT 2026", () => {});
+    db.run("ALTER TABLE usuarios ADD COLUMN activo INTEGER DEFAULT 1", () => {});
     db.run("INSERT OR IGNORE INTO config_global (clave, valor) VALUES ('emails_activados', 'true')", () => {});
+    db.run("INSERT OR IGNORE INTO config_global (clave, valor) VALUES ('anno_activo_predeterminado', '2026')", () => {});
+    db.run(`INSERT OR IGNORE INTO annos_escolares 
+      (anno, nombre, estado, fecha_inicio, fecha_fin, fecha_termino_primer_semestre, fecha_inicio_segundo_semestre, descripcion)
+      VALUES 
+      (2026, 'Año Escolar 2026', 'Activo', '2026-03-02', '2026-12-18', '2026-07-03', '2026-07-27', 'Año escolar en curso')`, () => {});
 
     db.run("INSERT OR IGNORE INTO config_tipos_evaluacion (nombre, es_prueba) VALUES ('📝 Prueba', 1)", () => {});
     db.run("INSERT OR IGNORE INTO config_tipos_evaluacion (nombre, es_prueba) VALUES ('🗣️ Exposición Oral', 1)", () => {});
