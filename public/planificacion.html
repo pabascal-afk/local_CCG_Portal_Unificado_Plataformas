@@ -1115,6 +1115,16 @@
       return 'badge-tag-custom';
     }
 
+    function escapeHtml(str) {
+      if (!str) return '';
+      return String(str)
+        .replace(/&/g, '&amp;')
+        .replace(/</g, '&lt;')
+        .replace(/>/g, '&gt;')
+        .replace(/"/g, '&quot;')
+        .replace(/'/g, '&#039;');
+    }
+
     let poolDocentesList = [];
     let colaboradoresSeleccionados = [];
     let sesionesSemanaActual = [];
@@ -1760,11 +1770,24 @@
                       ${(u.oas_seleccionados || []).length > 0 ? (u.oas_seleccionados || []).map((o, oIdx) => {
                         const cod = (typeof o === 'object') ? o.codigo : o;
                         const cat = (typeof o === 'object' && o.categoria) ? o.categoria : 'Basal';
+                        const oaId = (typeof o === 'object' && o.id) ? o.id : cod;
+                        let desc = (typeof o === 'object' && o.descripcion) ? o.descripcion : '';
+                        if (!desc && planActivo && Array.isArray(planActivo.oas_disponibles)) {
+                          const match = planActivo.oas_disponibles.find(x => (o.id && x.id === o.id) || x.codigo === cod);
+                          if (match) desc = match.descripcion;
+                        }
+                        const safeTooltip = escapeHtml(`[${cod} • ${cat}]: ${desc || 'Objetivo de Aprendizaje curricular'}`);
+
                         return `
-                          <span class="badge ${cat === 'Basal' ? 'badge-oa-basal' : 'badge-oa-comp'} p-2 d-flex align-items-center gap-2 cursor-grab" data-oa-codigo="${cod}">
+                          <span class="badge ${cat === 'Basal' ? 'badge-oa-basal' : 'badge-oa-comp'} p-2 d-flex align-items-center gap-2 cursor-grab" 
+                                data-oa-codigo="${cod}" 
+                                data-oa-id="${oaId}"
+                                data-bs-toggle="tooltip" 
+                                data-bs-placement="top" 
+                                title="${safeTooltip}">
                             <i class="bi bi-grip-vertical drag-handle-oa text-muted"></i>
                             <span>${cod} (${cat})</span>
-                            <i class="bi bi-x-circle cursor-pointer text-danger" onclick="quitarOAUnidad(${idx}, '${cod}')"></i>
+                            <i class="bi bi-x-circle cursor-pointer text-danger" onclick="quitarOAUnidad(${idx}, '${oaId}')" title="Quitar este OA"></i>
                           </span>
                         `;
                       }).join('') : '<span class="text-muted small">No se han asignado OAs a esta unidad todavía.</span>'}
@@ -2031,6 +2054,16 @@
           });
         }
       });
+
+      // Inicializar tooltips en los chips de OAs
+      setTimeout(() => {
+        const chipsTooltips = document.querySelectorAll('#unidadesAcordeonContainer [data-bs-toggle="tooltip"]');
+        chipsTooltips.forEach(el => {
+          const instance = bootstrap.Tooltip.getInstance(el);
+          if (instance) instance.dispose();
+          new bootstrap.Tooltip(el, { container: 'body' });
+        });
+      }, 150);
     }
 
     // -------------------------------------------------------------
@@ -2332,7 +2365,26 @@
       oasDisponiblesModal = planActivo.oas_disponibles || [];
       
       const u = planActivo.unidades[uIdx];
-      oasSeleccionadosTemp = new Set((u.oas_seleccionados || []).map(o => (typeof o === 'object') ? o.codigo : o));
+      // Indexar los OAs seleccionados por su ID único para evitar mezclas entre unidades o asignaturas
+      oasSeleccionadosTemp = new Set();
+      (u.oas_seleccionados || []).forEach(o => {
+        if (typeof o === 'object') {
+          if (o.id) {
+            oasSeleccionadosTemp.add(Number(o.id));
+          } else {
+            // Retrocompatibilidad: buscar en oasDisponiblesModal por código y unidad
+            const match = oasDisponiblesModal.find(d => d.codigo === o.codigo && (!o.unidad_sugerida || d.unidad_sugerida === o.unidad_sugerida));
+            if (match) oasSeleccionadosTemp.add(Number(match.id));
+            else {
+              const fallbackMatch = oasDisponiblesModal.find(d => d.codigo === o.codigo);
+              if (fallbackMatch) oasSeleccionadosTemp.add(Number(fallbackMatch.id));
+            }
+          }
+        } else {
+          const match = oasDisponiblesModal.find(d => d.codigo === o);
+          if (match) oasSeleccionadosTemp.add(Number(match.id));
+        }
+      });
 
       // Llenar selector de ejes
       const ejes = Array.from(new Set(oasDisponiblesModal.map(o => o.eje_unidad || 'General')));
@@ -2381,13 +2433,14 @@
       }
 
       cont.innerHTML = filtrados.map(o => {
-        const isChecked = oasSeleccionadosTemp.has(o.codigo);
+        const oId = Number(o.id);
+        const isChecked = oasSeleccionadosTemp.has(oId);
         const indics = Array.isArray(o.indicadores_sugeridos) ? o.indicadores_sugeridos : [];
         return `
           <div class="card mb-2 border ${isChecked ? 'border-primary bg-primary-subtle' : 'bg-white'}">
             <div class="card-body p-3">
               <div class="form-check">
-                <input class="form-check-input" type="checkbox" id="chkOA_${o.id}" value="${o.codigo}" ${isChecked ? 'checked' : ''} onchange="toggleOASeleccion('${o.codigo}', this.checked)">
+                <input class="form-check-input" type="checkbox" id="chkOA_${o.id}" value="${o.id}" ${isChecked ? 'checked' : ''} onchange="toggleOASeleccion(${o.id}, this.checked)">
                 <label class="form-check-label w-100 cursor-pointer" for="chkOA_${o.id}">
                   <div class="d-flex justify-content-between align-items-center mb-1 flex-wrap gap-1">
                     <span class="fw-bold font-monospace text-primary fs-6">${o.codigo}</span>
@@ -2397,7 +2450,7 @@
                       <span class="badge bg-light text-dark border">${o.eje_unidad || 'General'}</span>
                     </div>
                   </div>
-                  <p class="small text-dark mb-2">${o.descripcion}</p>
+                  <p class="small text-dark mb-2">${escapeHtml(o.descripcion)}</p>
                 </label>
               </div>
 
@@ -2407,7 +2460,7 @@
                     <i class="bi bi-check2-circle text-success me-1"></i>Indicadores de Evaluación Sugeridos MINEDUC (${indics.length}):
                   </div>
                   <ul class="small text-muted ps-3 mb-0" style="font-size: 0.8rem;">
-                    ${indics.map(ind => `<li>${ind}</li>`).join('')}
+                    ${indics.map(ind => `<li>${escapeHtml(ind)}</li>`).join('')}
                   </ul>
                 </div>
               ` : ''}
@@ -2417,9 +2470,10 @@
       }).join('');
     }
 
-    function toggleOASeleccion(codigo, checked) {
-      if (checked) oasSeleccionadosTemp.add(codigo);
-      else oasSeleccionadosTemp.delete(codigo);
+    function toggleOASeleccion(oaId, checked) {
+      const numId = Number(oaId);
+      if (checked) oasSeleccionadosTemp.add(numId);
+      else oasSeleccionadosTemp.delete(numId);
     }
 
     function confirmarSeleccionOAs() {
@@ -2429,12 +2483,14 @@
         const indicadoresAImportar = [];
 
         oasDisponiblesModal.forEach(o => {
-          if (oasSeleccionadosTemp.has(o.codigo)) {
+          if (oasSeleccionadosTemp.has(Number(o.id))) {
             nuevosOAs.push({
+              id: o.id,
               codigo: o.codigo,
               categoria: o.categoria,
               descripcion: o.descripcion,
-              unidad_sugerida: o.unidad_sugerida
+              unidad_sugerida: o.unidad_sugerida,
+              eje: o.eje_unidad
             });
             if (Array.isArray(o.indicadores_sugeridos)) {
               o.indicadores_sugeridos.forEach(ind => {
@@ -2460,6 +2516,7 @@
         }
 
         renderizarUnidadesAcordeon();
+        guardarBorradorActual(false);
         modalOAsObj.hide();
       }
     }
@@ -2517,14 +2574,18 @@
     // Precarga de indicadores sugeridos a partir de los OAs asignados a la unidad
     function precargarIndicadoresOAs(uIdx) {
       const u = planActivo.unidades[uIdx];
-      const oasSeleccionados = (u.oas_seleccionados || []).map(o => (typeof o === 'object') ? o.codigo : o);
-      if (oasSeleccionados.length === 0) {
+      const oasArray = u.oas_seleccionados || [];
+      if (oasArray.length === 0) {
         Swal.fire('Aviso', 'Primero debe seleccionar al menos un OA MINEDUC para esta unidad.', 'warning');
         return;
       }
+      const oasIds = new Set(oasArray.map(o => (typeof o === 'object' && o.id) ? Number(o.id) : null).filter(Boolean));
+      const oasCodigos = new Set(oasArray.map(o => (typeof o === 'object') ? o.codigo : o));
+
       const indicadores = [];
       (planActivo.oas_disponibles || []).forEach(o => {
-        if (oasSeleccionados.includes(o.codigo) && Array.isArray(o.indicadores_sugeridos)) {
+        const matches = (oasIds.size > 0 && oasIds.has(Number(o.id))) || (oasIds.size === 0 && oasCodigos.has(o.codigo));
+        if (matches && Array.isArray(o.indicadores_sugeridos)) {
           o.indicadores_sugeridos.forEach(ind => {
             indicadores.push(`• [${o.codigo}] ${ind}`);
           });
@@ -2548,13 +2609,18 @@
       });
     }
 
-    function quitarOAUnidad(uIdx, codigo) {
+    function quitarOAUnidad(uIdx, idOCodigo) {
       const u = planActivo.unidades[uIdx];
       u.oas_seleccionados = (u.oas_seleccionados || []).filter(o => {
-        const c = (typeof o === 'object') ? o.codigo : o;
-        return c !== codigo;
+        if (typeof o === 'object') {
+          if (o.id && (String(o.id) === String(idOCodigo))) return false;
+          if (o.codigo === String(idOCodigo)) return false;
+          return true;
+        }
+        return String(o) !== String(idOCodigo);
       });
       renderizarUnidadesAcordeon();
+      guardarBorradorActual(false);
     }
 
     // -------------------------------------------------------------

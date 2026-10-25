@@ -59,25 +59,41 @@ function normalizar(txt) {
 
 /**
  * Mapea el nombre del curso a un nivel educativo estándar MINEDUC
- * Ej: "3° BASICO A" -> "3° Básico", "II° MEDIO B" -> "II° Medio"
+ * Ej: "3° BASICO A" -> "3° Básico", "4to A" -> "4° Básico", "II° MEDIO B" -> "II° Medio"
  */
 function inferirNivelDesdeCurso(curso) {
     if (!curso) return '';
-    const c = curso.toUpperCase();
-    if (c.includes('1° BASICO') || c.includes('PRIMERO BASICO') || c.includes('1 BASICO')) return '1° Básico';
-    if (c.includes('2° BASICO') || c.includes('SEGUNDO BASICO') || c.includes('2 BASICO')) return '2° Básico';
-    if (c.includes('3° BASICO') || c.includes('TERCERO BASICO') || c.includes('3 BASICO')) return '3° Básico';
-    if (c.includes('4° BASICO') || c.includes('CUARTO BASICO') || c.includes('4 BASICO')) return '4° Básico';
-    if (c.includes('5° BASICO') || c.includes('QUINTO BASICO') || c.includes('5 BASICO')) return '5° Básico';
-    if (c.includes('6° BASICO') || c.includes('SEXTO BASICO') || c.includes('6 BASICO')) return '6° Básico';
-    if (c.includes('7° BASICO') || c.includes('SEPTIMO BASICO') || c.includes('7 BASICO')) return '7° Básico';
-    if (c.includes('8° BASICO') || c.includes('OCTAVO BASICO') || c.includes('8 BASICO')) return '8° Básico';
-    if (c.includes('I° MEDIO') || c.includes('PRIMERO MEDIO') || c.includes('1 MEDIO') || c.includes('1° MEDIO')) return 'I° Medio';
-    if (c.includes('II° MEDIO') || c.includes('SEGUNDO MEDIO') || c.includes('2 MEDIO') || c.includes('2° MEDIO')) return 'II° Medio';
-    if (c.includes('III° MEDIO') || c.includes('TERCERO MEDIO') || c.includes('3 MEDIO') || c.includes('3° MEDIO')) return 'III° Medio';
-    if (c.includes('IV° MEDIO') || c.includes('CUARTO MEDIO') || c.includes('4 MEDIO') || c.includes('4° MEDIO')) return 'IV° Medio';
-    if (c.includes('KINDER')) return 'Kinder';
-    if (c.includes('PRE-KINDER') || c.includes('PREKINDER')) return 'Pre-Kinder';
+    const c = curso.toString().toUpperCase()
+        .normalize("NFD").replace(/[\u0300-\u036f]/g, "")
+        .replace(/\s+/g, ' ').trim();
+
+    // 1. Detección de Educación Media
+    if (c.includes('IV MEDIO') || c.includes('IV° MEDIO') || c.includes('CUARTO MEDIO') || /4(°|TO|RO)?\s*(MEDIO|MED)\b/.test(c)) return 'IV° Medio';
+    if (c.includes('III MEDIO') || c.includes('III° MEDIO') || c.includes('TERCERO MEDIO') || /3(°|RO|ERO)?\s*(MEDIO|MED)\b/.test(c)) return 'III° Medio';
+    if (c.includes('II MEDIO') || c.includes('II° MEDIO') || c.includes('SEGUNDO MEDIO') || /2(°|DO|NDO)?\s*(MEDIO|MED)\b/.test(c)) return 'II° Medio';
+    if (c.includes('I MEDIO') || c.includes('I° MEDIO') || c.includes('PRIMERO MEDIO') || /1(°|RO|ERO)?\s*(MEDIO|MED)\b/.test(c)) return 'I° Medio';
+
+    // 2. Detección de Educación Parvularia
+    if (c.includes('PRE-KINDER') || c.includes('PREKINDER') || c.includes('PK')) return 'Pre-Kinder';
+    if (c.includes('KINDER') || c.includes('KND')) return 'Kinder';
+
+    // 3. Detección de Educación Básica (1° a 8°)
+    if (c.includes('OCTAVO') || /8(°|VO|BA)?\s*(BASICO|BAS\b|[A-F]\b)/.test(c) || /^8[A-F]?$/.test(c)) return '8° Básico';
+    if (c.includes('SEPTIMO') || /7(°|MO|MA)?\s*(BASICO|BAS\b|[A-F]\b)/.test(c) || /^7[A-F]?$/.test(c)) return '7° Básico';
+    if (c.includes('SEXTO') || /6(°|TO|TA)?\s*(BASICO|BAS\b|[A-F]\b)/.test(c) || /^6[A-F]?$/.test(c)) return '6° Básico';
+    if (c.includes('QUINTO') || /5(°|TO|TA)?\s*(BASICO|BAS\b|[A-F]\b)/.test(c) || /^5[A-F]?$/.test(c)) return '5° Básico';
+    if (c.includes('CUARTO') || /4(°|TO|TA)?\s*(BASICO|BAS\b|[A-F]\b)/.test(c) || /^4[A-F]?$/.test(c)) return '4° Básico';
+    if (c.includes('TERCERO') || /3(°|RO|RA|ERO)?\s*(BASICO|BAS\b|[A-F]\b)/.test(c) || /^3[A-F]?$/.test(c)) return '3° Básico';
+    if (c.includes('SEGUNDO') || /2(°|DO|DA|NDO)?\s*(BASICO|BAS\b|[A-F]\b)/.test(c) || /^2[A-F]?$/.test(c)) return '2° Básico';
+    if (c.includes('PRIMERO') || /1(°|RO|RA|ERO)?\s*(BASICO|BAS\b|[A-F]\b)/.test(c) || /^1[A-F]?$/.test(c)) return '1° Básico';
+
+    // Fallback general para números 1 a 8 seguidos o precedidos de marcas básicas
+    for (let i = 1; i <= 8; i++) {
+        if (c.includes(`${i}`) && (c.includes('BAS') || c.includes('°') || c.includes('TO') || c.includes('RO') || c.includes('DO') || c.includes('VO') || c.includes('MO'))) {
+            return `${i}° Básico`;
+        }
+    }
+
     return curso;
 }
 
@@ -584,13 +600,22 @@ async function obtenerPlanificacionDetalle(id) {
     if (!planCurr) {
         planCurr = await queryGet(`
             SELECT * FROM curriculo_planes 
-            WHERE anio = ? AND nivel = ? AND (
+            WHERE (anio = ? OR anio = 2026) 
+              AND (nivel = ? OR nivel LIKE ? OR ? LIKE '%' || nivel || '%')
+              AND (
                 asignatura = ? 
                 OR asignatura = ?
                 OR LOWER(asignatura) LIKE '%' || LOWER(?) || '%' 
                 OR LOWER(?) LIKE '%' || LOWER(asignatura) || '%'
-            ) LIMIT 1
-        `, [plan.anio, nivel, asigEstandar, plan.asignatura, plan.asignatura, plan.asignatura]);
+              )
+            ORDER BY (CASE WHEN anio = ? THEN 0 ELSE 1 END) ASC, id ASC
+            LIMIT 1
+        `, [plan.anio, nivel, `%${nivel}%`, nivel, asigEstandar, plan.asignatura, plan.asignatura, plan.asignatura, plan.anio]);
+
+        if (planCurr && !plan.plan_curricular_id) {
+            await queryRun(`UPDATE planificaciones SET plan_curricular_id = ? WHERE id = ?`, [planCurr.id, plan.id]);
+            plan.plan_curricular_id = planCurr.id;
+        }
     }
 
     let oasDisponibles = [];
@@ -612,14 +637,22 @@ async function obtenerPlanificacionDetalle(id) {
             ORDER BY orden ASC, codigo ASC
         `, [planCurr.id]);
     } else {
-        // Búsqueda flexible de OAs por nivel
+        // Búsqueda flexible de OAs por nivel Y ASIGNATURA (NUNCA mezclar asignaturas ajenas)
         oasDisponibles = await queryAll(`
             SELECT o.id, o.plan_id, o.tipo_objetivo, o.eje_unidad, o.unidad_sugerida, o.codigo, o.descripcion, o.categoria, o.indicadores_sugeridos, o.orden, cp.asignatura as asignatura_programa
             FROM curriculo_objetivos o
             JOIN curriculo_planes cp ON cp.id = o.plan_id
-            WHERE cp.anio = ? AND cp.nivel = ? AND o.activo = 1
+            WHERE (cp.anio = ? OR cp.anio = 2026) 
+              AND (cp.nivel = ? OR cp.nivel LIKE ?)
+              AND (
+                cp.asignatura = ? 
+                OR cp.asignatura = ?
+                OR LOWER(cp.asignatura) LIKE '%' || LOWER(?) || '%' 
+                OR LOWER(?) LIKE '%' || LOWER(cp.asignatura) || '%'
+              )
+              AND o.activo = 1
             ORDER BY o.eje_unidad ASC, o.codigo ASC
-        `, [plan.anio, nivel]);
+        `, [plan.anio, nivel, `%${nivel}%`, asigEstandar, plan.asignatura, plan.asignatura, plan.asignatura]);
     }
 
     // Parsear indicadores_sugeridos para cada OA
@@ -633,6 +666,36 @@ async function obtenerPlanificacionDetalle(id) {
 
     plan.oas_disponibles = oasDisponibles;
     plan.actitudes_sugeridas = curriculoSeed.ACTITUDES_GENERALES_MINEDUC;
+
+    // Enriquecer oas_seleccionados en cada unidad con su descripción para tooltips y precisión
+    unidades.forEach(u => {
+        u.oas_seleccionados = (u.oas_seleccionados || []).map(o => {
+            if (typeof o === 'string') {
+                const match = oasDisponibles.find(x => x.codigo === o && (x.unidad_sugerida && x.unidad_sugerida.includes(`Unidad ${u.numero_unidad}`)));
+                const fallbackMatch = match || oasDisponibles.find(x => x.codigo === o);
+                return {
+                    id: fallbackMatch ? fallbackMatch.id : null,
+                    codigo: o,
+                    descripcion: fallbackMatch ? fallbackMatch.descripcion : '',
+                    categoria: fallbackMatch ? fallbackMatch.categoria : 'Basal',
+                    unidad_sugerida: fallbackMatch ? fallbackMatch.unidad_sugerida : `Unidad ${u.numero_unidad || 1}`
+                };
+            } else if (typeof o === 'object') {
+                if (!o.descripcion || !o.id) {
+                    const match = oasDisponibles.find(x => (o.id && x.id === o.id) || (x.codigo === o.codigo && (!o.unidad_sugerida || x.unidad_sugerida === o.unidad_sugerida)));
+                    const fallbackMatch = match || oasDisponibles.find(x => x.codigo === o.codigo);
+                    if (fallbackMatch) {
+                        o.id = o.id || fallbackMatch.id;
+                        o.descripcion = o.descripcion || fallbackMatch.descripcion;
+                        o.categoria = o.categoria || fallbackMatch.categoria;
+                        o.unidad_sugerida = o.unidad_sugerida || fallbackMatch.unidad_sugerida;
+                    }
+                }
+                return o;
+            }
+            return o;
+        });
+    });
 
     // Observaciones activas
     const observaciones = await queryAll(`
@@ -691,13 +754,17 @@ async function crearPlanificacion(payload, usuario) {
     if (!planCurricularId) {
         const pc = await queryGet(`
             SELECT id FROM curriculo_planes 
-            WHERE anio = ? AND nivel = ? AND (
+            WHERE (anio = ? OR anio = 2026) 
+              AND (nivel = ? OR nivel LIKE ? OR ? LIKE '%' || nivel || '%')
+              AND (
                 asignatura = ? 
                 OR asignatura = ?
                 OR LOWER(asignatura) LIKE '%' || LOWER(?) || '%' 
                 OR LOWER(?) LIKE '%' || LOWER(asignatura) || '%'
-            ) LIMIT 1
-        `, [anio, nivel, asigEstandar, asignatura, asignatura, asignatura]);
+              )
+            ORDER BY (CASE WHEN anio = ? THEN 0 ELSE 1 END) ASC, id ASC
+            LIMIT 1
+        `, [anio, nivel, `%${nivel}%`, nivel, asigEstandar, asignatura, asignatura, asignatura, anio]);
         if (pc) planCurricularId = pc.id;
     }
 
