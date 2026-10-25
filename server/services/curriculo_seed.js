@@ -172,8 +172,8 @@ function inicializarCurriculo(db, callback, { forzarActualizacion = true } = {})
       const totalOAs = (row && row.total) || 0;
       const conIndicadores = (row && row.con_indicadores) || 0;
 
-      // Si ya está completamente poblado con indicadores y no se fuerza recarga, salir
-      if (!forzarActualizacion && totalOAs >= 200 && conIndicadores === totalOAs) {
+      // Si ya está completamente poblado con todo el catálogo oficial y no se fuerza recarga, salir
+      if (!forzarActualizacion && totalOAs >= CATALOGO_MINEDUC_COMPLETO.length && conIndicadores >= CATALOGO_MINEDUC_COMPLETO.length) {
         console.log(`[CURRICULO] Catálogo ya actualizado con ${totalOAs} OAs e indicadores para el año ${anioActual}.`);
         if (callback) callback(null);
         return;
