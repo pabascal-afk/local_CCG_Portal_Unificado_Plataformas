@@ -13,6 +13,7 @@ const passport = require('passport');
 const GoogleStrategy = require('passport-google-oauth20').Strategy;
 const sqlite3 = require('sqlite3').verbose();
 const path = require('path');
+const fs = require('fs');
 const nodemailer = require('nodemailer');
 const mailer = require('./services/mailer');
 const auditoria = require('./services/auditoria');
@@ -204,6 +205,19 @@ app.get('/api/launcher/version', (req, res) => {
     version: '1.2.0',
     downloadUrl: 'https://raw.githubusercontent.com/pabascal-afk/local_CCG_Portal_Unificado_Plataformas/main/Lanzador_Plataforma.exe'
   });
+});
+
+app.get('/api/launcher/download', (req, res) => {
+  const exePath = path.join(__dirname, '../Lanzador_Plataforma.exe');
+  if (fs.existsSync(exePath)) {
+    res.download(exePath, 'Lanzador_Plataforma.exe');
+  } else {
+    res.redirect('https://raw.githubusercontent.com/pabascal-afk/local_CCG_Portal_Unificado_Plataformas/main/Lanzador_Plataforma.exe');
+  }
+});
+
+app.get('/descargar-lanzador', (req, res) => {
+  res.redirect('/api/launcher/download');
 });
 
 function esDominioInstitucional(email) {
