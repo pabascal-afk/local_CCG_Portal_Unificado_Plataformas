@@ -79,6 +79,11 @@
           <i class="bi bi-shield-check"></i> Auditoría y Logs
         </a>
       </li>
+      <li class="nav-item d-none" id="nav-annos-container">
+        <a href="#" class="nav-link" onclick="loadApp('annos', this)" id="nav-annos">
+          <i class="bi bi-calendar-range"></i> Años Escolares
+        </a>
+      </li>
     </ul>
 
     <!-- Selector de Rol Activo (Exclusivo para usuarios Admin/Profesor duales) -->
@@ -118,7 +123,8 @@
       libro: "/libro.html",
       correos: "/correos.html",
       auditoria: "/auditoria.html",
-      planificacion: "/planificacion.html"
+      planificacion: "/planificacion.html",
+      annos: "/annos.html"
     };
     let contexto = {};
     
@@ -139,22 +145,26 @@
         if (document.getElementById('nav-correos-container')) document.getElementById('nav-correos-container').classList.remove('d-none');
         if (document.getElementById('nav-horarios-container')) document.getElementById('nav-horarios-container').classList.remove('d-none');
         if (document.getElementById('nav-auditoria-container')) document.getElementById('nav-auditoria-container').classList.remove('d-none');
+        if (document.getElementById('nav-annos-container')) document.getElementById('nav-annos-container').classList.remove('d-none');
         if (document.getElementById('opt-pref-horarios')) document.getElementById('opt-pref-horarios').classList.remove('d-none');
         if (document.getElementById('opt-pref-auditoria')) document.getElementById('opt-pref-auditoria').classList.remove('d-none');
+        if (document.getElementById('opt-pref-annos')) document.getElementById('opt-pref-annos').classList.remove('d-none');
       } else {
         document.getElementById('nav-usuarios-container').classList.add('d-none');
         if (document.getElementById('nav-libro-container')) document.getElementById('nav-libro-container').classList.add('d-none');
         if (document.getElementById('nav-correos-container')) document.getElementById('nav-correos-container').classList.add('d-none');
         if (document.getElementById('nav-horarios-container')) document.getElementById('nav-horarios-container').classList.add('d-none');
         if (document.getElementById('nav-auditoria-container')) document.getElementById('nav-auditoria-container').classList.add('d-none');
+        if (document.getElementById('nav-annos-container')) document.getElementById('nav-annos-container').classList.add('d-none');
         if (document.getElementById('opt-pref-horarios')) document.getElementById('opt-pref-horarios').classList.add('d-none');
         if (document.getElementById('opt-pref-auditoria')) document.getElementById('opt-pref-auditoria').classList.add('d-none');
-        if (document.getElementById('selectPrefTab') && (document.getElementById('selectPrefTab').value === 'horarios' || document.getElementById('selectPrefTab').value === 'auditoria')) {
+        if (document.getElementById('opt-pref-annos')) document.getElementById('opt-pref-annos').classList.add('d-none');
+        if (document.getElementById('selectPrefTab') && (document.getElementById('selectPrefTab').value === 'horarios' || document.getElementById('selectPrefTab').value === 'auditoria' || document.getElementById('selectPrefTab').value === 'annos')) {
           document.getElementById('selectPrefTab').value = 'dashboard';
         }
-        // Si el usuario estaba visualizando horarios o auditoría y pasa a vista profesor, redirigir a dashboard
+        // Si el usuario estaba visualizando módulos admin y pasa a vista profesor, redirigir a dashboard
         const frame = document.getElementById('appFrame');
-        if (frame && frame.src && (frame.src.includes('horarios.html') || frame.src.includes('auditoria.html'))) {
+        if (frame && frame.src && (frame.src.includes('horarios.html') || frame.src.includes('auditoria.html') || frame.src.includes('annos.html'))) {
           loadApp('dashboard', document.getElementById('nav-dashboard'));
         }
       }
@@ -276,6 +286,7 @@
                  <option value="recursos">Reserva de Recursos</option>
                  <option value="planificacion">Planificación Curricular</option>
                  <option value="auditoria" id="opt-pref-auditoria" class="d-none">Auditoría y Logs</option>
+                 <option value="annos" id="opt-pref-annos" class="d-none">Años Escolares</option>
               </select>
               <small class="text-muted">Esta pestaña se abrirá automáticamente al iniciar sesión.</small>
             </div>

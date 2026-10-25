@@ -1,0 +1,626 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Gestión de Años Escolares - Colegio Cerro Grande</title>
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css">
+  <style>
+    body {
+      background-color: #f1f5f9;
+      font-family: 'Segoe UI', system-ui, -apple-system, sans-serif;
+      color: #1e293b;
+    }
+    .card-custom {
+      background: white;
+      border: 1px solid #e2e8f0;
+      border-radius: 12px;
+      box-shadow: 0 1px 3px rgba(0,0,0,0.05);
+      transition: all 0.2s ease;
+    }
+    .card-custom:hover {
+      box-shadow: 0 4px 6px -1px rgba(0,0,0,0.1);
+    }
+    .stat-badge {
+      background: #f8fafc;
+      border: 1px solid #e2e8f0;
+      border-radius: 8px;
+      padding: 8px 12px;
+    }
+    .cursor-pointer { cursor: pointer; }
+    .badge-activo { background-color: #10b981; color: white; }
+    .badge-preparacion { background-color: #f59e0b; color: white; }
+    .badge-cerrado { background-color: #64748b; color: white; }
+  </style>
+</head>
+<body class="p-3 p-md-4">
+
+  <div class="container-fluid max-w-7xl">
+    <!-- Header Principal -->
+    <div class="d-flex justify-content-between align-items-center mb-4 flex-wrap gap-2">
+      <div>
+        <h4 class="fw-bold mb-1 d-flex align-items-center gap-2">
+          <i class="bi bi-calendar-range-fill text-primary"></i>
+          Gestión de Años Escolares & Ciclos Lectivos
+        </h4>
+        <p class="text-muted small mb-0">
+          Administración institucional de ciclos escolares, fechas oficiales, clonación de horarios y transición interanual.
+        </p>
+      </div>
+
+      <div class="d-flex align-items-center gap-2">
+        <div id="badgeCicloActivo" class="badge bg-success-subtle text-success border border-success-subtle px-3 py-2 fs-6">
+          <i class="bi bi-check-circle-fill me-1"></i> Ciclo Activo: <strong id="lblCicloActivo">Cargando...</strong>
+        </div>
+        <button class="btn btn-sm btn-outline-secondary" onclick="cargarListaAnnos()">
+          <i class="bi bi-arrow-clockwise"></i> Actualizar
+        </button>
+      </div>
+    </div>
+
+    <!-- Navegación de Pestañas -->
+    <ul class="nav nav-pills mb-4 border-bottom pb-2" id="annosPills" role="tablist">
+      <li class="nav-item">
+        <button class="nav-link active btn-sm" data-bs-toggle="pill" data-bs-target="#tab-lista-annos" type="button">
+          <i class="bi bi-grid-fill me-1"></i> Años Escolares Registrados
+        </button>
+      </li>
+      <li class="nav-item">
+        <button class="nav-link btn-sm" data-bs-toggle="pill" data-bs-target="#tab-nuevo-anno" type="button">
+          <i class="bi bi-calendar-plus me-1"></i> + Aperturar Nuevo Año Escolar
+        </button>
+      </li>
+      <li class="nav-item">
+        <button class="nav-link btn-sm" data-bs-toggle="pill" data-bs-target="#tab-transicion" type="button">
+          <i class="bi bi-arrow-left-right me-1"></i> Herramientas de Transición
+        </button>
+      </li>
+    </ul>
+
+    <!-- Contenido de Pestañas -->
+    <div class="tab-content">
+
+      <!-- TAB 1: LISTADO DE AÑOS REGISTRADOS -->
+      <div class="tab-pane fade show active" id="tab-lista-annos">
+        <div id="contenedorTarjetasAnnos" class="row g-3">
+          <div class="col-12 text-center py-5">
+            <div class="spinner-border text-primary" role="status"></div>
+            <p class="small text-muted mt-2">Cargando años escolares institucionales...</p>
+          </div>
+        </div>
+      </div>
+
+      <!-- TAB 2: APERTURA DE NUEVO AÑO ESCOLAR -->
+      <div class="tab-pane fade" id="tab-nuevo-anno">
+        <div class="card card-custom p-4 border bg-white max-w-4xl mx-auto shadow-sm">
+          <div class="border-bottom pb-3 mb-3">
+            <h5 class="fw-bold text-dark mb-1">
+              <i class="bi bi-calendar-plus text-primary me-2"></i>Aperturar Nuevo Ciclo Lectivo
+            </h5>
+            <span class="text-muted small">
+              Crea un nuevo año escolar, define sus fechas oficiales y activa automatizaciones de traspaso curricular y horario.
+            </span>
+          </div>
+
+          <div class="row g-3">
+            <div class="col-md-3">
+              <label class="form-label small fw-bold">Año Lectivo (Número)</label>
+              <input type="number" id="inputNuevoAnnoNum" class="form-control" placeholder="ej. 2027" min="2020" max="2050" value="2027">
+            </div>
+            <div class="col-md-5">
+              <label class="form-label small fw-bold">Nombre del Ciclo</label>
+              <input type="text" id="inputNuevoAnnoNombre" class="form-control" placeholder="ej. Año Escolar 2027" value="Año Escolar 2027">
+            </div>
+            <div class="col-md-4">
+              <label class="form-label small fw-bold">Estado Inicial</label>
+              <select id="selectNuevoAnnoEstado" class="form-select">
+                <option value="En preparacion" selected>En preparación (Planificación previa)</option>
+                <option value="Activo">Activo (Año en curso)</option>
+              </select>
+            </div>
+
+            <div class="col-md-3">
+              <label class="form-label small text-muted">Fecha Inicio de Clases</label>
+              <input type="date" id="inputNuevoAnnoFInicio" class="form-control form-control-sm" value="2027-03-01">
+            </div>
+            <div class="col-md-3">
+              <label class="form-label small text-muted">Término 1er Semestre</label>
+              <input type="date" id="inputNuevoAnnoFTerminoS1" class="form-control form-control-sm" value="2027-07-02">
+            </div>
+            <div class="col-md-3">
+              <label class="form-label small text-muted">Inicio 2do Semestre</label>
+              <input type="date" id="inputNuevoAnnoFInicioS2" class="form-control form-control-sm" value="2027-07-26">
+            </div>
+            <div class="col-md-3">
+              <label class="form-label small text-muted">Término del Año Escolar</label>
+              <input type="date" id="inputNuevoAnnoFFin" class="form-control form-control-sm" value="2027-12-17">
+            </div>
+
+            <div class="col-12">
+              <label class="form-label small text-muted">Descripción u Observaciones del Ciclo</label>
+              <input type="text" id="inputNuevoAnnoDesc" class="form-control form-control-sm" placeholder="Observaciones institucionales para el nuevo año escolar...">
+            </div>
+
+            <div class="col-12">
+              <div class="p-3 bg-light rounded border">
+                <div class="fw-bold small mb-2"><i class="bi bi-magic me-1 text-primary"></i>Automatizaciones de Transición de Ciclo</div>
+                <div class="form-check mb-2">
+                  <input class="form-check-input" type="checkbox" id="chkAutoCurr" checked disabled>
+                  <label class="form-check-label small" for="chkAutoCurr">
+                    <strong>Copiar catálogo curricular MINEDUC:</strong> Garantiza que los 78 planes y 585 OAs oficiales MINEDUC estén disponibles de inmediato para el nuevo año escolar.
+                  </label>
+                </div>
+                <div class="form-check mb-2">
+                  <input class="form-check-input" type="checkbox" id="chkAutoHorarios" checked>
+                  <label class="form-check-label small" for="chkAutoHorarios">
+                    <strong>Clonar malla horaria del año 2026:</strong> Duplica la distribución completa de horarios para que el equipo directivo solo deba ajustar docentes nuevos.
+                  </label>
+                </div>
+                <div class="form-check">
+                  <input class="form-check-input" type="checkbox" id="chkAutoPlanes">
+                  <label class="form-check-label small" for="chkAutoPlanes">
+                    <strong>Promover planificaciones visadas del año 2026:</strong> Crea borradores de todas las planificaciones aprobadas (conservando unidades, OAs, DUA e indicadores).
+                  </label>
+                </div>
+              </div>
+            </div>
+
+            <div class="col-12 text-end pt-2 border-top">
+              <button class="btn btn-success" onclick="ejecutarCrearAnnoForm()">
+                <i class="bi bi-check-circle me-1"></i> Crear y Aperturar Año Escolar
+              </button>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- TAB 3: HERRAMIENTAS DE TRANSICIÓN DE CICLO -->
+      <div class="tab-pane fade" id="tab-transicion">
+        <div class="row g-4">
+          <div class="col-md-6">
+            <div class="card card-custom p-4 h-100">
+              <h6 class="fw-bold text-dark mb-2">
+                <i class="bi bi-arrow-repeat text-primary me-2"></i>Promoción Masiva de Planificaciones
+              </h6>
+              <p class="text-muted small">
+                Busca todas las planificaciones con estado <strong>Visada</strong> del ciclo anterior y crea borradores (V1.0) para el nuevo ciclo escolar, preservando unidades y diseño pedagógico.
+              </p>
+              <div class="mb-3">
+                <label class="form-label small text-muted">Seleccionar Año Destino:</label>
+                <select id="selectDestinoPlanes" class="form-select form-select-sm"></select>
+              </div>
+              <button class="btn btn-outline-primary btn-sm w-100" onclick="ejecutarPromoverPlanesLoteBtn()">
+                <i class="bi bi-play-circle me-1"></i> Iniciar Promoción en Lote
+              </button>
+            </div>
+          </div>
+
+          <div class="col-md-6">
+            <div class="card card-custom p-4 h-100">
+              <h6 class="fw-bold text-dark mb-2">
+                <i class="bi bi-copy text-info me-2"></i>Clonación de Malla Horaria
+              </h6>
+              <p class="text-muted small">
+                Copia todos los bloques y asignaciones horarias desde un año base hacia un año nuevo. Ideal para iniciar la distribución del próximo ciclo escolar.
+              </p>
+              <div class="row g-2 mb-3">
+                <div class="col-6">
+                  <label class="form-label small text-muted">Año Origen:</label>
+                  <select id="selectOrigenHorarios" class="form-select form-select-sm"></select>
+                </div>
+                <div class="col-6">
+                  <label class="form-label small text-muted">Año Destino:</label>
+                  <select id="selectDestinoHorarios" class="form-select form-select-sm"></select>
+                </div>
+              </div>
+              <button class="btn btn-outline-info btn-sm w-100" onclick="ejecutarClonarHorariosBtn()">
+                <i class="bi bi-files me-1"></i> Clonar Malla Horaria
+              </button>
+            </div>
+          </div>
+        </div>
+      </div>
+
+    </div>
+  </div>
+
+  <!-- Scripts -->
+  <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+
+  <script>
+    let listaAnnos = [];
+    let annoActivoColegio = 2026;
+
+    document.addEventListener('DOMContentLoaded', async () => {
+      await cargarListaAnnos();
+    });
+
+    async function cargarListaAnnos() {
+      const cont = document.getElementById('contenedorTarjetasAnnos');
+      cont.innerHTML = '<div class="col-12 text-center py-4"><span class="spinner-border spinner-border-sm me-2"></span>Cargando años escolares...</div>';
+
+      try {
+        const res = await fetch('/api/annos');
+        if (!res.ok) throw new Error('Error al consultar lista de años escolares.');
+        listaAnnos = await res.json();
+
+        const activoObj = listaAnnos.find(a => a.estado === 'Activo');
+        if (activoObj) {
+          annoActivoColegio = activoObj.anno;
+          document.getElementById('lblCicloActivo').innerText = activoObj.nombre || `Año ${activoObj.anno}`;
+        }
+
+        // Llenar selectores de transición
+        llenarSelectoresTransicion();
+
+        if (!listaAnnos || listaAnnos.length === 0) {
+          cont.innerHTML = '<div class="col-12 text-center text-muted py-5">No hay años escolares registrados en la base de datos.</div>';
+          return;
+        }
+
+        cont.innerHTML = listaAnnos.map(a => {
+          let badgeEstado = '';
+          if (a.estado === 'Activo') {
+            badgeEstado = '<span class="badge badge-activo px-2 py-1"><i class="bi bi-check-circle me-1"></i>Activo</span>';
+          } else if (a.estado === 'Cerrado') {
+            badgeEstado = '<span class="badge badge-cerrado px-2 py-1"><i class="bi bi-lock-fill me-1"></i>Cerrado (Histórico)</span>';
+          } else {
+            badgeEstado = '<span class="badge badge-preparacion px-2 py-1"><i class="bi bi-hourglass-split me-1"></i>En preparación</span>';
+          }
+
+          const m = a.metricas || {};
+
+          let accionesHtml = '';
+          if (a.estado !== 'Activo' && a.estado !== 'Cerrado') {
+            accionesHtml += `
+              <button class="btn btn-sm btn-outline-success" onclick="ejecutarEstablecerAnnoActivo(${a.anno})">
+                <i class="bi bi-star-fill me-1"></i> Establecer como Activo
+              </button>
+            `;
+          }
+
+          if (a.estado !== 'Cerrado') {
+            accionesHtml += `
+              <button class="btn btn-sm btn-outline-primary" onclick="ejecutarClonarHorariosDirecto(${a.anno})">
+                <i class="bi bi-copy me-1"></i> Clonar Horarios
+              </button>
+              <button class="btn btn-sm btn-outline-info" onclick="ejecutarPromoverPlanesDirecto(${a.anno})">
+                <i class="bi bi-arrow-repeat me-1"></i> Promover Planes
+              </button>
+              <button class="btn btn-sm btn-outline-danger ms-auto" onclick="ejecutarCerrarAnno(${a.anno})">
+                <i class="bi bi-lock me-1"></i> Cerrar Año
+              </button>
+            `;
+          } else {
+            accionesHtml += `
+              <span class="small text-muted fst-italic"><i class="bi bi-shield-check me-1"></i>Ciclo archivado en modo solo lectura</span>
+            `;
+          }
+
+          return `
+            <div class="col-md-6 col-xl-6">
+              <div class="card card-custom h-100 p-3 d-flex flex-column justify-content-between">
+                <div>
+                  <div class="d-flex justify-content-between align-items-center mb-2 pb-2 border-bottom">
+                    <div class="fw-bold fs-5 text-dark">
+                      <i class="bi bi-calendar3 me-2 text-primary"></i>${a.nombre || `Año Escolar ${a.anno}`}
+                    </div>
+                    <div>${badgeEstado}</div>
+                  </div>
+
+                  <p class="small text-muted mb-3">${a.descripcion || 'Sin observaciones registradas.'}</p>
+
+                  <div class="row g-2 mb-3 small">
+                    <div class="col-6">
+                      <span class="text-muted d-block">Inicio de Clases:</span>
+                      <strong>${a.fecha_inicio || 'No definida'}</strong>
+                    </div>
+                    <div class="col-6">
+                      <span class="text-muted d-block">Término del Año:</span>
+                      <strong>${a.fecha_fin || 'No definida'}</strong>
+                    </div>
+                    <div class="col-6">
+                      <span class="text-muted d-block">Término 1er Semestre:</span>
+                      <span>${a.fecha_termino_primer_semestre || 'No definida'}</span>
+                    </div>
+                    <div class="col-6">
+                      <span class="text-muted d-block">Inicio 2do Semestre:</span>
+                      <span>${a.fecha_inicio_segundo_semestre || 'No definida'}</span>
+                    </div>
+                  </div>
+
+                  <div class="p-2 bg-light rounded border mb-3">
+                    <div class="fw-bold small text-secondary mb-1">Métricas del Ciclo:</div>
+                    <div class="d-flex justify-content-around text-center small">
+                      <div class="stat-badge flex-grow-1 mx-1">
+                        <div class="fw-bold fs-6 text-primary">${m.planificaciones || 0}</div>
+                        <div class="text-muted" style="font-size:0.75rem;">Planes (${m.visadas || 0} visadas)</div>
+                      </div>
+                      <div class="stat-badge flex-grow-1 mx-1">
+                        <div class="fw-bold fs-6 text-info">${m.cursos_horario || 0}</div>
+                        <div class="text-muted" style="font-size:0.75rem;">Cursos en Horario</div>
+                      </div>
+                      <div class="stat-badge flex-grow-1 mx-1">
+                        <div class="fw-bold fs-6 text-success">${m.profesores_horario || 0}</div>
+                        <div class="text-muted" style="font-size:0.75rem;">Profesores</div>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+
+                <div class="d-flex flex-wrap gap-2 align-items-center pt-2 border-top">
+                  ${accionesHtml}
+                </div>
+              </div>
+            </div>
+          `;
+        }).join('');
+
+      } catch (err) {
+        cont.innerHTML = `<div class="col-12 text-center text-danger py-4">Error al cargar años: ${err.message}</div>`;
+      }
+    }
+
+    function llenarSelectoresTransicion() {
+      const sDestPlanes = document.getElementById('selectDestinoPlanes');
+      const sOrigHorarios = document.getElementById('selectOrigenHorarios');
+      const sDestHorarios = document.getElementById('selectDestinoHorarios');
+
+      if (sDestPlanes) {
+        sDestPlanes.innerHTML = listaAnnos.map(a => `<option value="${a.anno}">${a.nombre || a.anno} (${a.estado})</option>`).join('');
+      }
+      if (sOrigHorarios) {
+        sOrigHorarios.innerHTML = listaAnnos.map(a => `<option value="${a.anno}" ${a.anno === 2026 ? 'selected' : ''}>${a.nombre || a.anno}</option>`).join('');
+      }
+      if (sDestHorarios) {
+        sDestHorarios.innerHTML = listaAnnos.map(a => `<option value="${a.anno}" ${a.anno === 2027 ? 'selected' : ''}>${a.nombre || a.anno}</option>`).join('');
+      }
+    }
+
+    async function ejecutarCrearAnnoForm() {
+      const annoNum = parseInt(document.getElementById('inputNuevoAnnoNum').value);
+      const nombre = document.getElementById('inputNuevoAnnoNombre').value.trim();
+      const estado = document.getElementById('selectNuevoAnnoEstado').value;
+      const fecha_inicio = document.getElementById('inputNuevoAnnoFInicio').value;
+      const fecha_termino_primer_semestre = document.getElementById('inputNuevoAnnoFTerminoS1').value;
+      const fecha_inicio_segundo_semestre = document.getElementById('inputNuevoAnnoFInicioS2').value;
+      const fecha_fin = document.getElementById('inputNuevoAnnoFFin').value;
+      const descripcion = document.getElementById('inputNuevoAnnoDesc').value.trim();
+      const autoHorarios = document.getElementById('chkAutoHorarios').checked;
+      const autoPlanes = document.getElementById('chkAutoPlanes').checked;
+
+      if (!annoNum || isNaN(annoNum) || annoNum < 2020 || annoNum > 2050) {
+        Swal.fire('Año Inválido', 'Por favor ingresa un año lectivo válido (ej. 2027).', 'warning');
+        return;
+      }
+
+      try {
+        Swal.fire({
+          title: 'Aperturando Año Escolar...',
+          text: 'Creando ciclo lectivo y configurando catálogo curricular.',
+          allowOutsideClick: false,
+          didOpen: () => Swal.showLoading()
+        });
+
+        const res = await fetch('/api/annos', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            anno: annoNum,
+            nombre: nombre || `Año Escolar ${annoNum}`,
+            estado: estado,
+            fecha_inicio,
+            fecha_fin,
+            fecha_termino_primer_semestre,
+            fecha_inicio_segundo_semestre,
+            descripcion
+          })
+        });
+
+        const data = await res.json();
+        if (!res.ok) throw new Error(data.error || 'No se pudo crear el año escolar.');
+
+        let msgs = [data.mensaje];
+
+        if (autoHorarios) {
+          try {
+            const resH = await fetch(`/api/annos/${annoNum}/clonar-horarios`, {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({ anno_origen: 2026 })
+            });
+            const dataH = await resH.json();
+            if (resH.ok) msgs.push(dataH.mensaje);
+          } catch (eH) {
+            msgs.push(`Advertencia en horarios: ${eH.message}`);
+          }
+        }
+
+        if (autoPlanes) {
+          try {
+            const resP = await fetch(`/api/annos/${annoNum}/promover-planificaciones`, {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({ anno_origen: 2026, solo_visadas: true })
+            });
+            const dataP = await resP.json();
+            if (resP.ok) msgs.push(dataP.mensaje);
+          } catch (eP) {
+            msgs.push(`Advertencia en planificaciones: ${eP.message}`);
+          }
+        }
+
+        await Swal.fire({
+          title: '¡Año Escolar Aperturado!',
+          html: `<div class="text-start small">${msgs.map(m => `<p class="mb-1"><i class="bi bi-check2 text-success me-1"></i>${m}</p>`).join('')}</div>`,
+          icon: 'success'
+        });
+
+        await cargarListaAnnos();
+
+        const tabListaBtn = document.querySelector('#annosPills button[data-bs-target="#tab-lista-annos"]');
+        if (tabListaBtn) {
+          const bsTab = new bootstrap.Tab(tabListaBtn);
+          bsTab.show();
+        }
+
+      } catch (err) {
+        Swal.fire('Error', err.message, 'error');
+      }
+    }
+
+    async function ejecutarEstablecerAnnoActivo(anno) {
+      const confirmResult = await Swal.fire({
+        title: `¿Establecer Año ${anno} como Activo?`,
+        text: `Este año pasará a ser el ciclo lectivo oficial predeterminado para todos los módulos del establecimiento.`,
+        icon: 'question',
+        showCancelButton: true,
+        confirmButtonText: 'Sí, activar ciclo',
+        cancelButtonText: 'Cancelar'
+      });
+
+      if (!confirmResult.isConfirmed) return;
+
+      try {
+        Swal.showLoading();
+        const res = await fetch(`/api/annos/${anno}/activar`, { method: 'POST' });
+        const data = await res.json();
+        if (!res.ok) throw new Error(data.error);
+
+        Swal.fire('Año Activado', data.mensaje, 'success');
+        await cargarListaAnnos();
+      } catch (e) {
+        Swal.fire('Error', e.message, 'error');
+      }
+    }
+
+    async function ejecutarCerrarAnno(anno) {
+      const confirmResult = await Swal.fire({
+        title: `¿Cerrar Año Escolar ${anno}?`,
+        html: `
+          <div class="text-start small">
+            <p class="text-danger fw-bold"><i class="bi bi-exclamation-triangle-fill me-1"></i>Atención:</p>
+            <p>Al cerrar el año <strong>${anno}</strong>, este ciclo lectivo quedará en <strong>Modo Histórico (Solo Lectura)</strong>.</p>
+            <p class="mb-0 text-muted">No se admitirán nuevas planificaciones ni ediciones sobre este ciclo para garantizar la inmutabilidad de los registros oficiales.</p>
+          </div>
+        `,
+        icon: 'warning',
+        showCancelButton: true,
+        confirmButtonText: 'Sí, cerrar ciclo escolar',
+        cancelButtonText: 'Cancelar',
+        confirmButtonColor: '#dc3545'
+      });
+
+      if (!confirmResult.isConfirmed) return;
+
+      try {
+        Swal.showLoading();
+        const res = await fetch(`/api/annos/${anno}/cerrar`, { method: 'POST' });
+        const data = await res.json();
+        if (!res.ok) throw new Error(data.error);
+
+        Swal.fire('Año Cerrado', data.mensaje, 'success');
+        await cargarListaAnnos();
+      } catch (e) {
+        Swal.fire('Error', e.message, 'error');
+      }
+    }
+
+    async function ejecutarClonarHorariosDirecto(annoDestino) {
+      const { value: annoOrigen } = await Swal.fire({
+        title: `Clonar Horarios para ${annoDestino}`,
+        input: 'select',
+        inputOptions: {
+          '2026': 'Año Escolar 2026',
+          '2025': 'Año Escolar 2025'
+        },
+        inputPlaceholder: 'Selecciona el año de origen',
+        showCancelButton: true,
+        confirmButtonText: 'Clonar malla horaria'
+      });
+
+      if (!annoOrigen) return;
+
+      try {
+        Swal.showLoading();
+        const res = await fetch(`/api/annos/${annoDestino}/clonar-horarios`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ anno_origen: parseInt(annoOrigen) })
+        });
+        const data = await res.json();
+        if (!res.ok) throw new Error(data.error);
+
+        Swal.fire('Horarios Clonados', data.mensaje, 'success');
+        await cargarListaAnnos();
+      } catch (e) {
+        Swal.fire('Error', e.message, 'error');
+      }
+    }
+
+    async function ejecutarPromoverPlanesDirecto(annoDestino) {
+      const confirmResult = await Swal.fire({
+        title: `Promover Planificaciones a ${annoDestino}`,
+        html: `
+          <div class="text-start small">
+            <p>Se buscarán todas las planificaciones con estado <strong>Visada</strong> del año escolar anterior y se crearán versiones borrador (V1.0) para el año ${annoDestino}.</p>
+            <p class="text-muted mb-0">Cada profesor podrá revisar y calendarizar las semanas del nuevo ciclo.</p>
+          </div>
+        `,
+        icon: 'info',
+        showCancelButton: true,
+        confirmButtonText: 'Promover en Lote'
+      });
+
+      if (!confirmResult.isConfirmed) return;
+
+      try {
+        Swal.showLoading();
+        const res = await fetch(`/api/annos/${annoDestino}/promover-planificaciones`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ anno_origen: annoDestino - 1, solo_visadas: true })
+        });
+        const data = await res.json();
+        if (!res.ok) throw new Error(data.error);
+
+        Swal.fire('Promoción Completada', data.mensaje, 'success');
+        await cargarListaAnnos();
+      } catch (e) {
+        Swal.fire('Error', e.message, 'error');
+      }
+    }
+
+    async function ejecutarPromoverPlanesLoteBtn() {
+      const dest = parseInt(document.getElementById('selectDestinoPlanes').value);
+      if (dest) ejecutarPromoverPlanesDirecto(dest);
+    }
+
+    async function ejecutarClonarHorariosBtn() {
+      const orig = parseInt(document.getElementById('selectOrigenHorarios').value);
+      const dest = parseInt(document.getElementById('selectDestinoHorarios').value);
+      if (!orig || !dest) return;
+      if (orig === dest) {
+        Swal.fire('Aviso', 'El año de origen y destino no pueden ser el mismo.', 'warning');
+        return;
+      }
+      try {
+        Swal.showLoading();
+        const res = await fetch(`/api/annos/${dest}/clonar-horarios`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ anno_origen: orig })
+        });
+        const data = await res.json();
+        if (!res.ok) throw new Error(data.error);
+        Swal.fire('Malla Clonada', data.mensaje, 'success');
+        await cargarListaAnnos();
+      } catch (e) {
+        Swal.fire('Error', e.message, 'error');
+      }
+    }
+  </script>
+</body>
+</html>
