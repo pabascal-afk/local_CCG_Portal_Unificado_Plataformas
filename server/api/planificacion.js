@@ -85,7 +85,7 @@ router.get('/curriculo/planes', (req, res) => {
 
 // 5. Búsqueda de Objetivos de Aprendizaje (OAs)
 router.get('/curriculo/objetivos', (req, res) => {
-    const { plan_id, nivel, asignatura, anio = 2026, q = '' } = req.query;
+    const { plan_id, nivel, asignatura, anio = 2026, q = '', unidad } = req.query;
     let sql = `
         SELECT o.*, cp.nivel, cp.asignatura, cp.tipo as tipo_plan
         FROM curriculo_objetivos o
@@ -106,17 +106,45 @@ router.get('/curriculo/objetivos', (req, res) => {
         sql += ` AND (cp.asignatura = ? OR LOWER(cp.asignatura) LIKE '%' || LOWER(?) || '%')`;
         params.push(asignatura, asignatura);
     }
+    if (unidad && unidad !== 'todas') {
+        sql += ` AND (o.unidad_sugerida = ? OR o.unidad_sugerida LIKE ?)`;
+        params.push(unidad, `%${unidad}%`);
+    }
     if (q && q.trim()) {
         sql += ` AND (LOWER(o.codigo) LIKE ? OR LOWER(o.descripcion) LIKE ? OR LOWER(o.eje_unidad) LIKE ?)`;
         const qParam = `%${q.trim().toLowerCase()}%`;
         params.push(qParam, qParam, qParam);
     }
 
-    sql += ` ORDER BY o.eje_unidad ASC, o.codigo ASC`;
+    sql += ` ORDER BY o.orden ASC, o.codigo ASC`;
 
     db.all(sql, params, (err, rows) => {
         if (err) return res.status(500).json({ error: err.message });
-        res.json(rows || []);
+        const data = (rows || []).map(r => {
+            let inds = [];
+            try {
+                inds = JSON.parse(r.indicadores_sugeridos || '[]');
+            } catch (e) {
+                inds = [];
+            }
+            return {
+                ...r,
+                indicadores_sugeridos: inds
+            };
+        });
+        res.json(data);
+    });
+});
+
+// 5b. Obtener habilidades y actitudes sugeridas MINEDUC
+router.get('/curriculo/habilidades', (req, res) => {
+    const { asignatura = '' } = req.query;
+    const asigNorm = curriculoSeed.normalizarNombreAsignatura(asignatura);
+    const habs = curriculoSeed.HABILIDADES_POR_ASIGNATURA[asigNorm] || curriculoSeed.HABILIDADES_POR_ASIGNATURA[asignatura] || [];
+    res.json({
+        asignatura: asigNorm,
+        habilidades: habs,
+        actitudes: curriculoSeed.ACTITUDES_GENERALES_MINEDUC
     });
 });
 

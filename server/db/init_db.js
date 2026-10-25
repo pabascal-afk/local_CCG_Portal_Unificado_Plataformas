@@ -323,6 +323,8 @@ db.serialize(() => {
     db.run("ALTER TABLE libro_registros ADD COLUMN profesor_plataforma TEXT", () => {});
     db.run("ALTER TABLE libro_registros ADD COLUMN profesor_email TEXT", () => {});
     db.run("ALTER TABLE libro_registros ADD COLUMN usuario_id INTEGER", () => {});
+    db.run("ALTER TABLE curriculo_planes ADD COLUMN habilidades_sugeridas TEXT DEFAULT '[]'", () => {});
+    db.run("ALTER TABLE curriculo_objetivos ADD COLUMN unidad_sugerida TEXT DEFAULT 'Unidad 1'", () => {});
     db.run("INSERT OR IGNORE INTO config_global (clave, valor) VALUES ('emails_activados', 'true')", () => {});
 
     db.run("INSERT OR IGNORE INTO config_tipos_evaluacion (nombre, es_prueba) VALUES ('📝 Prueba', 1)", () => {});

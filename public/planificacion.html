@@ -426,7 +426,7 @@
               <option value="IV° Medio">IV° Medio</option>
             </select>
           </div>
-          <div class="col-md-4">
+          <div class="col-md-3">
             <label class="form-label text-muted small mb-1">Asignatura</label>
             <select id="filtroAsigCurriculo" class="form-select form-select-sm" onchange="cargarObjetivosCurriculo()">
               <option value="">Todas las asignaturas</option>
@@ -440,9 +440,24 @@
               <option value="QUIMICA">Química</option>
               <option value="FISICA">Física</option>
               <option value="EDUCACION CIUDADANA">Educación Ciudadana</option>
+              <option value="FILOSOFIA">Filosofía</option>
+              <option value="ARTES VISUALES">Artes Visuales</option>
+              <option value="MUSICA">Música</option>
+              <option value="EDUCACION FISICA Y SALUD">Educación Física</option>
+              <option value="TECNOLOGIA">Tecnología</option>
             </select>
           </div>
-          <div class="col-md-4">
+          <div class="col-md-2">
+            <label class="form-label text-muted small mb-1">Unidad</label>
+            <select id="filtroUnidadCurriculo" class="form-select form-select-sm" onchange="cargarObjetivosCurriculo()">
+              <option value="">Todas</option>
+              <option value="Unidad 1">Unidad 1</option>
+              <option value="Unidad 2">Unidad 2</option>
+              <option value="Unidad 3">Unidad 3</option>
+              <option value="Unidad 4">Unidad 4</option>
+            </select>
+          </div>
+          <div class="col-md-3">
             <label class="form-label text-muted small mb-1">Búsqueda en OAs</label>
             <input type="text" id="filtroTextoCurriculo" class="form-control form-control-sm" placeholder="Buscar por código o palabra clave..." oninput="cargarObjetivosCurriculo()">
           </div>
@@ -455,11 +470,12 @@
             <thead class="table-light text-secondary" style="font-size: 0.78rem; text-transform: uppercase;">
               <tr>
                 <th style="width: 100px;">Nivel</th>
-                <th style="width: 180px;">Asignatura</th>
-                <th style="width: 140px;">Eje</th>
-                <th style="width: 90px;">Código</th>
-                <th style="width: 110px;">Priorización</th>
-                <th>Descripción Oficial del Objetivo de Aprendizaje (OA)</th>
+                <th style="width: 160px;">Asignatura</th>
+                <th style="width: 95px;">Unidad</th>
+                <th style="width: 130px;">Eje</th>
+                <th style="width: 85px;">Código</th>
+                <th style="width: 105px;">Priorización</th>
+                <th>Descripción Oficial e Indicadores Sugeridos</th>
               </tr>
             </thead>
             <tbody id="tablaCurriculoBody">
@@ -636,13 +652,22 @@
         </div>
         <div class="modal-body p-3">
           <div class="row g-2 mb-3">
-            <div class="col-md-6">
+            <div class="col-md-4">
+              <select id="filtroUnidadModalOA" class="form-select form-select-sm" onchange="renderizarModalOAs()">
+                <option value="todas">Todas las unidades</option>
+                <option value="Unidad 1">Unidad 1</option>
+                <option value="Unidad 2">Unidad 2</option>
+                <option value="Unidad 3">Unidad 3</option>
+                <option value="Unidad 4">Unidad 4</option>
+              </select>
+            </div>
+            <div class="col-md-4">
               <select id="filtroEjeModalOA" class="form-select form-select-sm" onchange="renderizarModalOAs()">
                 <option value="todos">Todos los ejes temáticos</option>
               </select>
             </div>
-            <div class="col-md-6">
-              <input type="text" id="filtroTextoModalOA" class="form-control form-control-sm" placeholder="Buscar OA por código o palabra..." oninput="renderizarModalOAs()">
+            <div class="col-md-4">
+              <input type="text" id="filtroTextoModalOA" class="form-control form-control-sm" placeholder="Buscar OA o palabra clave..." oninput="renderizarModalOAs()">
             </div>
           </div>
 
@@ -650,11 +675,19 @@
             <!-- Render dinámico con checkboxes -->
           </div>
         </div>
-        <div class="modal-footer">
-          <button type="button" class="btn btn-sm btn-secondary" data-bs-dismiss="modal">Cancelar</button>
-          <button type="button" class="btn btn-sm btn-primary" onclick="confirmarSeleccionOAs()">
-            <i class="bi bi-check-lg"></i> Asignar OAs a la Unidad
-          </button>
+        <div class="modal-footer d-flex justify-content-between align-items-center">
+          <div class="form-check form-switch mb-0">
+            <input class="form-check-input" type="checkbox" id="chkAutoImportarIndicadores" checked>
+            <label class="form-check-label small" for="chkAutoImportarIndicadores">
+              Importar indicadores sugeridos a la unidad
+            </label>
+          </div>
+          <div class="d-flex gap-2">
+            <button type="button" class="btn btn-sm btn-secondary" data-bs-dismiss="modal">Cancelar</button>
+            <button type="button" class="btn btn-sm btn-primary" onclick="confirmarSeleccionOAs()">
+              <i class="bi bi-check-lg me-1"></i> Asignar OAs a la Unidad
+            </button>
+          </div>
         </div>
       </div>
     </div>
@@ -971,29 +1004,46 @@
     async function cargarObjetivosCurriculo() {
       const nivel = document.getElementById('filtroNivelCurriculo').value;
       const asignatura = document.getElementById('filtroAsigCurriculo').value;
+      const unidad = document.getElementById('filtroUnidadCurriculo') ? document.getElementById('filtroUnidadCurriculo').value : '';
       const q = document.getElementById('filtroTextoCurriculo').value;
 
       try {
-        const res = await fetch(`/api/planificacion/curriculo/objetivos?anio=${anioActivo}&nivel=${encodeURIComponent(nivel)}&asignatura=${encodeURIComponent(asignatura)}&q=${encodeURIComponent(q)}`);
+        const res = await fetch(`/api/planificacion/curriculo/objetivos?anio=${anioActivo}&nivel=${encodeURIComponent(nivel)}&asignatura=${encodeURIComponent(asignatura)}&unidad=${encodeURIComponent(unidad)}&q=${encodeURIComponent(q)}`);
         if (!res.ok) return;
         const oas = await res.json();
         const tbody = document.getElementById('tablaCurriculoBody');
 
         if (oas.length === 0) {
-          tbody.innerHTML = '<tr><td colspan="6" class="text-center text-muted py-4">No se encontraron Objetivos de Aprendizaje con los filtros aplicados.</td></tr>';
+          tbody.innerHTML = '<tr><td colspan="7" class="text-center text-muted py-4">No se encontraron Objetivos de Aprendizaje con los filtros aplicados.</td></tr>';
           return;
         }
 
-        tbody.innerHTML = oas.map(o => `
-          <tr>
-            <td><span class="badge bg-light text-dark border">${o.nivel}</span></td>
-            <td class="small fw-semibold">${o.asignatura}</td>
-            <td class="small text-muted">${o.eje_unidad || 'General'}</td>
-            <td class="fw-bold font-monospace text-primary">${o.codigo}</td>
-            <td><span class="badge ${o.categoria === 'Basal' ? 'badge-oa-basal' : 'badge-oa-comp'}">${o.categoria}</span></td>
-            <td class="small">${o.descripcion}</td>
-          </tr>
-        `).join('');
+        tbody.innerHTML = oas.map(o => {
+          const indics = Array.isArray(o.indicadores_sugeridos) ? o.indicadores_sugeridos : [];
+          return `
+            <tr>
+              <td><span class="badge bg-light text-dark border">${o.nivel}</span></td>
+              <td class="small fw-semibold">${o.asignatura}</td>
+              <td><span class="badge bg-secondary-subtle text-secondary border">${o.unidad_sugerida || 'Unidad 1'}</span></td>
+              <td class="small text-muted">${o.eje_unidad || 'General'}</td>
+              <td class="fw-bold font-monospace text-primary">${o.codigo}</td>
+              <td><span class="badge ${o.categoria === 'Basal' ? 'badge-oa-basal' : 'badge-oa-comp'}">${o.categoria}</span></td>
+              <td class="small">
+                <div class="fw-semibold text-dark mb-1">${o.descripcion}</div>
+                ${indics.length > 0 ? `
+                  <div class="mt-1">
+                    <span class="badge bg-success-subtle text-success border border-success-subtle cursor-pointer" onclick="this.nextElementSibling.classList.toggle('d-none')">
+                      <i class="bi bi-list-check me-1"></i>${indics.length} indicadores sugeridos (clic para ver)
+                    </span>
+                    <ul class="text-muted mt-2 ps-3 d-none mb-0" style="font-size: 0.78rem;">
+                      ${indics.map(i => `<li>${i}</li>`).join('')}
+                    </ul>
+                  </div>
+                ` : ''}
+              </td>
+            </tr>
+          `;
+        }).join('');
 
       } catch (e) {
         console.error('Error cargando catálogo:', e);
@@ -1138,16 +1188,31 @@
                   <!-- HABILIDADES, ACTITUDES, INDICADORES Y EVALUACIÓN -->
                   <div class="row g-3 mb-4 bg-white p-3 rounded border">
                     <div class="col-md-6">
-                      <label class="form-label small fw-semibold">Habilidades Disciplinares</label>
-                      <textarea class="form-control form-control-sm" rows="3" placeholder="Ej: Resolver problemas, modelar, argumentar..." onchange="actualizarCampoUnidad(${idx}, 'habilidades', this.value)">${u.habilidades || ''}</textarea>
+                      <div class="d-flex justify-content-between align-items-center mb-1">
+                        <label class="form-label small fw-semibold mb-0">Habilidades Disciplinares</label>
+                        <button type="button" class="btn btn-xs btn-outline-primary py-0 px-2" style="font-size: 0.74rem;" onclick="precargarHabilidadesMINEDUC(${idx})">
+                          <i class="bi bi-magic me-1"></i>+ Precargar Habilidades MINEDUC
+                        </button>
+                      </div>
+                      <textarea id="unidad_hab_${idx}" class="form-control form-control-sm" rows="3" placeholder="Ej: Resolver problemas, modelar, argumentar..." onchange="actualizarCampoUnidad(${idx}, 'habilidades', this.value)">${u.habilidades || ''}</textarea>
                     </div>
                     <div class="col-md-6">
-                      <label class="form-label small fw-semibold">Actitudes & OATs</label>
-                      <textarea class="form-control form-control-sm" rows="3" placeholder="Ej: Demostrar curiosidad e interés, rigor y perseverancia..." onchange="actualizarCampoUnidad(${idx}, 'actitudes', this.value)">${u.actitudes || ''}</textarea>
+                      <div class="d-flex justify-content-between align-items-center mb-1">
+                        <label class="form-label small fw-semibold mb-0">Actitudes & OATs</label>
+                        <button type="button" class="btn btn-xs btn-outline-primary py-0 px-2" style="font-size: 0.74rem;" onclick="precargarActitudesMINEDUC(${idx})">
+                          <i class="bi bi-magic me-1"></i>+ Precargar Actitudes MINEDUC
+                        </button>
+                      </div>
+                      <textarea id="unidad_act_${idx}" class="form-control form-control-sm" rows="3" placeholder="Ej: Demostrar curiosidad e interés, rigor y perseverancia..." onchange="actualizarCampoUnidad(${idx}, 'actitudes', this.value)">${u.actitudes || ''}</textarea>
                     </div>
                     <div class="col-md-6">
-                      <label class="form-label small fw-semibold">Indicadores de Evaluación</label>
-                      <textarea class="form-control form-control-sm" rows="3" placeholder="Indicadores observables de logro..." onchange="actualizarCampoUnidad(${idx}, 'indicadores_evaluacion', this.value)">${u.indicadores_evaluacion || ''}</textarea>
+                      <div class="d-flex justify-content-between align-items-center mb-1">
+                        <label class="form-label small fw-semibold mb-0">Indicadores de Evaluación</label>
+                        <button type="button" class="btn btn-xs btn-outline-success py-0 px-2" style="font-size: 0.74rem;" onclick="precargarIndicadoresOAs(${idx})">
+                          <i class="bi bi-magic me-1"></i>+ Precargar de OAs Asignados
+                        </button>
+                      </div>
+                      <textarea id="unidad_ind_${idx}" class="form-control form-control-sm" rows="3" placeholder="Indicadores observables de logro..." onchange="actualizarCampoUnidad(${idx}, 'indicadores_evaluacion', this.value)">${u.indicadores_evaluacion || ''}</textarea>
                     </div>
                     <div class="col-md-6">
                       <label class="form-label small fw-semibold">Instrumentos de Evaluación</label>
@@ -1305,41 +1370,78 @@
       selEje.innerHTML = '<option value="todos">Todos los ejes temáticos</option>' +
         ejes.map(e => `<option value="${e}">${e}</option>`).join('');
 
+      // Auto-seleccionar la unidad correspondiente al número de la unidad editada si existen OAs para ella
+      const selUnidad = document.getElementById('filtroUnidadModalOA');
+      const nombreUnidadSugerida = `Unidad ${u.numero_unidad || (uIdx + 1)}`;
+      const tieneOAsUnidad = oasDisponiblesModal.some(o => o.unidad_sugerida === nombreUnidadSugerida);
+      if (selUnidad) {
+        selUnidad.value = tieneOAsUnidad ? nombreUnidadSugerida : 'todas';
+      }
+
       renderizarModalOAs();
       modalOAsObj.show();
     }
 
     function renderizarModalOAs() {
+      const unidadFiltro = document.getElementById('filtroUnidadModalOA') ? document.getElementById('filtroUnidadModalOA').value : 'todas';
       const ejeFiltro = document.getElementById('filtroEjeModalOA').value;
       const q = (document.getElementById('filtroTextoModalOA').value || '').toLowerCase();
       const cont = document.getElementById('listaModalOAsContainer');
 
       const filtrados = oasDisponiblesModal.filter(o => {
+        const matchesUnidad = (unidadFiltro === 'todas') || (o.unidad_sugerida === unidadFiltro);
         const matchesEje = (ejeFiltro === 'todos') || (o.eje_unidad === ejeFiltro);
         const matchesQ = !q || (o.codigo || '').toLowerCase().includes(q) || (o.descripcion || '').toLowerCase().includes(q);
-        return matchesEje && matchesQ;
+        return matchesUnidad && matchesEje && matchesQ;
       });
 
       if (filtrados.length === 0) {
-        cont.innerHTML = '<div class="text-center text-muted py-4">No hay OAs disponibles con los filtros aplicados.</div>';
+        cont.innerHTML = `
+          <div class="text-center text-muted py-4">
+            <i class="bi bi-funnel text-secondary fs-3 d-block mb-2"></i>
+            No hay OAs disponibles con los filtros aplicados.
+            <div class="mt-2">
+              <button class="btn btn-sm btn-link" onclick="document.getElementById('filtroUnidadModalOA').value='todas';document.getElementById('filtroEjeModalOA').value='todos';renderizarModalOAs();">
+                Ver OAs de todas las unidades
+              </button>
+            </div>
+          </div>
+        `;
         return;
       }
 
       cont.innerHTML = filtrados.map(o => {
         const isChecked = oasSeleccionadosTemp.has(o.codigo);
+        const indics = Array.isArray(o.indicadores_sugeridos) ? o.indicadores_sugeridos : [];
         return `
-          <div class="form-check p-3 mb-2 border rounded ${isChecked ? 'bg-primary-subtle border-primary' : 'bg-white'}">
-            <input class="form-check-input" type="checkbox" id="chkOA_${o.id}" value="${o.codigo}" ${isChecked ? 'checked' : ''} onchange="toggleOASeleccion('${o.codigo}', this.checked)">
-            <label class="form-check-label w-100 cursor-pointer" for="chkOA_${o.id}">
-              <div class="d-flex justify-content-between align-items-center mb-1">
-                <span class="fw-bold font-monospace text-primary">${o.codigo}</span>
-                <div>
-                  <span class="badge ${o.categoria === 'Basal' ? 'badge-oa-basal' : 'badge-oa-comp'} me-1">${o.categoria}</span>
-                  <span class="badge bg-light text-secondary border">${o.eje_unidad || 'General'}</span>
-                </div>
+          <div class="card mb-2 border ${isChecked ? 'border-primary bg-primary-subtle' : 'bg-white'}">
+            <div class="card-body p-3">
+              <div class="form-check">
+                <input class="form-check-input" type="checkbox" id="chkOA_${o.id}" value="${o.codigo}" ${isChecked ? 'checked' : ''} onchange="toggleOASeleccion('${o.codigo}', this.checked)">
+                <label class="form-check-label w-100 cursor-pointer" for="chkOA_${o.id}">
+                  <div class="d-flex justify-content-between align-items-center mb-1 flex-wrap gap-1">
+                    <span class="fw-bold font-monospace text-primary fs-6">${o.codigo}</span>
+                    <div class="d-flex gap-1 align-items-center">
+                      <span class="badge ${o.categoria === 'Basal' ? 'badge-oa-basal' : 'badge-oa-comp'}">${o.categoria}</span>
+                      <span class="badge bg-secondary-subtle text-secondary border">${o.unidad_sugerida || 'Unidad 1'}</span>
+                      <span class="badge bg-light text-dark border">${o.eje_unidad || 'General'}</span>
+                    </div>
+                  </div>
+                  <p class="small text-dark mb-2">${o.descripcion}</p>
+                </label>
               </div>
-              <p class="small text-muted mb-0">${o.descripcion}</p>
-            </label>
+
+              ${indics.length > 0 ? `
+                <div class="mt-2 pt-2 border-top bg-light p-2 rounded">
+                  <div class="small fw-semibold text-secondary mb-1">
+                    <i class="bi bi-check2-circle text-success me-1"></i>Indicadores de Evaluación Sugeridos MINEDUC (${indics.length}):
+                  </div>
+                  <ul class="small text-muted ps-3 mb-0" style="font-size: 0.8rem;">
+                    ${indics.map(ind => `<li>${ind}</li>`).join('')}
+                  </ul>
+                </div>
+              ` : ''}
+            </div>
           </div>
         `;
       }).join('');
@@ -1354,19 +1456,126 @@
       if (unidadEditandoIndex !== null && planActivo.unidades[unidadEditandoIndex]) {
         const u = planActivo.unidades[unidadEditandoIndex];
         const nuevosOAs = [];
+        const indicadoresAImportar = [];
+
         oasDisponiblesModal.forEach(o => {
           if (oasSeleccionadosTemp.has(o.codigo)) {
             nuevosOAs.push({
               codigo: o.codigo,
               categoria: o.categoria,
-              descripcion: o.descripcion
+              descripcion: o.descripcion,
+              unidad_sugerida: o.unidad_sugerida
             });
+            if (Array.isArray(o.indicadores_sugeridos)) {
+              o.indicadores_sugeridos.forEach(ind => {
+                const itemFormato = `[${o.codigo}] ${ind}`;
+                if (!indicadoresAImportar.includes(itemFormato)) {
+                  indicadoresAImportar.push(itemFormato);
+                }
+              });
+            }
           }
         });
         u.oas_seleccionados = nuevosOAs;
+
+        // Si la casilla de auto-importar indicadores está activada
+        const chkAuto = document.getElementById('chkAutoImportarIndicadores');
+        if (chkAuto && chkAuto.checked && indicadoresAImportar.length > 0) {
+          const textoIndics = indicadoresAImportar.map(i => `• ${i}`).join('\n');
+          if (!u.indicadores_evaluacion || u.indicadores_evaluacion.trim() === '') {
+            u.indicadores_evaluacion = textoIndics;
+          } else {
+            u.indicadores_evaluacion += `\n\n${textoIndics}`;
+          }
+        }
+
         renderizarUnidadesAcordeon();
         modalOAsObj.hide();
       }
+    }
+
+    // Precarga de habilidades sugeridas del programa oficial
+    function precargarHabilidadesMINEDUC(uIdx) {
+      const u = planActivo.unidades[uIdx];
+      let habs = [];
+      if (planActivo.plan_curricular && Array.isArray(planActivo.plan_curricular.habilidades_sugeridas)) {
+        habs = planActivo.plan_curricular.habilidades_sugeridas;
+      }
+      if (habs.length === 0) {
+        Swal.fire('Información', 'No se encontraron habilidades oficiales registradas para esta asignatura.', 'info');
+        return;
+      }
+      const textoHabs = habs.map(h => `• ${h.nombre}: ${h.descripcion}`).join('\n\n');
+      u.habilidades = textoHabs;
+      const el = document.getElementById(`unidad_hab_${uIdx}`);
+      if (el) el.value = textoHabs;
+      Swal.fire({
+        toast: true,
+        position: 'top-end',
+        icon: 'success',
+        title: 'Habilidades MINEDUC precargadas en la unidad',
+        showConfirmButton: false,
+        timer: 2000
+      });
+    }
+
+    // Precarga de actitudes transversales (OATs) MINEDUC
+    function precargarActitudesMINEDUC(uIdx) {
+      const u = planActivo.unidades[uIdx];
+      const oats = planActivo.actitudes_sugeridas || [
+        "Demostrar curiosidad, interés y rigor intelectual en el trabajo escolar.",
+        "Manifestar disposición al trabajo colaborativo, respetando las opiniones y aportes ajenos.",
+        "Valorar la perseverancia y el esfuerzo personal en la superación de desafíos pedagógicos.",
+        "Demostrar empatía, solidaridad y compromiso con el bienestar de la comunidad escolar y el cuidado del entorno.",
+        "Actuar con honestidad y rigurosidad en el uso de la información y en la presentación de resultados.",
+        "Reconocer y valorar la diversidad humana, cultural y social como fuente de enriquecimiento personal y colectivo."
+      ];
+      const textoOats = oats.map(a => `• ${a}`).join('\n');
+      u.actitudes = textoOats;
+      const el = document.getElementById(`unidad_act_${uIdx}`);
+      if (el) el.value = textoOats;
+      Swal.fire({
+        toast: true,
+        position: 'top-end',
+        icon: 'success',
+        title: 'Actitudes y OATs precargados en la unidad',
+        showConfirmButton: false,
+        timer: 2000
+      });
+    }
+
+    // Precarga de indicadores sugeridos a partir de los OAs asignados a la unidad
+    function precargarIndicadoresOAs(uIdx) {
+      const u = planActivo.unidades[uIdx];
+      const oasSeleccionados = (u.oas_seleccionados || []).map(o => (typeof o === 'object') ? o.codigo : o);
+      if (oasSeleccionados.length === 0) {
+        Swal.fire('Aviso', 'Primero debe seleccionar al menos un OA MINEDUC para esta unidad.', 'warning');
+        return;
+      }
+      const indicadores = [];
+      (planActivo.oas_disponibles || []).forEach(o => {
+        if (oasSeleccionados.includes(o.codigo) && Array.isArray(o.indicadores_sugeridos)) {
+          o.indicadores_sugeridos.forEach(ind => {
+            indicadores.push(`• [${o.codigo}] ${ind}`);
+          });
+        }
+      });
+      if (indicadores.length === 0) {
+        Swal.fire('Información', 'Los OAs seleccionados no tienen indicadores precargados.', 'info');
+        return;
+      }
+      const texto = indicadores.join('\n');
+      u.indicadores_evaluacion = texto;
+      const el = document.getElementById(`unidad_ind_${uIdx}`);
+      if (el) el.value = texto;
+      Swal.fire({
+        toast: true,
+        position: 'top-end',
+        icon: 'success',
+        title: `${indicadores.length} indicadores sugeridos precargados`,
+        showConfirmButton: false,
+        timer: 2000
+      });
     }
 
     function quitarOAUnidad(uIdx, codigo) {

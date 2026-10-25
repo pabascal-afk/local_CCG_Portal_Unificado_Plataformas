@@ -1,824 +1,271 @@
 /**
  * Servicio de Semilla y Gestión de Planes y Programas MINEDUC
- * Bases Curriculares y Priorización Curricular
+ * Bases Curriculares y Priorización Curricular Oficial
+ * Incluye distribución por Unidades (1 a 4), Habilidades e Indicadores de Evaluación precargados.
  */
 
 const path = require('path');
 const xlsx = require('xlsx');
 
-// Catálogo base de OAs oficiales MINEDUC organizados por Asignatura y Nivel
-const CATALOGO_MINEDUC_BASE = [
-  // ==========================================
-  // LENGUAJE Y COMUNICACIÓN (1° a 8° Básico)
-  // ==========================================
-  {
-    nivel: '1° Básico',
-    asignatura: 'LENGUAJE Y COMUNICACION',
-    eje: 'Lectura',
-    codigo: 'OA 01',
-    categoria: 'Basal',
-    descripcion: 'Reconocer que los textos escritos transmiten mensajes y que son escritos por alguien para cumplir un propósito.'
-  },
-  {
-    nivel: '1° Básico',
-    asignatura: 'LENGUAJE Y COMUNICACION',
-    eje: 'Lectura',
-    codigo: 'OA 04',
-    categoria: 'Basal',
-    descripcion: 'Leer palabras aisladas y en contexto, aplicando su conocimiento de la correspondencia letra-sonido en diferentes combinaciones.'
-  },
-  {
-    nivel: '1° Básico',
-    asignatura: 'LENGUAJE Y COMUNICACION',
-    eje: 'Lectura',
-    codigo: 'OA 08',
-    categoria: 'Basal',
-    descripcion: 'Demostrar comprensión de narraciones que aborden temas que les sean familiares: extrayendo información explícita e implícita, respondiendo preguntas.'
-  },
-  {
-    nivel: '1° Básico',
-    asignatura: 'LENGUAJE Y COMUNICACION',
-    eje: 'Escritura',
-    codigo: 'OA 13',
-    categoria: 'Basal',
-    descripcion: 'Experimentar con la escritura para comunicar hechos, ideas y sentimientos, entre otros.'
-  },
-  {
-    nivel: '1° Básico',
-    asignatura: 'LENGUAJE Y COMUNICACION',
-    eje: 'Comunicación Oral',
-    codigo: 'OA 18',
-    categoria: 'Complementario',
-    descripcion: 'Comprender textos orales (explicaciones, instrucciones, relatos, anécdotas, etc.) para obtener información y desarrollar su curiosidad por el mundo.'
-  },
+// Importación de catálogos curriculares oficiales por área
+const { LENGUAJE_CURRICULO } = require('./curriculo_data/lenguaje');
+const { MATEMATICA_CURRICULO } = require('./curriculo_data/matematica');
+const { CIENCIAS_CURRICULO } = require('./curriculo_data/ciencias');
+const { HISTORIA_CURRICULO } = require('./curriculo_data/historia');
+const { INGLES_CURRICULO } = require('./curriculo_data/ingles');
+const { ESPECIALIDADES_CURRICULO } = require('./curriculo_data/especialidades');
 
-  // 2° Básico - Lenguaje
-  {
-    nivel: '2° Básico',
-    asignatura: 'LENGUAJE Y COMUNICACION',
-    eje: 'Lectura',
-    codigo: 'OA 03',
-    categoria: 'Basal',
-    descripcion: 'Comprender textos aplicando estrategias de comprensión lectora; por ejemplo: relacionar la información del texto con sus experiencias y conocimientos, visualizar lo que describe el texto.'
-  },
-  {
-    nivel: '2° Básico',
-    asignatura: 'LENGUAJE Y COMUNICACION',
-    eje: 'Lectura',
-    codigo: 'OA 05',
-    categoria: 'Basal',
-    descripcion: 'Demostrar comprensión de las narraciones leídas: extrayendo información explícita e implícita, reconstruyendo la secuencia de las acciones en la historia.'
-  },
-  {
-    nivel: '2° Básico',
-    asignatura: 'LENGUAJE Y COMUNICACION',
-    eje: 'Escritura',
-    codigo: 'OA 12',
-    categoria: 'Basal',
-    descripcion: 'Escribir frecuentemente, para desarrollar la creatividad y expresar sus ideas, textos como poemas, diarios de vida, anécdotas, cartas, recados, etc.'
-  },
-  {
-    nivel: '2° Básico',
-    asignatura: 'LENGUAJE Y COMUNICACION',
-    eje: 'Escritura',
-    codigo: 'OA 17',
-    categoria: 'Complementario',
-    descripcion: 'Escribir correctamente para facilitar la comprensión por parte del lector, aplicando las reglas ortográficas aprendidas.'
-  },
+// -------------------------------------------------------------
+// HABILIDADES OFICIALES MINEDUC POR ASIGNATURA
+// -------------------------------------------------------------
+const HABILIDADES_POR_ASIGNATURA = {
+  'LENGUAJE Y COMUNICACION': [
+    { nombre: 'Comprensión lectora', descripcion: 'Localizar información explícita e implícita, interpretar sentido global, inferir significados y reflexionar críticamente sobre textos literarios y no literarios.' },
+    { nombre: 'Producción escrita', descripcion: 'Planificar, redactar, revisar y editar textos narrativos, informativos y argumentativos cohesionados y coherentes.' },
+    { nombre: 'Comunicación oral', descripcion: 'Expresar ideas con claridad, fluidez y adecuación pragmática en diversas situaciones comunicativas, y escuchar comprensiva y empáticamente.' },
+    { nombre: 'Investigación y uso de fuentes', descripcion: 'Buscar, seleccionar, evaluar y registrar información de diversas fuentes impresas y digitales citando adecuadamente.' }
+  ],
+  'LENGUA Y LITERATURA': [
+    { nombre: 'Comprensión e interpretación crítica', descripcion: 'Interpretar textos literarios y discursos públicos evaluando recursos estéticos, posturas ideológicas y visiones de mundo.' },
+    { nombre: 'Escritura argumentativa e investigativa', descripcion: 'Elaborar textos académicos y ensayos bien estructurados, fundamentando tesis con evidencia rigurosa.' },
+    { nombre: 'Diálogo y debate argumentativo', descripcion: 'Participar constructivamente en debates y exposiciones orales, rebatiendo argumentos con respeto y rigor.' }
+  ],
+  'MATEMATICA': [
+    { nombre: 'Resolver problemas', descripcion: 'Comprender situaciones problemáticas, seleccionar y adaptar estrategias heurísticas, verificar resultados y comunicar soluciones.' },
+    { nombre: 'Modelar', descripcion: 'Traducir situaciones del entorno cotidiano y científico a expresiones y modelos matemáticos, evaluando su validez y límites.' },
+    { nombre: 'Representar', descripcion: 'Utilizar y transitar entre representaciones concretas, pictóricas, gráficas y simbólicas para visualizar relaciones y conceptos matemáticos.' },
+    { nombre: 'Argumentar y comunicar', descripcion: 'Explicar razonamientos de manera clara, justificar afirmaciones matemáticas mediante propiedades y evaluar la validez de razonamientos ajenos.' }
+  ],
+  'CIENCIAS NATURALES': [
+    { nombre: 'Observar y plantear preguntas', descripcion: 'Formular preguntas e hipótesis comprobables sobre fenómenos naturales del entorno a partir de observaciones sistemáticas.' },
+    { nombre: 'Planificar y conducir investigaciones', descripcion: 'Diseñar y ejecutar procedimientos experimentales y no experimentales de forma rigurosa, ordenada y segura.' },
+    { nombre: 'Procesar y analizar evidencia', descripcion: 'Organizar datos cualitativos y cuantitativos en tablas y gráficos, identificar tendencias o relaciones causa-efecto y extraer conclusiones fundamentadas.' },
+    { nombre: 'Evaluar y comunicar', descripcion: 'Discutir la validez de los resultados experimentales y comunicar hallazgos usando vocabulario, modelos y formatos científicos adecuados.' }
+  ],
+  'BIOLOGIA': [
+    { nombre: 'Pensamiento científico y bioético', descripcion: 'Analizar problemáticas biológicas contemporáneas evaluando implicancias éticas, sociales y ambientales.' },
+    { nombre: 'Investigación experimental y modelamiento biológico', descripcion: 'Diseñar experimentos biológicos y construir modelos explicativos de procesos celulares, genéticos y ecológicos.' }
+  ],
+  'FISICA': [
+    { nombre: 'Modelamiento físico y cuantitativo', descripcion: 'Aplicar leyes de la física clásica y moderna para resolver problemas cuantitativos del movimiento, energía y materia.' },
+    { nombre: 'Experimentación y análisis de sistemas físicos', descripcion: 'Manipular instrumentos de medición física, evaluar fuentes de incertidumbre y relacionar variables teóricas y empíricas.' }
+  ],
+  'QUIMICA': [
+    { nombre: 'Interpretación a nivel molecular y macroscópico', descripcion: 'Relacionar fenómenos químicos macroscópicos con interacciones a escala atómica y molecular.' },
+    { nombre: 'Cálculo estequiométrico y trabajo experimental de laboratorio', descripcion: 'Realizar cálculos de reactivos y productos, manipulando sustancias químicas con rigurosidad y medidas de seguridad.' }
+  ],
+  'HISTORIA, GEOGRAFIA Y CIENCIAS SOCIALES': [
+    { nombre: 'Pensamiento temporal y espacial', descripcion: 'Secuenciar procesos históricos, utilizar coordenadas y mapas temáticos, y comprender la simultaneidad y multicausalidad de los fenómenos.' },
+    { nombre: 'Análisis y trabajo con fuentes', descripcion: 'Analizar y contrastar fuentes primarias y secundarias evaluando su confiabilidad, origen, intencionalidad y perspectiva histórica.' },
+    { nombre: 'Pensamiento crítico y deliberación', descripcion: 'Fundamentar opiniones sobre problemáticas históricas, geográficas y ciudadanas con argumentos sólidos basados en derechos humanos.' },
+    { nombre: 'Comunicación', descripcion: 'Elaborar explicaciones históricas y geográficas organizadas, escritas y orales, integrando vocabulario disciplinar.' }
+  ],
+  'HISTORIA Y GEOGRAFIA': [
+    { nombre: 'Pensamiento temporal y espacial', descripcion: 'Secuenciar procesos históricos, utilizar coordenadas y mapas temáticos, y comprender la simultaneidad y multicausalidad de los fenómenos.' },
+    { nombre: 'Análisis y trabajo con fuentes', descripcion: 'Analizar y contrastar fuentes primarias y secundarias evaluando su confiabilidad, origen, intencionalidad y perspectiva histórica.' },
+    { nombre: 'Pensamiento crítico y deliberación', descripcion: 'Fundamentar opiniones sobre problemáticas históricas, geográficas y ciudadanas con argumentos sólidos basados en derechos humanos.' },
+    { nombre: 'Comunicación', descripcion: 'Elaborar explicaciones históricas y geográficas organizadas, escritas y orales, integrando vocabulario disciplinar.' }
+  ],
+  'EDUCACION CIUDADANA': [
+    { nombre: 'Deliberación y participación democrática', descripcion: 'Analizar dilemas éticos y políticos de la sociedad democrática, proponiendo iniciativas de bien común.' },
+    { nombre: 'Juicio crítico sobre la institucionalidad y los medios', descripcion: 'Evaluar el funcionamiento del Estado de derecho, la justicia social y el impacto de los discursos mediáticos.' }
+  ],
+  'INGLES': [
+    { nombre: 'Listening (Comprensión auditiva)', descripcion: 'Identificar ideas clave y detalles específicos en textos orales auténticos y adaptados en diversas situaciones comunicativas.' },
+    { nombre: 'Reading (Comprensión lectora)', descripcion: 'Comprender propósitos comunicativos, vocabulario temático y estructuras gramaticales en textos escritos simples y complejos.' },
+    { nombre: 'Speaking (Expresión oral)', descripcion: 'Participar en diálogos, responder preguntas y realizar presentaciones orales fluidas y comprensibles sobre temas de interés.' },
+    { nombre: 'Writing (Expresión escrita)', descripcion: 'Redactar oraciones, mensajes breves, correos y párrafos aplicando conectores, ortografía y vocabulario meta.' }
+  ],
+  'CIENCIAS PARA LA CIUDADANIA': [
+    { nombre: 'Pensamiento científico reflexivo', descripcion: 'Evaluar críticamente controversias sociocientíficas e impactos de la ciencia y la tecnología en la sociedad.' },
+    { nombre: 'Diseño de proyectos colaborativos', descripcion: 'Planificar e implementar soluciones sustentables a problemáticas ambientales y de salud comunitaria.' }
+  ],
+  'ARTES VISUALES': [
+    { nombre: 'Expresar y crear visualmente', descripcion: 'Experimentar con diversas técnicas, materiales, soportes y medios digitales de expresión artística bidimensional y tridimensional.' },
+    { nombre: 'Apreciar y responder frente al arte', descripcion: 'Analizar e interpretar obras de arte visual de distintas culturas y épocas, fundamentando juicios estéticos y personales.' }
+  ],
+  'MUSICA': [
+    { nombre: 'Escuchar y apreciar', descripcion: 'Reconocer auditivamente elementos del lenguaje musical, timbres, formas y contextos socioculturales de diversas tradiciones sonoras.' },
+    { nombre: 'Interpretar y crear', descripcion: 'Cantar, tocar instrumentos musicales y experimentar con sonoridades individuales y grupales con precisión rítmica y expresividad.' }
+  ],
+  'EDUCACION FISICA Y SALUD': [
+    { nombre: 'Habilidades motrices específicas', descripcion: 'Ejecutar habilidades motrices básicas y específicas en diversos juegos predeportivos, deportes colectivos e individuales.' },
+    { nombre: 'Vida activa y hábitos saludables', descripcion: 'Practicar actividad física de intensidad moderada a vigorosa reconociendo sus beneficios para el bienestar integral.' }
+  ],
+  'EDUCACION FISICA': [
+    { nombre: 'Habilidades motrices específicas', descripcion: 'Ejecutar habilidades motrices básicas y específicas en diversos juegos predeportivos, deportes colectivos e individuales.' },
+    { nombre: 'Vida activa y hábitos saludables', descripcion: 'Practicar actividad física de intensidad moderada a vigorosa reconociendo sus beneficios para el bienestar integral.' }
+  ],
+  'TECNOLOGIA': [
+    { nombre: 'Diseñar y planificar soluciones', descripcion: 'Idear soluciones tecnológicas a necesidades del entorno seleccionando materiales, herramientas y procesos pertinentes.' },
+    { nombre: 'Elaborar, probar y evaluar', descripcion: 'Construir objetos o sistemas tecnológicos siguiendo normas de seguridad y evaluando su impacto social y ambiental.' }
+  ],
+  'ORIENTACION': [
+    { nombre: 'Crecimiento personal y autoconocimiento', descripcion: 'Reconocer fortalezas, intereses y metas personales, gestionando emociones y conductas con autonomía.' },
+    { nombre: 'Relaciones interpersonales y convivencia', descripcion: 'Fomentar la resolución pacífica de conflictos, la empatía y la participación en la comunidad escolar.' }
+  ],
+  'FILOSOFIA': [
+    { nombre: 'Problematización filosófica', descripcion: 'Formular preguntas fundamentales sobre la realidad, el conocimiento, la ética y el sentido de la existencia.' },
+    { nombre: 'Análisis y argumentación conceptual', descripcion: 'Examinar rigurosamente conceptos, supuestos y argumentos en textos filosóficos clásicos y contemporáneos.' }
+  ]
+};
 
-  // 3° Básico - Lenguaje
-  {
-    nivel: '3° Básico',
-    asignatura: 'LENGUAJE Y COMUNICACION',
-    eje: 'Lectura',
-    codigo: 'OA 02',
-    categoria: 'Basal',
-    descripcion: 'Comprender textos aplicando estrategias de comprensión lectora: relectura, subrayado, parafraseo y formulación de preguntas.'
-  },
-  {
-    nivel: '3° Básico',
-    asignatura: 'LENGUAJE Y COMUNICACION',
-    eje: 'Lectura',
-    codigo: 'OA 04',
-    categoria: 'Basal',
-    descripcion: 'Profundizar su comprensión de las narraciones leídas: extrayendo información explícita e implícita, describiendo el ambiente y personajes, expresando opiniones fundamentadas.'
-  },
-  {
-    nivel: '3° Básico',
-    asignatura: 'LENGUAJE Y COMUNICACION',
-    eje: 'Lectura',
-    codigo: 'OA 06',
-    categoria: 'Complementario',
-    descripcion: 'Leer independientemente y comprender textos no literarios (cartas, biografías, relatos históricos, instrucciones, libros y artículos informativos).'
-  },
-  {
-    nivel: '3° Básico',
-    asignatura: 'LENGUAJE Y COMUNICACION',
-    eje: 'Escritura',
-    codigo: 'OA 12',
-    categoria: 'Basal',
-    descripcion: 'Escribir creativamente narraciones (experiencias personales, relatos de hechos, cuentos) que tengan una estructura clara con inicio, desarrollo y desenlace.'
-  },
+// -------------------------------------------------------------
+// ACTITUDES TRANSVERSALES MINEDUC (OATs)
+// -------------------------------------------------------------
+const ACTITUDES_GENERALES_MINEDUC = [
+  "Demostrar curiosidad, interés y rigor intelectual en el trabajo escolar.",
+  "Manifestar disposición al trabajo colaborativo, respetando las opiniones y aportes ajenos.",
+  "Valorar la perseverancia y el esfuerzo personal en la superación de desafíos pedagógicos.",
+  "Demostrar empatía, solidaridad y compromiso con el bienestar de la comunidad escolar y el cuidado del entorno.",
+  "Actuar con honestidad y rigurosidad en el uso de la información y en la presentación de resultados.",
+  "Reconocer y valorar la diversidad humana, cultural y social como fuente de enriquecimiento personal y colectivo."
+];
 
-  // 4° Básico - Lenguaje
-  {
-    nivel: '4° Básico',
-    asignatura: 'LENGUAJE Y COMUNICACION',
-    eje: 'Lectura',
-    codigo: 'OA 04',
-    categoria: 'Basal',
-    descripcion: 'Profundizar su comprensión de las narraciones leídas: determinando las consecuencias de hechos o acciones, describiendo el orden temporal y relacionando el relato con el contexto.'
-  },
-  {
-    nivel: '4° Básico',
-    asignatura: 'LENGUAJE Y COMUNICACION',
-    eje: 'Escritura',
-    codigo: 'OA 11',
-    categoria: 'Basal',
-    descripcion: 'Escribir cartas, instrucciones, afiches, reportes de una experiencia o resúmenes, organizando las ideas en párrafos separados con punto aparte.'
-  },
-
-  // 5° Básico - Lenguaje
-  {
-    nivel: '5° Básico',
-    asignatura: 'LENGUAJE Y COMUNICACION',
-    eje: 'Lectura',
-    codigo: 'OA 03',
-    categoria: 'Basal',
-    descripcion: 'Leer y familiarizarse con un amplio repertorio de literatura para aumentar su conocimiento del mundo, desarrollando su imaginación y reconociendo su valor social.'
-  },
-  {
-    nivel: '5° Básico',
-    asignatura: 'LENGUAJE Y COMUNICACION',
-    eje: 'Lectura',
-    codigo: 'OA 04',
-    categoria: 'Basal',
-    descripcion: 'Analizar aspectos relevantes de narraciones leídas para profundizar su comprensión: interpretando el lenguaje figurado, evaluando actitudes y el dilema de los personajes.'
-  },
-  {
-    nivel: '5° Básico',
-    asignatura: 'LENGUAJE Y COMUNICACION',
-    eje: 'Escritura',
-    codigo: 'OA 14',
-    categoria: 'Basal',
-    descripcion: 'Escribir creativamente narraciones que incluyan una secuencia lógica de eventos, inicio, desarrollo, clímax y desenlace con personajes caracterizados.'
-  },
-
-  // 6° Básico - Lenguaje
-  {
-    nivel: '6° Básico',
-    asignatura: 'LENGUAJE Y COMUNICACION',
-    eje: 'Lectura',
-    codigo: 'OA 03',
-    categoria: 'Basal',
-    descripcion: 'Analizar aspectos relevantes de diversas narraciones para profundizar su comprensión: identificando las acciones principales y secundarias, explicando las motivaciones de los personajes.'
-  },
-  {
-    nivel: '6° Básico',
-    asignatura: 'LENGUAJE Y COMUNICACION',
-    eje: 'Escritura',
-    codigo: 'OA 13',
-    categoria: 'Basal',
-    descripcion: 'Escribir frecuentemente, para expresar sus ideas y reflexiones: comentarios sobre lecturas, cartas dirigidas a la comunidad, noticias o ensayos breves.'
-  },
-
-  // 7° Básico - Lengua y Literatura
-  {
-    nivel: '7° Básico',
-    asignatura: 'LENGUAJE Y COMUNICACION',
-    eje: 'Lectura',
-    codigo: 'OA 02',
-    categoria: 'Basal',
-    descripcion: 'Reflexionar sobre las diferentes dimensiones de la experiencia humana, propia y ajena, a partir de la lectura de obras literarias y textos argumentativos.'
-  },
-  {
-    nivel: '7° Básico',
-    asignatura: 'LENGUAJE Y COMUNICACION',
-    eje: 'Lectura',
-    codigo: 'OA 07',
-    categoria: 'Basal',
-    descripcion: 'Formular una interpretación de los textos literarios leídos o vistos, que sea coherente con su análisis y sustentada con citas textuales.'
-  },
-  {
-    nivel: '7° Básico',
-    asignatura: 'LENGUAJE Y COMUNICACION',
-    eje: 'Escritura',
-    codigo: 'OA 14',
-    categoria: 'Basal',
-    descripcion: 'Escribir, con el propósito de explicar un tema, textos de diversos géneros (por ejemplo, artículos informativos, monografías, informes).'
-  },
-
-  // 8° Básico - Lengua y Literatura
-  {
-    nivel: '8° Básico',
-    asignatura: 'LENGUAJE Y COMUNICACION',
-    eje: 'Lectura',
-    codigo: 'OA 02',
-    categoria: 'Basal',
-    descripcion: 'Reflexionar sobre temas y dilemas de la vida a partir de lecturas literarias, valorando distintas visiones de mundo y contextos socioculturales.'
-  },
-  {
-    nivel: '8° Básico',
-    asignatura: 'LENGUAJE Y COMUNICACION',
-    eje: 'Lectura',
-    codigo: 'OA 08',
-    categoria: 'Basal',
-    descripcion: 'Formular una interpretación crítica de los textos leídos, considerando su postura personal frente al tema y los recursos retóricos utilizados por el autor.'
-  },
-
-  // I° Medio - Lengua y Literatura
-  {
-    nivel: 'I° Medio',
-    asignatura: 'LENGUA Y LITERATURA',
-    eje: 'Lectura',
-    codigo: 'OA 01',
-    categoria: 'Basal',
-    descripcion: 'Leer habitualmente para aprender y recrearse, seleccionando textos de acuerdo con sus preferencias y propósitos formativos.'
-  },
-  {
-    nivel: 'I° Medio',
-    asignatura: 'LENGUA Y LITERATURA',
-    eje: 'Lectura',
-    codigo: 'OA 02',
-    categoria: 'Basal',
-    descripcion: 'Reflexionar sobre el conflicto y el sentido de la obra leída, analizando personajes, símbolos, temas recurrentes y visiones de mundo.'
-  },
-  {
-    nivel: 'I° Medio',
-    asignatura: 'LENGUA Y LITERATURA',
-    eje: 'Escritura',
-    codigo: 'OA 06',
-    categoria: 'Basal',
-    descripcion: 'Producir textos argumentativos coherentes y cohesionados para expresar una postura informada y fundamentada sobre temas controversiales.'
-  },
-
-  // II° Medio - Lengua y Literatura
-  {
-    nivel: 'II° Medio',
-    asignatura: 'LENGUA Y LITERATURA',
-    eje: 'Lectura',
-    codigo: 'OA 02',
-    categoria: 'Basal',
-    descripcion: 'Analizar críticamente textos poéticos y dramáticos, evaluando el uso del lenguaje figurado, figuras retóricas y el diálogo dramático.'
-  },
-  {
-    nivel: 'II° Medio',
-    asignatura: 'LENGUA Y LITERATURA',
-    eje: 'Investigación',
-    codigo: 'OA 08',
-    categoria: 'Basal',
-    descripcion: 'Planificar, escribir, revisar y editar textos en función del contexto, el destinatario y el propósito, utilizando fuentes confiables citadas formalmente.'
-  },
-
-  // III° y IV° Medio - Lengua y Literatura / Plan Común
-  {
-    nivel: 'III° Medio',
-    asignatura: 'LENGUA Y LITERATURA',
-    eje: 'Comprensión Crítica',
-    codigo: 'OA 01',
-    categoria: 'Basal',
-    descripcion: 'Formular interpretaciones de obras literarias y discursos públicos que consideren el contexto de producción, la intertextualidad y el impacto en la audiencia.'
-  },
-  {
-    nivel: 'III° Medio',
-    asignatura: 'LENGUA Y LITERATURA',
-    eje: 'Producción',
-    codigo: 'OA 03',
-    categoria: 'Basal',
-    descripcion: 'Evaluar críticamente discursos de medios masivos de comunicación, identificando sesgos, recursos persuasivos y falacias argumentativas.'
-  },
-  {
-    nivel: 'IV° Medio',
-    asignatura: 'LENGUA Y LITERATURA',
-    eje: 'Comprensión Crítica',
-    codigo: 'OA 01',
-    categoria: 'Basal',
-    descripcion: 'Analizar obras literarias y ensayos contemporáneos que planteen reflexiones filosóficas sobre la identidad, la libertad y el poder.'
-  },
-  {
-    nivel: 'IV° Medio',
-    asignatura: 'LENGUA Y LITERATURA',
-    eje: 'Discurso Público',
-    codigo: 'OA 04',
-    categoria: 'Basal',
-    descripcion: 'Construir textos orales, escritos y multimodales de carácter argumentativo complejo, integrando contraargumentación sólida y fuentes académicas.'
-  },
-
-  // ==========================================
-  // MATEMÁTICA (1° Básico a IV° Medio)
-  // ==========================================
-  {
-    nivel: '1° Básico',
-    asignatura: 'MATEMATICA',
-    eje: 'Números y Operaciones',
-    codigo: 'OA 01',
-    categoria: 'Basal',
-    descripcion: 'Contar números del 0 al 100 de 1 en 1, de 2 en 2, de 5 en 5 y de 10 en 10, hacia adelante y hacia atrás, empezando por cualquier número dado.'
-  },
-  {
-    nivel: '1° Básico',
-    asignatura: 'MATEMATICA',
-    eje: 'Números y Operaciones',
-    codigo: 'OA 09',
-    categoria: 'Basal',
-    descripcion: 'Demostrar que comprenden la adición y la sustracción de números del 0 al 20 progresivamente, de 0 a 5, de 6 a 10, de 11 a 20 con material concreto y pictórico.'
-  },
-  {
-    nivel: '2° Básico',
-    asignatura: 'MATEMATICA',
-    eje: 'Números y Operaciones',
-    codigo: 'OA 01',
-    categoria: 'Basal',
-    descripcion: 'Contar números del 0 al 1 000 de 2 en 2, de 5 en 5, de 10 en 10 y de 100 en 100, reconociendo el valor posicional de cada dígito.'
-  },
-  {
-    nivel: '2° Básico',
-    asignatura: 'MATEMATICA',
-    eje: 'Números y Operaciones',
-    codigo: 'OA 09',
-    categoria: 'Basal',
-    descripcion: 'Demostrar que comprende la adición y la sustracción en el ámbito del 0 al 100: usando un lenguaje cotidiano y matemático para describir las operaciones.'
-  },
-  {
-    nivel: '3° Básico',
-    asignatura: 'MATEMATICA',
-    eje: 'Números y Operaciones',
-    codigo: 'OA 03',
-    categoria: 'Basal',
-    descripcion: 'Comparar y ordenar números naturales hasta 1 000, utilizando la recta numérica y el valor posicional de las centenas, decenas y unidades.'
-  },
-  {
-    nivel: '3° Básico',
-    asignatura: 'MATEMATICA',
-    eje: 'Números y Operaciones',
-    codigo: 'OA 08',
-    categoria: 'Basal',
-    descripcion: 'Demostrar que comprenden las tablas de multiplicar hasta el 10 de manera progresiva: usando representaciones concretas y pictóricas, expresando una multiplicación como adición repetida.'
-  },
-  {
-    nivel: '3° Básico',
-    asignatura: 'MATEMATICA',
-    eje: 'Geometría',
-    codigo: 'OA 15',
-    categoria: 'Complementario',
-    descripcion: 'Demostrar que comprenden la relación entre figuras 3D y 2D: construyendo redes, identificando caras, aristas y vértices.'
-  },
-  {
-    nivel: '4° Básico',
-    asignatura: 'MATEMATICA',
-    eje: 'Números y Operaciones',
-    codigo: 'OA 05',
-    categoria: 'Basal',
-    descripcion: 'Demostrar que comprenden la multiplicación de números de tres dígitos por números de un dígito, aplicando el algoritmo de la multiplicación.'
-  },
-  {
-    nivel: '4° Básico',
-    asignatura: 'MATEMATICA',
-    eje: 'Números y Operaciones',
-    codigo: 'OA 06',
-    categoria: 'Basal',
-    descripcion: 'Demostrar que comprenden la división con dividendos de dos dígitos y divisores de un dígito: interpretando el resto en problemas contextualizados.'
-  },
-  {
-    nivel: '5° Básico',
-    asignatura: 'MATEMATICA',
-    eje: 'Números y Operaciones',
-    codigo: 'OA 03',
-    categoria: 'Basal',
-    descripcion: 'Demostrar que comprenden la multiplicación de números naturales de dos dígitos por números naturales de dos dígitos aplicando la propiedad distributiva.'
-  },
-  {
-    nivel: '5° Básico',
-    asignatura: 'MATEMATICA',
-    eje: 'Fracciones y Decimales',
-    codigo: 'OA 07',
-    categoria: 'Basal',
-    descripcion: 'Demostrar que comprenden las fracciones propias e impropias: representándolas de manera concreta, pictórica y simbólica, calculando adiciones y sustracciones con igual denominador.'
-  },
-  {
-    nivel: '6° Básico',
-    asignatura: 'MATEMATICA',
-    eje: 'Álgebra y Ecuaciones',
-    codigo: 'OA 11',
-    categoria: 'Basal',
-    descripcion: 'Resolver ecuaciones de primer grado con una incógnita, utilizando estrategias como la balanza, descomposición y operaciones inversas.'
-  },
-  {
-    nivel: '6° Básico',
-    asignatura: 'MATEMATICA',
-    eje: 'Porcentajes y Proporcionalidad',
-    codigo: 'OA 04',
-    categoria: 'Basal',
-    descripcion: 'Demostrar que comprenden el concepto de porcentaje de manera concreta, pictórica y simbólica, calculando porcentajes sencillos en situaciones de la vida diaria.'
-  },
-  {
-    nivel: '7° Básico',
-    asignatura: 'MATEMATICA',
-    eje: 'Números Enteros',
-    codigo: 'OA 01',
-    categoria: 'Basal',
-    descripcion: 'Mostrar que comprenden la adición y la sustracción de números enteros: representando los números enteros en la recta numérica, resolviendo problemas en contextos cotidianos.'
-  },
-  {
-    nivel: '7° Básico',
-    asignatura: 'MATEMATICA',
-    eje: 'Geometría y Medición',
-    codigo: 'OA 11',
-    categoria: 'Basal',
-    descripcion: 'Calcular el perímetro y el área de círculos y polígonos regulares, aplicando fórmulas en la resolución de problemas geométricos.'
-  },
-  {
-    nivel: '8° Básico',
-    asignatura: 'MATEMATICA',
-    eje: 'Números Racionales',
-    codigo: 'OA 01',
-    categoria: 'Basal',
-    descripcion: 'Mostrar que comprenden la multiplicación y la división de números racionales: aplicando la regla de los signos, resolviendo problemas con fracciones y decimales positivos y negativos.'
-  },
-  {
-    nivel: '8° Básico',
-    asignatura: 'MATEMATICA',
-    eje: 'Álgebra y Funciones',
-    codigo: 'OA 07',
-    categoria: 'Basal',
-    descripcion: 'Mostrar que comprenden la noción de función por medio de un cambio lineal: relacionando tablas, gráficos y expresiones algebraicas.'
-  },
-  {
-    nivel: 'I° Medio',
-    asignatura: 'MATEMATICA',
-    eje: 'Números y Potencias',
-    codigo: 'OA 02',
-    categoria: 'Basal',
-    descripcion: 'Mostrar que comprenden las potencias de base racional y exponente entero: transfiriendo propiedades de la multiplicación y división de potencias.'
-  },
-  {
-    nivel: 'I° Medio',
-    asignatura: 'MATEMATICA',
-    eje: 'Álgebra y Funciones',
-    codigo: 'OA 03',
-    categoria: 'Basal',
-    descripcion: 'Desarrollar los productos notables de manera concreta, pictórica y simbólica: transformando expresiones algebraicas y factorizando.'
-  },
-  {
-    nivel: 'II° Medio',
-    asignatura: 'MATEMATICA',
-    eje: 'Álgebra y Ecuación Cuadrática',
-    codigo: 'OA 03',
-    categoria: 'Basal',
-    descripcion: 'Mostrar que comprenden la función cuadrática f(x)= ax^2 + bx + c: reconociendo el vértice, eje de simetría y concavidad en situaciones modeladas.'
-  },
-  {
-    nivel: 'II° Medio',
-    asignatura: 'MATEMATICA',
-    eje: 'Probabilidad y Estadística',
-    codigo: 'OA 11',
-    categoria: 'Basal',
-    descripcion: 'Utilizar permutaciones y combinatoria simple para calcular probabilidades de eventos y resolver problemas contextualizados.'
-  },
-  {
-    nivel: 'III° Medio',
-    asignatura: 'MATEMATICA',
-    eje: 'Modelamiento y Funciones',
-    codigo: 'OA 01',
-    categoria: 'Basal',
-    descripcion: 'Construir modelos matemáticos de situaciones o fenómenos de la vida diaria utilizando funciones exponenciales y logarítmicas.'
-  },
-  {
-    nivel: 'IV° Medio',
-    asignatura: 'MATEMATICA',
-    eje: 'Toma de Decisiones y Estadística',
-    codigo: 'OA 01',
-    categoria: 'Basal',
-    descripcion: 'Fundamentar decisiones a partir del análisis crítico de datos cuantitativos, medidas de dispersión y distribuciones normales en problemas reales.'
-  },
-
-  // ==========================================
-  // CIENCIAS NATURALES (1° a 8° Básico)
-  // ==========================================
-  {
-    nivel: '1° Básico',
-    asignatura: 'CIENCIAS NATURALES',
-    eje: 'Ciencias de la Vida',
-    codigo: 'OA 01',
-    categoria: 'Basal',
-    descripcion: 'Reconocer y observar, por medio de la exploración, que los seres vivos crecen, responden a estímulos del medio, se reproducen y necesitan agua, alimento y aire.'
-  },
-  {
-    nivel: '2° Básico',
-    asignatura: 'CIENCIAS NATURALES',
-    eje: 'Cuerpo Humano',
-    codigo: 'OA 07',
-    categoria: 'Basal',
-    descripcion: 'Identificar la ubicación y explicar la función de algunas partes del cuerpo que son fundamentales para vivir: corazón, pulmones, estómago, esqueleto y músculos.'
-  },
-  {
-    nivel: '3° Básico',
-    asignatura: 'CIENCIAS NATURALES',
-    eje: 'Plantas y Ecosistemas',
-    codigo: 'OA 01',
-    categoria: 'Basal',
-    descripcion: 'Observar y describir, por medio de la investigación experimental, las necesidades de las plantas y su relación con la raíz, el tallo, las hojas, flores y frutos.'
-  },
-  {
-    nivel: '4° Básico',
-    asignatura: 'CIENCIAS NATURALES',
-    eje: 'Materia y Fuerza',
-    codigo: 'OA 09',
-    categoria: 'Basal',
-    descripcion: 'Demostrar, por medio de la investigación experimental, que la materia tiene masa y ocupa espacio, reconociendo sus tres estados: sólido, líquido y gaseoso.'
-  },
-  {
-    nivel: '5° Básico',
-    asignatura: 'CIENCIAS NATURALES',
-    eje: 'Sistemas del Cuerpo Humano',
-    codigo: 'OA 01',
-    categoria: 'Basal',
-    descripcion: 'Reconocer y explicar que los seres vivos están formados por una o más células y que estas se organizan en tejidos, órganos y sistemas.'
-  },
-  {
-    nivel: '6° Básico',
-    asignatura: 'CIENCIAS NATURALES',
-    eje: 'Fotosíntesis y Energía',
-    codigo: 'OA 01',
-    categoria: 'Basal',
-    descripcion: 'Explicar, a partir de una investigación experimental, los requerimientos de agua, dióxido de carbono y energía lumínica para la producción de azúcar y liberación de oxígeno en la fotosíntesis.'
-  },
-  {
-    nivel: '7° Básico',
-    asignatura: 'CIENCIAS NATURALES',
-    eje: 'Microorganismos y Barreras Biológicas',
-    codigo: 'OA 04',
-    categoria: 'Basal',
-    descripcion: 'Desarrollar modelos que expliquen las barreras defensivas del cuerpo humano frente a agentes patógenos e infecciones.'
-  },
-  {
-    nivel: '8° Básico',
-    asignatura: 'CIENCIAS NATURALES',
-    eje: 'Célula y Genética',
-    codigo: 'OA 02',
-    categoria: 'Basal',
-    descripcion: 'Desarrollar modelos que expliquen la estructura de la célula eucarionte, la función del núcleo y el papel de los cromosomas y el ADN.'
-  },
-
-  // ==========================================
-  // CIENCIAS MEDIA: BIOLOGÍA, FÍSICA, QUÍMICA
-  // ==========================================
-  {
-    nivel: 'I° Medio',
-    asignatura: 'BIOLOGIA',
-    eje: 'Evolución y Biodiversidad',
-    codigo: 'OA 02',
-    categoria: 'Basal',
-    descripcion: 'Analizar e interpretar datos sobre el origen de la biodiversidad, la selección natural y las evidencias fósiles, anatómicas y moleculares.'
-  },
-  {
-    nivel: 'I° Medio',
-    asignatura: 'QUIMICA',
-    eje: 'Reacciones Químicas',
-    codigo: 'OA 14',
-    categoria: 'Basal',
-    descripcion: 'Desarrollar modelos que expliquen la ley de conservación de la materia en las reacciones químicas cotidianas y procesos industriales.'
-  },
-  {
-    nivel: 'I° Medio',
-    asignatura: 'FISICA',
-    eje: 'Ondas y Sonido',
-    codigo: 'OA 09',
-    categoria: 'Basal',
-    descripcion: 'Explicar los fenómenos ondulatorios del sonido y la luz a partir de sus propiedades: reflexión, refracción, difracción e interferencia.'
-  },
-  {
-    nivel: 'II° Medio',
-    asignatura: 'BIOLOGIA',
-    eje: 'Homeostasis y Regulación',
-    codigo: 'OA 01',
-    categoria: 'Basal',
-    descripcion: 'Explicar el papel del sistema nervioso y endocrino en la mantención del medio interno del organismo frente a cambios ambientales.'
-  },
-  {
-    nivel: 'II° Medio',
-    asignatura: 'QUIMICA',
-    eje: 'Soluciones y Concentración',
-    codigo: 'OA 17',
-    categoria: 'Basal',
-    descripcion: 'Describir cuantitativamente las propiedades de las disoluciones químicas: molaridad, molalidad y porcentaje masa/volumen.'
-  },
-  {
-    nivel: 'II° Medio',
-    asignatura: 'FISICA',
-    eje: 'Fuerza y Movimiento',
-    codigo: 'OA 09',
-    categoria: 'Basal',
-    descripcion: 'Analizar cuantitativamente el movimiento rectilíneo uniforme y acelerado aplicando las leyes de Newton en problemas físicos reales.'
-  },
-
-  // ==========================================
-  // HISTORIA, GEOGRAFÍA Y CIENCIAS SOCIALES
-  // ==========================================
-  {
-    nivel: '1° Básico',
-    asignatura: 'HISTORIA, GEOGRAFIA Y CIENCIAS SOCIALES',
-    eje: 'Historia',
-    codigo: 'OA 01',
-    categoria: 'Basal',
-    descripcion: 'Nombrar y secuenciar días de la semana y meses del año, utilizando calendarios e identificando fechas significativas familiares y escolares.'
-  },
-  {
-    nivel: '3° Básico',
-    asignatura: 'HISTORIA, GEOGRAFIA Y CIENCIAS SOCIALES',
-    eje: 'Civilizaciones Clásicas',
-    codigo: 'OA 01',
-    categoria: 'Basal',
-    descripcion: 'Reconocer aspectos de la vida cotidiana de la civilización griega y romana de la Antigüedad y su legado en las sociedades democráticas contemporáneas.'
-  },
-  {
-    nivel: '5° Básico',
-    asignatura: 'HISTORIA, GEOGRAFIA Y CIENCIAS SOCIALES',
-    eje: 'Historia de Chile',
-    codigo: 'OA 02',
-    categoria: 'Basal',
-    descripcion: 'Explicar los viajes de descubrimiento de Cristóbal Colón, Hernando de Magallanes y otros exploradores, considerando sus rutas e impacto geográfico.'
-  },
-  {
-    nivel: '7° Básico',
-    asignatura: 'HISTORIA, GEOGRAFIA Y CIENCIAS SOCIALES',
-    eje: 'Historia Universal',
-    codigo: 'OA 03',
-    categoria: 'Basal',
-    descripcion: 'Explicar el surgimiento de las primeras civilizaciones fluviales (Mesopotamia, Egipto, India y China) y sus aportes a la organización política y urbana.'
-  },
-  {
-    nivel: 'I° Medio',
-    asignatura: 'HISTORIA, GEOGRAFIA Y CIENCIAS SOCIALES',
-    eje: 'Siglo XIX y República',
-    codigo: 'OA 01',
-    categoria: 'Basal',
-    descripcion: 'Explicar las ideas republicanas y liberales del siglo XIX y su impacto en la conformación del Estado nacional en Chile e Iberoamérica.'
-  },
-  {
-    nivel: 'II° Medio',
-    asignatura: 'HISTORIA, GEOGRAFIA Y CIENCIAS SOCIALES',
-    eje: 'Siglo XX y Crisis',
-    codigo: 'OA 03',
-    categoria: 'Basal',
-    descripcion: 'Analizar la crisis de 1929, las causas de la Segunda Guerra Mundial y el surgimiento de regímenes totalitarios en el periodo de entreguerras.'
-  },
-  {
-    nivel: 'III° Medio',
-    asignatura: 'EDUCACION CIUDADANA',
-    eje: 'Democracia y Participación',
-    codigo: 'OA 01',
-    categoria: 'Basal',
-    descripcion: 'Evaluar las características de la democracia en Chile, el Estado de derecho y la importancia de los derechos humanos como fundamento de la convivencia social.'
-  },
-  {
-    nivel: 'IV° Medio',
-    asignatura: 'EDUCACION CIUDADANA',
-    eje: 'Institucionalidad y Sociedad',
-    codigo: 'OA 02',
-    categoria: 'Basal',
-    descripcion: 'Analizar las políticas públicas, el rol del Estado en el bienestar social y los mecanismos de participación ciudadana en el Chile contemporáneo.'
-  },
-
-  // ==========================================
-  // IDIOMA EXTRANJERO: INGLÉS (1° Básico a IV° Medio)
-  // ==========================================
-  {
-    nivel: '3° Básico',
-    asignatura: 'INGLES',
-    eje: 'Comprensión Auditiva y Lectora',
-    codigo: 'OA 01',
-    categoria: 'Basal',
-    descripcion: 'Comprender textos orales y escritos muy breves y simples sobre temas conocidos (familia, animales, escuela y alimentos).'
-  },
-  {
-    nivel: '6° Básico',
-    asignatura: 'INGLES',
-    eje: 'Expresión Escrita',
-    codigo: 'OA 13',
-    categoria: 'Basal',
-    descripcion: 'Escribir oraciones breves y párrafos simples utilizando vocabulario de uso frecuente y conectores básicos (and, but, because).'
-  },
-  {
-    nivel: 'I° Medio',
-    asignatura: 'INGLES',
-    eje: 'Comprensión de Lectura',
-    codigo: 'OA 09',
-    categoria: 'Basal',
-    descripcion: 'Demostrar comprensión de textos auténticos simples y semi-auténticos identificando ideas principales, detalles relevantes y propósito comunicativo.'
-  },
-  {
-    nivel: 'III° Medio',
-    asignatura: 'INGLES',
-    eje: 'Comunicación Oral y Escrita',
-    codigo: 'OA 03',
-    categoria: 'Basal',
-    descripcion: 'Producir textos orales y escritos fluidos para expresar opiniones fundamentadas sobre temas de interés global y juvenil.'
-  }
+// -------------------------------------------------------------
+// CATÁLOGO OFICIAL COMPLETO MINEDUC
+// -------------------------------------------------------------
+const CATALOGO_MINEDUC_COMPLETO = [
+  ...LENGUAJE_CURRICULO,
+  ...MATEMATICA_CURRICULO,
+  ...CIENCIAS_CURRICULO,
+  ...HISTORIA_CURRICULO,
+  ...INGLES_CURRICULO,
+  ...ESPECIALIDADES_CURRICULO
 ];
 
 /**
- * Normaliza nombres de asignaturas para asegurar consistencia en búsquedas
+ * Normaliza nombres de asignaturas
  */
 function normalizarNombreAsignatura(asig) {
   if (!asig) return '';
-  return asig.trim().toUpperCase()
-    .normalize("NFD").replace(/[\u0300-\u036f]/g, "") // sin tildes
+  const clean = asig.trim().toUpperCase()
+    .normalize("NFD").replace(/[\u0300-\u036f]/g, "")
     .replace(/\s+/g, ' ');
+  if (clean === 'LENGUAJE' || clean === 'LENGUAJE Y COMUNICACION') return 'LENGUAJE Y COMUNICACION';
+  if (clean === 'HISTORIA Y GEOGRAFIA' || clean === 'HISTORIA, GEOGRAFIA Y CIENCIAS SOCIALES') return 'HISTORIA, GEOGRAFIA Y CIENCIAS SOCIALES';
+  if (clean === 'MATEMATICAS') return 'MATEMATICA';
+  if (clean === 'EDUCACION FISICA') return 'EDUCACION FISICA Y SALUD';
+  return clean;
 }
 
 /**
- * Inicializa las tablas del currículo y siembra los OAs oficiales si está vacío
+ * Inicializa las tablas del currículo y siembra el catálogo oficial MINEDUC enriquecido
+ * con OAs por Unidad (1 a 4), Habilidades e Indicadores de Evaluación precargados.
  */
-function inicializarCurriculo(db, callback) {
+function inicializarCurriculo(db, callback, { forzarActualizacion = true } = {}) {
   const anioActual = 2026;
 
   db.serialize(() => {
-    // 1. Verificar si existen planes para el año actual
-    db.get("SELECT COUNT(*) as total FROM curriculo_planes WHERE anio = ?", [anioActual], (err, row) => {
+    // 1. Asegurar columnas en las tablas
+    db.run("ALTER TABLE curriculo_planes ADD COLUMN habilidades_sugeridas TEXT DEFAULT '[]'", () => {});
+    db.run("ALTER TABLE curriculo_objetivos ADD COLUMN unidad_sugerida TEXT DEFAULT 'Unidad 1'", () => {});
+
+    // 2. Verificar estado de la base de datos
+    db.get("SELECT COUNT(*) as total, SUM(CASE WHEN indicadores_sugeridos IS NOT NULL AND indicadores_sugeridos != '[]' THEN 1 ELSE 0 END) as con_indicadores FROM curriculo_objetivos", [], (err, row) => {
       if (err) {
-        console.error("[CURRICULO] Error verificando planes:", err);
+        console.error("[CURRICULO] Error verificando estado:", err);
         if (callback) callback(err);
         return;
       }
 
-      if (row && row.total > 0) {
-        console.log(`[CURRICULO] Catálogo ya inicializado con ${row.total} planes para el año ${anioActual}.`);
+      const totalOAs = (row && row.total) || 0;
+      const conIndicadores = (row && row.con_indicadores) || 0;
+
+      // Si ya está completamente poblado con indicadores y no se fuerza recarga, salir
+      if (!forzarActualizacion && totalOAs >= 200 && conIndicadores === totalOAs) {
+        console.log(`[CURRICULO] Catálogo ya actualizado con ${totalOAs} OAs e indicadores para el año ${anioActual}.`);
         if (callback) callback(null);
         return;
       }
 
-      console.log(`[CURRICULO] Sembrando catálogo oficial MINEDUC para el año escolar ${anioActual}...`);
+      console.log(`[CURRICULO] Sembrando catálogo enriquecido MINEDUC 2026 (${CATALOGO_MINEDUC_COMPLETO.length} OAs)...`);
 
-      // Agrupar OAs por (nivel, asignatura)
+      // Limpiar registros antiguos de tipo MINEDUC para garantizar coherencia íntegra
+      db.run("DELETE FROM curriculo_objetivos WHERE plan_id IN (SELECT id FROM curriculo_planes WHERE tipo = 'MINEDUC')");
+      db.run("DELETE FROM curriculo_planes WHERE tipo = 'MINEDUC'");
+
+      // Agrupar catálogo por (nivel, asignatura)
       const planesAgrupados = {};
-      for (const item of CATALOGO_MINEDUC_BASE) {
+      for (const item of CATALOGO_MINEDUC_COMPLETO) {
         const key = `${item.nivel}___${item.asignatura}`;
         if (!planesAgrupados[key]) {
+          const asigNorm = normalizarNombreAsignatura(item.asignatura);
+          const habs = HABILIDADES_POR_ASIGNATURA[asigNorm] || HABILIDADES_POR_ASIGNATURA[item.asignatura] || [];
+
           planesAgrupados[key] = {
             nivel: item.nivel,
             asignatura: item.asignatura,
             tipo: 'MINEDUC',
+            habilidades: habs,
             objetivos: []
           };
         }
         planesAgrupados[key].objetivos.push(item);
       }
 
-      const stmtPlan = db.prepare(`INSERT OR IGNORE INTO curriculo_planes 
-        (anio, tipo, nivel, asignatura, descripcion, activo) VALUES (?, ?, ?, ?, ?, 1)`);
+      const keys = Object.keys(planesAgrupados);
 
-      const stmtObj = db.prepare(`INSERT OR IGNORE INTO curriculo_objetivos 
-        (plan_id, tipo_objetivo, eje_unidad, codigo, descripcion, categoria, orden, activo) 
-        VALUES (?, 'OA', ?, ?, ?, ?, ?, 1)`);
+      // Sentencias preparadas
+      const stmtInsertPlan = db.prepare(`INSERT INTO curriculo_planes (anio, tipo, nivel, asignatura, descripcion, habilidades_sugeridas, activo) VALUES (?, 'MINEDUC', ?, ?, ?, ?, 1)`);
+      const stmtInsertObj = db.prepare(`INSERT INTO curriculo_objetivos (plan_id, tipo_objetivo, eje_unidad, unidad_sugerida, codigo, descripcion, categoria, indicadores_sugeridos, orden, activo) VALUES (?, 'OA', ?, ?, ?, ?, ?, ?, ?, 1)`);
 
-      db.serialize(() => {
-        let insertados = 0;
-        const keys = Object.keys(planesAgrupados);
+      let planesProcesados = 0;
+      let oasProcesados = 0;
 
-        function insertarSiguiente(idx) {
-          if (idx >= keys.length) {
-            stmtPlan.finalize();
-            stmtObj.finalize();
-            console.log(`[CURRICULO] Precarga oficial MINEDUC completada con éxito (${insertados} planes sembrados).`);
-            if (callback) callback(null);
-            return;
-          }
+      function procesarSiguientePlan(idx) {
+        if (idx >= keys.length) {
+          stmtInsertPlan.finalize();
+          stmtInsertObj.finalize();
 
-          const planData = planesAgrupados[keys[idx]];
-          stmtPlan.run([
-            anioActual,
-            planData.tipo,
-            planData.nivel,
-            planData.asignatura,
-            `Programa Oficial MINEDUC ${planData.asignatura} - ${planData.nivel}`
-          ], function (errInsert) {
-            if (errInsert) {
-              console.error("[CURRICULO] Error insertando plan:", errInsert);
-              insertarSiguiente(idx + 1);
-              return;
-            }
-
-            const planId = this.lastID;
-            if (planId) {
-              insertados++;
-              planData.objetivos.forEach((obj, orderIdx) => {
-                stmtObj.run([
-                  planId,
-                  obj.eje || 'General',
-                  obj.codigo,
-                  obj.descripcion,
-                  obj.categoria || 'Basal',
-                  orderIdx + 1
-                ]);
-              });
-            }
-            insertarSiguiente(idx + 1);
-          });
+          console.log(`[CURRICULO] Precarga completada exitosamente: ${planesProcesados} planes y ${oasProcesados} OAs enriquecidos con Unidades, Habilidades e Indicadores.`);
+          if (callback) callback(null);
+          return;
         }
 
-        insertarSiguiente(0);
-      });
+        const planData = planesAgrupados[keys[idx]];
+        const habsJson = JSON.stringify(planData.habilidades || []);
+        const desc = `Programa Oficial MINEDUC ${planData.asignatura} - ${planData.nivel}`;
+
+        stmtInsertPlan.run([anioActual, planData.nivel, planData.asignatura, desc, habsJson], function (errIns) {
+          if (errIns) {
+            console.error("[CURRICULO] Error insertando plan:", errIns);
+            procesarSiguientePlan(idx + 1);
+            return;
+          }
+          const planId = this.lastID;
+          planesProcesados++;
+          insertarObjetivosPlan(planId, planData.objetivos, () => procesarSiguientePlan(idx + 1));
+        });
+      }
+
+      function insertarObjetivosPlan(planId, objetivos, onDone) {
+        let count = 0;
+        if (!objetivos || objetivos.length === 0) {
+          onDone();
+          return;
+        }
+
+        objetivos.forEach((obj, orderIdx) => {
+          const indicsJson = JSON.stringify(obj.indicadores || []);
+          stmtInsertObj.run([
+            planId,
+            obj.eje || 'General',
+            obj.unidad || 'Unidad 1',
+            obj.codigo,
+            obj.descripcion,
+            obj.categoria || 'Basal',
+            indicsJson,
+            orderIdx + 1
+          ], (errObj) => {
+            if (!errObj) oasProcesados++;
+            count++;
+            if (count === objetivos.length) onDone();
+          });
+        });
+      }
+
+      procesarSiguientePlan(0);
     });
   });
 }
@@ -839,31 +286,39 @@ function importarCurriculoExcel(db, buffer, anio, tipo = 'MINEDUC') {
       }
 
       const anioNum = parseInt(anio) || 2026;
-      let totalProcesados = 0;
       let planesCreados = 0;
       let objetivosCreados = 0;
 
-      // Agrupar filas del Excel por Nivel y Asignatura
       const planesMap = {};
       for (const r of rows) {
         const nivel = (r['Nivel'] || r['nivel'] || r['Curso'] || r['curso'] || '').toString().trim();
         const asignatura = (r['Asignatura'] || r['asignatura'] || r['Materia'] || '').toString().trim().toUpperCase();
         const codigo = (r['Codigo'] || r['codigo'] || r['OA'] || r['oa'] || '').toString().trim();
         const descripcion = (r['Descripcion'] || r['descripcion'] || r['Objetivo'] || '').toString().trim();
-        const eje = (r['Eje'] || r['eje'] || r['Unidad'] || 'General').toString().trim();
+        const eje = (r['Eje'] || r['eje'] || 'General').toString().trim();
+        const unidad = (r['Unidad'] || r['unidad'] || 'Unidad 1').toString().trim();
         const categoria = (r['Categoria'] || r['categoria'] || r['Priorizacion'] || 'Basal').toString().trim();
+        const indicadoresRaw = (r['Indicadores'] || r['indicadores'] || '').toString().trim();
 
         if (!nivel || !asignatura || !codigo || !descripcion) continue;
 
+        let indicadoresArr = [];
+        if (indicadoresRaw) {
+          indicadoresArr = indicadoresRaw.split(';').map(i => i.trim()).filter(Boolean);
+        }
+
         const key = `${nivel}___${asignatura}`;
         if (!planesMap[key]) {
+          const asigNorm = normalizarNombreAsignatura(asignatura);
+          const habs = HABILIDADES_POR_ASIGNATURA[asigNorm] || HABILIDADES_POR_ASIGNATURA[asignatura] || [];
           planesMap[key] = {
             nivel,
             asignatura,
+            habilidades: habs,
             objetivos: []
           };
         }
-        planesMap[key].objetivos.push({ codigo, descripcion, eje, categoria });
+        planesMap[key].objetivos.push({ codigo, descripcion, eje, unidad, categoria, indicadores: indicadoresArr });
       }
 
       const keys = Object.keys(planesMap);
@@ -888,7 +343,7 @@ function importarCurriculoExcel(db, buffer, anio, tipo = 'MINEDUC') {
           }
 
           const item = planesMap[keys[index]];
-          // Buscar si existe el plan
+          const habsJson = JSON.stringify(item.habilidades || []);
           db.get(`SELECT id FROM curriculo_planes WHERE anio = ? AND nivel = ? AND asignatura = ? AND tipo = ?`,
             [anioNum, item.nivel, item.asignatura, tipo], (errFind, planRow) => {
               if (errFind) {
@@ -897,14 +352,13 @@ function importarCurriculoExcel(db, buffer, anio, tipo = 'MINEDUC') {
               }
 
               if (planRow) {
-                // Plan existente: insertar OAs nuevos o reemplazar
                 const planId = planRow.id;
+                db.run(`UPDATE curriculo_planes SET habilidades_sugeridas = ? WHERE id = ?`, [habsJson, planId]);
                 insertarOAs(planId, item.objetivos, () => procesarPlan(index + 1));
               } else {
-                // Crear plan nuevo
-                db.run(`INSERT INTO curriculo_planes (anio, tipo, nivel, asignatura, descripcion, activo)
-                        VALUES (?, ?, ?, ?, ?, 1)`,
-                  [anioNum, tipo, item.nivel, item.asignatura, `Plan ${tipo} ${item.asignatura} - ${item.nivel}`],
+                db.run(`INSERT INTO curriculo_planes (anio, tipo, nivel, asignatura, descripcion, habilidades_sugeridas, activo)
+                        VALUES (?, ?, ?, ?, ?, ?, 1)`,
+                  [anioNum, tipo, item.nivel, item.asignatura, `Plan ${tipo} ${item.asignatura} - ${item.nivel}`, habsJson],
                   function (errIns) {
                     if (errIns) {
                       db.run("ROLLBACK");
@@ -921,9 +375,9 @@ function importarCurriculoExcel(db, buffer, anio, tipo = 'MINEDUC') {
         function insertarOAs(planId, objs, onDone) {
           let count = 0;
           for (const obj of objs) {
-            db.run(`INSERT INTO curriculo_objetivos (plan_id, tipo_objetivo, eje_unidad, codigo, descripcion, categoria, activo)
-                    VALUES (?, 'OA', ?, ?, ?, ?, 1)`,
-              [planId, obj.eje, obj.codigo, obj.descripcion, obj.categoria],
+            db.run(`INSERT INTO curriculo_objetivos (plan_id, tipo_objetivo, eje_unidad, unidad_sugerida, codigo, descripcion, categoria, indicadores_sugeridos, activo)
+                    VALUES (?, 'OA', ?, ?, ?, ?, ?, ?, 1)`,
+              [planId, obj.eje, obj.unidad, obj.codigo, obj.descripcion, obj.categoria, JSON.stringify(obj.indicadores || [])],
               (errObj) => {
                 if (!errObj) objetivosCreados++;
                 count++;
@@ -941,7 +395,9 @@ function importarCurriculoExcel(db, buffer, anio, tipo = 'MINEDUC') {
 }
 
 module.exports = {
-  CATALOGO_MINEDUC_BASE,
+  CATALOGO_MINEDUC_COMPLETO,
+  HABILIDADES_POR_ASIGNATURA,
+  ACTITUDES_GENERALES_MINEDUC,
   inicializarCurriculo,
   importarCurriculoExcel,
   normalizarNombreAsignatura

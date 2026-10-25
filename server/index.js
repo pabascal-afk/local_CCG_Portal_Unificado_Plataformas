@@ -84,6 +84,8 @@ db.serialize(() => {
     clave TEXT PRIMARY KEY,
     valor TEXT
   )`, () => {});
+  db.run("ALTER TABLE curriculo_planes ADD COLUMN habilidades_sugeridas TEXT DEFAULT '[]'", () => {});
+  db.run("ALTER TABLE curriculo_objetivos ADD COLUMN unidad_sugerida TEXT DEFAULT 'Unidad 1'", () => {});
   mailer.inicializarTablasCorreo();
   auditoria.inicializarTablaAuditoria();
   try {

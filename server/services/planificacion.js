@@ -7,6 +7,7 @@ const path = require('path');
 const xlsx = require('xlsx');
 const mailer = require('./mailer');
 const auditoria = require('./auditoria');
+const curriculoSeed = require('./curriculo_seed');
 
 const dbPath = path.join(__dirname, '..', 'db', 'colegio.db');
 let dbInstance = null;
@@ -78,6 +79,31 @@ function inferirNivelDesdeCurso(curso) {
     if (c.includes('KINDER')) return 'Kinder';
     if (c.includes('PRE-KINDER') || c.includes('PREKINDER')) return 'Pre-Kinder';
     return curso;
+}
+
+/**
+ * Normaliza nombres de asignaturas según taxonomía y nivel MINEDUC
+ */
+function normalizarAsignaturaMineduc(asig, nivel = '') {
+    if (!asig) return '';
+    const clean = normalizar(asig);
+    if (clean === 'LENGUAJE' || clean === 'LENGUAJE Y COMUNICACION') {
+        if (nivel.includes('Medio') || nivel.includes('7°') || nivel.includes('8°')) {
+            return 'LENGUA Y LITERATURA';
+        }
+        return 'LENGUAJE Y COMUNICACION';
+    }
+    if (clean === 'LENGUA Y LITERATURA') return 'LENGUA Y LITERATURA';
+    if (clean === 'MATEMATICAS' || clean === 'MATEMATICA') return 'MATEMATICA';
+    if (clean === 'HISTORIA Y GEOGRAFIA' || clean === 'HISTORIA' || clean === 'HISTORIA, GEOGRAFIA Y CIENCIAS SOCIALES') {
+        if (nivel.includes('III°') || nivel.includes('IV°')) {
+            return 'EDUCACION CIUDADANA';
+        }
+        return 'HISTORIA, GEOGRAFIA Y CIENCIAS SOCIALES';
+    }
+    if (clean === 'EDUCACION FISICA' || clean === 'EDUCACION FISICA Y SALUD') return 'EDUCACION FISICA Y SALUD';
+    if (clean === 'CIENCIAS' || clean === 'CIENCIAS NATURALES') return 'CIENCIAS NATURALES';
+    return clean;
 }
 
 // -------------------------------------------------------------
@@ -264,7 +290,7 @@ async function obtenerPlanificacionDetalle(id) {
 
     // Catálogo de OAs disponibles para este curso y asignatura
     const nivel = inferirNivelDesdeCurso(plan.curso);
-    const asigNorm = normalizar(plan.asignatura);
+    const asigEstandar = normalizarAsignaturaMineduc(plan.asignatura, nivel);
 
     // Buscar plan curricular correspondiente
     let planCurr = null;
@@ -276,32 +302,53 @@ async function obtenerPlanificacionDetalle(id) {
             SELECT * FROM curriculo_planes 
             WHERE anio = ? AND nivel = ? AND (
                 asignatura = ? 
+                OR asignatura = ?
                 OR LOWER(asignatura) LIKE '%' || LOWER(?) || '%' 
                 OR LOWER(?) LIKE '%' || LOWER(asignatura) || '%'
             ) LIMIT 1
-        `, [plan.anio, nivel, plan.asignatura, plan.asignatura, plan.asignatura]);
+        `, [plan.anio, nivel, asigEstandar, plan.asignatura, plan.asignatura, plan.asignatura]);
     }
 
     let oasDisponibles = [];
     if (planCurr) {
+        try {
+            planCurr.habilidades_sugeridas = JSON.parse(planCurr.habilidades_sugeridas || '[]');
+        } catch (e) {
+            planCurr.habilidades_sugeridas = [];
+        }
+        if (planCurr.habilidades_sugeridas.length === 0) {
+            planCurr.habilidades_sugeridas = curriculoSeed.HABILIDADES_POR_ASIGNATURA[planCurr.asignatura] || [];
+        }
         plan.plan_curricular = planCurr;
+
         oasDisponibles = await queryAll(`
-            SELECT id, tipo_objetivo, eje_unidad, codigo, descripcion, categoria, orden
+            SELECT id, plan_id, tipo_objetivo, eje_unidad, unidad_sugerida, codigo, descripcion, categoria, indicadores_sugeridos, orden
             FROM curriculo_objetivos 
             WHERE plan_id = ? AND activo = 1
-            ORDER BY eje_unidad ASC, codigo ASC
+            ORDER BY orden ASC, codigo ASC
         `, [planCurr.id]);
     } else {
         // Búsqueda flexible de OAs por nivel
         oasDisponibles = await queryAll(`
-            SELECT o.id, o.tipo_objetivo, o.eje_unidad, o.codigo, o.descripcion, o.categoria, o.orden, cp.asignatura as asignatura_programa
+            SELECT o.id, o.plan_id, o.tipo_objetivo, o.eje_unidad, o.unidad_sugerida, o.codigo, o.descripcion, o.categoria, o.indicadores_sugeridos, o.orden, cp.asignatura as asignatura_programa
             FROM curriculo_objetivos o
             JOIN curriculo_planes cp ON cp.id = o.plan_id
             WHERE cp.anio = ? AND cp.nivel = ? AND o.activo = 1
             ORDER BY o.eje_unidad ASC, o.codigo ASC
         `, [plan.anio, nivel]);
     }
+
+    // Parsear indicadores_sugeridos para cada OA
+    oasDisponibles.forEach(o => {
+        try {
+            o.indicadores_sugeridos = JSON.parse(o.indicadores_sugeridos || '[]');
+        } catch (e) {
+            o.indicadores_sugeridos = [];
+        }
+    });
+
     plan.oas_disponibles = oasDisponibles;
+    plan.actitudes_sugeridas = curriculoSeed.ACTITUDES_GENERALES_MINEDUC;
 
     // Observaciones activas
     const observaciones = await queryAll(`
@@ -355,16 +402,18 @@ async function crearPlanificacion(payload, usuario) {
 
     // Vincular automáticamente con el plan oficial MINEDUC si existe
     const nivel = inferirNivelDesdeCurso(curso);
+    const asigEstandar = normalizarAsignaturaMineduc(asignatura, nivel);
     let planCurricularId = payload.plan_curricular_id || null;
     if (!planCurricularId) {
         const pc = await queryGet(`
             SELECT id FROM curriculo_planes 
             WHERE anio = ? AND nivel = ? AND (
                 asignatura = ? 
+                OR asignatura = ?
                 OR LOWER(asignatura) LIKE '%' || LOWER(?) || '%' 
                 OR LOWER(?) LIKE '%' || LOWER(asignatura) || '%'
             ) LIMIT 1
-        `, [anio, nivel, asignatura, asignatura, asignatura]);
+        `, [anio, nivel, asigEstandar, asignatura, asignatura, asignatura]);
         if (pc) planCurricularId = pc.id;
     }
 
@@ -738,6 +787,7 @@ async function calcularCoberturaCurricular({ anio = 2026, curso, asignatura, pla
 
     // Buscar plan curricular
     let planCurr = null;
+    const asigEstandar = normalizarAsignaturaMineduc(asignatura, nivel);
     if (plan && plan.plan_curricular_id) {
         planCurr = await queryGet(`SELECT id FROM curriculo_planes WHERE id = ?`, [plan.plan_curricular_id]);
     }
@@ -746,10 +796,11 @@ async function calcularCoberturaCurricular({ anio = 2026, curso, asignatura, pla
             SELECT id FROM curriculo_planes 
             WHERE anio = ? AND nivel = ? AND (
                 asignatura = ? 
+                OR asignatura = ?
                 OR LOWER(asignatura) LIKE '%' || LOWER(?) || '%' 
                 OR LOWER(?) LIKE '%' || LOWER(asignatura) || '%'
             ) LIMIT 1
-        `, [anioNum, nivel, asignatura, asignatura, asignatura]);
+        `, [anioNum, nivel, asigEstandar, asignatura, asignatura, asignatura]);
     }
 
     if (planCurr) {
