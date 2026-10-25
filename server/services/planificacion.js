@@ -573,6 +573,11 @@ async function guardarPlanificacion(id, payload, usuario) {
 // 5b. Clonar Planificación (Copia Independiente a Paralelo)
 // -------------------------------------------------------------
 async function clonarPlanificacion(planId, cursoDestino, usuario) {
+    const u = usuario || {};
+    const userEmail = u.email || 'sistema@colegiocerrogrande.cl';
+    const userName = u.nombre || userEmail.split('@')[0] || 'Sistema';
+    const userRol = u.rol || 'Docente';
+
     if (!cursoDestino || !cursoDestino.trim()) {
         throw new Error("Debe especificar el curso de destino.");
     }
@@ -607,7 +612,7 @@ async function clonarPlanificacion(planId, cursoDestino, usuario) {
         plan.docentes_colaboradores,
         plan.metas_anuales,
         plan.horas_anuales,
-        usuario.email
+        userEmail
     ]);
 
     const nuevoPlanId = resIns.lastID;
@@ -642,8 +647,8 @@ async function clonarPlanificacion(planId, cursoDestino, usuario) {
     // Checkpoint de creación
     await crearCheckpointVersion(
         nuevoPlanId,
-        `V1.0: Clonada desde ${plan.curso} por ${usuario.nombre || usuario.email}`,
-        usuario,
+        `V1.0: Clonada desde ${plan.curso} por ${userName}`,
+        { email: userEmail, nombre: userName, rol: userRol },
         'checkpoint'
     );
 
@@ -652,9 +657,9 @@ async function clonarPlanificacion(planId, cursoDestino, usuario) {
         accion: 'Clonar',
         descripcion: `Clonó la planificación de ${plan.curso} a ${destinoNorm} en ${plan.asignatura}`,
         detalles: { plan_origen_id: planId, nuevo_plan_id: nuevoPlanId, curso_origen: plan.curso, curso_destino: destinoNorm, asignatura: plan.asignatura },
-        usuario_email: usuario.email,
-        usuario_nombre: usuario.nombre,
-        rol: usuario.rol,
+        usuario_email: userEmail,
+        usuario_nombre: userName,
+        rol: userRol,
         nivel: 'success'
     });
 
@@ -665,6 +670,11 @@ async function clonarPlanificacion(planId, cursoDestino, usuario) {
 // 5c. Vincular Curso (Planificación Compartida en Vivo)
 // -------------------------------------------------------------
 async function vincularCurso(planId, cursoVinculado, usuario) {
+    const u = usuario || {};
+    const userEmail = u.email || 'sistema@colegiocerrogrande.cl';
+    const userName = u.nombre || userEmail.split('@')[0] || 'Sistema';
+    const userRol = u.rol || 'Docente';
+
     if (!cursoVinculado || !cursoVinculado.trim()) {
         throw new Error("Debe especificar el curso a vincular.");
     }
@@ -696,7 +706,7 @@ async function vincularCurso(planId, cursoVinculado, usuario) {
     await crearCheckpointVersion(
         planId,
         `Vinculación de paralelo ${vinculadNorm}`,
-        usuario,
+        { email: userEmail, nombre: userName, rol: userRol },
         'checkpoint'
     );
 
@@ -705,9 +715,9 @@ async function vincularCurso(planId, cursoVinculado, usuario) {
         accion: 'Vincular',
         descripcion: `Vinculó el curso paralelo ${vinculadNorm} a la planificación de ${plan.curso} (${plan.asignatura})`,
         detalles: { plan_id: planId, curso_principal: plan.curso, curso_vinculado: vinculadNorm },
-        usuario_email: usuario.email,
-        usuario_nombre: usuario.nombre,
-        rol: usuario.rol,
+        usuario_email: userEmail,
+        usuario_nombre: userName,
+        rol: userRol,
         nivel: 'info'
     });
 
@@ -718,6 +728,11 @@ async function vincularCurso(planId, cursoVinculado, usuario) {
 // 5d. Desvincular Curso (Con opción de fork/copia independiente)
 // -------------------------------------------------------------
 async function desvincularCurso(planId, cursoDesvincular, { crearCopia = false } = {}, usuario) {
+    const u = usuario || {};
+    const userEmail = u.email || 'sistema@colegiocerrogrande.cl';
+    const userName = u.nombre || userEmail.split('@')[0] || 'Sistema';
+    const userRol = u.rol || 'Docente';
+
     if (!cursoDesvincular || !cursoDesvincular.trim()) {
         throw new Error("Debe especificar el curso a desvincular.");
     }
@@ -739,14 +754,14 @@ async function desvincularCurso(planId, cursoDesvincular, { crearCopia = false }
     let nuevoPlanId = null;
     if (crearCopia) {
         // Clonar la planificación actual como plan independiente para el curso desvinculado
-        const resClon = await clonarPlanificacion(planId, desvNorm, usuario);
+        const resClon = await clonarPlanificacion(planId, desvNorm, { email: userEmail, nombre: userName, rol: userRol });
         nuevoPlanId = resClon.id;
     }
 
     await crearCheckpointVersion(
         planId,
         `Desvinculación del curso paralelo ${desvNorm}${crearCopia ? ' (se generó copia independiente)' : ''}`,
-        usuario,
+        { email: userEmail, nombre: userName, rol: userRol },
         'checkpoint'
     );
 
@@ -755,9 +770,9 @@ async function desvincularCurso(planId, cursoDesvincular, { crearCopia = false }
         accion: 'Desvincular',
         descripcion: `Desvinculó el curso paralelo ${desvNorm} de la planificación de ${plan.curso} (${plan.asignatura})`,
         detalles: { plan_id: planId, curso_desvinculado: desvNorm, copia_creada: crearCopia, nuevo_plan_id: nuevoPlanId },
-        usuario_email: usuario.email,
-        usuario_nombre: usuario.nombre,
-        rol: usuario.rol,
+        usuario_email: userEmail,
+        usuario_nombre: userName,
+        rol: userRol,
         nivel: 'info'
     });
 
@@ -772,6 +787,11 @@ async function desvincularCurso(planId, cursoDesvincular, { crearCopia = false }
 // 6. Control de Versiones Tipo Git (Checkpoints y Restauración)
 // -------------------------------------------------------------
 async function crearCheckpointVersion(planificacionId, mensaje, usuario, tipo = 'checkpoint') {
+    const u = usuario || {};
+    const userEmail = u.email || 'sistema@colegiocerrogrande.cl';
+    const userName = u.nombre || userEmail.split('@')[0] || 'Sistema';
+    const userRol = u.rol || 'Docente';
+
     const plan = await queryGet(`SELECT * FROM planificaciones WHERE id = ?`, [planificacionId]);
     if (!plan) throw new Error("Planificación no encontrada.");
 
@@ -796,8 +816,8 @@ async function crearCheckpointVersion(planificacionId, mensaje, usuario, tipo = 
         planificacionId,
         numVersion,
         mensaje || `Guardado de versión ${numVersion}`,
-        usuario.email,
-        usuario.nombre || usuario.email,
+        userEmail,
+        userName,
         JSON.stringify(snapshot),
         tipo
     ]);
@@ -807,9 +827,9 @@ async function crearCheckpointVersion(planificacionId, mensaje, usuario, tipo = 
         accion: 'Guardar Versión',
         descripcion: `Creó el checkpoint de versión ${numVersion}: "${mensaje}" en ${plan.curso} - ${plan.asignatura}`,
         detalles: { plan_id: planificacionId, version: numVersion, mensaje },
-        usuario_email: usuario.email,
-        usuario_nombre: usuario.nombre,
-        rol: usuario.rol,
+        usuario_email: userEmail,
+        usuario_nombre: userName,
+        rol: userRol,
         nivel: 'info'
     });
 
@@ -817,6 +837,11 @@ async function crearCheckpointVersion(planificacionId, mensaje, usuario, tipo = 
 }
 
 async function restaurarVersion(planificacionId, versionId, usuario) {
+    const u = usuario || {};
+    const userEmail = u.email || 'sistema@colegiocerrogrande.cl';
+    const userName = u.nombre || userEmail.split('@')[0] || 'Sistema';
+    const userRol = u.rol || 'Docente';
+
     const version = await queryGet(`SELECT * FROM planificaciones_versiones WHERE id = ? AND planificacion_id = ?`, [versionId, planificacionId]);
     if (!version) throw new Error("Versión no encontrada para esta planificación.");
 
@@ -846,27 +871,28 @@ async function restaurarVersion(planificacionId, versionId, usuario) {
     // 2. Restaurar unidades
     if (Array.isArray(unidades)) {
         await queryRun(`DELETE FROM planificaciones_unidades WHERE planificacion_id = ?`, [planificacionId]);
-        for (const u of unidades) {
+        for (const un of unidades) {
             await queryRun(`
                 INSERT INTO planificaciones_unidades
-                (planificacion_id, numero_unidad, nombre_unidad, semestre, fecha_inicio, fecha_fin, horas_estimadas, oas_seleccionados, oats_seleccionados, habilidades, actitudes, indicadores_evaluacion, instrumentos_evaluacion, desglose_semanal, orden)
-                VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+                (planificacion_id, numero_unidad, nombre_unidad, semestre, fecha_inicio, fecha_fin, horas_estimadas, oas_seleccionados, oats_seleccionados, habilidades, actitudes, indicadores_evaluacion, instrumentos_evaluacion, desglose_semanal, tags, orden)
+                VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
             `, [
                 planificacionId,
-                u.numero_unidad,
-                u.nombre_unidad,
-                u.semestre,
-                u.fecha_inicio,
-                u.fecha_fin,
-                u.horas_estimadas,
-                u.oas_seleccionados,
-                u.oats_seleccionados,
-                u.habilidades,
-                u.actitudes,
-                u.indicadores_evaluacion,
-                u.instrumentos_evaluacion,
-                u.desglose_semanal,
-                u.orden
+                un.numero_unidad,
+                un.nombre_unidad,
+                un.semestre,
+                un.fecha_inicio,
+                un.fecha_fin,
+                un.horas_estimadas,
+                un.oas_seleccionados,
+                un.oats_seleccionados,
+                un.habilidades,
+                un.actitudes,
+                un.indicadores_evaluacion,
+                un.instrumentos_evaluacion,
+                un.desglose_semanal,
+                un.tags || '[]',
+                un.orden
             ]);
         }
     }
@@ -875,7 +901,7 @@ async function restaurarVersion(planificacionId, versionId, usuario) {
     await crearCheckpointVersion(
         planificacionId,
         `Restauración a partir de versión ${version.version_numero} (${version.mensaje})`,
-        usuario,
+        { email: userEmail, nombre: userName, rol: userRol },
         'checkpoint'
     );
 
@@ -884,9 +910,9 @@ async function restaurarVersion(planificacionId, versionId, usuario) {
         accion: 'Restaurar Versión',
         descripcion: `Restauró la planificación al estado de la versión ${version.version_numero}`,
         detalles: { plan_id: planificacionId, version_restaurada: version.version_numero },
-        usuario_email: usuario.email,
-        usuario_nombre: usuario.nombre,
-        rol: usuario.rol,
+        usuario_email: userEmail,
+        usuario_nombre: userName,
+        rol: userRol,
         nivel: 'warning'
     });
 
@@ -897,11 +923,16 @@ async function restaurarVersion(planificacionId, versionId, usuario) {
 // 7. Flujo Ágil de Revisión y Visado (En edición <-> Visada)
 // -------------------------------------------------------------
 async function cambiarEstadoVisado(planificacionId, { estado, comentario }, usuario) {
+    const u = usuario || {};
+    const userEmail = u.email || 'coordinacion@colegiocerrogrande.cl';
+    const userName = u.nombre || userEmail.split('@')[0] || 'Coordinación';
+    const userRol = u.rol || 'Coordinador';
+
     const plan = await queryGet(`SELECT * FROM planificaciones WHERE id = ?`, [planificacionId]);
     if (!plan) throw new Error("Planificación no encontrada.");
 
     const nuevoEstado = (estado === 'Visada') ? 'Visada' : 'En edición';
-    const visadoPor = (nuevoEstado === 'Visada') ? usuario.email : null;
+    const visadoPor = (nuevoEstado === 'Visada') ? userEmail : null;
     const visadoFecha = (nuevoEstado === 'Visada') ? new Date().toISOString() : null;
 
     await queryRun(`
@@ -916,10 +947,10 @@ async function cambiarEstadoVisado(planificacionId, { estado, comentario }, usua
 
     // Crear checkpoint de visado
     const msj = nuevoEstado === 'Visada'
-        ? `Visada por Coordinación (${usuario.nombre || usuario.email}): ${comentario || 'Aprobada sin observaciones.'}`
-        : `Reabierta a edición por ${usuario.nombre || usuario.email}: ${comentario || 'Modificaciones solicitadas.'}`;
+        ? `Visada por Coordinación (${userName}): ${comentario || 'Aprobada sin observaciones.'}`
+        : `Reabierta a edición por ${userName}: ${comentario || 'Modificaciones solicitadas.'}`;
 
-    await crearCheckpointVersion(planificacionId, msj, usuario, 'visado');
+    await crearCheckpointVersion(planificacionId, msj, { email: userEmail, nombre: userName, rol: userRol }, 'visado');
 
     // Registrar en auditoría
     auditoria.registrarAuditoria({
@@ -927,9 +958,9 @@ async function cambiarEstadoVisado(planificacionId, { estado, comentario }, usua
         accion: nuevoEstado === 'Visada' ? 'Visar' : 'Reabrir',
         descripcion: `${nuevoEstado === 'Visada' ? 'Visó' : 'Reabrió'} la planificación de ${plan.curso} - ${plan.asignatura}`,
         detalles: { plan_id: planificacionId, estado: nuevoEstado, comentario },
-        usuario_email: usuario.email,
-        usuario_nombre: usuario.nombre,
-        rol: usuario.rol,
+        usuario_email: userEmail,
+        usuario_nombre: userName,
+        rol: userRol,
         nivel: nuevoEstado === 'Visada' ? 'success' : 'warning'
     });
 
@@ -940,7 +971,7 @@ async function cambiarEstadoVisado(planificacionId, { estado, comentario }, usua
             variables: {
                 profesor_nombre: plan.docente_responsable.split('@')[0],
                 titulo_aviso: `Estado de Planificación: ${plan.curso} - ${plan.asignatura}`,
-                mensaje_aviso: `La planificación ha cambiado de estado a <strong>${nuevoEstado}</strong> por ${usuario.nombre || usuario.email}.<br>Observaciones: ${comentario || 'Sin observaciones adicionales.'}`
+                mensaje_aviso: `La planificación ha cambiado de estado a <strong>${nuevoEstado}</strong> por ${userName}.<br>Observaciones: ${comentario || 'Sin observaciones adicionales.'}`
             },
             destinatario: plan.docente_responsable,
             modulo: 'Planificaciones'
@@ -954,6 +985,11 @@ async function cambiarEstadoVisado(planificacionId, { estado, comentario }, usua
 // 8. Observaciones y Retroalimentación Pedagógica
 // -------------------------------------------------------------
 async function agregarObservacion(planificacionId, { seccion = 'general', comentario }, usuario) {
+    const u = usuario || {};
+    const userEmail = u.email || 'docente@colegiocerrogrande.cl';
+    const userName = u.nombre || userEmail.split('@')[0] || 'Docente';
+    const userRol = u.rol || 'Profesor';
+
     if (!comentario || !comentario.trim()) {
         throw new Error("El comentario no puede estar vacío.");
     }
@@ -965,9 +1001,9 @@ async function agregarObservacion(planificacionId, { seccion = 'general', coment
     `, [
         planificacionId,
         seccion,
-        usuario.email,
-        usuario.nombre || usuario.email,
-        usuario.rol || 'Profesor',
+        userEmail,
+        userName,
+        userRol,
         comentario.trim()
     ]);
 

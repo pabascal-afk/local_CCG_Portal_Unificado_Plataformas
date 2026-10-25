@@ -2540,7 +2540,14 @@
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({ curso_vinculado: cursoVinculado })
         });
-        const data = await res.json();
+        let data = {};
+        try {
+          data = await res.json();
+        } catch (_) {
+          if (!res.ok) {
+            throw new Error(`El servidor o túnel no está respondiendo (HTTP ${res.status}). Por favor recarga la página o verifica la conexión.`);
+          }
+        }
         if (!res.ok) throw new Error(data.error || 'Error al vincular curso.');
 
         Swal.fire('Vinculado', data.mensaje, 'success');
@@ -2568,7 +2575,14 @@
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({ curso_destino: cursoDestino })
         });
-        const data = await res.json();
+        let data = {};
+        try {
+          data = await res.json();
+        } catch (_) {
+          if (!res.ok) {
+            throw new Error(`El servidor o túnel no está respondiendo (HTTP ${res.status}). Por favor recarga la página o verifica la conexión.`);
+          }
+        }
         if (!res.ok) throw new Error(data.error || 'Error al clonar planificación.');
 
         modalClonarVincularObj.hide();
@@ -2631,7 +2645,14 @@
               crear_copia: accion === 'copia'
             })
           });
-          const data = await res.json();
+          let data = {};
+          try {
+            data = await res.json();
+          } catch (_) {
+            if (!res.ok) {
+              throw new Error(`El servidor o túnel no está respondiendo (HTTP ${res.status}). Por favor recarga la página o verifica la conexión.`);
+            }
+          }
           if (!res.ok) throw new Error(data.error || 'Error al desvincular curso.');
 
           Swal.fire('Desvinculado', data.mensaje, 'success');
