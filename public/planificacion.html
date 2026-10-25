@@ -601,8 +601,8 @@
         <!-- Header del Editor -->
         <div class="modal-header bg-dark text-white py-2 px-3">
           <div class="d-flex align-items-center gap-3">
-            <button type="button" class="btn btn-sm btn-outline-light" data-bs-dismiss="modal">
-              <i class="bi bi-arrow-left"></i> Volver
+            <button type="button" class="btn btn-sm btn-outline-light" data-bs-dismiss="modal" data-bs-toggle="tooltip" data-bs-placement="bottom" title="Volver al panel principal">
+              <i class="bi bi-arrow-left"></i>
             </button>
             <div>
               <div class="d-flex align-items-center gap-2">
@@ -615,24 +615,24 @@
             </div>
           </div>
 
-          <div class="d-flex align-items-center gap-2">
-            <button class="btn btn-sm btn-outline-info" onclick="abrirModalClonarVincularActual()">
-              <i class="bi bi-copy me-1"></i> Paralelos / Clonar
+          <div class="d-flex align-items-center gap-2" id="editorTopToolbar">
+            <button class="btn btn-sm btn-outline-info" data-bs-toggle="tooltip" data-bs-placement="bottom" title="Gestionar Paralelos y Clonación" onclick="abrirModalClonarVincularActual()">
+              <i class="bi bi-copy"></i>
             </button>
-            <button class="btn btn-sm btn-outline-light" onclick="guardarBorradorActual(false)">
-              <i class="bi bi-save"></i> Guardar Borrador
+            <button class="btn btn-sm btn-outline-light" data-bs-toggle="tooltip" data-bs-placement="bottom" title="Guardar Borrador actual" onclick="guardarBorradorActual(false)">
+              <i class="bi bi-save"></i>
             </button>
-            <button class="btn btn-sm btn-light" onclick="abrirModalCheckpoint()">
-              <i class="bi bi-git"></i> Guardar Versión Hito
+            <button class="btn btn-sm btn-light" data-bs-toggle="tooltip" data-bs-placement="bottom" title="Guardar Versión Hito (Checkpoint)" onclick="abrirModalCheckpoint()">
+              <i class="bi bi-git"></i>
             </button>
-            <button class="btn btn-sm btn-outline-info" onclick="exportarExcelPlanActivo()">
-              <i class="bi bi-file-earmark-excel"></i> Excel
+            <button class="btn btn-sm btn-outline-info" data-bs-toggle="tooltip" data-bs-placement="bottom" title="Exportar Planificación a Excel" onclick="exportarExcelPlanActivo()">
+              <i class="bi bi-file-earmark-excel"></i>
             </button>
-            <button class="btn btn-sm btn-outline-warning" onclick="imprimirPlanActivo()">
-              <i class="bi bi-printer"></i> Imprimir / PDF
+            <button class="btn btn-sm btn-outline-warning" data-bs-toggle="tooltip" data-bs-placement="bottom" title="Imprimir o Descargar en PDF" onclick="imprimirPlanActivo()">
+              <i class="bi bi-printer"></i>
             </button>
             <div id="btnVisadoContainer">
-              <!-- Render botón de visado para UTP -->
+              <!-- Render botón de visado con tooltip para UTP/Admin -->
             </div>
           </div>
         </div>
@@ -684,7 +684,12 @@
                     <input type="text" id="inputPlanTitulo" class="form-control form-control-sm">
                   </div>
                   <div class="col-md-3">
-                    <label class="form-label small fw-semibold">Horas Pedagógicas Anuales</label>
+                    <div class="d-flex justify-content-between align-items-center mb-1">
+                      <label class="form-label small fw-semibold mb-0">Horas Anuales</label>
+                      <span id="badgeHorasSugeridas" class="badge bg-primary-subtle text-primary border cursor-pointer d-none" style="font-size: 0.7rem;" onclick="aplicarHorasSugeridas()" title="Clic para aplicar horas calculadas desde los horarios semanales (38 semanas)">
+                        <i class="bi bi-lightning-charge me-1"></i>Sugerido: <span id="valHorasSugeridas">0</span> hrs
+                      </span>
+                    </div>
                     <input type="number" id="inputPlanHoras" class="form-control form-control-sm" value="152">
                   </div>
                   <div class="col-md-3">
@@ -693,8 +698,16 @@
                   </div>
                   <div class="col-12">
                     <label class="form-label small fw-semibold">Docentes Colaboradores (Equipo / Co-docencia)</label>
-                    <input type="text" id="inputPlanColaboradores" class="form-control form-control-sm" placeholder="Ej: maria.perez@colegio.edu, juan.araya@colegio.edu">
-                    <div class="form-text small">Los profesores agregados podrán ver y editar esta planificación colaborativamente.</div>
+                    <div id="contenedorTagsColaboradores" class="d-flex flex-wrap gap-1 p-2 bg-white rounded border mb-2" style="min-height: 42px;">
+                      <!-- Chips de docentes colaboradores -->
+                    </div>
+                    <div class="input-group input-group-sm">
+                      <span class="input-group-text bg-white"><i class="bi bi-person-plus text-primary"></i></span>
+                      <select id="selectPoolDocentes" class="form-select form-select-sm" onchange="agregarDocenteColaborador(this.value)">
+                        <option value="">-- Seleccionar docente del colegio para agregar a co-docencia --</option>
+                      </select>
+                    </div>
+                    <div class="form-text small">Los profesores seleccionados verán y podrán editar esta planificación colaborativamente en su panel.</div>
                   </div>
                   <div class="col-12">
                     <label class="form-label small fw-semibold">Metas Institucionales y Objetivos Anuales de la Asignatura</label>
@@ -1230,6 +1243,10 @@
       return 'badge-tag-custom';
     }
 
+    let poolDocentesList = [];
+    let colaboradoresSeleccionados = [];
+    let sesionesSemanaActual = [];
+
     document.addEventListener('DOMContentLoaded', async () => {
       modalEditorObj = new bootstrap.Modal(document.getElementById('modalEditorPlan'));
       modalOAsObj = new bootstrap.Modal(document.getElementById('modalSelectorOAs'));
@@ -1240,6 +1257,7 @@
       modalGestionAnnosObj = new bootstrap.Modal(document.getElementById('modalGestionAnnos'));
 
       await cargarUsuario();
+      await cargarPoolDocentes();
       await cargarSelectorAnnos();
       await recargarDatos();
     });
@@ -1254,6 +1272,8 @@
           
           if (!esAdminOCoord) {
             document.getElementById('nav-item-matriz').classList.add('d-none');
+            const navCob = document.getElementById('nav-item-cobertura');
+            if (navCob) navCob.classList.add('d-none');
             document.getElementById('adminCurriculoBtns').classList.add('d-none');
           } else {
             const btnGestion = document.getElementById('btnGestionAnnos');
@@ -1419,14 +1439,17 @@
                 <div class="card card-custom course-card h-100 p-3 d-flex flex-column justify-content-between">
                   <div>
                     <div class="d-flex justify-content-between align-items-center mb-2 flex-wrap gap-1">
-                      <div class="d-flex align-items-center gap-1">
+                      <div class="d-flex align-items-center gap-1 flex-wrap">
                         <span class="badge bg-light text-dark border font-monospace" style="font-size: 0.75rem;">${a.curso}</span>
+                        ${a.es_codocente ? '<span class="badge bg-purple-subtle text-purple border font-monospace" style="font-size: 0.72rem;" title="Participas como Co-docente en este curso"><i class="bi bi-people-fill me-1"></i>Co-docencia</span>' : ''}
+                        ${(a.es_creador && !a.es_codocente) ? '<span class="badge bg-primary-subtle text-primary border font-monospace" style="font-size: 0.72rem;" title="Plan creado por ti"><i class="bi bi-person-fill me-1"></i>Creador</span>' : ''}
                         ${badgeVinculo}
                       </div>
                       ${badgeEstado}
                     </div>
                     <h6 class="fw-bold text-dark mb-1 text-truncate" title="${a.asignatura}">${a.asignatura}</h6>
-                    <p class="small text-muted mb-3">${a.nivel} • ${a.total_unidades} unidades planificadas</p>
+                    <p class="small text-muted mb-1">${a.nivel} • ${a.total_unidades} unidades planificadas</p>
+                    ${(a.docentes_colaboradores && a.docentes_colaboradores.length > 0) ? `<div class="small text-secondary mb-2" style="font-size: 0.75rem;"><i class="bi bi-people me-1"></i>Co-docentes: ${a.docentes_colaboradores.join(', ')}</div>` : '<div class="mb-2"></div>'}
                   </div>
                   <div>
                     ${btnAccion}
@@ -1551,6 +1574,10 @@
     // -------------------------------------------------------------
     async function cargarDashboardCobertura() {
       try {
+        const rolNorm = (usuarioActual.rol || '').toLowerCase();
+        const esAdminOCoord = rolNorm.includes('admin') || rolNorm.includes('directiv') || rolNorm.includes('coordinaci');
+        if (!esAdminOCoord) return;
+
         const res = await fetch(`/api/planificacion/cobertura/colegio?anio=${anioActivo}`);
         if (!res.ok) return;
         const data = await res.json();
@@ -1694,16 +1721,16 @@
           alertaVinc.classList.remove('d-flex');
         }
 
-        // Botón de visado para UTP/Admin
+        // Botón de visado para UTP/Admin (Icono con Tooltip)
         const btnVisadoCont = document.getElementById('btnVisadoContainer');
         const rolNorm = (usuarioActual.rol || '').toLowerCase();
         const esAdminOCoord = rolNorm.includes('admin') || rolNorm.includes('directiv') || rolNorm.includes('coordinaci');
         
         if (esAdminOCoord) {
           if (planActivo.estado === 'Visada') {
-            btnVisadoCont.innerHTML = `<button class="btn btn-sm btn-outline-warning" onclick="cambiarVisadoSubmit('En edición')"><i class="bi bi-arrow-counterclockwise"></i> Reabrir Edición</button>`;
+            btnVisadoCont.innerHTML = `<button class="btn btn-sm btn-outline-warning" data-bs-toggle="tooltip" data-bs-placement="bottom" title="Reabrir Edición (Admin/Coord)" onclick="cambiarVisadoSubmit('En edición')"><i class="bi bi-arrow-counterclockwise"></i></button>`;
           } else {
-            btnVisadoCont.innerHTML = `<button class="btn btn-sm btn-success" onclick="cambiarVisadoSubmit('Visada')"><i class="bi bi-check2-circle"></i> Visar Planificación</button>`;
+            btnVisadoCont.innerHTML = `<button class="btn btn-sm btn-success" data-bs-toggle="tooltip" data-bs-placement="bottom" title="Visar y Aprobar Planificación" onclick="cambiarVisadoSubmit('Visada')"><i class="bi bi-check2-circle"></i></button>`;
           }
         } else {
           btnVisadoCont.innerHTML = '';
@@ -1713,8 +1740,34 @@
         document.getElementById('inputPlanTitulo').value = planActivo.titulo || '';
         document.getElementById('inputPlanHoras').value = planActivo.horas_anuales || 152;
         document.getElementById('inputPlanDocente').value = planActivo.docente_responsable || '';
-        document.getElementById('inputPlanColaboradores').value = (planActivo.docentes_colaboradores || []).join(', ');
         document.getElementById('inputPlanMetas').value = planActivo.metas_anuales || '';
+
+        // Cargar tags de co-docencia
+        colaboradoresSeleccionados = Array.isArray(planActivo.docentes_colaboradores)
+          ? [...planActivo.docentes_colaboradores]
+          : (typeof planActivo.docentes_colaboradores === 'string' ? JSON.parse(planActivo.docentes_colaboradores || '[]') : []);
+        renderizarTagsColaboradores();
+
+        // Consultar horas anuales sugeridas y sesiones de clases según horarios
+        try {
+          const resSes = await fetch(`/api/planificacion/sesiones-semana?curso=${encodeURIComponent(planActivo.curso)}&asignatura=${encodeURIComponent(planActivo.asignatura)}&anio=${planActivo.anio}`);
+          if (resSes.ok) {
+            const sesData = await resSes.json();
+            sesionesSemanaActual = sesData.sesiones || [];
+            const badgeHrs = document.getElementById('badgeHorasSugeridas');
+            const valHrs = document.getElementById('valHorasSugeridas');
+            if (badgeHrs && valHrs && sesData.horas_anuales_sugeridas > 0) {
+              valHrs.innerText = sesData.horas_anuales_sugeridas;
+              badgeHrs.classList.remove('d-none');
+              if (!planActivo.horas_anuales || planActivo.horas_anuales === 0 || planActivo.horas_anuales === 152) {
+                document.getElementById('inputPlanHoras').value = sesData.horas_anuales_sugeridas;
+                planActivo.horas_anuales = sesData.horas_anuales_sugeridas;
+              }
+            }
+          }
+        } catch (eSes) {
+          console.error("Error al consultar horario semanal:", eSes);
+        }
 
         // Render Unidades
         renderizarUnidadesAcordeon();
@@ -1726,6 +1779,16 @@
         renderizarObservaciones();
 
         modalEditorObj.show();
+
+        // Inicializar tooltips de la botonera superior
+        setTimeout(() => {
+          const tooltips = document.querySelectorAll('#modalEditorPlan [data-bs-toggle="tooltip"]');
+          tooltips.forEach(t => {
+            const instance = bootstrap.Tooltip.getInstance(t);
+            if (instance) instance.dispose();
+            new bootstrap.Tooltip(t);
+          });
+        }, 150);
       } catch (err) {
         Swal.fire('Error', err.message, 'error');
       }
@@ -1892,10 +1955,10 @@
                         <thead class="table-light text-secondary">
                           <tr>
                             <th style="width: 35px;" class="text-center"></th>
-                            <th style="width: 65px;" class="text-center">Semana</th>
+                            <th style="width: 80px;" class="text-center">Semana</th>
                             <th style="width: 130px;">Fechas</th>
                             <th style="width: 170px;">Tema / Contenido</th>
-                            <th>Actividades Formativas (Inicio-Desarrollo-Cierre)</th>
+                            <th>Actividades de Aprendizaje</th>
                             <th style="width: 150px;">Recursos</th>
                             <th style="width: 210px;">DUA & Metodologías</th>
                             <th style="width: 35px;" class="text-center"></th>
@@ -1904,12 +1967,23 @@
                         <tbody id="tablaSemanasBody_${idx}">
                           ${(u.desglose_semanal || []).map((s, sIdx) => {
                             const semTags = s.tags || [];
+                            const tieneClases = s.dividir_clases && Array.isArray(s.clases) && s.clases.length > 0;
                             return `
                             <tr data-semana-idx="${sIdx}">
                               <td class="text-center">
                                 <span class="drag-handle-semana text-secondary"><i class="bi bi-grip-vertical fs-6"></i></span>
                               </td>
-                              <td class="text-center fw-bold">Sem ${s.semana || (sIdx + 1)}</td>
+                              <td class="text-center">
+                                <div class="fw-bold">Sem ${s.semana || (sIdx + 1)}</div>
+                                <div class="mt-2 text-center">
+                                  <div class="form-check form-switch d-inline-block p-0 m-0">
+                                    <input class="form-check-input ms-0" type="checkbox" id="chkDividir_${idx}_${sIdx}" ${s.dividir_clases ? 'checked' : ''} onchange="toggleDividirClasesSemana(${idx}, ${sIdx}, this.checked)" title="Dividir en clases individuales según horario escolar">
+                                  </div>
+                                  <label for="chkDividir_${idx}_${sIdx}" class="small d-block text-muted cursor-pointer" style="font-size: 0.68rem;">
+                                    ${s.dividir_clases ? '<span class="text-primary fw-bold">Por Clases</span>' : 'Por Clases'}
+                                  </label>
+                                </div>
+                              </td>
                               <td>
                                 <input type="date" class="form-control form-control-sm p-1 mb-1" value="${s.fecha_inicio || ''}" onchange="actualizarCampoSemana(${idx}, ${sIdx}, 'fecha_inicio', this.value)">
                                 <input type="date" class="form-control form-control-sm p-1" value="${s.fecha_fin || ''}" onchange="actualizarCampoSemana(${idx}, ${sIdx}, 'fecha_fin', this.value)">
@@ -1918,10 +1992,10 @@
                                 <input type="text" class="form-control form-control-sm" value="${s.tema || ''}" placeholder="Contenido..." onchange="actualizarCampoSemana(${idx}, ${sIdx}, 'tema', this.value)">
                               </td>
                               <td>
-                                <textarea class="form-control form-control-sm" rows="2" placeholder="Inicio, Desarrollo y Cierre..." onchange="actualizarCampoSemana(${idx}, ${sIdx}, 'actividades_formativas', this.value)">${s.actividades_formativas || ''}</textarea>
+                                <textarea class="form-control form-control-sm" rows="${s.dividir_clases ? 1 : 2}" placeholder="Actividades y experiencias de aprendizaje..." onchange="actualizarCampoSemana(${idx}, ${sIdx}, 'actividades_formativas', this.value)">${s.actividades_formativas || ''}</textarea>
                               </td>
                               <td>
-                                <textarea class="form-control form-control-sm" rows="2" placeholder="Guías, data..." onchange="actualizarCampoSemana(${idx}, ${sIdx}, 'recursos', this.value)">${s.recursos || ''}</textarea>
+                                <textarea class="form-control form-control-sm" rows="${s.dividir_clases ? 1 : 2}" placeholder="Guías, texto, recursos..." onchange="actualizarCampoSemana(${idx}, ${sIdx}, 'recursos', this.value)">${s.recursos || ''}</textarea>
                               </td>
                               <td>
                                 <div class="d-flex flex-wrap gap-1 mb-1">
@@ -1935,12 +2009,52 @@
                                     <i class="bi bi-plus"></i> Tag
                                   </button>
                                 </div>
-                                <textarea class="form-control form-control-sm" rows="2" placeholder="Estrategias DUA..." onchange="actualizarCampoSemana(${idx}, ${sIdx}, 'dua_adecuaciones', this.value)">${s.dua_adecuaciones || ''}</textarea>
+                                <textarea class="form-control form-control-sm" rows="${s.dividir_clases ? 1 : 2}" placeholder="Estrategias DUA..." onchange="actualizarCampoSemana(${idx}, ${sIdx}, 'dua_adecuaciones', this.value)">${s.dua_adecuaciones || ''}</textarea>
                               </td>
                               <td class="text-center">
                                 <button class="btn btn-sm text-danger p-0" onclick="eliminarSemana(${idx}, ${sIdx})"><i class="bi bi-trash"></i></button>
                               </td>
                             </tr>
+                            ${tieneClases ? `
+                            <tr class="bg-light-subtle">
+                              <td colspan="8" class="p-2 border-start border-primary border-3 bg-light">
+                                <div class="bg-white rounded p-3 border shadow-sm">
+                                  <div class="d-flex justify-content-between align-items-center mb-2 pb-2 border-bottom">
+                                    <span class="small fw-bold text-primary">
+                                      <i class="bi bi-columns-gap me-1"></i> Desglose por Sesiones de la Semana ${s.semana || (sIdx + 1)} (${planActivo.asignatura})
+                                    </span>
+                                    <span class="badge bg-primary-subtle text-primary border" style="font-size: 0.72rem;">
+                                      ${s.clases.length} clase(s) distribuidas por horario
+                                    </span>
+                                  </div>
+                                  <div class="row g-2">
+                                    ${s.clases.map((clase, cIdx) => `
+                                      <div class="col-md-6 col-xl-${s.clases.length === 1 ? '12' : (s.clases.length === 2 ? '6' : '4')}">
+                                        <div class="border rounded p-2 bg-light-subtle h-100">
+                                          <div class="d-flex justify-content-between align-items-center mb-1">
+                                            <span class="fw-bold small text-dark"><i class="bi bi-clock me-1 text-primary"></i>${clase.label || ('Clase ' + (cIdx + 1))}</span>
+                                            <span class="badge bg-secondary-subtle text-secondary" style="font-size: 0.7rem;">${clase.duracion || 90} min</span>
+                                          </div>
+                                          <div class="mb-1">
+                                            <label class="form-label text-muted mb-0" style="font-size: 0.7rem;">Actividades</label>
+                                            <textarea class="form-control form-control-sm" rows="2" placeholder="Experiencias de aprendizaje..." onchange="actualizarCampoClase(${idx}, ${sIdx}, ${cIdx}, 'actividades', this.value)">${clase.actividades || ''}</textarea>
+                                          </div>
+                                          <div class="mb-1">
+                                            <label class="form-label text-muted mb-0" style="font-size: 0.7rem;">Recursos</label>
+                                            <input type="text" class="form-control form-control-sm" placeholder="Recursos y materiales..." value="${clase.recursos || ''}" onchange="actualizarCampoClase(${idx}, ${sIdx}, ${cIdx}, 'recursos', this.value)">
+                                          </div>
+                                          <div>
+                                            <label class="form-label text-muted mb-0" style="font-size: 0.7rem;">DUA & Adecuaciones</label>
+                                            <input type="text" class="form-control form-control-sm" placeholder="Estrategias DUA..." value="${clase.dua || ''}" onchange="actualizarCampoClase(${idx}, ${sIdx}, ${cIdx}, 'dua', this.value)">
+                                          </div>
+                                        </div>
+                                      </div>
+                                    `).join('')}
+                                  </div>
+                                </div>
+                              </td>
+                            </tr>
+                            ` : ''}
                             `;
                           }).join('')}
                         </tbody>
@@ -2235,6 +2349,113 @@
       }
     }
 
+    function toggleDividirClasesSemana(uIdx, sIdx, checked) {
+      if (!planActivo || !planActivo.unidades[uIdx]) return;
+      const s = planActivo.unidades[uIdx].desglose_semanal[sIdx];
+      if (!s) return;
+      s.dividir_clases = checked;
+      if (checked && (!s.clases || s.clases.length === 0)) {
+        const plantillas = (sesionesSemanaActual && sesionesSemanaActual.length > 0)
+          ? sesionesSemanaActual
+          : [
+              { numero: 1, dia: 'Lunes', duracion_minutos: 90, label: 'Clase 1 (90 min)' },
+              { numero: 2, dia: 'Miércoles', duracion_minutos: 90, label: 'Clase 2 (90 min)' }
+            ];
+        s.clases = plantillas.map((ses, i) => ({
+          numero: ses.numero || (i + 1),
+          dia: ses.dia || '',
+          duracion: ses.duracion_minutos || 90,
+          label: ses.label || `Clase ${i + 1} (${ses.duracion_minutos || 90} min)`,
+          actividades: '',
+          recursos: '',
+          dua: ''
+        }));
+      }
+      renderizarUnidadesAcordeon();
+      guardarBorradorActual(false);
+    }
+
+    function actualizarCampoClase(uIdx, sIdx, cIdx, campo, valor) {
+      if (!planActivo || !planActivo.unidades[uIdx]) return;
+      const s = planActivo.unidades[uIdx].desglose_semanal[sIdx];
+      if (!s) return;
+      if (!s.clases) s.clases = [];
+      if (!s.clases[cIdx]) s.clases[cIdx] = {};
+      s.clases[cIdx][campo] = valor;
+      
+      // Sincronizar actividades generales de la semana si están vacías
+      if (campo === 'actividades' && !s.actividades_formativas) {
+        s.actividades_formativas = s.clases.map(c => `[${c.label || ('Clase ' + (cIdx+1))}]: ${c.actividades || ''}`).filter(Boolean).join('\n');
+      }
+    }
+
+    function aplicarHorasSugeridas() {
+      const val = parseInt(document.getElementById('valHorasSugeridas').innerText);
+      if (val > 0) {
+        document.getElementById('inputPlanHoras').value = val;
+        if (planActivo) planActivo.horas_anuales = val;
+        Swal.fire({
+          toast: true,
+          position: 'top-end',
+          icon: 'success',
+          title: `Horas sugeridas (${val} hrs) aplicadas`,
+          showConfirmButton: false,
+          timer: 1500
+        });
+      }
+    }
+
+    async function cargarPoolDocentes() {
+      try {
+        const res = await fetch('/api/planificacion/pool-docentes');
+        if (res.ok) {
+          poolDocentesList = await res.json();
+          const sel = document.getElementById('selectPoolDocentes');
+          if (sel) {
+            sel.innerHTML = '<option value="">-- Seleccionar docente del colegio para co-docencia --</option>' +
+              poolDocentesList.map(d => `<option value="${d.nombre}">${d.nombre} (${d.email || d.rol})</option>`).join('');
+          }
+        }
+      } catch (e) {
+        console.error('Error cargando pool de docentes:', e);
+      }
+    }
+
+    function renderizarTagsColaboradores() {
+      const cont = document.getElementById('contenedorTagsColaboradores');
+      if (!cont) return;
+      if (colaboradoresSeleccionados.length === 0) {
+        cont.innerHTML = '<span class="text-muted small fst-italic">Sin docentes colaboradores asignados aún.</span>';
+        return;
+      }
+      cont.innerHTML = colaboradoresSeleccionados.map((nom, i) => `
+        <span class="badge bg-purple-subtle text-purple border d-inline-flex align-items-center gap-1 py-1 px-2" style="font-size: 0.82rem;">
+          <i class="bi bi-person-check-fill text-purple me-1"></i>
+          <span>${nom}</span>
+          <i class="bi bi-x-circle-fill text-secondary cursor-pointer ms-1" style="font-size: 0.9rem;" onclick="quitarDocenteColaborador(${i})" title="Quitar de co-docencia"></i>
+        </span>
+      `).join('');
+    }
+
+    function agregarDocenteColaborador(nombre) {
+      if (!nombre) return;
+      if (!colaboradoresSeleccionados.includes(nombre)) {
+        colaboradoresSeleccionados.push(nombre);
+        if (planActivo) planActivo.docentes_colaboradores = [...colaboradoresSeleccionados];
+        renderizarTagsColaboradores();
+        guardarBorradorActual(false);
+      }
+      const sel = document.getElementById('selectPoolDocentes');
+      if (sel) sel.value = '';
+    }
+
+    function quitarDocenteColaborador(index) {
+      colaboradoresSeleccionados.splice(index, 1);
+      if (planActivo) planActivo.docentes_colaboradores = [...colaboradoresSeleccionados];
+      renderizarTagsColaboradores();
+      guardarBorradorActual(false);
+    }
+
     // -------------------------------------------------------------
     // SELECTOR MODAL DE OAs MINEDUC
     // -------------------------------------------------------------
@@ -2254,7 +2475,7 @@
       // Auto-seleccionar la unidad correspondiente al número de la unidad editada si existen OAs para ella
       const selUnidad = document.getElementById('filtroUnidadModalOA');
       const nombreUnidadSugerida = `Unidad ${u.numero_unidad || (uIdx + 1)}`;
-      const tieneOAsUnidad = oasDisponiblesModal.some(o => o.unidad_sugerida === nombreUnidadSugerida);
+      const tieneOAsUnidad = oasDisponiblesModal.some(o => o.unidad_sugerida && (o.unidad_sugerida.includes(nombreUnidadSugerida) || o.unidad_sugerida.includes('Transversal') || o.unidad_sugerida.includes('Todas')));
       if (selUnidad) {
         selUnidad.value = tieneOAsUnidad ? nombreUnidadSugerida : 'todas';
       }
@@ -2270,7 +2491,7 @@
       const cont = document.getElementById('listaModalOAsContainer');
 
       const filtrados = oasDisponiblesModal.filter(o => {
-        const matchesUnidad = (unidadFiltro === 'todas') || (o.unidad_sugerida === unidadFiltro);
+        const matchesUnidad = (unidadFiltro === 'todas') || (o.unidad_sugerida && (o.unidad_sugerida.includes(unidadFiltro) || o.unidad_sugerida.includes('Transversal') || o.unidad_sugerida.includes('Todas')));
         const matchesEje = (ejeFiltro === 'todos') || (o.eje_unidad === ejeFiltro);
         const matchesQ = !q || (o.codigo || '').toLowerCase().includes(q) || (o.descripcion || '').toLowerCase().includes(q);
         return matchesUnidad && matchesEje && matchesQ;
@@ -2477,7 +2698,7 @@
           titulo: document.getElementById('inputPlanTitulo').value,
           horas_anuales: parseInt(document.getElementById('inputPlanHoras').value) || 152,
           docente_responsable: document.getElementById('inputPlanDocente').value,
-          docentes_colaboradores: (document.getElementById('inputPlanColaboradores').value || '').split(',').map(s => s.trim()).filter(Boolean),
+          docentes_colaboradores: colaboradoresSeleccionados,
           metas_anuales: document.getElementById('inputPlanMetas').value,
           unidades: planActivo.unidades
         };

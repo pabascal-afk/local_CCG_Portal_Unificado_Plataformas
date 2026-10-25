@@ -165,7 +165,7 @@ async function obtenerCursosDocente(usuarioEmail, usuarioNombre, anio = 2026) {
     // 3. Planificaciones existentes para el año activo
     const planificacionesExistentes = await queryAll(`
         SELECT p.id, p.anio, p.curso, p.asignatura, p.titulo, p.docente_responsable, 
-               p.docentes_colaboradores, p.cursos_vinculados, p.estado, p.visado_por, p.visado_fecha, p.actualizado_en,
+               p.docentes_colaboradores, p.creado_por, p.cursos_vinculados, p.estado, p.visado_por, p.visado_fecha, p.actualizado_en,
                (SELECT COUNT(*) FROM planificaciones_unidades u WHERE u.planificacion_id = p.id) as total_unidades
         FROM planificaciones p
         WHERE p.anio = ?
@@ -201,11 +201,44 @@ async function obtenerCursosDocente(usuarioEmail, usuarioNombre, anio = 2026) {
         prevMap[`${p.curso}___${normalizar(p.asignatura)}`] = p;
     });
 
+    const uEmailNorm = (usuarioEmail || '').trim().toLowerCase();
+    const uNombreNorm = (usuarioNombre || '').trim().toLowerCase();
+
+    function coincideUsuario(texto) {
+        if (!texto) return false;
+        const t = String(texto).trim().toLowerCase();
+        return (uEmailNorm && (t === uEmailNorm || t.includes(uEmailNorm) || uEmailNorm.includes(t))) ||
+               (uNombreNorm && (t === uNombreNorm || t.includes(uNombreNorm) || uNombreNorm.includes(t)));
+    }
+
+    function esColaborador(colabsArr) {
+        if (!Array.isArray(colabsArr) || colabsArr.length === 0) return false;
+        return colabsArr.some(c => {
+            if (!c) return false;
+            if (typeof c === 'string') return coincideUsuario(c);
+            if (typeof c === 'object') return coincideUsuario(c.nombre) || coincideUsuario(c.email);
+            return false;
+        });
+    }
+
+    const keysEnAsignaciones = new Set();
+
     // Enriquecer la carga horaria del docente con el estado de su planificación
     const misAsignaciones = misCursosHorario.map(c => {
         const k = `${c.curso}___${normalizar(c.asignatura)}`;
+        keysEnAsignaciones.add(k);
         const plan = planMap[k] || null;
         const prevPlan = prevMap[k] || null;
+
+        let colabs = [];
+        if (plan && plan.docentes_colaboradores) {
+            try { 
+                colabs = typeof plan.docentes_colaboradores === 'string' ? JSON.parse(plan.docentes_colaboradores) : plan.docentes_colaboradores; 
+            } catch(e) { colabs = []; }
+        }
+
+        const userEsCodoc = plan ? esColaborador(colabs) : false;
+        const userEsCreador = plan ? (coincideUsuario(plan.creado_por) || coincideUsuario(plan.docente_responsable)) : false;
 
         return {
             curso: c.curso,
@@ -219,6 +252,10 @@ async function obtenerCursosDocente(usuarioEmail, usuarioNombre, anio = 2026) {
             es_vinculado: plan ? !!plan.es_vinculado : false,
             curso_principal: plan ? plan.curso_principal : null,
             cursos_vinculados: plan ? plan.cursos_vinculados_arr : [],
+            es_codocente: userEsCodoc,
+            es_creador: userEsCreador,
+            docente_responsable: plan ? plan.docente_responsable : null,
+            docentes_colaboradores: colabs,
             // Datos del año anterior para botón de importación
             tiene_plan_anterior: !plan && !!prevPlan,
             plan_anterior_id: prevPlan ? prevPlan.id : null,
@@ -228,12 +265,211 @@ async function obtenerCursosDocente(usuarioEmail, usuarioNombre, anio = 2026) {
         };
     });
 
+    // Agregar planificaciones donde el profesor es Co-Docente, Creador o Responsable aunque no tenga el curso en su horario
+    planificacionesExistentes.forEach(p => {
+        const k = `${p.curso}___${normalizar(p.asignatura)}`;
+        let colabs = [];
+        try { 
+            colabs = typeof p.docentes_colaboradores === 'string' ? JSON.parse(p.docentes_colaboradores || '[]') : p.docentes_colaboradores; 
+        } catch(e) { colabs = []; }
+
+        const userEsCodoc = esColaborador(colabs);
+        const userEsCreador = coincideUsuario(p.creado_por);
+        const userEsResp = coincideUsuario(p.docente_responsable);
+
+        if ((userEsCodoc || userEsCreador || userEsResp) && !keysEnAsignaciones.has(k)) {
+            keysEnAsignaciones.add(k);
+            misAsignaciones.push({
+                curso: p.curso,
+                asignatura: p.asignatura,
+                nivel: inferirNivelDesdeCurso(p.curso),
+                planificacion_id: p.id,
+                titulo: p.titulo,
+                estado: p.estado,
+                total_unidades: p.total_unidades,
+                actualizado_en: p.actualizado_en,
+                es_vinculado: false,
+                curso_principal: p.curso,
+                cursos_vinculados: p.cursos_vinculados_arr || [],
+                es_codocente: userEsCodoc,
+                es_creador: userEsCreador || userEsResp,
+                docente_responsable: p.docente_responsable,
+                docentes_colaboradores: colabs,
+                tiene_plan_anterior: false,
+                plan_anterior_id: null,
+                plan_anterior_anno: null,
+                plan_anterior_titulo: null,
+                plan_anterior_unidades: 0
+            });
+        }
+    });
+
     return {
         anio: anioNum,
         anno: anioNum,
         misAsignaciones,
         todosLosCursos,
         todasLasAsignaturas
+    };
+}
+
+// -------------------------------------------------------------
+// 1b. Obtener Pool de Docentes del Colegio (Para Co-Docencia / Equipo)
+// -------------------------------------------------------------
+async function obtenerPoolDocentes() {
+    const usuarios = await queryAll(`
+        SELECT id, nombre, email, rol 
+        FROM usuarios 
+        WHERE (activo = 1 OR activo IS NULL)
+          AND (
+            LOWER(rol) LIKE '%profesor%' OR 
+            LOWER(rol) LIKE '%docente%' OR 
+            LOWER(rol) LIKE '%coordinac%' OR 
+            LOWER(rol) LIKE '%utp%' OR 
+            LOWER(rol) LIKE '%admin%' OR 
+            LOWER(rol) LIKE '%pie%' OR
+            rol IS NULL
+          )
+        ORDER BY nombre ASC
+    `);
+
+    const profesoresHorario = await queryAll(`
+        SELECT DISTINCT TRIM(profesor) as nombre 
+        FROM horarios 
+        WHERE profesor IS NOT NULL AND TRIM(profesor) != ''
+        ORDER BY nombre ASC
+    `);
+
+    const map = new Map();
+    usuarios.forEach(u => {
+        if (u.nombre && u.nombre.trim()) {
+            map.set(u.nombre.trim().toUpperCase(), {
+                id: u.id,
+                nombre: u.nombre.trim(),
+                email: u.email ? u.email.trim() : '',
+                rol: u.rol || 'PROFESOR'
+            });
+        }
+    });
+
+    profesoresHorario.forEach(p => {
+        const nom = p.nombre.trim();
+        const nomUpper = nom.toUpperCase();
+        if (!map.has(nomUpper)) {
+            map.set(nomUpper, {
+                id: null,
+                nombre: nom,
+                email: '',
+                rol: 'PROFESOR'
+            });
+        }
+    });
+
+    return Array.from(map.values()).sort((a, b) => a.nombre.localeCompare(b.nombre));
+}
+
+// -------------------------------------------------------------
+// 1c. Obtener Horas Sugeridas y Sesiones de Clases Semanales desde Horarios
+// -------------------------------------------------------------
+async function obtenerSesionesClasesSemana(curso, asignatura, anio = 2026) {
+    const anioNum = parseInt(anio) || 2026;
+    if (!curso || !asignatura) {
+        return {
+            curso: curso || '',
+            asignatura: asignatura || '',
+            anno: anioNum,
+            bloques_semanales: 0,
+            horas_anuales_sugeridas: 0,
+            sesiones: []
+        };
+    }
+
+    // Buscar bloques en horarios para el curso y asignatura
+    const rows = await queryAll(`
+        SELECT dia, bloque, profesor
+        FROM horarios
+        WHERE (anno = ? OR (anno IS NULL AND ? = 2026))
+          AND LOWER(TRIM(curso)) = LOWER(TRIM(?))
+          AND (
+            LOWER(TRIM(asignatura)) = LOWER(TRIM(?))
+            OR LOWER(asignatura) LIKE '%' || LOWER(?) || '%'
+            OR LOWER(?) LIKE '%' || LOWER(asignatura) || '%'
+          )
+        ORDER BY 
+          CASE UPPER(dia)
+            WHEN 'LUNES' THEN 1
+            WHEN 'MARTES' THEN 2
+            WHEN 'MIERCOLES' THEN 3
+            WHEN 'MIÉRCOLES' THEN 3
+            WHEN 'JUEVES' THEN 4
+            WHEN 'VIERNES' THEN 5
+            WHEN 'SABADO' THEN 6
+            WHEN 'SÁBADO' THEN 6
+            ELSE 7
+          END, bloque ASC
+    `, [anioNum, anioNum, curso, asignatura, asignatura, asignatura]);
+
+    // Agrupar bloques por día para detectar clases de 90 min (2 bloques contiguos) o 45 min (1 bloque)
+    const porDia = {};
+    rows.forEach(r => {
+        const d = (r.dia || 'Lunes').trim();
+        const diaCap = d.charAt(0).toUpperCase() + d.slice(1).toLowerCase();
+        if (!porDia[diaCap]) porDia[diaCap] = [];
+        porDia[diaCap].push({ bloque: parseInt(r.bloque), profesor: r.profesor });
+    });
+
+    const sesiones = [];
+    let sesionNum = 1;
+
+    Object.keys(porDia).forEach(dia => {
+        const items = porDia[dia].sort((a, b) => a.bloque - b.bloque);
+        let i = 0;
+        while (i < items.length) {
+            // Verificar si el siguiente bloque es contiguo (ej: bloque 1 y 2 -> 90 min)
+            if (i + 1 < items.length && items[i + 1].bloque === items[i].bloque + 1) {
+                const b1 = items[i].bloque;
+                const b2 = items[i + 1].bloque;
+                sesiones.push({
+                    numero: sesionNum++,
+                    dia: dia,
+                    bloques: [b1, b2],
+                    duracion_minutos: 90,
+                    label: `Clase ${sesionNum - 1} (${dia} - 90 min)`
+                });
+                i += 2;
+            } else {
+                const b = items[i].bloque;
+                sesiones.push({
+                    numero: sesionNum++,
+                    dia: dia,
+                    bloques: [b],
+                    duracion_minutos: 45,
+                    label: `Clase ${sesionNum - 1} (${dia} - 45 min)`
+                });
+                i += 1;
+            }
+        }
+    });
+
+    const totalBloques = rows.length;
+    // 38 semanas lectivas oficiales MINEDUC
+    const horasAnualesSugeridas = totalBloques > 0 ? (totalBloques * 38) : 0;
+
+    // Si no hay horario cargado, entregar una estructura por defecto basada en la asignatura
+    if (sesiones.length === 0) {
+        sesiones.push(
+            { numero: 1, dia: 'Lunes', bloques: [1, 2], duracion_minutos: 90, label: 'Clase 1 (90 min)' },
+            { numero: 2, dia: 'Miércoles', bloques: [1, 2], duracion_minutos: 90, label: 'Clase 2 (90 min)' }
+        );
+    }
+
+    return {
+        curso,
+        asignatura,
+        anno: anioNum,
+        bloques_semanales: totalBloques,
+        horas_anuales_sugeridas: horasAnualesSugeridas || (sesiones.reduce((acc, s) => acc + (s.duracion_minutos / 45), 0) * 38),
+        sesiones
     };
 }
 
@@ -1287,6 +1523,8 @@ async function obtenerDashboardCoberturaColegio(anio = 2026) {
 
 module.exports = {
     obtenerCursosDocente,
+    obtenerPoolDocentes,
+    obtenerSesionesClasesSemana,
     listarPlanificaciones,
     obtenerPlanificacionDetalle,
     crearPlanificacion,
@@ -1304,3 +1542,4 @@ module.exports = {
     inferirNivelDesdeCurso,
     normalizar
 };
+

@@ -53,6 +53,27 @@ router.get('/cursos-docente', async (req, res) => {
     }
 });
 
+// 1b. Pool de docentes disponibles para co-docencia y equipo
+router.get('/pool-docentes', async (req, res) => {
+    try {
+        const docentes = await planificacion.obtenerPoolDocentes();
+        res.json(docentes);
+    } catch (e) {
+        res.status(500).json({ error: e.message });
+    }
+});
+
+// 1c. Horas sugeridas y sesiones de clases semanales según horarios
+router.get('/sesiones-semana', async (req, res) => {
+    try {
+        const { curso, asignatura, anio } = req.query;
+        const data = await planificacion.obtenerSesionesClasesSemana(curso, asignatura, anio);
+        res.json(data);
+    } catch (e) {
+        res.status(500).json({ error: e.message });
+    }
+});
+
 // 2. Listado de planificaciones con filtros
 router.get('/', async (req, res) => {
     try {
@@ -63,9 +84,19 @@ router.get('/', async (req, res) => {
     }
 });
 
-// 3. Dashboard general de cobertura curricular del colegio
+// 3. Dashboard general de cobertura curricular del colegio (Exclusivo Administradores y Coordinadores)
 router.get('/cobertura/colegio', async (req, res) => {
     try {
+        const user = req.user || (req.session && req.session.user) || {
+            rol: req.headers['x-user-role'] || (req.query.user_rol || '')
+        };
+        const rolNorm = (user.rol || '').toLowerCase().trim();
+        const esAdminOCoord = rolNorm.includes('admin') || rolNorm.includes('directiv') || rolNorm.includes('coordinaci') || rolNorm.includes('utp');
+
+        if (req.headers['x-user-role'] && !esAdminOCoord) {
+            return res.status(403).json({ error: "Acceso denegado: El dashboard de cobertura curricular es exclusivo para Administradores y Coordinadores." });
+        }
+
         const anio = req.query.anio || 2026;
         const data = await planificacion.obtenerDashboardCoberturaColegio(anio);
         res.json(data);
@@ -73,6 +104,7 @@ router.get('/cobertura/colegio', async (req, res) => {
         res.status(500).json({ error: e.message });
     }
 });
+
 
 // 4. Catálogo de Planes Curriculares
 router.get('/curriculo/planes', (req, res) => {
