@@ -231,6 +231,42 @@ router.put('/:id', async (req, res) => {
     }
 });
 
+// 10b. Clonar Planificación a otro paralelo
+router.post('/:id/clonar', async (req, res) => {
+    try {
+        const { curso_destino } = req.body;
+        if (!curso_destino) return res.status(400).json({ error: 'Debe especificar el curso de destino.' });
+        const resultado = await planificacion.clonarPlanificacion(req.params.id, curso_destino, req.user);
+        res.json(resultado);
+    } catch (e) {
+        res.status(400).json({ error: e.message });
+    }
+});
+
+// 10c. Vincular curso paralelo a la planificación
+router.post('/:id/vincular', async (req, res) => {
+    try {
+        const { curso_vinculado } = req.body;
+        if (!curso_vinculado) return res.status(400).json({ error: 'Debe especificar el curso a vincular.' });
+        const resultado = await planificacion.vincularCurso(req.params.id, curso_vinculado, req.user);
+        res.json(resultado);
+    } catch (e) {
+        res.status(400).json({ error: e.message });
+    }
+});
+
+// 10d. Desvincular curso paralelo
+router.post('/:id/desvincular', async (req, res) => {
+    try {
+        const { curso_desvincular, crear_copia } = req.body;
+        if (!curso_desvincular) return res.status(400).json({ error: 'Debe especificar el curso a desvincular.' });
+        const resultado = await planificacion.desvincularCurso(req.params.id, curso_desvincular, { crearCopia: !!crear_copia }, req.user);
+        res.json(resultado);
+    } catch (e) {
+        res.status(400).json({ error: e.message });
+    }
+});
+
 // 11. Crear Checkpoint de Versión ("Tipo Git")
 router.post('/:id/checkpoint', async (req, res) => {
     try {

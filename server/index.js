@@ -86,6 +86,8 @@ db.serialize(() => {
   )`, () => {});
   db.run("ALTER TABLE curriculo_planes ADD COLUMN habilidades_sugeridas TEXT DEFAULT '[]'", () => {});
   db.run("ALTER TABLE curriculo_objetivos ADD COLUMN unidad_sugerida TEXT DEFAULT 'Unidad 1'", () => {});
+  db.run("ALTER TABLE planificaciones ADD COLUMN cursos_vinculados TEXT DEFAULT '[]'", () => {});
+  db.run("ALTER TABLE planificaciones_unidades ADD COLUMN tags TEXT DEFAULT '[]'", () => {});
   mailer.inicializarTablasCorreo();
   auditoria.inicializarTablaAuditoria();
   try {

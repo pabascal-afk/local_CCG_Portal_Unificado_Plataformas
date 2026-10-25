@@ -147,6 +147,99 @@
       box-shadow: 0 0 0 2px #a7f3d0;
     }
 
+    /* Tags y Etiquetas Pedagógicas */
+    .badge-tag-dua {
+      background-color: #f3e8ff;
+      color: #6b21a8;
+      border: 1px solid #d8b4fe;
+      font-weight: 600;
+    }
+    .badge-tag-metodologia {
+      background-color: #ecfdf5;
+      color: #047857;
+      border: 1px solid #a7f3d0;
+      font-weight: 600;
+    }
+    .badge-tag-evaluacion {
+      background-color: #fffbeb;
+      color: #b45309;
+      border: 1px solid #fde68a;
+      font-weight: 600;
+    }
+    .badge-tag-inclusion {
+      background-color: #e0f2fe;
+      color: #0369a1;
+      border: 1px solid #bae6fd;
+      font-weight: 600;
+    }
+    .badge-tag-custom {
+      background-color: #f1f5f9;
+      color: #475569;
+      border: 1px solid #cbd5e1;
+      font-weight: 600;
+    }
+    .badge-vinculado {
+      background-color: #e0e7ff;
+      color: #3730a3;
+      border: 1px solid #c7d2fe;
+      font-weight: 600;
+    }
+
+    /* Drag & Drop Handles y Sortable */
+    .drag-handle-unidad, .drag-handle-semana, .drag-handle-oa {
+      cursor: grab;
+      user-select: none;
+      transition: transform 0.15s ease;
+    }
+    .drag-handle-unidad:hover, .drag-handle-semana:hover, .drag-handle-oa:hover {
+      color: var(--accent-color) !important;
+      transform: scale(1.15);
+    }
+    .drag-handle-unidad:active, .drag-handle-semana:active, .drag-handle-oa:active {
+      cursor: grabbing;
+    }
+    .sortable-ghost {
+      opacity: 0.35;
+      background-color: #e2e8f0 !important;
+      border: 2px dashed #3b82f6 !important;
+    }
+    .sortable-chosen {
+      background-color: #f8fafc !important;
+      box-shadow: 0 4px 12px rgba(0,0,0,0.1) !important;
+    }
+    .tag-chip {
+      display: inline-flex;
+      align-items: center;
+      gap: 5px;
+      font-size: 0.75rem;
+      padding: 3px 8px;
+      border-radius: 9999px;
+      transition: all 0.15s ease;
+    }
+    .tag-chip .tag-remove {
+      cursor: pointer;
+      opacity: 0.6;
+    }
+    .tag-chip .tag-remove:hover {
+      opacity: 1;
+      color: #dc2626;
+    }
+    .tag-picker-btn {
+      cursor: pointer;
+      border: 1px dashed #cbd5e1;
+      border-radius: 9999px;
+      padding: 2px 8px;
+      font-size: 0.74rem;
+      color: #64748b;
+      background: #f8fafc;
+      transition: all 0.15s ease;
+    }
+    .tag-picker-btn:hover {
+      background: #e2e8f0;
+      color: #1e293b;
+      border-color: #94a3b8;
+    }
+
     /* Estilos de Impresión Oficial */
     @media print {
       body {
@@ -501,13 +594,20 @@
               <i class="bi bi-arrow-left"></i> Volver
             </button>
             <div>
-              <h6 class="modal-title fw-bold mb-0" id="editorTituloPlan">Cargando Planificación...</h6>
-              <div class="small text-secondary" id="editorSubtituloPlan">Curso • Asignatura • Año</div>
+              <div class="d-flex align-items-center gap-2">
+                <h6 class="modal-title fw-bold mb-0" id="editorTituloPlan">Cargando Planificación...</h6>
+                <span class="badge" id="editorBadgeEstado">En edición</span>
+              </div>
+              <div class="small text-secondary d-flex align-items-center gap-2" id="editorSubtituloPlan">
+                <span>Curso • Asignatura • Año</span>
+              </div>
             </div>
-            <span class="badge" id="editorBadgeEstado">En edición</span>
           </div>
 
           <div class="d-flex align-items-center gap-2">
+            <button class="btn btn-sm btn-outline-info" onclick="abrirModalClonarVincularActual()">
+              <i class="bi bi-copy me-1"></i> Paralelos / Clonar
+            </button>
             <button class="btn btn-sm btn-outline-light" onclick="guardarBorradorActual(false)">
               <i class="bi bi-save"></i> Guardar Borrador
             </button>
@@ -527,6 +627,17 @@
         </div>
 
         <div class="modal-body p-4 bg-light">
+          <!-- Alerta de Planificación Vinculada / Compartida -->
+          <div id="editorAlertaVinculada" class="alert alert-primary py-2 px-3 d-none align-items-center justify-content-between mb-3 border">
+            <div class="d-flex align-items-center gap-2 small">
+              <i class="bi bi-link-45deg fs-5 text-primary"></i>
+              <span id="editorTextoAlertaVinculada">Esta planificación está compartida en tiempo real con otros paralelos.</span>
+            </div>
+            <button class="btn btn-xs btn-outline-primary py-0 px-2" style="font-size: 0.75rem;" onclick="abrirModalClonarVincularActual()">
+              Gestionar Paralelos
+            </button>
+          </div>
+
           <!-- Pestañas internas del Editor -->
           <ul class="nav nav-pills mb-4 bg-white p-2 rounded border" id="editorTabs">
             <li class="nav-item">
@@ -752,9 +863,175 @@
     </div>
   </div>
 
+  <!-- ============================================================== -->
+  <!-- MODAL: CLONAR O VINCULAR PLANIFICACIÓN A PARALELOS            -->
+  <!-- ============================================================== -->
+  <div class="modal fade" id="modalClonarVincular" tabindex="-1">
+    <div class="modal-dialog modal-lg">
+      <div class="modal-content">
+        <div class="modal-header bg-dark text-white">
+          <div class="d-flex align-items-center gap-2">
+            <i class="bi bi-copy fs-5 text-info"></i>
+            <div>
+              <h6 class="modal-title fw-bold mb-0">Gestión de Cursos Paralelos</h6>
+              <div class="small text-secondary" id="modalCVSubtitulo">Clonar o Vincular Planificación</div>
+            </div>
+          </div>
+          <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+        </div>
+        <div class="modal-body p-4">
+          <!-- Resumen del Curso Origen -->
+          <div class="card bg-light border p-3 mb-4">
+            <div class="d-flex justify-content-between align-items-center flex-wrap gap-2">
+              <div>
+                <span class="badge bg-primary me-2 font-monospace" id="modalCVCursoOrigen">CURSO</span>
+                <span class="fw-bold text-dark" id="modalCVAsignaturaOrigen">ASIGNATURA</span>
+                <div class="small text-muted mt-1" id="modalCVTituloOrigen">Título de la planificación</div>
+              </div>
+              <div id="modalCVBadgeEstado">
+                <!-- Estado -->
+              </div>
+            </div>
+          </div>
+
+          <!-- Pestañas Vincular vs Clonar -->
+          <ul class="nav nav-pills mb-3 border-bottom pb-2" id="cvTabs">
+            <li class="nav-item">
+              <button class="nav-link active" data-bs-toggle="pill" data-bs-target="#tab-cv-vincular" type="button">
+                <i class="bi bi-link-45deg me-1"></i> 1. Vincular Paralelo (Compartido en Vivo)
+              </button>
+            </li>
+            <li class="nav-item">
+              <button class="nav-link" data-bs-toggle="pill" data-bs-target="#tab-cv-clonar" type="button">
+                <i class="bi bi-files me-1"></i> 2. Clonar Planificación (Copia Independiente)
+              </button>
+            </li>
+          </ul>
+
+          <div class="tab-content">
+            <!-- TAB 1: VINCULAR -->
+            <div class="tab-pane fade show active" id="tab-cv-vincular">
+              <div class="alert alert-info d-flex align-items-start gap-2 mb-3">
+                <i class="bi bi-info-circle-fill fs-5 mt-1 flex-shrink-0"></i>
+                <div class="small">
+                  <strong>Planificación Compartida en Vivo:</strong> Los cursos vinculados compartirán exactamente las mismas unidades, OAs, desglose semanal y fechas. Cualquier cambio realizado por el profesor o co-docente se sincronizará de forma instantánea en ambos paralelos.
+                </div>
+              </div>
+
+              <!-- Lista de cursos actualmente vinculados -->
+              <h6 class="fw-bold small text-secondary text-uppercase mb-2">Cursos actualmente vinculados</h6>
+              <div id="listaCursosVinculadosCont" class="mb-4">
+                <!-- Render dinámico -->
+              </div>
+
+              <!-- Formulario para vincular un nuevo paralelo -->
+              <div class="card p-3 border rounded bg-white">
+                <h6 class="fw-bold small text-dark mb-2"><i class="bi bi-plus-circle text-primary me-1"></i>Vincular un nuevo curso paralelo</h6>
+                <div class="row g-2 align-items-end">
+                  <div class="col-md-8">
+                    <label class="form-label small text-muted mb-1">Seleccionar Curso Paralelo</label>
+                    <select id="selectCursoParaVincular" class="form-select form-select-sm">
+                      <!-- Render dinámico de opciones -->
+                    </select>
+                  </div>
+                  <div class="col-md-4">
+                    <button class="btn btn-sm btn-primary w-100" onclick="ejecutarVinculacionCurso()">
+                      <i class="bi bi-link-45deg me-1"></i> Vincular Curso
+                    </button>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            <!-- TAB 2: CLONAR -->
+            <div class="tab-pane fade" id="tab-cv-clonar">
+              <div class="alert alert-warning d-flex align-items-start gap-2 mb-3">
+                <i class="bi bi-exclamation-triangle-fill fs-5 mt-1 flex-shrink-0 text-warning"></i>
+                <div class="small">
+                  <strong>Copia Independiente (Fork):</strong> Se duplicará íntegramente la planificación actual (cabecera, unidades, OAs, indicadores, desglose semanal y tags) hacia el curso de destino. A partir de la clonación, cada curso tendrá su propio ciclo de vida y modificaciones aisladas.
+                </div>
+              </div>
+
+              <div class="card p-3 border rounded bg-white mb-3">
+                <h6 class="fw-bold small text-dark mb-2"><i class="bi bi-copy text-primary me-1"></i>Curso de destino para la copia</h6>
+                <div class="row g-2 align-items-end">
+                  <div class="col-md-8">
+                    <label class="form-label small text-muted mb-1">Curso Destino</label>
+                    <select id="selectCursoParaClonar" class="form-select form-select-sm">
+                      <!-- Render dinámico -->
+                    </select>
+                  </div>
+                  <div class="col-md-4">
+                    <button class="btn btn-sm btn-success w-100" onclick="ejecutarClonacionCurso()">
+                      <i class="bi bi-files me-1"></i> Clonar Planificación
+                    </button>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+        <div class="modal-footer">
+          <button type="button" class="btn btn-sm btn-secondary" data-bs-dismiss="modal">Cerrar</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ============================================================== -->
+  <!-- MODAL: SELECTOR DE TAGS Y ETIQUETAS PEDAGÓGICAS                -->
+  <!-- ============================================================== -->
+  <div class="modal fade" id="modalSelectorTags" tabindex="-1">
+    <div class="modal-dialog modal-lg">
+      <div class="modal-content">
+        <div class="modal-header bg-primary text-white py-2 px-3">
+          <div class="d-flex align-items-center gap-2">
+            <i class="bi bi-tags-fill me-1"></i>
+            <div>
+              <h6 class="modal-title fw-bold mb-0">Etiquetas Pedagógicas & Metodologías</h6>
+              <div class="small" style="opacity: 0.85;" id="modalTagsSubtitulo">Asignar a Unidad</div>
+            </div>
+          </div>
+          <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+        </div>
+        <div class="modal-body p-3">
+          <!-- Etiquetas seleccionadas actualmente -->
+          <div class="p-3 bg-light rounded border mb-3">
+            <div class="small fw-semibold text-secondary mb-2">Etiquetas seleccionadas para esta sección:</div>
+            <div id="modalTagsSeleccionadosCont" class="d-flex flex-wrap gap-2 align-items-center">
+              <!-- Chips seleccionados -->
+            </div>
+          </div>
+
+          <!-- Input para agregar etiqueta personalizada -->
+          <div class="input-group input-group-sm mb-3">
+            <span class="input-group-text bg-white"><i class="bi bi-plus-circle"></i></span>
+            <input type="text" id="inputCustomTag" class="form-control" placeholder="Escribir etiqueta personalizada y presionar Enter..." onkeydown="if(event.key==='Enter')agregarCustomTag()">
+            <button class="btn btn-outline-primary" type="button" onclick="agregarCustomTag()">Agregar</button>
+          </div>
+
+          <!-- Catálogo de categorías preconfiguradas -->
+          <div class="row g-3" id="catalogoTagsCategorias">
+            <!-- Render dinámico de categorías DUA, Metodologías, Evaluación, Inclusión -->
+          </div>
+        </div>
+        <div class="modal-footer d-flex justify-content-between align-items-center">
+          <button type="button" class="btn btn-sm btn-outline-secondary" onclick="limpiarTodosLosTags()">Limpiar todas</button>
+          <div class="d-flex gap-2">
+            <button type="button" class="btn btn-sm btn-secondary" data-bs-dismiss="modal">Cancelar</button>
+            <button type="button" class="btn btn-sm btn-primary" onclick="confirmarSeleccionTags()">
+              <i class="bi bi-check-lg me-1"></i> Aplicar Etiquetas
+            </button>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
   <!-- Scripts -->
   <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
   <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+  <script src="https://cdn.jsdelivr.net/npm/sortablejs@1.15.2/Sortable.min.js"></script>
 
   <script>
     // Estado global de la aplicación
@@ -769,12 +1046,61 @@
     let modalOAsObj = null;
     let modalNuevaPlanObj = null;
     let modalCheckpointObj = null;
+    let modalClonarVincularObj = null;
+    let modalSelectorTagsObj = null;
+
+    // Estado del selector de etiquetas
+    let tagTarget = { tipo: 'unidad', uIdx: 0, sIdx: null };
+    let tagsSeleccionadosTemp = new Set();
+
+    // Catálogo de categorías de etiquetas preconfiguradas
+    const CATEGORIAS_TAGS = {
+      'DUA (Diseño Universal)': [
+        'DUA I: Representación',
+        'DUA II: Acción y Expresión',
+        'DUA III: Compromiso'
+      ],
+      'Metodologías Activas': [
+        'ABP (Proyectos)',
+        'Aula Invertida',
+        'Gamificación',
+        'Aprendizaje Colaborativo',
+        'Rutinas de Pensamiento',
+        'STEAM'
+      ],
+      'Evaluación': [
+        'Formativa',
+        'Sumativa',
+        'Autoevaluación',
+        'Coevaluación',
+        'Rúbrica',
+        'Ticket de Salida'
+      ],
+      'Inclusión & Transversales': [
+        'PIE / Adecuación',
+        'Socioemocional',
+        'TICs',
+        'Cuidado Ambiental'
+      ]
+    };
+
+    function obtenerClaseTag(tag) {
+      if (!tag) return 'badge-tag-custom';
+      const t = tag.toUpperCase();
+      if (t.includes('DUA')) return 'badge-tag-dua';
+      if (t.includes('ABP') || t.includes('AULA INVERTIDA') || t.includes('GAMIFIC') || t.includes('COLABORATIV') || t.includes('RUTINAS') || t.includes('STEAM')) return 'badge-tag-metodologia';
+      if (t.includes('FORMATIVA') || t.includes('SUMATIVA') || t.includes('AUTOEVAL') || t.includes('COEVAL') || t.includes('RUBRICA') || t.includes('TICKET')) return 'badge-tag-evaluacion';
+      if (t.includes('PIE') || t.includes('SOCIOEMOCIONAL') || t.includes('TIC') || t.includes('AMBIENT')) return 'badge-tag-inclusion';
+      return 'badge-tag-custom';
+    }
 
     document.addEventListener('DOMContentLoaded', async () => {
       modalEditorObj = new bootstrap.Modal(document.getElementById('modalEditorPlan'));
       modalOAsObj = new bootstrap.Modal(document.getElementById('modalSelectorOAs'));
       modalNuevaPlanObj = new bootstrap.Modal(document.getElementById('modalNuevaPlan'));
       modalCheckpointObj = new bootstrap.Modal(document.getElementById('modalCheckpoint'));
+      modalClonarVincularObj = new bootstrap.Modal(document.getElementById('modalClonarVincular'));
+      modalSelectorTagsObj = new bootstrap.Modal(document.getElementById('modalSelectorTags'));
 
       await cargarUsuario();
       await recargarDatos();
@@ -858,7 +1184,45 @@
             } else {
               badgeEstado = '<span class="badge badge-estado-edicion"><i class="bi bi-pencil me-1"></i>En edición</span>';
             }
-            btnAccion = `<button class="btn btn-sm btn-primary w-100" onclick="abrirEditorPlan(${a.planificacion_id})"><i class="bi bi-pencil-square me-1"></i> Abrir Editor</button>`;
+
+            let badgeVinculo = '';
+            if (a.es_vinculado) {
+              badgeVinculo = `<span class="badge badge-vinculado me-1" title="Planificación compartida en vivo con ${a.curso_principal}"><i class="bi bi-link-45deg me-1"></i>Vinculado a ${a.curso_principal}</span>`;
+            } else if (a.cursos_vinculados && a.cursos_vinculados.length > 0) {
+              badgeVinculo = `<span class="badge bg-info-subtle text-info border border-info-subtle me-1" title="Paralelos vinculados: ${a.cursos_vinculados.join(', ')}"><i class="bi bi-people me-1"></i>+${a.cursos_vinculados.length} vinculado(s)</span>`;
+            }
+
+            btnAccion = `
+              <div class="d-flex gap-2">
+                <button class="btn btn-sm btn-primary flex-grow-1" onclick="abrirEditorPlan(${a.planificacion_id})">
+                  <i class="bi bi-pencil-square me-1"></i> Abrir Editor
+                </button>
+                <button class="btn btn-sm btn-outline-info" title="Gestionar paralelos (Clonar o Vincular)" onclick="event.stopPropagation(); abrirModalClonarVincular(${a.planificacion_id}, '${a.curso}', '${a.asignatura}')">
+                  <i class="bi bi-copy"></i>
+                </button>
+              </div>
+            `;
+
+            return `
+              <div class="col-md-6 col-lg-4">
+                <div class="card card-custom course-card h-100 p-3 d-flex flex-column justify-content-between">
+                  <div>
+                    <div class="d-flex justify-content-between align-items-center mb-2 flex-wrap gap-1">
+                      <div class="d-flex align-items-center gap-1">
+                        <span class="badge bg-light text-dark border font-monospace" style="font-size: 0.75rem;">${a.curso}</span>
+                        ${badgeVinculo}
+                      </div>
+                      ${badgeEstado}
+                    </div>
+                    <h6 class="fw-bold text-dark mb-1 text-truncate" title="${a.asignatura}">${a.asignatura}</h6>
+                    <p class="small text-muted mb-3">${a.nivel} • ${a.total_unidades} unidades planificadas</p>
+                  </div>
+                  <div>
+                    ${btnAccion}
+                  </div>
+                </div>
+              </div>
+            `;
           }
 
           return `
@@ -870,7 +1234,7 @@
                     ${badgeEstado}
                   </div>
                   <h6 class="fw-bold text-dark mb-1 text-truncate" title="${a.asignatura}">${a.asignatura}</h6>
-                  <p class="small text-muted mb-3">${a.nivel} • ${a.total_unidades} unidades planificadas</p>
+                  <p class="small text-muted mb-3">${a.nivel} • 0 unidades planificadas</p>
                 </div>
                 <div>
                   ${btnAccion}
@@ -926,9 +1290,14 @@
           ? '<span class="badge badge-estado-visada"><i class="bi bi-check-circle me-1"></i>Visada</span>'
           : '<span class="badge badge-estado-edicion"><i class="bi bi-pencil me-1"></i>En edición</span>';
 
+        const vincs = Array.isArray(p.cursos_vinculados) ? p.cursos_vinculados : [];
+        const badgeVinc = vincs.length > 0
+          ? `<span class="badge bg-info-subtle text-info border border-info-subtle ms-1" title="Compartido en vivo con: ${vincs.join(', ')}"><i class="bi bi-people me-1"></i>+${vincs.length}</span>`
+          : '';
+
         return `
           <tr>
-            <td class="fw-bold">${p.curso}</td>
+            <td class="fw-bold">${p.curso}${badgeVinc}</td>
             <td>${p.asignatura}</td>
             <td><i class="bi bi-person text-secondary me-1"></i>${p.docente_responsable}</td>
             <td class="text-center"><span class="badge bg-light text-dark border">${p.total_unidades}</span></td>
@@ -941,9 +1310,14 @@
             <td class="text-center">${badge}</td>
             <td class="small text-muted">${p.visado_por ? p.visado_por.split('@')[0] : '-'}</td>
             <td class="text-end">
-              <button class="btn btn-sm btn-outline-primary py-0 px-2" onclick="abrirEditorPlan(${p.id})">
-                <i class="bi bi-eye"></i> Ver
-              </button>
+              <div class="btn-group btn-group-sm">
+                <button class="btn btn-outline-primary py-0 px-2" onclick="abrirEditorPlan(${p.id})">
+                  <i class="bi bi-eye"></i> Ver
+                </button>
+                <button class="btn btn-outline-info py-0 px-2" title="Clonar o Vincular Paralelo" onclick="abrirModalClonarVincular(${p.id}, '${p.curso}', '${p.asignatura}')">
+                  <i class="bi bi-copy"></i>
+                </button>
+              </div>
             </td>
           </tr>
         `;
@@ -971,9 +1345,14 @@
           if (r.semaforo === 'Amarillo') semBadge = '<span class="badge bg-warning text-dark">🟡 Parcial</span>';
           else if (r.semaforo === 'Rojo') semBadge = '<span class="badge bg-danger">🔴 Crítico</span>';
 
+          let badgeVinc = '';
+          if (r.es_vinculado) {
+            badgeVinc = `<span class="badge badge-vinculado ms-1" style="font-size:0.7rem;" title="Vinculado a ${r.curso_principal}"><i class="bi bi-link-45deg me-1"></i>Vinculado a ${r.curso_principal}</span>`;
+          }
+
           return `
             <tr>
-              <td class="fw-bold">${r.curso}</td>
+              <td class="fw-bold">${r.curso} ${badgeVinc}</td>
               <td>${r.asignatura}</td>
               <td class="small text-muted">${r.docente_responsable}</td>
               <td>${semBadge}</td>
@@ -1063,7 +1442,10 @@
 
         // Render datos de cabecera
         document.getElementById('editorTituloPlan').innerText = planActivo.titulo;
-        document.getElementById('editorSubtituloPlan').innerText = `${planActivo.curso} • ${planActivo.asignatura} • Año Escolar ${planActivo.anio}`;
+        document.getElementById('editorSubtituloPlan').innerHTML = `
+          <span>${planActivo.curso} • ${planActivo.asignatura} • Año Escolar ${planActivo.anio}</span>
+          ${(planActivo.cursos_vinculados && planActivo.cursos_vinculados.length > 0) ? `<span class="badge badge-vinculado ms-2"><i class="bi bi-people me-1"></i>+${planActivo.cursos_vinculados.length} vinculado(s)</span>` : ''}
+        `;
         
         const bEstado = document.getElementById('editorBadgeEstado');
         if (planActivo.estado === 'Visada') {
@@ -1072,6 +1454,22 @@
         } else {
           bEstado.className = 'badge badge-estado-edicion';
           bEstado.innerHTML = '<i class="bi bi-pencil me-1"></i>En edición';
+        }
+
+        // Alerta de cursos vinculados
+        const alertaVinc = document.getElementById('editorAlertaVinculada');
+        const txtAlertaVinc = document.getElementById('editorTextoAlertaVinculada');
+        if (planActivo.es_vinculado) {
+          alertaVinc.classList.remove('d-none');
+          alertaVinc.classList.add('d-flex');
+          txtAlertaVinc.innerHTML = `Esta planificación está <strong>vinculada en vivo con ${planActivo.curso_principal}</strong>. Cualquier cambio se sincroniza automáticamente en ambos cursos.`;
+        } else if (planActivo.cursos_vinculados && planActivo.cursos_vinculados.length > 0) {
+          alertaVinc.classList.remove('d-none');
+          alertaVinc.classList.add('d-flex');
+          txtAlertaVinc.innerHTML = `Esta planificación está <strong>compartida en vivo</strong> con los cursos paralelos: <strong>${planActivo.cursos_vinculados.join(', ')}</strong>.`;
+        } else {
+          alertaVinc.classList.add('d-none');
+          alertaVinc.classList.remove('d-flex');
         }
 
         // Botón de visado para UTP/Admin
@@ -1128,14 +1526,24 @@
 
       cont.innerHTML = `
         <div class="accordion" id="acordeonUnidades">
-          ${unidades.map((u, idx) => `
-            <div class="accordion-item mb-3 border rounded shadow-sm">
-              <h2 class="accordion-header">
+          ${unidades.map((u, idx) => {
+            const uTags = u.tags || [];
+            return `
+            <div class="accordion-item mb-3 border rounded shadow-sm" data-unidad-idx="${idx}">
+              <h2 class="accordion-header d-flex align-items-center">
                 <button class="accordion-button ${idx === 0 ? '' : 'collapsed'}" type="button" data-bs-toggle="collapse" data-bs-target="#collapseUnidad${idx}">
+                  <span class="drag-handle-unidad me-2" title="Arrastrar para reordenar unidad"><i class="bi bi-grip-vertical fs-5 text-secondary"></i></span>
                   <span class="badge bg-primary me-2">U${u.numero_unidad}</span>
                   <span class="fw-bold me-3">${u.nombre_unidad}</span>
                   <span class="badge bg-light text-secondary border me-2">Semestre ${u.semestre}</span>
                   <span class="small text-muted me-auto">${u.horas_estimadas || 0} hrs</span>
+                  
+                  <!-- Tags en Cabecera de Acordeón -->
+                  <div class="d-none d-md-flex gap-1 me-3 flex-wrap">
+                    ${uTags.slice(0, 3).map(t => `<span class="badge ${obtenerClaseTag(t)} tag-chip py-1">${t}</span>`).join('')}
+                    ${uTags.length > 3 ? `<span class="badge bg-secondary-subtle text-secondary tag-chip">+${uTags.length - 3}</span>` : ''}
+                  </div>
+
                   <span class="badge bg-info-subtle text-info border border-info-subtle me-3">${(u.oas_seleccionados || []).length} OAs asignados</span>
                 </button>
               </h2>
@@ -1163,22 +1571,47 @@
                     </div>
                   </div>
 
+                  <!-- ETIQUETAS, DUA Y METODOLOGÍAS DE LA UNIDAD -->
+                  <div class="bg-white p-3 rounded border mb-4">
+                    <div class="d-flex justify-content-between align-items-center mb-2">
+                      <div>
+                        <h6 class="fw-bold text-dark mb-0"><i class="bi bi-tags text-primary me-2"></i>Etiquetas de la Unidad (DUA, Metodologías, Evaluación)</h6>
+                        <span class="small text-muted">Clasifica el enfoque pedagógico y metodologías activas implementadas.</span>
+                      </div>
+                      <button class="btn btn-sm btn-outline-primary" onclick="abrirModalTags('unidad', ${idx})">
+                        <i class="bi bi-plus-circle me-1"></i> Gestionar Etiquetas / DUA
+                      </button>
+                    </div>
+                    <div class="d-flex flex-wrap gap-2 align-items-center mt-2" id="tagsUnidad_${idx}">
+                      ${uTags.length > 0 ? uTags.map(t => `
+                        <span class="tag-chip ${obtenerClaseTag(t)}">
+                          <span>${t}</span>
+                          <i class="bi bi-x tag-remove" onclick="quitarTagUnidad(${idx}, '${t}')"></i>
+                        </span>
+                      `).join('') : '<span class="text-muted small">Sin etiquetas asignadas. Haz clic en "Gestionar Etiquetas" para agregar DUA o Metodologías.</span>'}
+                    </div>
+                  </div>
+
                   <!-- OBJETIVOS DE APRENDIZAJE SELECCIONADOS -->
                   <div class="bg-white p-3 rounded border mb-4">
                     <div class="d-flex justify-content-between align-items-center mb-3">
-                      <h6 class="fw-bold text-dark mb-0"><i class="bi bi-bullseye text-primary me-2"></i>Objetivos de Aprendizaje (OAs) Asignados</h6>
+                      <div>
+                        <h6 class="fw-bold text-dark mb-0"><i class="bi bi-bullseye text-primary me-2"></i>Objetivos de Aprendizaje (OAs) Asignados</h6>
+                        <span class="small text-muted">Arrastra los OAs para reordenar la secuencia pedagógica.</span>
+                      </div>
                       <button class="btn btn-sm btn-outline-primary" onclick="abrirModalSelectorOAs(${idx})">
                         <i class="bi bi-plus-circle me-1"></i> Seleccionar OAs MINEDUC
                       </button>
                     </div>
                     <div class="d-flex flex-wrap gap-2" id="chipsOAsUnidad${idx}">
-                      ${(u.oas_seleccionados || []).length > 0 ? (u.oas_seleccionados || []).map(o => {
+                      ${(u.oas_seleccionados || []).length > 0 ? (u.oas_seleccionados || []).map((o, oIdx) => {
                         const cod = (typeof o === 'object') ? o.codigo : o;
                         const cat = (typeof o === 'object' && o.categoria) ? o.categoria : 'Basal';
                         return `
-                          <span class="badge ${cat === 'Basal' ? 'badge-oa-basal' : 'badge-oa-comp'} p-2 d-flex align-items-center gap-2">
+                          <span class="badge ${cat === 'Basal' ? 'badge-oa-basal' : 'badge-oa-comp'} p-2 d-flex align-items-center gap-2 cursor-grab" data-oa-codigo="${cod}">
+                            <i class="bi bi-grip-vertical drag-handle-oa text-muted"></i>
                             <span>${cod} (${cat})</span>
-                            <i class="bi bi-x-circle cursor-pointer" onclick="quitarOAUnidad(${idx}, '${cod}')"></i>
+                            <i class="bi bi-x-circle cursor-pointer text-danger" onclick="quitarOAUnidad(${idx}, '${cod}')"></i>
                           </span>
                         `;
                       }).join('') : '<span class="text-muted small">No se han asignado OAs a esta unidad todavía.</span>'}
@@ -1224,8 +1657,8 @@
                   <div class="bg-white p-3 rounded border">
                     <div class="d-flex justify-content-between align-items-center mb-3">
                       <div>
-                        <h6 class="fw-bold text-dark mb-0"><i class="bi bi-calendar-week text-primary me-2"></i>Desglose Semanal de Clases & DUA</h6>
-                        <span class="small text-muted">Planificación de actividades formativas (Inicio, Desarrollo, Cierre) y adecuaciones.</span>
+                        <h6 class="fw-bold text-dark mb-0"><i class="bi bi-calendar-week text-primary me-2"></i>Desglose Semanal de Clases, DUA & Metodologías</h6>
+                        <span class="small text-muted">Arrastra las filas desde el icono <i class="bi bi-grip-vertical"></i> para reordenar semanas.</span>
                       </div>
                       <button class="btn btn-sm btn-outline-secondary" onclick="agregarSemanaAUnidad(${idx})">
                         <i class="bi bi-plus-lg me-1"></i> Agregar Semana
@@ -1236,18 +1669,24 @@
                       <table class="table table-bordered table-sm align-middle" style="font-size: 0.82rem;">
                         <thead class="table-light text-secondary">
                           <tr>
-                            <th style="width: 70px;">Semana</th>
-                            <th style="width: 140px;">Fechas</th>
-                            <th style="width: 180px;">Tema / Contenido</th>
+                            <th style="width: 35px;" class="text-center"></th>
+                            <th style="width: 65px;" class="text-center">Semana</th>
+                            <th style="width: 130px;">Fechas</th>
+                            <th style="width: 170px;">Tema / Contenido</th>
                             <th>Actividades Formativas (Inicio-Desarrollo-Cierre)</th>
-                            <th style="width: 160px;">Recursos</th>
-                            <th style="width: 180px;">Adecuaciones DUA</th>
-                            <th style="width: 40px;"></th>
+                            <th style="width: 150px;">Recursos</th>
+                            <th style="width: 210px;">DUA & Metodologías</th>
+                            <th style="width: 35px;" class="text-center"></th>
                           </tr>
                         </thead>
-                        <tbody>
-                          ${(u.desglose_semanal || []).map((s, sIdx) => `
-                            <tr>
+                        <tbody id="tablaSemanasBody_${idx}">
+                          ${(u.desglose_semanal || []).map((s, sIdx) => {
+                            const semTags = s.tags || [];
+                            return `
+                            <tr data-semana-idx="${sIdx}">
+                              <td class="text-center">
+                                <span class="drag-handle-semana text-secondary"><i class="bi bi-grip-vertical fs-6"></i></span>
+                              </td>
                               <td class="text-center fw-bold">Sem ${s.semana || (sIdx + 1)}</td>
                               <td>
                                 <input type="date" class="form-control form-control-sm p-1 mb-1" value="${s.fecha_inicio || ''}" onchange="actualizarCampoSemana(${idx}, ${sIdx}, 'fecha_inicio', this.value)">
@@ -1263,13 +1702,25 @@
                                 <textarea class="form-control form-control-sm" rows="2" placeholder="Guías, data..." onchange="actualizarCampoSemana(${idx}, ${sIdx}, 'recursos', this.value)">${s.recursos || ''}</textarea>
                               </td>
                               <td>
+                                <div class="d-flex flex-wrap gap-1 mb-1">
+                                  ${semTags.map(st => `
+                                    <span class="tag-chip ${obtenerClaseTag(st)} py-0 px-1" style="font-size: 0.7rem;">
+                                      <span>${st}</span>
+                                      <i class="bi bi-x tag-remove" onclick="quitarTagSemana(${idx}, ${sIdx}, '${st}')"></i>
+                                    </span>
+                                  `).join('')}
+                                  <button class="tag-picker-btn" onclick="abrirModalTags('semana', ${idx}, ${sIdx})">
+                                    <i class="bi bi-plus"></i> Tag
+                                  </button>
+                                </div>
                                 <textarea class="form-control form-control-sm" rows="2" placeholder="Estrategias DUA..." onchange="actualizarCampoSemana(${idx}, ${sIdx}, 'dua_adecuaciones', this.value)">${s.dua_adecuaciones || ''}</textarea>
                               </td>
                               <td class="text-center">
                                 <button class="btn btn-sm text-danger p-0" onclick="eliminarSemana(${idx}, ${sIdx})"><i class="bi bi-trash"></i></button>
                               </td>
                             </tr>
-                          `).join('')}
+                            `;
+                          }).join('')}
                         </tbody>
                       </table>
                     </div>
@@ -1281,9 +1732,215 @@
                 </div>
               </div>
             </div>
-          `).join('')}
+            `;
+          }).join('')}
         </div>
       `;
+
+      // Inicializar Drag & Drop con SortableJS
+      setTimeout(inicializarSortables, 50);
+    }
+
+    // -------------------------------------------------------------
+    // DRAG & DROP CON SORTABLEJS
+    // -------------------------------------------------------------
+    function inicializarSortables() {
+      if (typeof Sortable === 'undefined') return;
+
+      // 1. Reordenar Unidades
+      const contAcordeon = document.getElementById('acordeonUnidades');
+      if (contAcordeon) {
+        new Sortable(contAcordeon, {
+          handle: '.drag-handle-unidad',
+          animation: 180,
+          ghostClass: 'sortable-ghost',
+          chosenClass: 'sortable-chosen',
+          onEnd: function (evt) {
+            const { oldIndex, newIndex } = evt;
+            if (oldIndex !== undefined && newIndex !== undefined && oldIndex !== newIndex) {
+              const moved = planActivo.unidades.splice(oldIndex, 1)[0];
+              planActivo.unidades.splice(newIndex, 0, moved);
+              planActivo.unidades.forEach((u, i) => {
+                u.orden = i + 1;
+                u.numero_unidad = i + 1;
+              });
+              renderizarUnidadesAcordeon();
+              guardarBorradorActual(false);
+              Swal.fire({
+                toast: true,
+                position: 'top-end',
+                icon: 'success',
+                title: 'Secuencia de unidades actualizada',
+                showConfirmButton: false,
+                timer: 1500
+              });
+            }
+          }
+        });
+      }
+
+      // 2. Reordenar Semanas y OAs en cada unidad
+      (planActivo.unidades || []).forEach((u, uIdx) => {
+        const tbodySem = document.getElementById(`tablaSemanasBody_${uIdx}`);
+        if (tbodySem) {
+          new Sortable(tbodySem, {
+            handle: '.drag-handle-semana',
+            animation: 180,
+            ghostClass: 'sortable-ghost',
+            chosenClass: 'sortable-chosen',
+            onEnd: function (evt) {
+              const { oldIndex, newIndex } = evt;
+              if (oldIndex !== undefined && newIndex !== undefined && oldIndex !== newIndex) {
+                const moved = u.desglose_semanal.splice(oldIndex, 1)[0];
+                u.desglose_semanal.splice(newIndex, 0, moved);
+                u.desglose_semanal.forEach((s, sIdx) => {
+                  s.semana = sIdx + 1;
+                });
+                renderizarUnidadesAcordeon();
+                guardarBorradorActual(false);
+                Swal.fire({
+                  toast: true,
+                  position: 'top-end',
+                  icon: 'success',
+                  title: 'Cronograma semanal actualizado',
+                  showConfirmButton: false,
+                  timer: 1500
+                });
+              }
+            }
+          });
+        }
+
+        const chipsCont = document.getElementById(`chipsOAsUnidad${uIdx}`);
+        if (chipsCont) {
+          new Sortable(chipsCont, {
+            animation: 180,
+            ghostClass: 'sortable-ghost',
+            onEnd: function (evt) {
+              const { oldIndex, newIndex } = evt;
+              if (oldIndex !== undefined && newIndex !== undefined && oldIndex !== newIndex) {
+                const moved = u.oas_seleccionados.splice(oldIndex, 1)[0];
+                u.oas_seleccionados.splice(newIndex, 0, moved);
+                guardarBorradorActual(false);
+              }
+            }
+          });
+        }
+      });
+    }
+
+    // -------------------------------------------------------------
+    // GESTIÓN DE ETIQUETAS Y TAGS PEDAGÓGICOS
+    // -------------------------------------------------------------
+    function abrirModalTags(tipo, uIdx, sIdx = null) {
+      tagTarget = { tipo, uIdx, sIdx };
+      const sub = document.getElementById('modalTagsSubtitulo');
+      if (tipo === 'unidad') {
+        const u = planActivo.unidades[uIdx];
+        sub.innerText = `Asignar a ${u.nombre_unidad || ('Unidad ' + (uIdx + 1))}`;
+        tagsSeleccionadosTemp = new Set(u.tags || []);
+      } else {
+        const s = planActivo.unidades[uIdx].desglose_semanal[sIdx];
+        sub.innerText = `Asignar a Unidad ${uIdx + 1} • Semana ${s.semana || (sIdx + 1)}`;
+        tagsSeleccionadosTemp = new Set(s.tags || []);
+      }
+
+      renderizarModalTags();
+      modalSelectorTagsObj.show();
+    }
+
+    function renderizarModalTags() {
+      // 1. Chips seleccionados arriba
+      const contSel = document.getElementById('modalTagsSeleccionadosCont');
+      if (tagsSeleccionadosTemp.size === 0) {
+        contSel.innerHTML = '<span class="text-muted small">Ninguna etiqueta seleccionada todavía.</span>';
+      } else {
+        contSel.innerHTML = Array.from(tagsSeleccionadosTemp).map(t => `
+          <span class="tag-chip ${obtenerClaseTag(t)}">
+            <span>${t}</span>
+            <i class="bi bi-x tag-remove" onclick="toggleTagTemp('${t}')"></i>
+          </span>
+        `).join('');
+      }
+
+      // 2. Render de categorías preconfiguradas
+      const catCont = document.getElementById('catalogoTagsCategorias');
+      catCont.innerHTML = Object.entries(CATEGORIAS_TAGS).map(([catNombre, tagList]) => {
+        return `
+          <div class="col-md-6">
+            <div class="card p-3 h-100 bg-white border">
+              <h6 class="fw-bold small text-dark mb-2">${catNombre}</h6>
+              <div class="d-flex flex-wrap gap-1">
+                ${tagList.map(t => {
+                  const isChecked = tagsSeleccionadosTemp.has(t);
+                  return `
+                    <button type="button" class="btn btn-xs py-1 px-2 text-start rounded-pill border ${isChecked ? 'btn-primary text-white' : 'btn-light'}" style="font-size: 0.75rem;" onclick="toggleTagTemp('${t}')">
+                      <i class="bi ${isChecked ? 'bi-check2' : 'bi-plus'} me-1"></i>${t}
+                    </button>
+                  `;
+                }).join('')}
+              </div>
+            </div>
+          </div>
+        `;
+      }).join('');
+    }
+
+    function toggleTagTemp(tag) {
+      if (tagsSeleccionadosTemp.has(tag)) {
+        tagsSeleccionadosTemp.delete(tag);
+      } else {
+        tagsSeleccionadosTemp.add(tag);
+      }
+      renderizarModalTags();
+    }
+
+    function agregarCustomTag() {
+      const inp = document.getElementById('inputCustomTag');
+      const val = (inp.value || '').trim();
+      if (!val) return;
+      tagsSeleccionadosTemp.add(val);
+      inp.value = '';
+      renderizarModalTags();
+    }
+
+    function limpiarTodosLosTags() {
+      tagsSeleccionadosTemp.clear();
+      renderizarModalTags();
+    }
+
+    function confirmarSeleccionTags() {
+      const tagsArr = Array.from(tagsSeleccionadosTemp);
+      if (tagTarget.tipo === 'unidad') {
+        planActivo.unidades[tagTarget.uIdx].tags = tagsArr;
+      } else {
+        planActivo.unidades[tagTarget.uIdx].desglose_semanal[tagTarget.sIdx].tags = tagsArr;
+      }
+      renderizarUnidadesAcordeon();
+      guardarBorradorActual(false);
+      modalSelectorTagsObj.hide();
+      Swal.fire({
+        toast: true,
+        position: 'top-end',
+        icon: 'success',
+        title: 'Etiquetas actualizadas',
+        showConfirmButton: false,
+        timer: 1500
+      });
+    }
+
+    function quitarTagUnidad(uIdx, tag) {
+      const u = planActivo.unidades[uIdx];
+      u.tags = (u.tags || []).filter(t => t !== tag);
+      renderizarUnidadesAcordeon();
+      guardarBorradorActual(false);
+    }
+
+    function quitarTagSemana(uIdx, sIdx, tag) {
+      const s = planActivo.unidades[uIdx].desglose_semanal[sIdx];
+      s.tags = (s.tags || []).filter(t => t !== tag);
+      renderizarUnidadesAcordeon();
+      guardarBorradorActual(false);
     }
 
     function agregarNuevaUnidad() {
@@ -1296,12 +1953,13 @@
         horas_estimadas: 38,
         oas_seleccionados: [],
         oats_seleccionados: [],
+        tags: [],
         habilidades: '',
         actitudes: '',
         indicadores_evaluacion: '',
         instrumentos_evaluacion: '',
         desglose_semanal: [
-          { semana: 1, tema: '', actividades_formativas: '', recursos: '', dua_adecuaciones: '' }
+          { semana: 1, tema: '', actividades_formativas: '', recursos: '', dua_adecuaciones: '', tags: [] }
         ]
       });
       renderizarUnidadesAcordeon();
@@ -1338,7 +1996,8 @@
         tema: '',
         actividades_formativas: '',
         recursos: '',
-        dua_adecuaciones: ''
+        dua_adecuaciones: '',
+        tags: []
       });
       renderizarUnidadesAcordeon();
     }
@@ -1776,6 +2435,214 @@
         renderizarObservaciones();
       } catch (err) {
         Swal.fire('Error', err.message, 'error');
+      }
+    }
+
+    // -------------------------------------------------------------
+    // GESTIÓN DE PARALELOS: CLONAR & VINCULAR
+    // -------------------------------------------------------------
+    let planCVActivoId = null;
+    let planCVCurso = '';
+    let planCVAsignatura = '';
+
+    function abrirModalClonarVincularActual() {
+      if (!planActivo) return;
+      abrirModalClonarVincular(planActivo.id, planActivo.curso, planActivo.asignatura);
+    }
+
+    async function abrirModalClonarVincular(planId, curso, asignatura) {
+      planCVActivoId = planId;
+      planCVCurso = curso;
+      planCVAsignatura = asignatura;
+
+      // Obtener detalle fresco del plan si no coincide con planActivo
+      let planObj = planActivo;
+      if (!planObj || planObj.id !== planId) {
+        try {
+          const res = await fetch(`/api/planificacion/${planId}`);
+          if (res.ok) planObj = await res.json();
+        } catch (e) { }
+      }
+
+      document.getElementById('modalCVCursoOrigen').innerText = curso;
+      document.getElementById('modalCVAsignaturaOrigen').innerText = asignatura;
+      document.getElementById('modalCVTituloOrigen').innerText = planObj ? planObj.titulo : `Planificación Anual ${asignatura} - ${curso}`;
+
+      const bEstado = document.getElementById('modalCVBadgeEstado');
+      if (planObj && planObj.estado === 'Visada') {
+        bEstado.innerHTML = '<span class="badge badge-estado-visada"><i class="bi bi-check-circle me-1"></i>Visada</span>';
+      } else {
+        bEstado.innerHTML = '<span class="badge badge-estado-edicion"><i class="bi bi-pencil me-1"></i>En edición</span>';
+      }
+
+      // 1. Cursos vinculados actuales
+      const vinculados = (planObj && planObj.cursos_vinculados) ? planObj.cursos_vinculados : [];
+      const contVinc = document.getElementById('listaCursosVinculadosCont');
+      if (vinculados.length === 0) {
+        contVinc.innerHTML = `
+          <div class="text-muted small p-3 bg-light rounded border text-center">
+            <i class="bi bi-link-45deg fs-4 d-block mb-1 text-secondary opacity-50"></i>
+            No hay cursos paralelos vinculados actualmente a esta planificación.
+          </div>
+        `;
+      } else {
+        contVinc.innerHTML = vinculados.map(c => `
+          <div class="p-2 px-3 mb-2 bg-white rounded border d-flex justify-content-between align-items-center">
+            <div class="d-flex align-items-center gap-2">
+              <span class="badge badge-vinculado"><i class="bi bi-link-45deg me-1"></i>Compartido en vivo</span>
+              <span class="fw-bold text-dark font-monospace">${c}</span>
+            </div>
+            <button class="btn btn-sm btn-outline-danger py-0 px-2" style="font-size: 0.78rem;" onclick="desvincularCursoClick('${c}')">
+              <i class="bi bi-slash-circle me-1"></i> Desvincular
+            </button>
+          </div>
+        `).join('');
+      }
+
+      // 2. Llenar opciones de cursos disponibles para vincular y clonar
+      const todos = datosDocente.todosLosCursos || [];
+      const disponibles = todos.filter(c => c !== curso && !vinculados.includes(c));
+
+      // Ordenar sugiriendo primero los del mismo nivel
+      const nivelBase = curso.split(' ')[0] || '';
+      const paralelosSugeridos = disponibles.filter(c => c.includes(nivelBase));
+      const otrosCursos = disponibles.filter(c => !c.includes(nivelBase));
+
+      let optHtml = '';
+      if (paralelosSugeridos.length > 0) {
+        optHtml += `<optgroup label="Paralelos sugeridos (${nivelBase})">` +
+          paralelosSugeridos.map(c => `<option value="${c}">${c}</option>`).join('') +
+          `</optgroup>`;
+      }
+      if (otrosCursos.length > 0) {
+        optHtml += `<optgroup label="Otros cursos del colegio">` +
+          otrosCursos.map(c => `<option value="${c}">${c}</option>`).join('') +
+          `</optgroup>`;
+      }
+
+      document.getElementById('selectCursoParaVincular').innerHTML = optHtml || '<option value="">No hay cursos disponibles</option>';
+      document.getElementById('selectCursoParaClonar').innerHTML = optHtml || '<option value="">No hay cursos disponibles</option>';
+
+      modalClonarVincularObj.show();
+    }
+
+    async function ejecutarVinculacionCurso() {
+      const cursoVinculado = document.getElementById('selectCursoParaVincular').value;
+      if (!cursoVinculado) {
+        Swal.fire('Atención', 'Seleccione un curso para vincular.', 'warning');
+        return;
+      }
+
+      try {
+        Swal.showLoading();
+        const res = await fetch(`/api/planificacion/${planCVActivoId}/vincular`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ curso_vinculado: cursoVinculado })
+        });
+        const data = await res.json();
+        if (!res.ok) throw new Error(data.error || 'Error al vincular curso.');
+
+        Swal.fire('Vinculado', data.mensaje, 'success');
+        await recargarDatos();
+        if (planActivo && planActivo.id === planCVActivoId) {
+          await abrirEditorPlan(planCVActivoId);
+        }
+        abrirModalClonarVincular(planCVActivoId, planCVCurso, planCVAsignatura);
+      } catch (e) {
+        Swal.fire('Error', e.message, 'error');
+      }
+    }
+
+    async function ejecutarClonacionCurso() {
+      const cursoDestino = document.getElementById('selectCursoParaClonar').value;
+      if (!cursoDestino) {
+        Swal.fire('Atención', 'Seleccione un curso de destino para la clonación.', 'warning');
+        return;
+      }
+
+      try {
+        Swal.showLoading();
+        const res = await fetch(`/api/planificacion/${planCVActivoId}/clonar`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ curso_destino: cursoDestino })
+        });
+        const data = await res.json();
+        if (!res.ok) throw new Error(data.error || 'Error al clonar planificación.');
+
+        modalClonarVincularObj.hide();
+        await recargarDatos();
+
+        Swal.fire({
+          title: 'Planificación Clonada',
+          text: `Se creó exitosamente la copia independiente para ${cursoDestino}. ¿Deseas abrir la nueva planificación?`,
+          icon: 'success',
+          showCancelButton: true,
+          confirmButtonText: 'Abrir Nueva Planificación',
+          cancelButtonText: 'Permanecer aquí'
+        }).then(r => {
+          if (r.isConfirmed) {
+            abrirEditorPlan(data.id);
+          }
+        });
+      } catch (e) {
+        Swal.fire('Error', e.message, 'error');
+      }
+    }
+
+    async function desvincularCursoClick(curso) {
+      const { value: accion } = await Swal.fire({
+        title: `Desvincular ${curso}`,
+        html: `
+          <p class="small text-muted">¿Qué deseas hacer con la planificación de <strong>${curso}</strong> al desvincularla?</p>
+          <div class="text-start small">
+            <div class="form-check mb-2">
+              <input class="form-check-input" type="radio" name="swalDesvincOp" id="opCopia" value="copia" checked>
+              <label class="form-check-label" for="opCopia">
+                <strong>Generar copia independiente:</strong> Conserva todas las unidades, OAs y clases actuales para que continúe trabajando por separado.
+              </label>
+            </div>
+            <div class="form-check">
+              <input class="form-check-input" type="radio" name="swalDesvincOp" id="opSolo" value="solo">
+              <label class="form-check-label" for="opSolo">
+                <strong>Solo desvincular:</strong> El curso quedará sin planificación para iniciar una nueva desde cero.
+              </label>
+            </div>
+          </div>
+        `,
+        icon: 'question',
+        showCancelButton: true,
+        confirmButtonText: 'Confirmar Desvinculación',
+        cancelButtonText: 'Cancelar',
+        preConfirm: () => {
+          return document.querySelector('input[name="swalDesvincOp"]:checked').value;
+        }
+      });
+
+      if (accion) {
+        try {
+          Swal.showLoading();
+          const res = await fetch(`/api/planificacion/${planCVActivoId}/desvincular`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+              curso_desvincular: curso,
+              crear_copia: accion === 'copia'
+            })
+          });
+          const data = await res.json();
+          if (!res.ok) throw new Error(data.error || 'Error al desvincular curso.');
+
+          Swal.fire('Desvinculado', data.mensaje, 'success');
+          await recargarDatos();
+          if (planActivo && planActivo.id === planCVActivoId) {
+            await abrirEditorPlan(planCVActivoId);
+          }
+          abrirModalClonarVincular(planCVActivoId, planCVCurso, planCVAsignatura);
+        } catch (e) {
+          Swal.fire('Error', e.message, 'error');
+        }
       }
     }
 

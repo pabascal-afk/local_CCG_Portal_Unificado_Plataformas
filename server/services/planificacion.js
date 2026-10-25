@@ -160,7 +160,7 @@ async function obtenerCursosDocente(usuarioEmail, usuarioNombre, anio = 2026) {
     // 3. Planificaciones existentes para el año
     const planificacionesExistentes = await queryAll(`
         SELECT p.id, p.anio, p.curso, p.asignatura, p.titulo, p.docente_responsable, 
-               p.docentes_colaboradores, p.estado, p.visado_por, p.visado_fecha, p.actualizado_en,
+               p.docentes_colaboradores, p.cursos_vinculados, p.estado, p.visado_por, p.visado_fecha, p.actualizado_en,
                (SELECT COUNT(*) FROM planificaciones_unidades u WHERE u.planificacion_id = p.id) as total_unidades
         FROM planificaciones p
         WHERE p.anio = ?
@@ -168,8 +168,19 @@ async function obtenerCursosDocente(usuarioEmail, usuarioNombre, anio = 2026) {
 
     const planMap = {};
     planificacionesExistentes.forEach(p => {
-        const k = `${p.curso}___${normalizar(p.asignatura)}`;
-        planMap[k] = p;
+        let vincs = [];
+        try { vincs = JSON.parse(p.cursos_vinculados || '[]'); } catch (e) { vincs = []; }
+        p.cursos_vinculados_arr = vincs;
+
+        // Registro del curso principal
+        const kPrincipal = `${p.curso}___${normalizar(p.asignatura)}`;
+        planMap[kPrincipal] = { ...p, es_vinculado: false, curso_principal: p.curso };
+
+        // Registro de cada curso vinculado
+        vincs.forEach(cVin => {
+            const kVinc = `${cVin}___${normalizar(p.asignatura)}`;
+            planMap[kVinc] = { ...p, es_vinculado: true, curso_principal: p.curso };
+        });
     });
 
     // Enriquecer la carga horaria del docente con el estado de su planificación
@@ -184,7 +195,10 @@ async function obtenerCursosDocente(usuarioEmail, usuarioNombre, anio = 2026) {
             titulo: plan ? plan.titulo : null,
             estado: plan ? plan.estado : 'Sin iniciar',
             total_unidades: plan ? plan.total_unidades : 0,
-            actualizado_en: plan ? plan.actualizado_en : null
+            actualizado_en: plan ? plan.actualizado_en : null,
+            es_vinculado: plan ? !!plan.es_vinculado : false,
+            curso_principal: plan ? plan.curso_principal : null,
+            cursos_vinculados: plan ? plan.cursos_vinculados_arr : []
         };
     });
 
@@ -205,8 +219,8 @@ async function listarPlanificaciones({ anio = 2026, curso = '', asignatura = '',
     const params = [anioNum];
 
     if (curso && curso !== 'todos') {
-        where.push('p.curso = ?');
-        params.push(curso);
+        where.push('(p.curso = ? OR p.cursos_vinculados LIKE ?)');
+        params.push(curso, `%"${curso}"%`);
     }
     if (asignatura && asignatura !== 'todas') {
         where.push('p.asignatura LIKE ?');
@@ -224,7 +238,7 @@ async function listarPlanificaciones({ anio = 2026, curso = '', asignatura = '',
 
     const sql = `
         SELECT p.id, p.anio, p.curso, p.asignatura, p.titulo, p.docente_responsable,
-               p.docentes_colaboradores, p.estado, p.visado_por, p.visado_fecha, p.visado_comentario,
+               p.docentes_colaboradores, p.cursos_vinculados, p.estado, p.visado_por, p.visado_fecha, p.visado_comentario,
                p.horas_anuales, p.actualizado_en, p.creado_en,
                (SELECT COUNT(*) FROM planificaciones_unidades u WHERE u.planificacion_id = p.id) as total_unidades,
                (SELECT COUNT(*) FROM planificaciones_versiones v WHERE v.planificacion_id = p.id) as total_versiones,
@@ -236,8 +250,9 @@ async function listarPlanificaciones({ anio = 2026, curso = '', asignatura = '',
 
     const planes = await queryAll(sql, params);
 
-    // Enriquecer cada plan con la métrica de cobertura básica
+    // Enriquecer cada plan con la métrica de cobertura básica y parsing de vinculados
     for (const p of planes) {
+        try { p.cursos_vinculados = JSON.parse(p.cursos_vinculados || '[]'); } catch (e) { p.cursos_vinculados = []; }
         try {
             const cob = await calcularCoberturaCurricular({ anio: p.anio, curso: p.curso, asignatura: p.asignatura, planId: p.id });
             p.cobertura_oas_pct = cob.cobertura_oas_pct;
@@ -273,6 +288,11 @@ async function obtenerPlanificacionDetalle(id) {
     } catch (e) {
         plan.docentes_colaboradores = [];
     }
+    try {
+        plan.cursos_vinculados = JSON.parse(plan.cursos_vinculados || '[]');
+    } catch (e) {
+        plan.cursos_vinculados = [];
+    }
 
     // Unidades ordenadas
     const unidades = await queryAll(`
@@ -284,6 +304,7 @@ async function obtenerPlanificacionDetalle(id) {
     unidades.forEach(u => {
         try { u.oas_seleccionados = JSON.parse(u.oas_seleccionados || '[]'); } catch (e) { u.oas_seleccionados = []; }
         try { u.oats_seleccionados = JSON.parse(u.oats_seleccionados || '[]'); } catch (e) { u.oats_seleccionados = []; }
+        try { u.tags = JSON.parse(u.tags || '[]'); } catch (e) { u.tags = []; }
         try { u.desglose_semanal = JSON.parse(u.desglose_semanal || '[]'); } catch (e) { u.desglose_semanal = []; }
     });
     plan.unidades = unidades;
@@ -469,6 +490,7 @@ async function guardarPlanificacion(id, payload, usuario) {
             titulo = COALESCE(?, titulo),
             docente_responsable = COALESCE(?, docente_responsable),
             docentes_colaboradores = COALESCE(?, docentes_colaboradores),
+            cursos_vinculados = COALESCE(?, cursos_vinculados),
             metas_anuales = COALESCE(?, metas_anuales),
             horas_anuales = COALESCE(?, horas_anuales),
             actualizado_en = CURRENT_TIMESTAMP
@@ -477,6 +499,7 @@ async function guardarPlanificacion(id, payload, usuario) {
         payload.titulo,
         payload.docente_responsable,
         payload.docentes_colaboradores ? JSON.stringify(payload.docentes_colaboradores) : null,
+        payload.cursos_vinculados ? JSON.stringify(payload.cursos_vinculados) : null,
         payload.metas_anuales,
         payload.horas_anuales,
         id
@@ -490,7 +513,7 @@ async function guardarPlanificacion(id, payload, usuario) {
         // Eliminar unidades que ya no estén
         if (idsRecibidos.length > 0) {
             await queryRun(`DELETE FROM planificaciones_unidades WHERE planificacion_id = ? AND id NOT IN (${idsRecibidos.join(',')})`, [id]);
-        } else if (payload.unidades.length === 0) {
+        } else {
             await queryRun(`DELETE FROM planificaciones_unidades WHERE planificacion_id = ?`, [id]);
         }
 
@@ -510,6 +533,8 @@ async function guardarPlanificacion(id, payload, usuario) {
             const indics = u.indicadores_evaluacion || '';
             const insts = u.instrumentos_evaluacion || '';
             const desglose = JSON.stringify(u.desglose_semanal || []);
+            const tags = JSON.stringify(u.tags || []);
+            const orden = parseInt(u.orden) || (i + 1);
 
             if (u.id) {
                 await queryRun(`
@@ -527,20 +552,220 @@ async function guardarPlanificacion(id, payload, usuario) {
                         indicadores_evaluacion = ?,
                         instrumentos_evaluacion = ?,
                         desglose_semanal = ?,
+                        tags = ?,
                         orden = ?
                     WHERE id = ? AND planificacion_id = ?
-                `, [numUnidad, nombre, semestre, fInicio, fFin, horas, oas, oats, habs, acts, indics, insts, desglose, i + 1, u.id, id]);
+                `, [numUnidad, nombre, semestre, fInicio, fFin, horas, oas, oats, habs, acts, indics, insts, desglose, tags, orden, u.id, id]);
             } else {
                 await queryRun(`
                     INSERT INTO planificaciones_unidades
-                    (planificacion_id, numero_unidad, nombre_unidad, semestre, fecha_inicio, fecha_fin, horas_estimadas, oas_seleccionados, oats_seleccionados, habilidades, actitudes, indicadores_evaluacion, instrumentos_evaluacion, desglose_semanal, orden)
-                    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
-                `, [id, numUnidad, nombre, semestre, fInicio, fFin, horas, oas, oats, habs, acts, indics, insts, desglose, i + 1]);
+                    (planificacion_id, numero_unidad, nombre_unidad, semestre, fecha_inicio, fecha_fin, horas_estimadas, oas_seleccionados, oats_seleccionados, habilidades, actitudes, indicadores_evaluacion, instrumentos_evaluacion, desglose_semanal, tags, orden)
+                    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+                `, [id, numUnidad, nombre, semestre, fInicio, fFin, horas, oas, oats, habs, acts, indics, insts, desglose, tags, orden]);
             }
         }
     }
 
     return { mensaje: "Planificación guardada correctamente." };
+}
+
+// -------------------------------------------------------------
+// 5b. Clonar Planificación (Copia Independiente a Paralelo)
+// -------------------------------------------------------------
+async function clonarPlanificacion(planId, cursoDestino, usuario) {
+    if (!cursoDestino || !cursoDestino.trim()) {
+        throw new Error("Debe especificar el curso de destino.");
+    }
+    const destinoNorm = cursoDestino.trim().toUpperCase();
+
+    const plan = await queryGet(`SELECT * FROM planificaciones WHERE id = ?`, [planId]);
+    if (!plan) throw new Error("Planificación de origen no encontrada.");
+
+    if (plan.curso === destinoNorm) {
+        throw new Error("El curso de destino no puede ser el mismo curso de origen.");
+    }
+
+    // Verificar si ya existe planificación para el curso de destino
+    const existe = await queryGet(`SELECT id FROM planificaciones WHERE anio = ? AND curso = ? AND asignatura = ?`, [plan.anio, destinoNorm, plan.asignatura]);
+    if (existe) {
+        throw new Error(`Ya existe una planificación para ${destinoNorm} - ${plan.asignatura} en el año ${plan.anio}.`);
+    }
+
+    const nuevoTitulo = `Planificación Anual ${plan.asignatura} - ${destinoNorm} (${plan.anio})`;
+
+    const resIns = await queryRun(`
+        INSERT INTO planificaciones 
+        (anio, curso, asignatura, plan_curricular_id, titulo, docente_responsable, docentes_colaboradores, estado, metas_anuales, horas_anuales, creado_por, cursos_vinculados)
+        VALUES (?, ?, ?, ?, ?, ?, ?, 'En edición', ?, ?, ?, '[]')
+    `, [
+        plan.anio,
+        destinoNorm,
+        plan.asignatura,
+        plan.plan_curricular_id,
+        nuevoTitulo,
+        plan.docente_responsable,
+        plan.docentes_colaboradores,
+        plan.metas_anuales,
+        plan.horas_anuales,
+        usuario.email
+    ]);
+
+    const nuevoPlanId = resIns.lastID;
+
+    // Copiar todas las unidades
+    const unidades = await queryAll(`SELECT * FROM planificaciones_unidades WHERE planificacion_id = ? ORDER BY numero_unidad ASC, orden ASC`, [planId]);
+    for (const u of unidades) {
+        await queryRun(`
+            INSERT INTO planificaciones_unidades
+            (planificacion_id, numero_unidad, nombre_unidad, semestre, fecha_inicio, fecha_fin, horas_estimadas, oas_seleccionados, oats_seleccionados, habilidades, actitudes, indicadores_evaluacion, instrumentos_evaluacion, desglose_semanal, tags, orden)
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+        `, [
+            nuevoPlanId,
+            u.numero_unidad,
+            u.nombre_unidad,
+            u.semestre,
+            u.fecha_inicio,
+            u.fecha_fin,
+            u.horas_estimadas,
+            u.oas_seleccionados,
+            u.oats_seleccionados,
+            u.habilidades,
+            u.actitudes,
+            u.indicadores_evaluacion,
+            u.instrumentos_evaluacion,
+            u.desglose_semanal,
+            u.tags || '[]',
+            u.orden
+        ]);
+    }
+
+    // Checkpoint de creación
+    await crearCheckpointVersion(
+        nuevoPlanId,
+        `V1.0: Clonada desde ${plan.curso} por ${usuario.nombre || usuario.email}`,
+        usuario,
+        'checkpoint'
+    );
+
+    auditoria.registrarAuditoria({
+        modulo: 'PLANIFICACIONES',
+        accion: 'Clonar',
+        descripcion: `Clonó la planificación de ${plan.curso} a ${destinoNorm} en ${plan.asignatura}`,
+        detalles: { plan_origen_id: planId, nuevo_plan_id: nuevoPlanId, curso_origen: plan.curso, curso_destino: destinoNorm, asignatura: plan.asignatura },
+        usuario_email: usuario.email,
+        usuario_nombre: usuario.nombre,
+        rol: usuario.rol,
+        nivel: 'success'
+    });
+
+    return { id: nuevoPlanId, mensaje: `Planificación clonada con éxito a ${destinoNorm}.` };
+}
+
+// -------------------------------------------------------------
+// 5c. Vincular Curso (Planificación Compartida en Vivo)
+// -------------------------------------------------------------
+async function vincularCurso(planId, cursoVinculado, usuario) {
+    if (!cursoVinculado || !cursoVinculado.trim()) {
+        throw new Error("Debe especificar el curso a vincular.");
+    }
+    const vinculadNorm = cursoVinculado.trim().toUpperCase();
+
+    const plan = await queryGet(`SELECT * FROM planificaciones WHERE id = ?`, [planId]);
+    if (!plan) throw new Error("Planificación no encontrada.");
+
+    if (plan.curso === vinculadNorm) {
+        throw new Error("No puede vincular el curso consigo mismo.");
+    }
+
+    let arr = [];
+    try { arr = JSON.parse(plan.cursos_vinculados || '[]'); } catch (e) { arr = []; }
+
+    if (arr.includes(vinculadNorm)) {
+        throw new Error(`El curso ${vinculadNorm} ya está vinculado a esta planificación.`);
+    }
+
+    // Verificar si ya tiene planificación propia
+    const existePropia = await queryGet(`SELECT id FROM planificaciones WHERE anio = ? AND curso = ? AND asignatura = ?`, [plan.anio, vinculadNorm, plan.asignatura]);
+    if (existePropia) {
+        throw new Error(`El curso ${vinculadNorm} ya tiene una planificación propia independiente. Debe eliminarla o desvincularla primero.`);
+    }
+
+    arr.push(vinculadNorm);
+    await queryRun(`UPDATE planificaciones SET cursos_vinculados = ?, actualizado_en = CURRENT_TIMESTAMP WHERE id = ?`, [JSON.stringify(arr), planId]);
+
+    await crearCheckpointVersion(
+        planId,
+        `Vinculación de paralelo ${vinculadNorm}`,
+        usuario,
+        'checkpoint'
+    );
+
+    auditoria.registrarAuditoria({
+        modulo: 'PLANIFICACIONES',
+        accion: 'Vincular',
+        descripcion: `Vinculó el curso paralelo ${vinculadNorm} a la planificación de ${plan.curso} (${plan.asignatura})`,
+        detalles: { plan_id: planId, curso_principal: plan.curso, curso_vinculado: vinculadNorm },
+        usuario_email: usuario.email,
+        usuario_nombre: usuario.nombre,
+        rol: usuario.rol,
+        nivel: 'info'
+    });
+
+    return { cursos_vinculados: arr, mensaje: `Curso ${vinculadNorm} vinculado exitosamente a ${plan.curso}.` };
+}
+
+// -------------------------------------------------------------
+// 5d. Desvincular Curso (Con opción de fork/copia independiente)
+// -------------------------------------------------------------
+async function desvincularCurso(planId, cursoDesvincular, { crearCopia = false } = {}, usuario) {
+    if (!cursoDesvincular || !cursoDesvincular.trim()) {
+        throw new Error("Debe especificar el curso a desvincular.");
+    }
+    const desvNorm = cursoDesvincular.trim().toUpperCase();
+
+    const plan = await queryGet(`SELECT * FROM planificaciones WHERE id = ?`, [planId]);
+    if (!plan) throw new Error("Planificación no encontrada.");
+
+    let arr = [];
+    try { arr = JSON.parse(plan.cursos_vinculados || '[]'); } catch (e) { arr = []; }
+
+    if (!arr.includes(desvNorm)) {
+        throw new Error(`El curso ${desvNorm} no está vinculado a esta planificación.`);
+    }
+
+    arr = arr.filter(c => c !== desvNorm);
+    await queryRun(`UPDATE planificaciones SET cursos_vinculados = ?, actualizado_en = CURRENT_TIMESTAMP WHERE id = ?`, [JSON.stringify(arr), planId]);
+
+    let nuevoPlanId = null;
+    if (crearCopia) {
+        // Clonar la planificación actual como plan independiente para el curso desvinculado
+        const resClon = await clonarPlanificacion(planId, desvNorm, usuario);
+        nuevoPlanId = resClon.id;
+    }
+
+    await crearCheckpointVersion(
+        planId,
+        `Desvinculación del curso paralelo ${desvNorm}${crearCopia ? ' (se generó copia independiente)' : ''}`,
+        usuario,
+        'checkpoint'
+    );
+
+    auditoria.registrarAuditoria({
+        modulo: 'PLANIFICACIONES',
+        accion: 'Desvincular',
+        descripcion: `Desvinculó el curso paralelo ${desvNorm} de la planificación de ${plan.curso} (${plan.asignatura})`,
+        detalles: { plan_id: planId, curso_desvinculado: desvNorm, copia_creada: crearCopia, nuevo_plan_id: nuevoPlanId },
+        usuario_email: usuario.email,
+        usuario_nombre: usuario.nombre,
+        rol: usuario.rol,
+        nivel: 'info'
+    });
+
+    return {
+        cursos_vinculados: arr,
+        nuevo_plan_id: nuevoPlanId,
+        mensaje: `Curso ${desvNorm} desvinculado exitosamente.${crearCopia ? ' Se creó una copia independiente.' : ''}`
+    };
 }
 
 // -------------------------------------------------------------
@@ -882,15 +1107,22 @@ async function obtenerDashboardCoberturaColegio(anio = 2026) {
 
     // Planificaciones existentes
     const planes = await queryAll(`
-        SELECT id, curso, asignatura, estado, docente_responsable, visado_por, visado_fecha, actualizado_en 
+        SELECT id, curso, asignatura, cursos_vinculados, estado, docente_responsable, visado_por, visado_fecha, actualizado_en 
         FROM planificaciones 
         WHERE anio = ?
     `, [anioNum]);
 
     const planMap = {};
     planes.forEach(p => {
-        const k = `${p.curso}___${normalizar(p.asignatura)}`;
-        planMap[k] = p;
+        let vincs = [];
+        try { vincs = JSON.parse(p.cursos_vinculados || '[]'); } catch (e) { vincs = []; }
+        const kPrincipal = `${p.curso}___${normalizar(p.asignatura)}`;
+        planMap[kPrincipal] = { ...p, es_vinculado: false, curso_principal: p.curso };
+
+        vincs.forEach(cVin => {
+            const kVinc = `${cVin}___${normalizar(p.asignatura)}`;
+            planMap[kVinc] = { ...p, es_vinculado: true, curso_principal: p.curso };
+        });
     });
 
     const resultados = [];
@@ -932,6 +1164,8 @@ async function obtenerDashboardCoberturaColegio(anio = 2026) {
             planificacion_id: p ? p.id : null,
             docente_responsable: p ? p.docente_responsable : 'Sin asignar',
             estado: p ? p.estado : 'Sin planificación',
+            es_vinculado: p ? !!p.es_vinculado : false,
+            curso_principal: p ? p.curso_principal : null,
             visado_por: p ? p.visado_por : null,
             visado_fecha: p ? p.visado_fecha : null,
             cobertura_oas_pct: cob.cobertura_oas_pct,
@@ -966,6 +1200,9 @@ module.exports = {
     obtenerPlanificacionDetalle,
     crearPlanificacion,
     guardarPlanificacion,
+    clonarPlanificacion,
+    vincularCurso,
+    desvincularCurso,
     crearCheckpointVersion,
     restaurarVersion,
     cambiarEstadoVisado,
