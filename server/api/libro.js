@@ -459,6 +459,15 @@ router.post('/procesar-archivo', upload.single('archivo'), async (req, res) => {
             throw e;
         }
         
+        auditoria.registrarAuditoria({
+            req,
+            modulo: 'Libro de Clases',
+            accion: 'Carga de Archivo Libro',
+            nivel: 'info',
+            descripcion: `Carga de reporte de libro: "${nombreArchivo}" (${filasExtraidas.length} registros procesados, ${nuevos} nuevos, ${actualizados} actualizados)`,
+            detalles: { archivo: nombreArchivo, totalRegistros: filasExtraidas.length, nuevos, actualizados }
+        });
+
         res.json({
             success: true,
             filename: nombreArchivo,
@@ -545,15 +554,6 @@ router.get('/dashboard', async (req, res) => {
                 Pendiente: esPend,
                 ArchivoOrigen: r.archivo_origen
             };
-        });
-        
-        auditoria.registrarAuditoria({
-            req,
-            modulo: 'Libro de Clases',
-            accion: 'Carga de Archivo Libro',
-            nivel: 'info',
-            descripcion: `Carga de reporte de libro: "${nombreArchivo}" (${registrosFormateados.length} registros procesados)`,
-            detalles: { archivo: nombreArchivo, totalRegistros: registrosFormateados.length, criticos: countCriticos, pendientes: countPendientes }
         });
 
         res.json({
