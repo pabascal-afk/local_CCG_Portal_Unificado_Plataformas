@@ -6,108 +6,434 @@
   <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
   <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.10.5/font/bootstrap-icons.css">
   <style>
-    body, html { height: 100%; margin: 0; overflow: hidden; font-family: 'Inter', sans-serif; }
-    #sidebar { width: 250px; background-color: #2c3e50; color: white; height: 100vh; float: left; display: flex; flex-direction: column; }
-    #content { height: 100vh; overflow: hidden; background-color: #f8f9fa; }
-    iframe { width: 100%; height: 100%; border: none; }
-    .nav-link { color: #cbd5e1; padding: 15px 20px; border-radius: 0; transition: all 0.3s; display: block; }
-    .nav-link:hover, .nav-link.active { color: white; background-color: #34495e; }
-    .nav-link i { margin-right: 10px; }
-    .brand { padding: 20px; font-size: 1.2rem; font-weight: bold; border-bottom: 1px solid #34495e; margin-bottom: 10px; }
+    body, html {
+      height: 100%;
+      margin: 0;
+      overflow: hidden;
+      font-family: 'Inter', sans-serif;
+    }
+
+    #layout-wrapper {
+      display: flex;
+      height: 100vh;
+      width: 100vw;
+      overflow: hidden;
+      position: relative;
+    }
+
+    /* Contenedor que reserva el espacio en el layout */
+    #sidebar-wrapper {
+      width: 250px;
+      min-width: 250px;
+      height: 100vh;
+      flex-shrink: 0;
+      transition: width 0.22s cubic-bezier(0.4, 0, 0.2, 1), min-width 0.22s cubic-bezier(0.4, 0, 0.2, 1);
+      position: relative;
+    }
+
+    #sidebar-wrapper.wrapper-collapsed {
+      width: 68px;
+      min-width: 68px;
+    }
+
+    /* Barra lateral */
+    #sidebar {
+      width: 250px;
+      background-color: #1e293b;
+      color: #f8fafc;
+      height: 100vh;
+      display: flex;
+      flex-direction: column;
+      position: absolute;
+      left: 0;
+      top: 0;
+      bottom: 0;
+      z-index: 1040;
+      border-right: 1px solid #334155;
+      transition: width 0.22s cubic-bezier(0.4, 0, 0.2, 1), box-shadow 0.22s ease;
+      overflow: hidden;
+    }
+
+    /* Modo colapsado (sólo iconos) */
+    #sidebar.sidebar-collapsed {
+      width: 68px;
+    }
+
+    /* Modo colapsado pero expandido temporalmente por hover (en modo auto) */
+    #sidebar.sidebar-collapsed.sidebar-hover-active {
+      width: 250px !important;
+      z-index: 1060;
+      box-shadow: 6px 0 24px rgba(0, 0, 0, 0.45);
+    }
+
+    #content {
+      flex: 1 1 auto;
+      height: 100vh;
+      overflow: hidden;
+      background-color: #f8f9fa;
+      min-width: 0;
+      position: relative;
+    }
+
+    iframe {
+      width: 100%;
+      height: 100%;
+      border: none;
+      display: block;
+    }
+
+    /* Encabezado del sidebar */
+    .sidebar-brand-header {
+      height: 60px;
+      min-height: 60px;
+      padding: 0 14px;
+      border-bottom: 1px solid #334155;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      background-color: #0f172a;
+    }
+
+    .brand-title-wrap {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      overflow: hidden;
+      white-space: nowrap;
+    }
+
+    .brand-icon {
+      font-size: 1.3rem;
+      color: #38bdf8;
+      flex-shrink: 0;
+    }
+
+    .brand-text {
+      font-size: 1.05rem;
+      font-weight: 700;
+      color: #f8fafc;
+      letter-spacing: 0.3px;
+    }
+
+    .sidebar-actions-wrap {
+      display: flex;
+      align-items: center;
+      gap: 4px;
+    }
+
+    .btn-sidebar-action {
+      color: #94a3b8;
+      background: transparent;
+      border: none;
+      padding: 5px 7px;
+      border-radius: 6px;
+      transition: all 0.2s;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      cursor: pointer;
+    }
+
+    .btn-sidebar-action:hover, .btn-sidebar-action:focus {
+      color: #ffffff;
+      background-color: #334155;
+    }
+
+    /* Contenedor scrolleable del menú (overflow vertical) */
+    .sidebar-scrollable-menu {
+      flex: 1 1 auto;
+      overflow-y: auto;
+      overflow-x: hidden;
+      min-height: 0;
+      padding: 8px 0;
+    }
+
+    .sidebar-scrollable-menu::-webkit-scrollbar {
+      width: 5px;
+    }
+    .sidebar-scrollable-menu::-webkit-scrollbar-track {
+      background: rgba(15, 23, 42, 0.3);
+    }
+    .sidebar-scrollable-menu::-webkit-scrollbar-thumb {
+      background: rgba(148, 163, 184, 0.3);
+      border-radius: 4px;
+    }
+    .sidebar-scrollable-menu::-webkit-scrollbar-thumb:hover {
+      background: rgba(148, 163, 184, 0.6);
+    }
+
+    /* Enlaces de navegación */
+    .nav-link {
+      color: #cbd5e1;
+      padding: 12px 18px;
+      border-radius: 0;
+      transition: background-color 0.18s, color 0.18s;
+      display: flex;
+      align-items: center;
+      white-space: nowrap;
+      text-decoration: none;
+      font-size: 0.9rem;
+    }
+
+    .nav-link:hover {
+      color: #ffffff;
+      background-color: #334155;
+    }
+
+    .nav-link.active {
+      color: #ffffff;
+      background-color: #2563eb;
+      font-weight: 600;
+    }
+
+    .nav-link i {
+      font-size: 1.15rem;
+      min-width: 24px;
+      text-align: center;
+      margin-right: 12px;
+      flex-shrink: 0;
+    }
+
+    .nav-link span {
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+
+    /* Footer del sidebar */
+    .sidebar-footer {
+      border-top: 1px solid #334155;
+      background-color: #0f172a;
+      flex-shrink: 0;
+    }
+
+    /* Reglas cuando el sidebar está colapsado y NO tiene hover activo */
+    #sidebar.sidebar-collapsed:not(.sidebar-hover-active) .brand-text {
+      display: none !important;
+    }
+
+    #sidebar.sidebar-collapsed:not(.sidebar-hover-active) .sidebar-brand-header {
+      padding: 0 8px;
+      justify-content: center;
+    }
+
+    #sidebar.sidebar-collapsed:not(.sidebar-hover-active) .brand-title-wrap {
+      display: none !important;
+    }
+
+    #sidebar.sidebar-collapsed:not(.sidebar-hover-active) .sidebar-actions-wrap .dropdown {
+      display: none !important;
+    }
+
+    #sidebar.sidebar-collapsed:not(.sidebar-hover-active) .nav-link {
+      padding: 14px 0 !important;
+      justify-content: center !important;
+    }
+
+    #sidebar.sidebar-collapsed:not(.sidebar-hover-active) .nav-link i {
+      margin-right: 0 !important;
+      font-size: 1.25rem !important;
+    }
+
+    #sidebar.sidebar-collapsed:not(.sidebar-hover-active) .nav-link span {
+      display: none !important;
+    }
+
+    #sidebar.sidebar-collapsed:not(.sidebar-hover-active) .user-info-expanded {
+      display: none !important;
+    }
+
+    #sidebar.sidebar-collapsed:not(.sidebar-hover-active) .user-info-collapsed {
+      display: flex !important;
+      justify-content: center;
+    }
+
+    #sidebar.sidebar-collapsed:not(.sidebar-hover-active) .role-switcher-expanded {
+      display: none !important;
+    }
+
+    #sidebar.sidebar-collapsed:not(.sidebar-hover-active) .role-switcher-collapsed {
+      display: flex !important;
+      justify-content: center;
+    }
+
+    #sidebar.sidebar-collapsed:not(.sidebar-hover-active) #icon-toggle {
+      transform: rotate(180deg);
+    }
+
     .d-none { display: none !important; }
   </style>
 </head>
 <body>
 
-  <div id="sidebar">
-    <div class="brand">
-      <i class="bi bi-diagram-3-fill"></i> Portal Colegio
-    </div>
-    <ul class="nav flex-column mb-auto">
-      <li class="nav-item">
-        <a href="#" class="nav-link" onclick="loadApp('dashboard', this)" id="nav-dashboard">
-          <i class="bi bi-grid-1x2"></i> Inicio
-        </a>
-      </li>
-      <li class="nav-item">
-        <a href="#" class="nav-link active" onclick="loadApp('evaluaciones', this)" id="nav-evaluaciones">
-          <i class="bi bi-journal-check"></i> Calendario Pruebas
-        </a>
-      </li>
-      <li class="nav-item">
-        <a href="#" class="nav-link" onclick="loadApp('calendario', this)" id="nav-calendario">
-          <i class="bi bi-calendar-event"></i> Calendario Académico
-        </a>
-      </li>
-      <li class="nav-item d-none" id="nav-actividades-container">
-        <a href="#" class="nav-link" onclick="loadApp('actividades', this)" id="nav-actividades">
-          <i class="bi bi-briefcase"></i> Gestión de Actividades
-        </a>
-      </li>
-      <li class="nav-item">
-        <a href="#" class="nav-link" onclick="loadApp('planificacion', this)" id="nav-planificacion">
-          <i class="bi bi-journal-bookmark"></i> Planificación Curricular
-        </a>
-      </li>
-      <li class="nav-item d-none" id="nav-horarios-container">
-        <a href="#" class="nav-link" onclick="loadApp('horarios', this)" id="nav-horarios">
-          <i class="bi bi-clock-history"></i> Visor de Horarios
-        </a>
-      </li>
-      <li class="nav-item">
-        <a href="#" class="nav-link" onclick="loadApp('recursos', this)" id="nav-recursos">
-          <i class="bi bi-building"></i> Reserva de Recursos
-        </a>
-      </li>
-      <li class="nav-item d-none" id="nav-usuarios-container">
-        <a href="#" class="nav-link" onclick="loadApp('usuarios', this)" id="nav-usuarios">
-          <i class="bi bi-people"></i> Gestión de Usuarios
-        </a>
-      </li>
-      <li class="nav-item d-none" id="nav-libro-container">
-        <a href="#" class="nav-link" onclick="loadApp('libro', this)" id="nav-libro">
-          <i class="bi bi-book-half"></i> Llenado de Libros
-        </a>
-      </li>
-      <li class="nav-item d-none" id="nav-correos-container">
-        <a href="#" class="nav-link" onclick="loadApp('correos', this)" id="nav-correos">
-          <i class="bi bi-envelope-at"></i> Centro de Correos
-        </a>
-      </li>
-      <li class="nav-item d-none" id="nav-auditoria-container">
-        <a href="#" class="nav-link" onclick="loadApp('auditoria', this)" id="nav-auditoria">
-          <i class="bi bi-shield-check"></i> Auditoría y Logs
-        </a>
-      </li>
-      <li class="nav-item d-none" id="nav-annos-container">
-        <a href="#" class="nav-link" onclick="loadApp('annos', this)" id="nav-annos">
-          <i class="bi bi-calendar-range"></i> Años Escolares
-        </a>
-      </li>
-    </ul>
+  <div id="layout-wrapper">
+    <!-- Contenedor que reserva espacio del sidebar -->
+    <div id="sidebar-wrapper">
+      <div id="sidebar">
+        <!-- Encabezado / Brand -->
+        <div class="sidebar-brand-header">
+          <div class="brand-title-wrap">
+            <i class="bi bi-diagram-3-fill brand-icon"></i>
+            <span class="brand-text">Portal Colegio</span>
+          </div>
+          <div class="sidebar-actions-wrap">
+            <!-- Menú de Selección de Fijado (Pinear Abierta / Cerrada / Auto) -->
+            <div class="dropdown">
+              <button class="btn btn-sm btn-sidebar-action" type="button" id="btnPinDropdown" data-bs-toggle="dropdown" aria-expanded="false" title="Comportamiento de la barra lateral">
+                <i class="bi bi-pin-fill text-warning fs-6" id="icon-pin-status"></i>
+              </button>
+              <ul class="dropdown-menu dropdown-menu-dark dropdown-menu-end shadow" aria-labelledby="btnPinDropdown" style="font-size: 0.8rem; min-width: 220px; z-index: 1070;">
+                <li><h6 class="dropdown-header text-uppercase text-secondary" style="font-size: 0.68rem; letter-spacing: 0.5px;">Comportamiento</h6></li>
+                <li>
+                  <a class="dropdown-item d-flex align-items-center justify-content-between py-2" href="#" onclick="setSidebarMode('pinned-open'); return false;" id="item-mode-pinned-open">
+                    <div class="d-flex align-items-center gap-2">
+                      <i class="bi bi-pin-fill text-warning fs-6"></i>
+                      <div>
+                        <div class="fw-bold">Fijada Abierta</div>
+                        <div class="small text-secondary" style="font-size: 0.72rem;">Siempre visible completa</div>
+                      </div>
+                    </div>
+                    <i class="bi bi-check2 text-warning fs-5 checkmark-mode d-none" id="check-pinned-open"></i>
+                  </a>
+                </li>
+                <li>
+                  <a class="dropdown-item d-flex align-items-center justify-content-between py-2" href="#" onclick="setSidebarMode('pinned-closed'); return false;" id="item-mode-pinned-closed">
+                    <div class="d-flex align-items-center gap-2">
+                      <i class="bi bi-pin-fill text-info fs-6"></i>
+                      <div>
+                        <div class="fw-bold">Fijada Cerrada</div>
+                        <div class="small text-secondary" style="font-size: 0.72rem;">Sólo iconos (sin hover)</div>
+                      </div>
+                    </div>
+                    <i class="bi bi-check2 text-info fs-5 checkmark-mode d-none" id="check-pinned-closed"></i>
+                  </a>
+                </li>
+                <li>
+                  <a class="dropdown-item d-flex align-items-center justify-content-between py-2" href="#" onclick="setSidebarMode('auto'); return false;" id="item-mode-auto">
+                    <div class="d-flex align-items-center gap-2">
+                      <i class="bi bi-magic text-success fs-6"></i>
+                      <div>
+                        <div class="fw-bold">Auto (Mouseover)</div>
+                        <div class="small text-secondary" style="font-size: 0.72rem;">Se agranda al pasar mouse</div>
+                      </div>
+                    </div>
+                    <i class="bi bi-check2 text-success fs-5 checkmark-mode d-none" id="check-auto"></i>
+                  </a>
+                </li>
+              </ul>
+            </div>
+            <!-- Botón Colapsar / Expandir a voluntad -->
+            <button id="btn-toggle-sidebar" class="btn btn-sm btn-sidebar-action" onclick="toggleSidebarAtWill()" title="Colapsar o expandir barra lateral">
+              <i class="bi bi-chevron-left fs-6" id="icon-toggle"></i>
+            </button>
+          </div>
+        </div>
 
-    <!-- Selector de Rol Activo (Exclusivo para usuarios Admin/Profesor duales) -->
-    <div id="role-switcher-container" class="px-3 py-2 mx-2 mb-2 rounded d-none" style="background-color: #1e293b; border: 1px solid #334155;">
-      <div class="d-flex justify-content-between align-items-center mb-1">
-        <span class="text-uppercase fw-bold" style="font-size: 0.68rem; color: #94a3b8; letter-spacing: 0.5px;">
-          <i class="bi bi-arrow-repeat"></i> Modo Activo
-        </span>
-        <span class="badge bg-danger" id="badge-rol-actual" style="font-size: 0.65rem;">ADMIN</span>
+        <!-- Contenedor Scrolleable con Overflow Vertical -->
+        <div class="sidebar-scrollable-menu">
+          <ul class="nav flex-column mb-0">
+            <li class="nav-item">
+              <a href="#" class="nav-link" onclick="loadApp('dashboard', this)" id="nav-dashboard" data-nav-title="Inicio">
+                <i class="bi bi-grid-1x2"></i> <span>Inicio</span>
+              </a>
+            </li>
+            <li class="nav-item">
+              <a href="#" class="nav-link active" onclick="loadApp('evaluaciones', this)" id="nav-evaluaciones" data-nav-title="Calendario Pruebas">
+                <i class="bi bi-journal-check"></i> <span>Calendario Pruebas</span>
+              </a>
+            </li>
+            <li class="nav-item">
+              <a href="#" class="nav-link" onclick="loadApp('calendario', this)" id="nav-calendario" data-nav-title="Calendario Académico">
+                <i class="bi bi-calendar-event"></i> <span>Calendario Académico</span>
+              </a>
+            </li>
+            <li class="nav-item d-none" id="nav-actividades-container">
+              <a href="#" class="nav-link" onclick="loadApp('actividades', this)" id="nav-actividades" data-nav-title="Gestión de Actividades">
+                <i class="bi bi-briefcase"></i> <span>Gestión de Actividades</span>
+              </a>
+            </li>
+            <li class="nav-item">
+              <a href="#" class="nav-link" onclick="loadApp('planificacion', this)" id="nav-planificacion" data-nav-title="Planificación Curricular">
+                <i class="bi bi-journal-bookmark"></i> <span>Planificación Curricular</span>
+              </a>
+            </li>
+            <li class="nav-item d-none" id="nav-horarios-container">
+              <a href="#" class="nav-link" onclick="loadApp('horarios', this)" id="nav-horarios" data-nav-title="Visor de Horarios">
+                <i class="bi bi-clock-history"></i> <span>Visor de Horarios</span>
+              </a>
+            </li>
+            <li class="nav-item">
+              <a href="#" class="nav-link" onclick="loadApp('recursos', this)" id="nav-recursos" data-nav-title="Reserva de Recursos">
+                <i class="bi bi-building"></i> <span>Reserva de Recursos</span>
+              </a>
+            </li>
+            <li class="nav-item d-none" id="nav-usuarios-container">
+              <a href="#" class="nav-link" onclick="loadApp('usuarios', this)" id="nav-usuarios" data-nav-title="Gestión de Usuarios">
+                <i class="bi bi-people"></i> <span>Gestión de Usuarios</span>
+              </a>
+            </li>
+            <li class="nav-item d-none" id="nav-libro-container">
+              <a href="#" class="nav-link" onclick="loadApp('libro', this)" id="nav-libro" data-nav-title="Llenado de Libros">
+                <i class="bi bi-book-half"></i> <span>Llenado de Libros</span>
+              </a>
+            </li>
+            <li class="nav-item d-none" id="nav-correos-container">
+              <a href="#" class="nav-link" onclick="loadApp('correos', this)" id="nav-correos" data-nav-title="Centro de Correos">
+                <i class="bi bi-envelope-at"></i> <span>Centro de Correos</span>
+              </a>
+            </li>
+            <li class="nav-item d-none" id="nav-auditoria-container">
+              <a href="#" class="nav-link" onclick="loadApp('auditoria', this)" id="nav-auditoria" data-nav-title="Auditoría y Logs">
+                <i class="bi bi-shield-check"></i> <span>Auditoría y Logs</span>
+              </a>
+            </li>
+            <li class="nav-item d-none" id="nav-annos-container">
+              <a href="#" class="nav-link" onclick="loadApp('annos', this)" id="nav-annos" data-nav-title="Años Escolares">
+                <i class="bi bi-calendar-range"></i> <span>Años Escolares</span>
+              </a>
+            </li>
+          </ul>
+        </div>
+
+        <!-- Footer del Sidebar -->
+        <div class="sidebar-footer">
+          <!-- Selector de Rol Activo (Exclusivo para usuarios Admin/Profesor duales) -->
+          <div id="role-switcher-container" class="px-3 py-2 mx-2 my-2 rounded d-none" style="background-color: #1e293b; border: 1px solid #334155;">
+            <div class="role-switcher-expanded">
+              <div class="d-flex justify-content-between align-items-center mb-1">
+                <span class="text-uppercase fw-bold" style="font-size: 0.68rem; color: #94a3b8; letter-spacing: 0.5px;">
+                  <i class="bi bi-arrow-repeat"></i> Modo Activo
+                </span>
+                <span class="badge bg-danger" id="badge-rol-actual" style="font-size: 0.65rem;">ADMIN</span>
+              </div>
+              <select id="select-cambio-rol" class="form-select form-select-sm text-white shadow-none" style="background-color: #0f172a; border-color: #475569; font-size: 0.8rem;" onchange="cambiarRolDesdeSidebar(this.value)">
+                <option value="Administrador">🛡️ Administrador</option>
+                <option value="Profesor">👨‍🏫 Profesor</option>
+              </select>
+            </div>
+            <div class="role-switcher-collapsed text-center d-none" id="btn-role-collapsed" data-nav-title="Alternar Modo (Admin/Docente)" onclick="toggleRolRapidoDesdeSidebar()" style="cursor: pointer;">
+              <span class="badge bg-danger p-1" id="badge-rol-collapsed" style="font-size: 0.65rem;">ADM</span>
+            </div>
+          </div>
+
+          <div class="p-2 text-center text-secondary" style="font-size: 0.8rem;" id="info-usuario-container">
+            <div class="user-info-expanded px-2 mb-1">
+              <div id="info-usuario" class="mb-2 text-white">Cargando usuario...</div>
+              <button class="btn btn-sm btn-outline-light w-100" onclick="abrirPerfil()"><i class="bi bi-gear"></i> Mi Perfil</button>
+            </div>
+            <div class="user-info-collapsed d-none text-center py-1">
+              <button class="btn btn-sm btn-outline-light rounded-circle p-2" onclick="abrirPerfil()" id="btn-perfil-collapsed" data-nav-title="Mi Perfil y Preferencias">
+                <i class="bi bi-person-gear fs-5"></i>
+              </button>
+            </div>
+          </div>
+        </div>
       </div>
-      <select id="select-cambio-rol" class="form-select form-select-sm text-white shadow-none" style="background-color: #0f172a; border-color: #475569; font-size: 0.8rem;" onchange="cambiarRolDesdeSidebar(this.value)">
-        <option value="Administrador">🛡️ Administrador</option>
-        <option value="Profesor">👨‍🏫 Profesor</option>
-      </select>
     </div>
 
-    <div class="p-3 text-center text-secondary" style="font-size: 0.8rem;" id="info-usuario-container">
-      <div id="info-usuario" class="mb-2 text-white">Cargando usuario...</div>
-      <button class="btn btn-sm btn-outline-light w-100" onclick="abrirPerfil()"><i class="bi bi-gear"></i> Mi Perfil</button>
+    <!-- Contenido Principal con iframe -->
+    <div id="content">
+      <iframe id="appFrame" src=""></iframe>
     </div>
-  </div>
-
-  <div id="content">
-    <iframe id="appFrame" src=""></iframe>
   </div>
 
   <script>
@@ -127,6 +453,107 @@
       annos: "/annos.html"
     };
     let contexto = {};
+    
+    // GESTIÓN DE ESTADO Y COMPORTAMIENTO DEL SIDEBAR
+    let sidebarMode = localStorage.getItem('sidebar_mode') || 'pinned-open';
+    let tooltipInstances = [];
+
+    function updateSidebarTooltips() {
+      tooltipInstances.forEach(t => {
+        try { t.dispose(); } catch(e){}
+      });
+      tooltipInstances = [];
+
+      const sidebar = document.getElementById('sidebar');
+      if (!sidebar) return;
+      const isCollapsed = sidebar.classList.contains('sidebar-collapsed') && !sidebar.classList.contains('sidebar-hover-active');
+
+      if (isCollapsed) {
+        document.querySelectorAll('#sidebar .nav-link, #btn-perfil-collapsed, #btn-role-collapsed').forEach(el => {
+          const title = el.getAttribute('data-nav-title');
+          if (title) {
+            el.setAttribute('data-bs-toggle', 'tooltip');
+            el.setAttribute('data-bs-placement', 'right');
+            el.setAttribute('data-bs-title', title);
+            tooltipInstances.push(new bootstrap.Tooltip(el, { container: 'body', trigger: 'hover' }));
+          }
+        });
+      } else {
+        document.querySelectorAll('#sidebar .nav-link, #btn-perfil-collapsed, #btn-role-collapsed').forEach(el => {
+          el.removeAttribute('data-bs-toggle');
+          el.removeAttribute('data-bs-placement');
+          el.removeAttribute('data-bs-title');
+        });
+      }
+    }
+
+    function setSidebarMode(mode) {
+      sidebarMode = mode;
+      localStorage.setItem('sidebar_mode', mode);
+      aplicarModoSidebar();
+      const prefSel = document.getElementById('selectPrefSidebar');
+      if (prefSel) prefSel.value = mode;
+    }
+
+    function aplicarModoSidebar() {
+      const sidebarWrapper = document.getElementById('sidebar-wrapper');
+      const sidebar = document.getElementById('sidebar');
+      const iconPin = document.getElementById('icon-pin-status');
+      const btnPin = document.getElementById('btnPinDropdown');
+
+      if (!sidebarWrapper || !sidebar) return;
+
+      document.querySelectorAll('.checkmark-mode').forEach(el => el.classList.add('d-none'));
+
+      if (sidebarMode === 'pinned-open') {
+        sidebarWrapper.classList.remove('wrapper-collapsed');
+        sidebar.classList.remove('sidebar-collapsed');
+        sidebar.classList.remove('sidebar-hover-active');
+        if (iconPin) iconPin.className = 'bi bi-pin-fill text-warning fs-6';
+        if (btnPin) btnPin.title = 'Barra fijada abierta (clic para cambiar modo)';
+        const chk = document.getElementById('check-pinned-open');
+        if (chk) chk.classList.remove('d-none');
+      } else if (sidebarMode === 'pinned-closed') {
+        sidebarWrapper.classList.add('wrapper-collapsed');
+        sidebar.classList.add('sidebar-collapsed');
+        sidebar.classList.remove('sidebar-hover-active');
+        if (iconPin) iconPin.className = 'bi bi-pin-fill text-info fs-6';
+        if (btnPin) btnPin.title = 'Barra fijada cerrada (clic para cambiar modo)';
+        const chk = document.getElementById('check-pinned-closed');
+        if (chk) chk.classList.remove('d-none');
+      } else {
+        sidebarMode = 'auto';
+        sidebarWrapper.classList.add('wrapper-collapsed');
+        sidebar.classList.add('sidebar-collapsed');
+        sidebar.classList.remove('sidebar-hover-active');
+        if (iconPin) iconPin.className = 'bi bi-magic text-success fs-6';
+        if (btnPin) btnPin.title = 'Barra auto-expandible con mouseover (clic para cambiar modo)';
+        const chk = document.getElementById('check-auto');
+        if (chk) chk.classList.remove('d-none');
+      }
+
+      setTimeout(updateSidebarTooltips, 60);
+    }
+
+    function toggleSidebarAtWill() {
+      const sidebar = document.getElementById('sidebar');
+      const isCollapsed = sidebar.classList.contains('sidebar-collapsed') && !sidebar.classList.contains('sidebar-hover-active');
+      if (isCollapsed) {
+        setSidebarMode('pinned-open');
+      } else {
+        if (sidebarMode === 'pinned-open') {
+          setSidebarMode('auto');
+        } else {
+          setSidebarMode('pinned-closed');
+        }
+      }
+    }
+
+    function toggleRolRapidoDesdeSidebar() {
+      const rolActual = (contexto.rol || '').toLowerCase();
+      const nuevo = rolActual.includes('admin') ? 'Profesor' : 'Administrador';
+      cambiarRolDesdeSidebar(nuevo);
+    }
     
     function actualizarVistaRol(ctx) {
       contexto = ctx;
@@ -179,14 +606,23 @@
         container.classList.remove('d-none');
         const select = document.getElementById('select-cambio-rol');
         const badge = document.getElementById('badge-rol-actual');
+        const badgeCollapsed = document.getElementById('badge-rol-collapsed');
         if (esAdminActivo) {
           select.value = 'Administrador';
           badge.className = 'badge bg-danger';
           badge.innerText = 'ADMIN';
+          if (badgeCollapsed) {
+            badgeCollapsed.className = 'badge bg-danger p-1';
+            badgeCollapsed.innerText = 'ADM';
+          }
         } else {
           select.value = 'Profesor';
           badge.className = 'badge bg-info text-dark';
           badge.innerText = 'DOCENTE';
+          if (badgeCollapsed) {
+            badgeCollapsed.className = 'badge bg-info text-dark p-1';
+            badgeCollapsed.innerText = 'DOC';
+          }
         }
       } else {
         container.classList.add('d-none');
@@ -232,6 +668,42 @@
     }
 
     document.addEventListener('DOMContentLoaded', function() {
+      aplicarModoSidebar();
+
+      const sidebarEl = document.getElementById('sidebar');
+      if (sidebarEl) {
+        sidebarEl.addEventListener('mouseenter', () => {
+          if (sidebarMode === 'auto') {
+            sidebarEl.classList.add('sidebar-hover-active');
+            updateSidebarTooltips();
+          }
+        });
+
+        sidebarEl.addEventListener('mouseleave', () => {
+          if (sidebarMode === 'auto') {
+            sidebarEl.classList.remove('sidebar-hover-active');
+            updateSidebarTooltips();
+          }
+        });
+      }
+
+      // Resguardo cuando el puntero sale velozmente hacia el iframe
+      document.addEventListener('mousemove', (e) => {
+        if (sidebarMode === 'auto' && sidebarEl && sidebarEl.classList.contains('sidebar-hover-active')) {
+          if (e.clientX > 260) {
+            sidebarEl.classList.remove('sidebar-hover-active');
+            updateSidebarTooltips();
+          }
+        }
+      });
+
+      window.addEventListener('blur', () => {
+        if (sidebarMode === 'auto' && sidebarEl) {
+          sidebarEl.classList.remove('sidebar-hover-active');
+          updateSidebarTooltips();
+        }
+      });
+
       fetch('/api/auth/me')
         .then(res => res.json())
         .then(ctx => {
@@ -258,11 +730,19 @@
         const el = document.getElementById('nav-' + appName);
         if (el) el.classList.add('active');
       }
+      if (sidebarMode === 'auto') {
+        const sidebar = document.getElementById('sidebar');
+        if (sidebar) sidebar.classList.remove('sidebar-hover-active');
+        updateSidebarTooltips();
+      }
     }
 
     // Exponer para comunicación desde los iframes (Dashboard, etc.)
     window.loadApp = loadApp;
     window.cambiarRolDesdeSidebar = cambiarRolDesdeSidebar;
+    window.setSidebarMode = setSidebarMode;
+    window.toggleSidebarAtWill = toggleSidebarAtWill;
+    window.toggleRolRapidoDesdeSidebar = toggleRolRapidoDesdeSidebar;
   </script>
 
   <!-- Modal Perfil Preferencias -->
@@ -294,6 +774,16 @@
                  <option value="annos" id="opt-pref-annos" class="d-none">Años Escolares</option>
               </select>
               <small class="text-muted">Esta pestaña se abrirá automáticamente al iniciar sesión.</small>
+            </div>
+
+            <h6 class="fw-bold mb-3 mt-1"><i class="bi bi-layout-sidebar"></i> Comportamiento de Barra Lateral</h6>
+            <div class="mb-4">
+              <select class="form-select" id="selectPrefSidebar" onchange="setSidebarMode(this.value)">
+                 <option value="pinned-open">📌 Fijada Abierta (Siempre visible completa)</option>
+                 <option value="pinned-closed">📌 Fijada Cerrada (Sólo iconos fija)</option>
+                 <option value="auto">✨ Auto (Expandir con mouseover)</option>
+              </select>
+              <small class="text-muted">Elige el comportamiento predeterminado para el menú izquierdo.</small>
             </div>
             
             <h6 class="fw-bold mb-3">Notificaciones por Correo</h6>
@@ -332,6 +822,9 @@
             document.getElementById('chkPrefRecordatorio').checked = data.recordatorio_eval;
             document.getElementById('chkPrefAviso').checked = data.nuevo_aviso;
             document.getElementById('selectPrefTab').value = data.default_tab || 'dashboard';
+            if (document.getElementById('selectPrefSidebar')) {
+              document.getElementById('selectPrefSidebar').value = sidebarMode;
+            }
             document.getElementById('inputPinLocal').value = data.pin_actual || '';
             modalPerfilObj.show();
         });
