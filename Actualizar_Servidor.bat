@@ -69,6 +69,7 @@ IF EXIST "ServerManager.cs" (
         echo.
         echo [EXTRA] Actualizando ejecutable Gestor_Servidores_CCG.exe...
         "C:\Windows\Microsoft.NET\Framework64\v4.0.30319\csc.exe" /nologo /target:winexe /out:"Gestor_Servidores_CCG.exe" /win32icon:"app.ico" /r:System.dll /r:System.Drawing.dll /r:System.Windows.Forms.dll /r:System.Net.Http.dll /r:System.Core.dll ServerManager.cs >nul 2>&1
+        copy /y "Gestor_Servidores_CCG.exe" "ccg.exe" >nul 2>&1
     )
 )
 

@@ -137,7 +137,7 @@ namespace CCGServerManager
 
                 if (initialAutoStart)
                 {
-                    AppendLog(generalLogBox, "[AUTOSTART] Inicio automático con Windows activado. Verificando y arrancando los 3 servidores...");
+                    AppendLog(generalLogBox, "[AUTOSTART] Inicio automático con Windows activado. Verificando y arrancando los 4 servidores...");
                     await StartAllServicesAsync();
                 }
             };
@@ -153,6 +153,7 @@ namespace CCGServerManager
             string defaultSimce = AutoDetectFolder(baseDir, parentDir, new string[] { "ENSAYOS SIMCE", "local_CCG_Plataforma_Ensayos" }, false);
             string defaultPruebas = AutoDetectFolder(baseDir, parentDir, new string[] { "PRUEBAS CCG", "PRUEBAS_CCG" }, true);
             string defaultUnified = AutoDetectFolder(baseDir, parentDir, new string[] { "UNIFIED PLATAFORM", "UNIFIED PLATFORM", "local_CCG_Portal_Unificado_Plataformas" }, false);
+            string defaultLabdesk = AutoDetectFolder(baseDir, parentDir, new string[] { "labdesk", "LabDesk", "labmanager", "LabManager" }, false);
 
             services.Add(new ManagedService
             {
@@ -201,6 +202,22 @@ namespace CCGServerManager
                 LastCommit = "Verificando...",
                 TunnelUrl = "Sin túnel detectado aún"
             });
+
+            services.Add(new ManagedService
+            {
+                Id = "LABDESK",
+                Title = "4. LabDesk (Control de Aula)",
+                Subtitle = "Dashboard :3000  |  Botonera Docente",
+                MainPort = 3000,
+                BackendPort = 0,
+                RepoUrl = "",
+                IsNextJs = false,
+                EntryScript = "server\\src\\index.js",
+                FolderPath = defaultLabdesk,
+                AccentColor = Color.FromArgb(234, 88, 12), // Warm Orange / Amber
+                LastCommit = "Verificando...",
+                TunnelUrl = ""
+            });
         }
 
         private string AutoDetectFolder(string baseDir, string parentDir, string[] folderNames, bool isPruebas)
@@ -225,11 +242,30 @@ namespace CCGServerManager
                 }
             }
 
-            // 3. Check Desktop and Documents\antigravity
+            // 3. Check Desktop, Documents\antigravity, Documents, Documents\New folder, parentDir\New folder
             string desktop = Environment.GetFolderPath(Environment.SpecialFolder.Desktop);
-            string docs = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.MyDocuments), "antigravity");
+            string myDocs = Environment.GetFolderPath(Environment.SpecialFolder.MyDocuments);
+            string userProfile = Environment.GetFolderPath(Environment.SpecialFolder.UserProfile);
 
-            foreach (string root in new string[] { desktop, docs })
+            List<string> candidateRoots = new List<string>();
+            if (!string.IsNullOrEmpty(desktop)) candidateRoots.Add(desktop);
+            if (!string.IsNullOrEmpty(myDocs))
+            {
+                candidateRoots.Add(Path.Combine(myDocs, "antigravity"));
+                candidateRoots.Add(myDocs);
+                candidateRoots.Add(Path.Combine(myDocs, "New folder"));
+            }
+            if (!string.IsNullOrEmpty(parentDir))
+            {
+                candidateRoots.Add(Path.Combine(parentDir, "New folder"));
+            }
+            if (!string.IsNullOrEmpty(userProfile))
+            {
+                candidateRoots.Add(Path.Combine(userProfile, "Documents", "New folder"));
+                candidateRoots.Add(Path.Combine(userProfile, "New folder"));
+            }
+
+            foreach (string root in candidateRoots)
             {
                 if (!Directory.Exists(root)) continue;
                 foreach (string name in folderNames)
@@ -295,8 +331,8 @@ namespace CCGServerManager
         private void BuildUserInterface()
         {
             this.Text = "Gestor Unificado de Servidores CCG • Colegio Cerro Grande";
-            this.Size = new Size(1120, 760);
-            this.MinimumSize = new Size(980, 680);
+            this.Size = new Size(1360, 760);
+            this.MinimumSize = new Size(1180, 680);
             this.StartPosition = FormStartPosition.CenterScreen;
             this.BackColor = Color.FromArgb(241, 245, 249);
             this.Font = new Font("Segoe UI", 9F, FontStyle.Regular);
@@ -335,7 +371,7 @@ namespace CCGServerManager
 
             lblHeaderIp = new Label
             {
-                Text = string.Format("IP Servidor LAN: {0}   |   Puertos Activos: SIMCE (:3300) • PRUEBAS (:3600) • UNIFIED (:9000 + Túnel)", localIpAddress),
+                Text = string.Format("IP Servidor LAN: {0}   |   SIMCE (:3300) • PRUEBAS (:3600) • UNIFIED (:9000 + Túnel) • LABDESK (:3000)", localIpAddress),
                 ForeColor = Color.FromArgb(148, 163, 184),
                 Font = new Font("Segoe UI", 8.8F, FontStyle.Regular),
                 AutoSize = true,
@@ -353,13 +389,13 @@ namespace CCGServerManager
                 BackColor = Color.Transparent
             };
 
-            Button btnStartAll = CreateStyledButton("▶ Iniciar los 3", Color.FromArgb(22, 163, 74), Color.White, 125, 34);
+            Button btnStartAll = CreateStyledButton("▶ Iniciar los 4", Color.FromArgb(22, 163, 74), Color.White, 125, 34);
             btnStartAll.Click += async (s, e) => await StartAllServicesAsync();
 
             Button btnStopAll = CreateStyledButton("⏹ Detener Todos", Color.FromArgb(220, 38, 38), Color.White, 130, 34);
             btnStopAll.Click += async (s, e) => await StopAllServicesAsync();
 
-            Button btnUpdateAll = CreateStyledButton("⬇️ Actualizar los 3 (Git)", Color.FromArgb(37, 99, 235), Color.White, 165, 34);
+            Button btnUpdateAll = CreateStyledButton("⬇️ Actualizar los 4", Color.FromArgb(37, 99, 235), Color.White, 150, 34);
             btnUpdateAll.Click += async (s, e) => await UpdateAllServicesAsync();
 
             headerActions.Controls.Add(btnStartAll);
@@ -381,7 +417,7 @@ namespace CCGServerManager
 
             chkStartup = new CheckBox
             {
-                Text = "Iniciar automáticamente con Windows y encender los 3 servidores al arrancar el equipo",
+                Text = "Iniciar automáticamente con Windows y encender los 4 servidores al arrancar el equipo",
                 Font = new Font("Segoe UI", 9F, FontStyle.Bold),
                 ForeColor = Color.FromArgb(30, 41, 59),
                 AutoSize = true,
@@ -402,19 +438,20 @@ namespace CCGServerManager
             subHeader.Controls.Add(lblTrayHint);
             subHeader.Controls.Add(chkStartup);
 
-            // 3. CARDS CONTAINER (3 COLUMNS)
+            // 3. CARDS CONTAINER (4 COLUMNS)
             TableLayoutPanel cardsGrid = new TableLayoutPanel
             {
                 Dock = DockStyle.Top,
                 Height = 310,
-                ColumnCount = 3,
+                ColumnCount = 4,
                 RowCount = 1,
                 Padding = new Padding(12, 10, 12, 6),
                 BackColor = Color.FromArgb(241, 245, 249)
             };
-            cardsGrid.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 33.33F));
-            cardsGrid.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 33.33F));
-            cardsGrid.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 33.34F));
+            cardsGrid.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 25F));
+            cardsGrid.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 25F));
+            cardsGrid.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 25F));
+            cardsGrid.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 25F));
             cardsGrid.RowStyles.Add(new RowStyle(SizeType.Percent, 100F));
 
             for (int i = 0; i < services.Count; i++)
@@ -495,7 +532,7 @@ namespace CCGServerManager
             try
             {
                 string exeDir = AppDomain.CurrentDomain.BaseDirectory;
-                string icoName = srv.Id == "SIMCE" ? "app_simce.ico" : (srv.Id == "PRUEBAS" ? "app_pruebas.ico" : "app.ico");
+                string icoName = srv.Id == "SIMCE" ? "app_simce.ico" : (srv.Id == "PRUEBAS" ? "app_pruebas.ico" : (srv.Id == "LABDESK" ? "app_labdesk.ico" : "app.ico"));
                 string icoFull = Path.Combine(exeDir, icoName);
                 if (!File.Exists(icoFull) && !string.IsNullOrEmpty(srv.FolderPath))
                     icoFull = Path.Combine(srv.FolderPath, icoName);
@@ -538,7 +575,7 @@ namespace CCGServerManager
                 Font = new Font("Segoe UI", 8.5F, FontStyle.Bold),
                 TextAlign = ContentAlignment.MiddleCenter,
                 Location = new Point(12, 54),
-                Size = new Size(310, 26),
+                Size = new Size(295, 26),
                 Anchor = AnchorStyles.Top | AnchorStyles.Left | AnchorStyles.Right,
                 BackColor = Color.FromArgb(226, 232, 240),
                 ForeColor = Color.FromArgb(51, 65, 85)
@@ -552,7 +589,7 @@ namespace CCGServerManager
                 Font = new Font("Consolas", 8.2F, FontStyle.Regular),
                 ForeColor = Color.FromArgb(71, 85, 105),
                 Location = new Point(12, 86),
-                Size = new Size(310, 18),
+                Size = new Size(295, 18),
                 Anchor = AnchorStyles.Top | AnchorStyles.Left | AnchorStyles.Right,
                 AutoEllipsis = true
             };
@@ -565,7 +602,7 @@ namespace CCGServerManager
                 Font = new Font("Segoe UI", 7.8F, FontStyle.Regular),
                 ForeColor = Color.FromArgb(100, 116, 139),
                 Location = new Point(12, 106),
-                Size = new Size(235, 18),
+                Size = new Size(225, 18),
                 Anchor = AnchorStyles.Top | AnchorStyles.Left | AnchorStyles.Right,
                 AutoEllipsis = true
             };
@@ -575,8 +612,8 @@ namespace CCGServerManager
             {
                 Text = "📁 Ruta",
                 Font = new Font("Segoe UI", 7.5F, FontStyle.Bold),
-                Size = new Size(68, 22),
-                Location = new Point(254, 103),
+                Size = new Size(66, 22),
+                Location = new Point(241, 103),
                 Anchor = AnchorStyles.Top | AnchorStyles.Right,
                 BackColor = Color.FromArgb(241, 245, 249),
                 FlatStyle = FlatStyle.Flat,
@@ -589,7 +626,7 @@ namespace CCGServerManager
             Panel infoBox = new Panel
             {
                 Location = new Point(12, 130),
-                Size = new Size(310, 50),
+                Size = new Size(295, 50),
                 Anchor = AnchorStyles.Top | AnchorStyles.Left | AnchorStyles.Right,
                 BackColor = Color.FromArgb(248, 250, 252),
                 BorderStyle = BorderStyle.FixedSingle
@@ -612,7 +649,7 @@ namespace CCGServerManager
                     Font = new Font("Consolas", 8F, FontStyle.Bold),
                     ForeColor = Color.FromArgb(30, 41, 59),
                     Location = new Point(6, 22),
-                    Size = new Size(195, 20),
+                    Size = new Size(185, 20),
                     AutoEllipsis = true
                 };
                 srv.TunnelLabel = lblTunUrl;
@@ -621,8 +658,8 @@ namespace CCGServerManager
                 {
                     Text = "Copiar",
                     Font = new Font("Segoe UI", 7.2F, FontStyle.Bold),
-                    Size = new Size(48, 22),
-                    Location = new Point(204, 19),
+                    Size = new Size(46, 22),
+                    Location = new Point(194, 19),
                     Anchor = AnchorStyles.Top | AnchorStyles.Right,
                     BackColor = Color.White,
                     FlatStyle = FlatStyle.Flat,
@@ -641,8 +678,8 @@ namespace CCGServerManager
                 {
                     Text = "Abrir",
                     Font = new Font("Segoe UI", 7.2F, FontStyle.Bold),
-                    Size = new Size(48, 22),
-                    Location = new Point(255, 19),
+                    Size = new Size(46, 22),
+                    Location = new Point(243, 19),
                     Anchor = AnchorStyles.Top | AnchorStyles.Right,
                     BackColor = Color.White,
                     FlatStyle = FlatStyle.Flat,
@@ -661,6 +698,47 @@ namespace CCGServerManager
                 infoBox.Controls.Add(btnCopyTun);
                 infoBox.Controls.Add(btnOpenTun);
             }
+            else if (srv.Id == "LABDESK")
+            {
+                Label lblLabAdmin = new Label
+                {
+                    Text = string.Format("🌐 Admin: http://{0}:{1}", localIpAddress, srv.MainPort),
+                    Font = new Font("Consolas", 7.6F, FontStyle.Regular),
+                    ForeColor = Color.FromArgb(51, 65, 85),
+                    Location = new Point(6, 4),
+                    Size = new Size(205, 18),
+                    AutoEllipsis = true
+                };
+                Label lblLabBotonera = new Label
+                {
+                    Text = string.Format("🎛️ Docente: http://{0}:{1}/botonera", localIpAddress, srv.MainPort),
+                    Font = new Font("Consolas", 7.6F, FontStyle.Bold),
+                    ForeColor = Color.FromArgb(194, 65, 12),
+                    Location = new Point(6, 24),
+                    Size = new Size(205, 18),
+                    AutoEllipsis = true
+                };
+
+                Button btnBotonera = new Button
+                {
+                    Text = "Botonera",
+                    Font = new Font("Segoe UI", 7.2F, FontStyle.Bold),
+                    Size = new Size(66, 24),
+                    Location = new Point(220, 12),
+                    Anchor = AnchorStyles.Top | AnchorStyles.Right,
+                    BackColor = Color.White,
+                    FlatStyle = FlatStyle.Flat,
+                    Cursor = Cursors.Hand
+                };
+                btnBotonera.Click += (s, e) =>
+                {
+                    Process.Start(new ProcessStartInfo(string.Format("http://localhost:{0}/botonera", srv.MainPort)) { UseShellExecute = true });
+                };
+
+                infoBox.Controls.Add(lblLabAdmin);
+                infoBox.Controls.Add(lblLabBotonera);
+                infoBox.Controls.Add(btnBotonera);
+            }
             else
             {
                 Label lblLanInfo = new Label
@@ -675,18 +753,18 @@ namespace CCGServerManager
             }
 
             // Action Buttons Row 1: Iniciar | Detener | Reiniciar (Y=188)
-            Button btnStart = CreateStyledButton("▶ Iniciar", Color.FromArgb(22, 163, 74), Color.White, 98, 30);
+            Button btnStart = CreateStyledButton("▶ Iniciar", Color.FromArgb(22, 163, 74), Color.White, 88, 30);
             btnStart.Location = new Point(12, 188);
             btnStart.Click += async (s, e) => await StartServiceAsync(srv);
             srv.BtnStart = btnStart;
 
-            Button btnStop = CreateStyledButton("⏹ Detener", Color.FromArgb(220, 38, 38), Color.White, 98, 30);
-            btnStop.Location = new Point(116, 188);
+            Button btnStop = CreateStyledButton("⏹ Detener", Color.FromArgb(220, 38, 38), Color.White, 88, 30);
+            btnStop.Location = new Point(106, 188);
             btnStop.Click += async (s, e) => await StopServiceAsync(srv);
             srv.BtnStop = btnStop;
 
-            Button btnRestart = CreateStyledButton("🔄 Reiniciar", Color.FromArgb(217, 119, 6), Color.White, 102, 30);
-            btnRestart.Location = new Point(220, 188);
+            Button btnRestart = CreateStyledButton("🔄 Reiniciar", Color.FromArgb(217, 119, 6), Color.White, 95, 30);
+            btnRestart.Location = new Point(200, 188);
             btnRestart.Click += async (s, e) =>
             {
                 await StopServiceAsync(srv);
@@ -694,13 +772,22 @@ namespace CCGServerManager
             };
             srv.BtnRestart = btnRestart;
 
-            // Action Buttons Row 2: Actualizar desde GitHub | Abrir en Navegador (Y=226)
-            Button btnUpdate = CreateStyledButton("⬇️ Actualizar (Git Pull + Build)", srv.AccentColor, Color.White, 202, 34);
+            // Action Buttons Row 2: Actualizar | Abrir en Navegador (Y=226)
+            string updateBtnText = srv.Id == "LABDESK" ? "⬇️ Actualizar (NPM)" : "⬇️ Actualizar (Git + Build)";
+            Button btnUpdate = CreateStyledButton(updateBtnText, srv.AccentColor, Color.White, 182, 34);
             btnUpdate.Location = new Point(12, 226);
             btnUpdate.Click += async (s, e) => await UpdateServiceAsync(srv);
             srv.BtnUpdate = btnUpdate;
 
-            Button btnOpenWeb = CreateStyledButton("🌐 Abrir Web", Color.FromArgb(51, 65, 85), Color.White, 102, 34);
+            string openBtnText = srv.Id == "LABDESK" ? "🌐 Admin" : "🌐 Abrir Web";
+            Button btnOpenWeb = CreateStyledButton(openBtnText, Color.FromArgb(51, 65, 85), Color.White, 95, 34);
+            btnOpenWeb.Location = new Point(200, 226);
+            btnOpenWeb.Click += (s, e) =>
+            {
+                string url = string.Format("http://localhost:{0}", srv.MainPort);
+                Process.Start(new ProcessStartInfo(url) { UseShellExecute = true });
+            };
+            srv.BtnOpenWeb = btnOpenWeb;
             btnOpenWeb.Location = new Point(220, 226);
             btnOpenWeb.Click += (s, e) =>
             {
@@ -763,8 +850,8 @@ namespace CCGServerManager
             ContextMenu trayMenu = new ContextMenu();
             trayMenu.MenuItems.Add("🖥️ Mostrar Panel de Control CCG", (s, e) => ShowMainWindow());
             trayMenu.MenuItems.Add("-");
-            trayMenu.MenuItems.Add("▶ Iniciar los 3 Servidores", async (s, e) => await StartAllServicesAsync());
-            trayMenu.MenuItems.Add("⬇️ Actualizar los 3 desde GitHub", async (s, e) =>
+            trayMenu.MenuItems.Add("▶ Iniciar los 4 Servidores", async (s, e) => await StartAllServicesAsync());
+            trayMenu.MenuItems.Add("⬇️ Actualizar los 4 Servidores", async (s, e) =>
             {
                 ShowMainWindow();
                 await UpdateAllServicesAsync();
@@ -773,6 +860,8 @@ namespace CCGServerManager
             trayMenu.MenuItems.Add("🌐 Abrir Ensayos SIMCE (:3300)", (s, e) => Process.Start("http://localhost:3300"));
             trayMenu.MenuItems.Add("🌐 Abrir Pruebas CCG (:3600)", (s, e) => Process.Start("http://localhost:3600"));
             trayMenu.MenuItems.Add("🌐 Abrir Portal Unificado (:9000)", (s, e) => Process.Start("http://localhost:9000"));
+            trayMenu.MenuItems.Add("🌐 Abrir LabDesk Dashboard (:3000)", (s, e) => Process.Start("http://localhost:3000"));
+            trayMenu.MenuItems.Add("🎛️ Abrir LabDesk Botonera (:3000/botonera)", (s, e) => Process.Start("http://localhost:3000/botonera"));
             trayMenu.MenuItems.Add("-");
             trayMenu.MenuItems.Add("❌ Apagar Todos los Servidores y Salir", async (s, e) =>
             {
@@ -784,7 +873,7 @@ namespace CCGServerManager
 
             trayIcon = new NotifyIcon
             {
-                Text = "Gestor de Servidores CCG (SIMCE / Pruebas / Unified)",
+                Text = "Gestor de Servidores CCG (SIMCE / Pruebas / Unified / LabDesk)",
                 Icon = this.Icon ?? SystemIcons.Application,
                 ContextMenu = trayMenu,
                 Visible = true
@@ -978,7 +1067,7 @@ namespace CCGServerManager
         {
             tabLogs.SelectedIndex = 0;
             AppendLog(generalLogBox, "======================================================================");
-            AppendLog(generalLogBox, "[ACTUALIZACIÓN GLOBAL] Iniciando actualización secuencial de las 3 plataformas...");
+            AppendLog(generalLogBox, "[ACTUALIZACIÓN GLOBAL] Iniciando actualización secuencial de las 4 plataformas...");
             AppendLog(generalLogBox, "======================================================================");
 
             foreach (ManagedService srv in services)
@@ -986,7 +1075,42 @@ namespace CCGServerManager
                 await UpdateServiceAsync(srv);
             }
 
-            AppendLog(generalLogBox, "🎉 [ACTUALIZACIÓN GLOBAL FINALIZADA] Las 3 plataformas están al día y en línea.");
+            AppendLog(generalLogBox, "🎉 [ACTUALIZACIÓN GLOBAL FINALIZADA] Las 4 plataformas están al día y en línea.");
+        }
+
+        private bool ResolveServiceExecution(ManagedService srv, out string workingDir, out string fullScriptPath)
+        {
+            workingDir = srv.FolderPath;
+            fullScriptPath = Path.Combine(srv.FolderPath, srv.EntryScript);
+
+            if (File.Exists(fullScriptPath))
+            {
+                if (srv.Id == "LABDESK" && Directory.Exists(Path.Combine(srv.FolderPath, "server")))
+                {
+                    workingDir = Path.Combine(srv.FolderPath, "server");
+                }
+                return true;
+            }
+
+            if (srv.Id == "LABDESK")
+            {
+                string cand1 = Path.Combine(srv.FolderPath, "server", "src", "index.js");
+                if (File.Exists(cand1))
+                {
+                    workingDir = Path.Combine(srv.FolderPath, "server");
+                    fullScriptPath = cand1;
+                    return true;
+                }
+                string cand2 = Path.Combine(srv.FolderPath, "src", "index.js");
+                if (File.Exists(cand2))
+                {
+                    workingDir = srv.FolderPath;
+                    fullScriptPath = cand2;
+                    return true;
+                }
+            }
+
+            return false;
         }
 
         private async Task StartServiceAsync(ManagedService srv)
@@ -1000,11 +1124,12 @@ namespace CCGServerManager
                 return;
             }
 
-            string entryFull = Path.Combine(srv.FolderPath, srv.EntryScript);
-            if (!File.Exists(entryFull))
+            string workingDir;
+            string entryFull;
+            if (!ResolveServiceExecution(srv, out workingDir, out entryFull))
             {
                 MessageBox.Show(
-                    string.Format("No se encontró el archivo '{0}' en:\n{1}\n\nVerifica la ruta con el botón '📁 Ruta' o presiona 'Actualizar' para clonar el repositorio.", srv.EntryScript, srv.FolderPath),
+                    string.Format("No se encontró el archivo '{0}' en:\n{1}\n\nVerifica la ruta con el botón '📁 Ruta' o presiona 'Actualizar' para instalar dependencias.", srv.EntryScript, srv.FolderPath),
                     "Archivo no encontrado",
                     MessageBoxButtons.OK,
                     MessageBoxIcon.Warning
@@ -1033,7 +1158,7 @@ namespace CCGServerManager
                     {
                         FileName = "node",
                         Arguments = "\"" + entryFull + "\"",
-                        WorkingDirectory = srv.FolderPath,
+                        WorkingDirectory = workingDir,
                         UseShellExecute = false,
                         CreateNoWindow = true,
                         RedirectStandardOutput = true,
@@ -1232,11 +1357,18 @@ namespace CCGServerManager
 
                     if (!Directory.Exists(srv.FolderPath) || !Directory.Exists(Path.Combine(srv.FolderPath, ".git")))
                     {
-                        AppendLog(generalLogBox, string.Format("[2/4] Carpeta no inicializada con Git. Clonando repositorio (rama {0})...", targetBranch));
-                        Directory.CreateDirectory(srv.FolderPath);
-                        RunCommandWithLogs("git", "config --global http.sslVerify false", srv.FolderPath, generalLogBox);
-                        string cloneArgs = string.Format("clone -b {0} {1} \"{2}\"", targetBranch, srv.RepoUrl, srv.FolderPath);
-                        RunCommandWithLogs("git", cloneArgs, Path.GetDirectoryName(srv.FolderPath), generalLogBox);
+                        if (!string.IsNullOrEmpty(srv.RepoUrl))
+                        {
+                            AppendLog(generalLogBox, string.Format("[2/4] Carpeta no inicializada con Git. Clonando repositorio (rama {0})...", targetBranch));
+                            Directory.CreateDirectory(srv.FolderPath);
+                            RunCommandWithLogs("git", "config --global http.sslVerify false", srv.FolderPath, generalLogBox);
+                            string cloneArgs = string.Format("clone -b {0} {1} \"{2}\"", targetBranch, srv.RepoUrl, srv.FolderPath);
+                            RunCommandWithLogs("git", cloneArgs, Path.GetDirectoryName(srv.FolderPath), generalLogBox);
+                        }
+                        else
+                        {
+                            AppendLog(generalLogBox, string.Format("[2/4] Verificando instalación local de {0}...", srv.Title));
+                        }
                     }
                     else
                     {
@@ -1257,7 +1389,18 @@ namespace CCGServerManager
                     this.BeginInvoke((Action)(() => ReloadAppIcon(srv.FolderPath)));
 
                     // 3. Build & Sync dependencies according to project type
-                    if (srv.IsNextJs)
+                    if (srv.Id == "LABDESK")
+                    {
+                        srv.BusyText = "INSTALANDO DEPENDENCIAS LABDESK...";
+                        this.BeginInvoke((Action)UpdateAllStatuses);
+
+                        string serverDir = Directory.Exists(Path.Combine(srv.FolderPath, "server")) ? Path.Combine(srv.FolderPath, "server") : srv.FolderPath;
+
+                        AppendLog(generalLogBox, "[3/4] Verificando entorno LabDesk...");
+                        AppendLog(generalLogBox, "[4/4] Instalando dependencias npm en servidor LabDesk...");
+                        RunCommandWithLogs("cmd.exe", "/c npm install --no-audit", serverDir, generalLogBox);
+                    }
+                    else if (srv.IsNextJs)
                     {
                         if (srv.Id == "PRUEBAS")
                         {
@@ -1346,15 +1489,19 @@ namespace CCGServerManager
         {
             try
             {
-                string exePath = Path.Combine(folderPath, "Gestor_Servidores_CCG.exe");
-                string oldPath = Path.Combine(folderPath, "Gestor_Servidores_CCG.exe.old");
-                if (File.Exists(oldPath))
+                string[] exeNames = new string[] { "Gestor_Servidores_CCG.exe", "ccg.exe" };
+                foreach (string exeName in exeNames)
                 {
-                    try { File.Delete(oldPath); } catch { }
-                }
-                if (File.Exists(exePath))
-                {
-                    try { File.Move(exePath, oldPath); } catch { }
+                    string exePath = Path.Combine(folderPath, exeName);
+                    string oldPath = Path.Combine(folderPath, exeName + ".old");
+                    if (File.Exists(oldPath))
+                    {
+                        try { File.Delete(oldPath); } catch { }
+                    }
+                    if (File.Exists(exePath))
+                    {
+                        try { File.Move(exePath, oldPath); } catch { }
+                    }
                 }
             }
             catch { }
@@ -1484,31 +1631,68 @@ namespace CCGServerManager
                 string info = "Carpeta no encontrada";
                 if (Directory.Exists(srv.FolderPath))
                 {
-                    try
+                    string gitDir = Path.Combine(srv.FolderPath, ".git");
+                    if (Directory.Exists(gitDir))
                     {
-                        ProcessStartInfo psi = new ProcessStartInfo
+                        try
                         {
-                            FileName = "git",
-                            Arguments = "log -1 --format=\"%h • %cr (%s)\"",
-                            WorkingDirectory = srv.FolderPath,
-                            UseShellExecute = false,
-                            CreateNoWindow = true,
-                            RedirectStandardOutput = true,
-                            StandardOutputEncoding = Encoding.UTF8
-                        };
-                        using (Process p = Process.Start(psi))
+                            ProcessStartInfo psi = new ProcessStartInfo
+                            {
+                                FileName = "git",
+                                Arguments = "log -1 --format=\"%h • %cr (%s)\"",
+                                WorkingDirectory = srv.FolderPath,
+                                UseShellExecute = false,
+                                CreateNoWindow = true,
+                                RedirectStandardOutput = true,
+                                StandardOutputEncoding = Encoding.UTF8
+                            };
+                            using (Process p = Process.Start(psi))
+                            {
+                                string output = p.StandardOutput.ReadToEnd().Trim();
+                                p.WaitForExit(2500);
+                                if (!string.IsNullOrEmpty(output))
+                                    info = output;
+                                else
+                                    info = "Repositorio Git listo";
+                            }
+                        }
+                        catch
                         {
-                            string output = p.StandardOutput.ReadToEnd().Trim();
-                            p.WaitForExit(2500);
-                            if (!string.IsNullOrEmpty(output))
-                                info = output;
-                            else
-                                info = "Repositorio Git listo";
+                            info = "Git disponible";
                         }
                     }
-                    catch
+                    else
                     {
-                        info = "Git disponible";
+                        // Fallback: leer version desde package.json
+                        string pkg = Path.Combine(srv.FolderPath, "package.json");
+                        if (!File.Exists(pkg))
+                        {
+                            pkg = Path.Combine(srv.FolderPath, "server", "package.json");
+                        }
+                        if (File.Exists(pkg))
+                        {
+                            try
+                            {
+                                string text = File.ReadAllText(pkg, Encoding.UTF8);
+                                Match m = Regex.Match(text, @"""version""\s*:\s*""([^""]+)""");
+                                if (m.Success)
+                                {
+                                    info = (srv.Id == "LABDESK" ? "LabDesk v" : "v") + m.Groups[1].Value + " (Servidor Aula Local)";
+                                }
+                                else
+                                {
+                                    info = "Servidor Local Listo";
+                                }
+                            }
+                            catch
+                            {
+                                info = "Servidor Local Listo";
+                            }
+                        }
+                        else
+                        {
+                            info = "Servidor Local Listo";
+                        }
                     }
                 }
                 srv.LastCommit = info;
@@ -1517,7 +1701,7 @@ namespace CCGServerManager
                     this.BeginInvoke((Action)(() =>
                     {
                         if (srv.CommitLabel != null)
-                            srv.CommitLabel.Text = "Versión Git: " + srv.LastCommit;
+                            srv.CommitLabel.Text = (Directory.Exists(Path.Combine(srv.FolderPath, ".git")) ? "Versión Git: " : "Versión: ") + srv.LastCommit;
                     }));
                 }
             });
@@ -1587,7 +1771,7 @@ namespace CCGServerManager
                     {
                         string cmd = "\"" + Application.ExecutablePath + "\" --autostart";
                         key.SetValue(REG_KEY_NAME, cmd);
-                        AppendLog(generalLogBox, "✅ [WINDOWS STARTUP] Configurado para iniciar automáticamente con Windows y encender los 3 servidores.");
+                        AppendLog(generalLogBox, "✅ [WINDOWS STARTUP] Configurado para iniciar automáticamente con Windows y encender los 4 servidores.");
                     }
                     else
                     {
