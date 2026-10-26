@@ -1876,7 +1876,7 @@ async function obtenerHitosParaPlan(anio, curso, asignatura) {
 }
 
 async function crearHito(datos, usuario = {}) {
-    const anio = parseInt(datos.anio) || 2026;
+    const anio = parseInt(datos.anio || datos.anno) || 2026;
     const titulo = (datos.titulo || '').trim();
     if (!titulo) throw new Error("El título del hito es obligatorio.");
     if (!datos.fecha_inicio || !datos.fecha_fin) throw new Error("Las fechas de inicio y término son obligatorias.");

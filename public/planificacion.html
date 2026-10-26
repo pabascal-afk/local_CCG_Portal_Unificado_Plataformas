@@ -2259,7 +2259,7 @@
 
         // Consultar hitos institucionales vigentes para este curso y asignatura
         try {
-          const resH = await fetch(`/api/planificacion/hitos/vigentes?anio=${planActivo.anio}&curso=${encodeURIComponent(planActivo.curso)}&asignatura=${encodeURIComponent(planActivo.asignatura)}`);
+          const resH = await fetch(`/api/planificacion/hitos/vigentes?anio=${planActivo.anio}&anno=${planActivo.anio}&curso=${encodeURIComponent(planActivo.curso)}&asignatura=${encodeURIComponent(planActivo.asignatura)}`);
           if (resH.ok) {
             planActivo.hitosVigentes = await resH.json();
           } else {
@@ -4239,7 +4239,7 @@
       tbody.innerHTML = '<tr><td colspan="7" class="text-center py-4 text-muted"><span class="spinner-border spinner-border-sm me-2"></span>Cargando hitos institucionales...</td></tr>';
 
       try {
-        const res = await fetch(`/api/planificacion/hitos?anio=${anioActivo}`);
+        const res = await fetch(`/api/planificacion/hitos?anio=${anioActivo}&anno=${anioActivo}`);
         if (!res.ok) throw new Error('Error al cargar hitos institucionales.');
         hitosColegioCache = await res.json();
         renderizarTablaHitos(hitosColegioCache);
@@ -4520,6 +4520,7 @@
 
       const payload = {
         anio: anioActivo,
+        anno: anioActivo,
         titulo,
         tipo,
         icono,
