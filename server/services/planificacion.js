@@ -15,10 +15,37 @@ let dbInstance = null;
 function getDb() {
     if (!dbInstance) {
         dbInstance = new sqlite3.Database(dbPath);
-        dbInstance.run("ALTER TABLE planificaciones ADD COLUMN solicitud_eliminacion INTEGER DEFAULT 0", () => {});
-        dbInstance.run("ALTER TABLE planificaciones ADD COLUMN solicitud_eliminacion_motivo TEXT", () => {});
-        dbInstance.run("ALTER TABLE planificaciones ADD COLUMN solicitud_eliminacion_por TEXT", () => {});
-        dbInstance.run("ALTER TABLE planificaciones ADD COLUMN solicitud_eliminacion_fecha DATETIME", () => {});
+        dbInstance.serialize(() => {
+            dbInstance.run("ALTER TABLE planificaciones ADD COLUMN solicitud_eliminacion INTEGER DEFAULT 0", () => {});
+            dbInstance.run("ALTER TABLE planificaciones ADD COLUMN solicitud_eliminacion_motivo TEXT", () => {});
+            dbInstance.run("ALTER TABLE planificaciones ADD COLUMN solicitud_eliminacion_por TEXT", () => {});
+            dbInstance.run("ALTER TABLE planificaciones ADD COLUMN solicitud_eliminacion_fecha DATETIME", () => {});
+            dbInstance.run(`CREATE TABLE IF NOT EXISTS planificaciones_hitos (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                anio INTEGER NOT NULL DEFAULT 2026,
+                titulo TEXT NOT NULL,
+                tipo TEXT NOT NULL DEFAULT 'Hito Pedagógico',
+                icono TEXT DEFAULT '🎭',
+                color TEXT DEFAULT '#2563eb',
+                fecha_inicio TEXT NOT NULL,
+                fecha_fin TEXT NOT NULL,
+                todas_asignaturas INTEGER DEFAULT 0,
+                asignaturas TEXT DEFAULT '[]',
+                todos_cursos INTEGER DEFAULT 0,
+                cursos TEXT DEFAULT '[]',
+                cursos_excluidos TEXT DEFAULT '[]',
+                lineamientos TEXT,
+                oas_sugeridos TEXT DEFAULT '[]',
+                metodologias_sugeridas TEXT DEFAULT '[]',
+                recursos_enlaces TEXT DEFAULT '[]',
+                bloquear_edicion INTEGER DEFAULT 0,
+                activo INTEGER DEFAULT 1,
+                creado_por TEXT,
+                creado_en DATETIME DEFAULT CURRENT_TIMESTAMP,
+                actualizado_en DATETIME DEFAULT CURRENT_TIMESTAMP
+            )`);
+            dbInstance.run("CREATE INDEX IF NOT EXISTS idx_hitos_anio ON planificaciones_hitos(anio, fecha_inicio, fecha_fin)");
+        });
     }
     return dbInstance;
 }
@@ -1795,6 +1822,624 @@ async function cambiarPropietarioPlan(planId, nuevoPropietario, usuario = {}) {
     return { success: true, message: `Propietario reasignado con éxito a "${prop}".` };
 }
 
+// -------------------------------------------------------------
+// 19. HITOS Y LINEAMIENTOS INSTITUCIONALES (UTP / ADMIN)
+// -------------------------------------------------------------
+async function listarHitos(anio) {
+    const anioNum = parseInt(anio) || 2026;
+    const rows = await queryAll(`SELECT * FROM planificaciones_hitos WHERE anio = ? ORDER BY fecha_inicio ASC, id ASC`, [anioNum]);
+    return rows.map(r => {
+        try { r.asignaturas = typeof r.asignaturas === 'string' ? JSON.parse(r.asignaturas || '[]') : (r.asignaturas || []); } catch(e) { r.asignaturas = []; }
+        try { r.cursos = typeof r.cursos === 'string' ? JSON.parse(r.cursos || '[]') : (r.cursos || []); } catch(e) { r.cursos = []; }
+        try { r.cursos_excluidos = typeof r.cursos_excluidos === 'string' ? JSON.parse(r.cursos_excluidos || '[]') : (r.cursos_excluidos || []); } catch(e) { r.cursos_excluidos = []; }
+        try { r.oas_sugeridos = typeof r.oas_sugeridos === 'string' ? JSON.parse(r.oas_sugeridos || '[]') : (r.oas_sugeridos || []); } catch(e) { r.oas_sugeridos = []; }
+        try { r.metodologias_sugeridas = typeof r.metodologias_sugeridas === 'string' ? JSON.parse(r.metodologias_sugeridas || '[]') : (r.metodologias_sugeridas || []); } catch(e) { r.metodologias_sugeridas = []; }
+        try { r.recursos_enlaces = typeof r.recursos_enlaces === 'string' ? JSON.parse(r.recursos_enlaces || '[]') : (r.recursos_enlaces || []); } catch(e) { r.recursos_enlaces = []; }
+        return r;
+    });
+}
+
+async function obtenerHitosParaPlan(anio, curso, asignatura) {
+    const hitos = await listarHitos(anio);
+    const cNorm = (curso || '').trim().toUpperCase();
+    const aNorm = (asignatura || '').trim().toUpperCase();
+
+    return hitos.filter(h => {
+        if (h.activo === 0) return false;
+
+        // 1. Exclusiones de cursos (prioridad máxima)
+        const excluidos = (h.cursos_excluidos || []).map(c => String(c).trim().toUpperCase());
+        if (excluidos.some(exc => cNorm === exc || (exc.length > 2 && cNorm.includes(exc)))) {
+            return false;
+        }
+
+        // 2. Inclusión de cursos
+        if (!h.todos_cursos) {
+            const cursosInc = (h.cursos || []).map(c => String(c).trim().toUpperCase());
+            if (cursosInc.length > 0 && !cursosInc.includes('TODOS')) {
+                const coincideCurso = cursosInc.some(inc => cNorm === inc || (inc.length > 2 && cNorm.includes(inc)));
+                if (!coincideCurso) return false;
+            }
+        }
+
+        // 3. Inclusión de asignaturas
+        if (!h.todas_asignaturas) {
+            const asigsInc = (h.asignaturas || []).map(a => String(a).trim().toUpperCase());
+            if (asigsInc.length > 0 && !asigsInc.includes('TODAS')) {
+                const coincideAsig = asigsInc.some(inc => aNorm === inc || (inc.length > 3 && (aNorm.includes(inc) || inc.includes(aNorm))));
+                if (!coincideAsig) return false;
+            }
+        }
+
+        return true;
+    });
+}
+
+async function crearHito(datos, usuario = {}) {
+    const anio = parseInt(datos.anio) || 2026;
+    const titulo = (datos.titulo || '').trim();
+    if (!titulo) throw new Error("El título del hito es obligatorio.");
+    if (!datos.fecha_inicio || !datos.fecha_fin) throw new Error("Las fechas de inicio y término son obligatorias.");
+
+    const res = await queryRun(`
+        INSERT INTO planificaciones_hitos (
+            anio, titulo, tipo, icono, color, fecha_inicio, fecha_fin,
+            todas_asignaturas, asignaturas, todos_cursos, cursos, cursos_excluidos,
+            lineamientos, oas_sugeridos, metodologias_sugeridas, recursos_enlaces,
+            bloquear_edicion, activo, creado_por
+        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+    `, [
+        anio,
+        titulo,
+        datos.tipo || 'Semana Temática',
+        datos.icono || '🎭',
+        datos.color || '#2563eb',
+        datos.fecha_inicio,
+        datos.fecha_fin,
+        datos.todas_asignaturas ? 1 : 0,
+        JSON.stringify(Array.isArray(datos.asignaturas) ? datos.asignaturas : []),
+        datos.todos_cursos ? 1 : 0,
+        JSON.stringify(Array.isArray(datos.cursos) ? datos.cursos : []),
+        JSON.stringify(Array.isArray(datos.cursos_excluidos) ? datos.cursos_excluidos : []),
+        datos.lineamientos || '',
+        JSON.stringify(Array.isArray(datos.oas_sugeridos) ? datos.oas_sugeridos : []),
+        JSON.stringify(Array.isArray(datos.metodologias_sugeridas) ? datos.metodologias_sugeridas : []),
+        JSON.stringify(Array.isArray(datos.recursos_enlaces) ? datos.recursos_enlaces : []),
+        datos.bloquear_edicion ? 1 : 0,
+        datos.activo !== undefined ? (datos.activo ? 1 : 0) : 1,
+        usuario.email || usuario.nombre || 'admin'
+    ]);
+
+    auditoria.registrarAuditoria({
+        usuario,
+        modulo: 'PLANIFICACIONES',
+        accion: 'Crear Hito',
+        descripcion: `Creó el hito institucional "${titulo}" (${datos.fecha_inicio} al ${datos.fecha_fin}) para el año ${anio}`,
+        detalles: { hito_id: res.lastID, titulo, anio },
+        nivel: 'info'
+    });
+
+    return { success: true, id: res.lastID, mensaje: `Hito "${titulo}" creado con éxito.` };
+}
+
+async function actualizarHito(id, datos, usuario = {}) {
+    const hitoActual = await queryGet(`SELECT * FROM planificaciones_hitos WHERE id = ?`, [id]);
+    if (!hitoActual) throw new Error("Hito no encontrado.");
+
+    const titulo = (datos.titulo || hitoActual.titulo || '').trim();
+    if (!titulo) throw new Error("El título del hito es obligatorio.");
+
+    await queryRun(`
+        UPDATE planificaciones_hitos SET
+            titulo = ?,
+            tipo = ?,
+            icono = ?,
+            color = ?,
+            fecha_inicio = ?,
+            fecha_fin = ?,
+            todas_asignaturas = ?,
+            asignaturas = ?,
+            todos_cursos = ?,
+            cursos = ?,
+            cursos_excluidos = ?,
+            lineamientos = ?,
+            oas_sugeridos = ?,
+            metodologias_sugeridas = ?,
+            recursos_enlaces = ?,
+            bloquear_edicion = ?,
+            activo = ?,
+            actualizado_en = CURRENT_TIMESTAMP
+        WHERE id = ?
+    `, [
+        titulo,
+        datos.tipo || hitoActual.tipo,
+        datos.icono || hitoActual.icono,
+        datos.color || hitoActual.color,
+        datos.fecha_inicio || hitoActual.fecha_inicio,
+        datos.fecha_fin || hitoActual.fecha_fin,
+        datos.todas_asignaturas !== undefined ? (datos.todas_asignaturas ? 1 : 0) : hitoActual.todas_asignaturas,
+        JSON.stringify(Array.isArray(datos.asignaturas) ? datos.asignaturas : JSON.parse(hitoActual.asignaturas || '[]')),
+        datos.todos_cursos !== undefined ? (datos.todos_cursos ? 1 : 0) : hitoActual.todos_cursos,
+        JSON.stringify(Array.isArray(datos.cursos) ? datos.cursos : JSON.parse(hitoActual.cursos || '[]')),
+        JSON.stringify(Array.isArray(datos.cursos_excluidos) ? datos.cursos_excluidos : JSON.parse(hitoActual.cursos_excluidos || '[]')),
+        datos.lineamientos !== undefined ? datos.lineamientos : hitoActual.lineamientos,
+        JSON.stringify(Array.isArray(datos.oas_sugeridos) ? datos.oas_sugeridos : JSON.parse(hitoActual.oas_sugeridos || '[]')),
+        JSON.stringify(Array.isArray(datos.metodologias_sugeridas) ? datos.metodologias_sugeridas : JSON.parse(hitoActual.metodologias_sugeridas || '[]')),
+        JSON.stringify(Array.isArray(datos.recursos_enlaces) ? datos.recursos_enlaces : JSON.parse(hitoActual.recursos_enlaces || '[]')),
+        datos.bloquear_edicion !== undefined ? (datos.bloquear_edicion ? 1 : 0) : hitoActual.bloquear_edicion,
+        datos.activo !== undefined ? (datos.activo ? 1 : 0) : hitoActual.activo,
+        id
+    ]);
+
+    auditoria.registrarAuditoria({
+        usuario,
+        modulo: 'PLANIFICACIONES',
+        accion: 'Actualizar Hito',
+        descripcion: `Actualizó el hito institucional "${titulo}"`,
+        detalles: { hito_id: id, titulo },
+        nivel: 'info'
+    });
+
+    return { success: true, mensaje: `Hito "${titulo}" actualizado.` };
+}
+
+async function eliminarHito(id, usuario = {}) {
+    const hito = await queryGet(`SELECT * FROM planificaciones_hitos WHERE id = ?`, [id]);
+    if (!hito) throw new Error("Hito no encontrado.");
+
+    await queryRun(`DELETE FROM planificaciones_hitos WHERE id = ?`, [id]);
+
+    auditoria.registrarAuditoria({
+        usuario,
+        modulo: 'PLANIFICACIONES',
+        accion: 'Eliminar Hito',
+        descripcion: `Eliminó el hito institucional "${hito.titulo}"`,
+        detalles: { hito_id: id, titulo: hito.titulo, anio: hito.anio },
+        nivel: 'warning'
+    });
+
+    return { success: true, mensaje: `Hito "${hito.titulo}" eliminado correctamente.` };
+}
+
+// -------------------------------------------------------------
+// 20. PLANTILLAS E IMPORTACIÓN MASIVA XLS
+// -------------------------------------------------------------
+function generarPlantillaHitosExcel() {
+    const ejemplo = [
+        {
+            titulo: 'Semana del Teatro',
+            tipo: 'Semana Temática',
+            icono: '🎭',
+            color: '#e11d48',
+            fecha_inicio: '2026-05-11',
+            fecha_fin: '2026-05-15',
+            asignaturas: 'LENGUAJE Y COMUNICACION, LENGUA Y LITERATURA',
+            cursos: 'TODOS',
+            cursos_excluidos: '1° BASICO A, 1° BASICO B, 2° BASICO A, 2° BASICO B',
+            lineamientos: 'Desarrollar una obra teatral o lectura dramatizada articulando expresión oral y comprensión lectora.',
+            oas_sugeridos: 'OA 03, OA 08, OA 14',
+            metodologias: 'ABP, DUA II: Acción y Expresión, Aprendizaje Colaborativo'
+        },
+        {
+            titulo: 'Mes de la Ciencia y STEM',
+            tipo: 'Proyecto Interdisciplinario',
+            icono: '🔬',
+            color: '#059669',
+            fecha_inicio: '2026-08-03',
+            fecha_fin: '2026-08-28',
+            asignaturas: 'CIENCIAS NATURALES, FISICA, QUIMICA, BIOLOGIA, MATEMATICA, TECNOLOGIA',
+            cursos: 'TODOS',
+            cursos_excluidos: '',
+            lineamientos: 'Feria de ciencias escolar con enfoque experimental y resolución de problemas cotidianos.',
+            oas_sugeridos: 'OA 01, OA 04',
+            metodologias: 'STEAM, ABP, Rutinas de Pensamiento'
+        },
+        {
+            titulo: 'Día Internacional del Libro',
+            tipo: 'Efeméride Institucional',
+            icono: '📖',
+            color: '#2563eb',
+            fecha_inicio: '2026-04-20',
+            fecha_fin: '2026-04-24',
+            asignaturas: 'TODAS',
+            cursos: 'TODOS',
+            cursos_excluidos: '',
+            lineamientos: 'Actividades de fomento lector y narración oral en todas las materias.',
+            oas_sugeridos: '',
+            metodologias: 'DUA III: Compromiso'
+        }
+    ];
+
+    const wb = xlsx.utils.book_new();
+    const ws = xlsx.utils.json_to_sheet(ejemplo);
+    ws['!cols'] = [
+        { wch: 25 }, { wch: 20 }, { wch: 8 }, { wch: 10 },
+        { wch: 14 }, { wch: 14 }, { wch: 30 }, { wch: 15 },
+        { wch: 30 }, { wch: 45 }, { wch: 20 }, { wch: 30 }
+    ];
+    xlsx.utils.book_append_sheet(wb, ws, "Hitos");
+    return xlsx.write(wb, { type: 'buffer', bookType: 'xlsx' });
+}
+
+async function importarHitosExcel(buffer, anio, usuario = {}) {
+    const workbook = xlsx.read(buffer, { type: 'buffer' });
+    const firstSheet = workbook.Sheets[workbook.SheetNames[0]];
+    const rows = xlsx.utils.sheet_to_json(firstSheet);
+    if (!rows || rows.length === 0) throw new Error("La planilla no contiene filas de datos.");
+
+    const anioNum = parseInt(anio) || 2026;
+    let creados = 0;
+
+    for (const r of rows) {
+        const titulo = (r['titulo'] || r['Titulo'] || r['Nombre'] || '').toString().trim();
+        const fInicio = (r['fecha_inicio'] || r['Fecha Inicio'] || r['Desde'] || '').toString().trim();
+        const fFin = (r['fecha_fin'] || r['Fecha Fin'] || r['Hasta'] || '').toString().trim();
+        if (!titulo || !fInicio || !fFin) continue;
+
+        const tipo = (r['tipo'] || r['Tipo'] || 'Semana Temática').toString().trim();
+        const icono = (r['icono'] || r['Icono'] || '🎭').toString().trim();
+        const color = (r['color'] || r['Color'] || '#2563eb').toString().trim();
+        
+        const asigsRaw = (r['asignaturas'] || r['Asignaturas'] || 'TODAS').toString().trim();
+        const todasAsigs = asigsRaw.toUpperCase() === 'TODAS' || asigsRaw === '';
+        const asignaturasArr = todasAsigs ? [] : asigsRaw.split(',').map(s => s.trim().toUpperCase()).filter(Boolean);
+
+        const cursosRaw = (r['cursos'] || r['Cursos'] || 'TODOS').toString().trim();
+        const todosCursos = cursosRaw.toUpperCase() === 'TODOS' || cursosRaw === '';
+        const cursosArr = todosCursos ? [] : cursosRaw.split(',').map(s => s.trim().toUpperCase()).filter(Boolean);
+
+        const excluidosRaw = (r['cursos_excluidos'] || r['Excluidos'] || '').toString().trim();
+        const excluidosArr = excluidosRaw ? excluidosRaw.split(',').map(s => s.trim().toUpperCase()).filter(Boolean) : [];
+
+        const lineamientos = (r['lineamientos'] || r['Lineamientos'] || r['Orientaciones'] || '').toString().trim();
+        const oasRaw = (r['oas_sugeridos'] || r['OAs'] || '').toString().trim();
+        const oasArr = oasRaw ? oasRaw.split(',').map(s => s.trim()).filter(Boolean) : [];
+
+        const metRaw = (r['metodologias'] || r['Metodologias'] || r['DUA'] || '').toString().trim();
+        const metArr = metRaw ? metRaw.split(',').map(s => s.trim()).filter(Boolean) : [];
+
+        await crearHito({
+            anio: anioNum,
+            titulo,
+            tipo,
+            icono,
+            color,
+            fecha_inicio: fInicio,
+            fecha_fin: fFin,
+            todas_asignaturas: todasAsigs,
+            asignaturas: asignaturasArr,
+            todos_cursos: todosCursos,
+            cursos: cursosArr,
+            cursos_excluidos: excluidosArr,
+            lineamientos,
+            oas_sugeridos: oasArr,
+            metodologias_sugeridas: metArr
+        }, usuario);
+        creados++;
+    }
+
+    return { success: true, importados: creados, mensaje: `Se importaron ${creados} hitos institucionales exitosamente.` };
+}
+
+function generarPlantillaPlanificacionesExcel(anio = 2026) {
+    const ejemplo = [
+        {
+            curso: '4° BASICO A',
+            asignatura: 'LENGUAJE Y COMUNICACION',
+            titulo: 'Plan Anual de Lenguaje y Comunicación 2026',
+            docente_responsable: 'Docente Ejemplo',
+            horas_anuales: 152,
+            metas_anuales: 'Promover el gusto por la lectura comprensiva y el desarrollo de habilidades comunicativas orales y escritas.'
+        },
+        {
+            curso: '4° BASICO B',
+            asignatura: 'MATEMATICA',
+            titulo: 'Planificación Curricular Matemática 2026',
+            docente_responsable: 'Docente Ejemplo',
+            horas_anuales: 152,
+            metas_anuales: 'Consolidar el pensamiento lógico-matemático, cálculo mental y resolución de problemas contextualizados.'
+        }
+    ];
+
+    const wb = xlsx.utils.book_new();
+    const ws = xlsx.utils.json_to_sheet(ejemplo);
+    ws['!cols'] = [
+        { wch: 18 }, { wch: 30 }, { wch: 40 }, { wch: 25 }, { wch: 14 }, { wch: 50 }
+    ];
+    xlsx.utils.book_append_sheet(wb, ws, "Planificaciones");
+    return xlsx.write(wb, { type: 'buffer', bookType: 'xlsx' });
+}
+
+async function importarPlanificacionesMasivasExcel(buffer, anio, usuario = {}) {
+    const workbook = xlsx.read(buffer, { type: 'buffer' });
+    const firstSheet = workbook.Sheets[workbook.SheetNames[0]];
+    const rows = xlsx.utils.sheet_to_json(firstSheet);
+    if (!rows || rows.length === 0) throw new Error("La planilla no contiene filas de datos.");
+
+    const anioNum = parseInt(anio) || 2026;
+    let creadas = 0;
+    let actualizadas = 0;
+
+    for (const r of rows) {
+        const curso = (r['curso'] || r['Curso'] || '').toString().trim().toUpperCase();
+        const asignatura = (r['asignatura'] || r['Asignatura'] || '').toString().trim().toUpperCase();
+        if (!curso || !asignatura) continue;
+
+        const titulo = (r['titulo'] || r['Titulo'] || `Planificación ${asignatura} - ${curso}`).toString().trim();
+        const docente = (r['docente_responsable'] || r['Docente'] || usuario.nombre || 'Docente').toString().trim();
+        const horas = parseInt(r['horas_anuales'] || r['Horas']) || 152;
+        const metas = (r['metas_anuales'] || r['Metas'] || '').toString().trim();
+
+        const planExistente = await queryGet(`
+            SELECT id FROM planificaciones WHERE anio = ? AND curso = ? AND asignatura = ?
+        `, [anioNum, curso, asignatura]);
+
+        if (planExistente) {
+            await queryRun(`
+                UPDATE planificaciones SET
+                    titulo = ?,
+                    docente_responsable = ?,
+                    horas_anuales = ?,
+                    metas_anuales = ?,
+                    actualizado_en = CURRENT_TIMESTAMP
+                WHERE id = ?
+            `, [titulo, docente, horas, metas, planExistente.id]);
+            actualizadas++;
+        } else {
+            const nivel = inferirNivelDesdeCurso(curso);
+            const planCurr = await queryGet(`
+                SELECT id FROM curriculo_planes WHERE anio = ? AND nivel = ? AND asignatura = ?
+            `, [anioNum, nivel, asignatura]);
+
+            await queryRun(`
+                INSERT INTO planificaciones (
+                    anio, curso, asignatura, titulo, docente_responsable,
+                    horas_anuales, metas_anuales, plan_curricular_id, creado_por
+                ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
+            `, [
+                anioNum, curso, asignatura, titulo, docente,
+                horas, metas, planCurr ? planCurr.id : null, usuario.email || 'sistema'
+            ]);
+            creadas++;
+        }
+    }
+
+    auditoria.registrarAuditoria({
+        usuario,
+        modulo: 'PLANIFICACIONES',
+        accion: 'Importación Masiva Planificaciones',
+        descripcion: `Importó planificaciones masivas para el año ${anioNum}: ${creadas} creadas, ${actualizadas} actualizadas`,
+        detalles: { anio: anioNum, creadas, actualizadas },
+        nivel: 'success'
+    });
+
+    return { success: true, creadas, actualizadas, mensaje: `Proceso completado: ${creadas} planificaciones creadas y ${actualizadas} actualizadas.` };
+}
+
+async function generarPlantillaUnidadesExcel(planId) {
+    const plan = planId ? await obtenerPlanificacionDetalle(planId) : null;
+    
+    // Hoja 1: Unidades
+    let unidadesDatos = [];
+    if (plan && plan.unidades && plan.unidades.length > 0) {
+        unidadesDatos = plan.unidades.map(u => ({
+            numero_unidad: u.numero_unidad,
+            nombre_unidad: u.nombre_unidad,
+            semestre: u.semestre || 1,
+            fecha_inicio: u.fecha_inicio || '',
+            fecha_fin: u.fecha_fin || '',
+            horas_estimadas: u.horas_estimadas || 38,
+            oas_codigos: (u.oas_seleccionados || []).join(', '),
+            habilidades: u.habilidades || '',
+            tags_dua: (u.tags || []).join(', ')
+        }));
+    } else {
+        unidadesDatos = [
+            {
+                numero_unidad: 1,
+                nombre_unidad: 'Unidad 1: Descubriendo el mundo de la lectura',
+                semestre: 1,
+                fecha_inicio: '2026-03-02',
+                fecha_fin: '2026-04-17',
+                horas_estimadas: 38,
+                oas_codigos: 'OA 01, OA 03, OA 06',
+                habilidades: 'Comprensión lectora, extracción de información explícita e implícita',
+                tags_dua: 'DUA I: Representación, ABP (Proyectos)'
+            },
+            {
+                numero_unidad: 2,
+                nombre_unidad: 'Unidad 2: Expresión oral y textos dramáticos',
+                semestre: 1,
+                fecha_inicio: '2026-04-20',
+                fecha_fin: '2026-06-05',
+                horas_estimadas: 38,
+                oas_codigos: 'OA 04, OA 08',
+                habilidades: 'Dramatización, lectura fluida',
+                tags_dua: 'DUA II: Acción y Expresión, Aprendizaje Colaborativo'
+            }
+        ];
+    }
+
+    // Hoja 2: Semanas
+    let semanasDatos = [];
+    if (plan && plan.unidades && plan.unidades.length > 0) {
+        plan.unidades.forEach(u => {
+            (u.desglose_semanal || []).forEach(s => {
+                semanasDatos.push({
+                    numero_unidad: u.numero_unidad,
+                    semana: s.semana || 1,
+                    fecha_inicio: s.fecha_inicio || '',
+                    fecha_fin: s.fecha_fin || '',
+                    tema: s.tema || '',
+                    actividades: s.actividades_formativas || '',
+                    recursos: s.recursos || '',
+                    tags_metodologias: (s.tags || []).join(', ')
+                });
+            });
+        });
+    }
+    if (semanasDatos.length === 0) {
+        semanasDatos = [
+            {
+                numero_unidad: 1,
+                semana: 1,
+                fecha_inicio: '2026-03-02',
+                fecha_fin: '2026-03-06',
+                tema: 'Diagnóstico y activación de conocimientos previos',
+                actividades: 'Lectura guiada de texto breve y preguntas exploratorias.',
+                recursos: 'Texto del estudiante, guía diagnóstica',
+                tags_metodologias: 'Formativa, Ticket de Salida'
+            },
+            {
+                numero_unidad: 1,
+                semana: 2,
+                fecha_inicio: '2026-03-09',
+                fecha_fin: '2026-03-13',
+                tema: 'Estrategias de comprensión: ideas principales',
+                actividades: 'Subrayado activo y discusión grupal de párrafos clave.',
+                recursos: 'Cuentos breves, pizarra interactiva',
+                tags_metodologias: 'DUA I: Representación, Aprendizaje Colaborativo'
+            }
+        ];
+    }
+
+    const wb = xlsx.utils.book_new();
+    const wsU = xlsx.utils.json_to_sheet(unidadesDatos);
+    wsU['!cols'] = [{ wch: 15 }, { wch: 40 }, { wch: 10 }, { wch: 14 }, { wch: 14 }, { wch: 15 }, { wch: 25 }, { wch: 40 }, { wch: 30 }];
+    xlsx.utils.book_append_sheet(wb, wsU, "Unidades");
+
+    const wsS = xlsx.utils.json_to_sheet(semanasDatos);
+    wsS['!cols'] = [{ wch: 15 }, { wch: 10 }, { wch: 14 }, { wch: 14 }, { wch: 35 }, { wch: 50 }, { wch: 30 }, { wch: 30 }];
+    xlsx.utils.book_append_sheet(wb, wsS, "Semanas");
+
+    return xlsx.write(wb, { type: 'buffer', bookType: 'xlsx' });
+}
+
+async function importarUnidadesSemanasExcel(planId, buffer, usuario = {}) {
+    const plan = await queryGet(`SELECT * FROM planificaciones WHERE id = ?`, [planId]);
+    if (!plan) throw new Error("Planificación no encontrada.");
+
+    const workbook = xlsx.read(buffer, { type: 'buffer' });
+    const sheetNames = workbook.SheetNames;
+    if (!sheetNames || sheetNames.length === 0) throw new Error("Archivo Excel inválido o vacío.");
+
+    // Hoja 1: Unidades
+    const wsU = workbook.Sheets["Unidades"] || workbook.Sheets[sheetNames[0]];
+    const unidadesRows = xlsx.utils.sheet_to_json(wsU);
+    if (!unidadesRows || unidadesRows.length === 0) throw new Error("No se encontraron registros en la hoja de Unidades.");
+
+    // Hoja 2: Semanas
+    let semanasRows = [];
+    if (workbook.Sheets["Semanas"]) {
+        semanasRows = xlsx.utils.sheet_to_json(workbook.Sheets["Semanas"]);
+    } else if (sheetNames.length > 1) {
+        semanasRows = xlsx.utils.sheet_to_json(workbook.Sheets[sheetNames[1]]);
+    }
+
+    const mapaSemanasPorUnidad = {};
+    for (const sr of semanasRows) {
+        const uNum = parseInt(sr['numero_unidad'] || sr['Unidad'] || 1);
+        if (!mapaSemanasPorUnidad[uNum]) mapaSemanasPorUnidad[uNum] = [];
+        
+        const tagsRaw = (sr['tags_metodologias'] || sr['tags'] || sr['DUA'] || '').toString().trim();
+        const tagsArr = tagsRaw ? tagsRaw.split(',').map(t => t.trim()).filter(Boolean) : [];
+
+        mapaSemanasPorUnidad[uNum].push({
+            semana: parseInt(sr['semana'] || sr['Semana']) || (mapaSemanasPorUnidad[uNum].length + 1),
+            fecha_inicio: (sr['fecha_inicio'] || sr['Fecha Inicio'] || '').toString().trim(),
+            fecha_fin: (sr['fecha_fin'] || sr['Fecha Fin'] || '').toString().trim(),
+            tema: (sr['tema'] || sr['Tema'] || sr['Contenido'] || '').toString().trim(),
+            actividades_formativas: (sr['actividades'] || sr['Actividades'] || '').toString().trim(),
+            recursos: (sr['recursos'] || sr['Recursos'] || '').toString().trim(),
+            tags: tagsArr,
+            dividir_clases: false,
+            clases: []
+        });
+    }
+
+    // Limpiar unidades anteriores de esta planificación
+    await queryRun(`DELETE FROM planificaciones_unidades WHERE planificacion_id = ?`, [planId]);
+
+    let unidadesCreadas = 0;
+    for (const ur of unidadesRows) {
+        const numU = parseInt(ur['numero_unidad'] || ur['Unidad'] || (unidadesCreadas + 1));
+        const nombreU = (ur['nombre_unidad'] || ur['Nombre'] || `Unidad ${numU}`).toString().trim();
+        const semestre = parseInt(ur['semestre'] || ur['Semestre']) || (numU > 2 ? 2 : 1);
+        const fInicio = (ur['fecha_inicio'] || ur['Fecha Inicio'] || '').toString().trim();
+        const fFin = (ur['fecha_fin'] || ur['Fecha Fin'] || '').toString().trim();
+        const horas = parseInt(ur['horas_estimadas'] || ur['Horas']) || 38;
+
+        const oasRaw = (ur['oas_codigos'] || ur['OAs'] || '').toString().trim();
+        const oasArr = oasRaw ? oasRaw.split(',').map(o => o.trim()).filter(Boolean) : [];
+
+        const habs = (ur['habilidades'] || ur['Habilidades'] || '').toString().trim();
+        const tagsRaw = (ur['tags_dua'] || ur['tags'] || ur['DUA'] || '').toString().trim();
+        const tagsArr = tagsRaw ? tagsRaw.split(',').map(t => t.trim()).filter(Boolean) : [];
+
+        const semanasDeEstaUnidad = mapaSemanasPorUnidad[numU] || [];
+
+        await queryRun(`
+            INSERT INTO planificaciones_unidades (
+                planificacion_id, numero_unidad, nombre_unidad, semestre,
+                fecha_inicio, fecha_fin, horas_estimadas, oas_seleccionados,
+                habilidades, desglose_semanal, orden
+            ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+        `, [
+            planId, numU, nombreU, semestre,
+            fInicio, fFin, horas, JSON.stringify(oasArr),
+            habs, JSON.stringify(semanasDeEstaUnidad), numU
+        ]);
+        unidadesCreadas++;
+    }
+
+    await queryRun(`UPDATE planificaciones SET actualizado_en = CURRENT_TIMESTAMP WHERE id = ?`, [planId]);
+
+    auditoria.registrarAuditoria({
+        usuario,
+        modulo: 'PLANIFICACIONES',
+        accion: 'Importar Unidades y Semanas',
+        descripcion: `Importó ${unidadesCreadas} unidades desde Excel para ${plan.curso} - ${plan.asignatura}`,
+        detalles: { plan_id: planId, unidades_creadas: unidadesCreadas },
+        nivel: 'info'
+    });
+
+    return { success: true, unidades_creadas: unidadesCreadas, mensaje: `Se importaron ${unidadesCreadas} unidades y sus semanas exitosamente.` };
+}
+
+function generarPlantillaCurriculoExcel() {
+    const ejemplo = [
+        {
+            Nivel: '4° Básico',
+            Asignatura: 'Taller de Robótica y Pensamiento Computacional',
+            Eje: 'Programación y Circuitos',
+            Codigo_OA: 'OA 01',
+            Descripcion_OA: 'Diseñar, construir y programar prototipos robóticos sencillos para resolver desafíos cotidianos.',
+            Basal_Complementario: 'Basal',
+            Habilidades: 'Pensamiento lógico, resolución colaborativa de problemas',
+            Actitudes: 'Trabajo en equipo, curiosidad e interés por la tecnología'
+        },
+        {
+            Nivel: '4° Básico',
+            Asignatura: 'Taller de Robótica y Pensamiento Computacional',
+            Eje: 'Programación y Circuitos',
+            Codigo_OA: 'OA 02',
+            Descripcion_OA: 'Utilizar sensores de luz y movimiento para condicionar el comportamiento de un robot.',
+            Basal_Complementario: 'Complementario',
+            Habilidades: 'Experimentación, análisis de causa y efecto',
+            Actitudes: 'Perseverancia frente al error'
+        }
+    ];
+
+    const wb = xlsx.utils.book_new();
+    const ws = xlsx.utils.json_to_sheet(ejemplo);
+    ws['!cols'] = [
+        { wch: 15 }, { wch: 40 }, { wch: 30 }, { wch: 14 },
+        { wch: 60 }, { wch: 20 }, { wch: 40 }, { wch: 40 }
+    ];
+    xlsx.utils.book_append_sheet(wb, ws, "Curriculo");
+    return xlsx.write(wb, { type: 'buffer', bookType: 'xlsx' });
+}
+
 module.exports = {
     obtenerCursosDocente,
     obtenerPoolDocentes,
@@ -1819,6 +2464,19 @@ module.exports = {
     calcularCoberturaCurricular,
     obtenerDashboardCoberturaColegio,
     inferirNivelDesdeCurso,
-    normalizar
+    normalizar,
+    // Hitos y Plantillas Masivas XLS
+    listarHitos,
+    obtenerHitosParaPlan,
+    crearHito,
+    actualizarHito,
+    eliminarHito,
+    generarPlantillaHitosExcel,
+    importarHitosExcel,
+    generarPlantillaPlanificacionesExcel,
+    importarPlanificacionesMasivasExcel,
+    generarPlantillaUnidadesExcel,
+    importarUnidadesSemanasExcel,
+    generarPlantillaCurriculoExcel
 };
 

@@ -149,9 +149,15 @@ function resolverCoincidencia(nombreReporte, listaUsuarios) {
 
 function formatearFechaTexto(val) {
     if (val === null || val === undefined) return '';
-    if (typeof val === 'number') {
+    if (val instanceof Date) {
+        const d = String(val.getDate()).padStart(2, '0');
+        const m = String(val.getMonth() + 1).padStart(2, '0');
+        const y = val.getFullYear();
+        return `${d}/${m}/${y}`;
+    }
+    if (typeof val === 'number' || (!isNaN(Number(val)) && String(val).trim() !== '' && Number(val) > 30000 && Number(val) < 70000)) {
         try {
-            const dateObj = xlsx.SSF.parse_date_code(val);
+            const dateObj = xlsx.SSF.parse_date_code(Number(val));
             if (dateObj) {
                 const d = String(dateObj.d).padStart(2, '0');
                 const m = String(dateObj.m).padStart(2, '0');
@@ -161,18 +167,26 @@ function formatearFechaTexto(val) {
         } catch (e) {}
     }
     const str = String(val).trim();
-    const matchDDMM = str.match(/^(\d{1,2})[\/\-](\d{1,2})[\/\-](\d{4})$/);
+    const matchDDMM = str.match(/\b(\d{1,2})[\/\-](\d{1,2})[\/\-](\d{4})\b/);
     if (matchDDMM) {
         const d = String(matchDDMM[1]).padStart(2, '0');
         const m = String(matchDDMM[2]).padStart(2, '0');
         const y = matchDDMM[3];
         return `${d}/${m}/${y}`;
     }
-    const matchISO = str.match(/^(\d{4})[\/\-](\d{1,2})[\/\-](\d{1,2})$/);
+    const matchISO = str.match(/\b(\d{4})[\/\-](\d{1,2})[\/\-](\d{1,2})\b/);
     if (matchISO) {
         const y = matchISO[1];
         const m = String(matchISO[2]).padStart(2, '0');
         const d = String(matchISO[3]).padStart(2, '0');
+        return `${d}/${m}/${y}`;
+    }
+    const matchYY = str.match(/\b(\d{1,2})[\/\-](\d{1,2})[\/\-](\d{2})\b/);
+    if (matchYY) {
+        const d = String(matchYY[1]).padStart(2, '0');
+        const m = String(matchYY[2]).padStart(2, '0');
+        let y = parseInt(matchYY[3], 10);
+        y = y < 70 ? 2000 + y : 1900 + y;
         return `${d}/${m}/${y}`;
     }
     return str;
@@ -295,7 +309,8 @@ router.post('/config', async (req, res) => {
             await run("INSERT INTO libro_config (clave, valor) VALUES ('blacklist', ?) ON CONFLICT(clave) DO UPDATE SET valor=excluded.valor", [JSON.stringify(blacklist)]);
         }
         if (dias_excluidos !== undefined) {
-            await run("INSERT INTO libro_config (clave, valor) VALUES ('dias_excluidos', ?) ON CONFLICT(clave) DO UPDATE SET valor=excluded.valor", [JSON.stringify(dias_excluidos)]);
+            const diasLimpios = Array.from(new Set((dias_excluidos || []).map(d => formatearFechaTexto(d)).filter(Boolean)));
+            await run("INSERT INTO libro_config (clave, valor) VALUES ('dias_excluidos', ?) ON CONFLICT(clave) DO UPDATE SET valor=excluded.valor", [JSON.stringify(diasLimpios)]);
         }
         if (destinatarios_admin !== undefined) {
             await run("INSERT INTO libro_config (clave, valor) VALUES ('destinatarios_admin', ?) ON CONFLICT(clave) DO UPDATE SET valor=excluded.valor", [JSON.stringify(destinatarios_admin)]);
@@ -484,42 +499,54 @@ router.post('/procesar-archivo', upload.single('archivo'), async (req, res) => {
 });
 
 // ==========================================
+// CONSULTA UNIFICADA CON FILTROS DE EXCLUSIÓN
+// ==========================================
+
+/**
+ * Obtiene los registros del libro aplicando consistentemente los filtros de exclusión:
+ * - Días excluidos de reporte (feriados, paros, suspensiones)
+ * - Lista de profesores exentos (blacklist)
+ * - Clases requeridas > 0
+ */
+async function obtenerRegistrosFiltrados() {
+    const configRows = await queryAll("SELECT clave, valor FROM libro_config");
+    let blacklist = [];
+    let diasExcluidos = [];
+    configRows.forEach(r => {
+        try {
+            if (r.clave === 'blacklist') blacklist = JSON.parse(r.valor);
+            if (r.clave === 'dias_excluidos') diasExcluidos = JSON.parse(r.valor);
+        } catch (e) {}
+    });
+
+    const blacklistNorm = (blacklist || []).map(b => normalizarTexto(b));
+    const diasExcluidosNorm = (diasExcluidos || []).map(d => formatearFechaTexto(d)).filter(Boolean);
+
+    const todos = await queryAll(`
+        SELECT id, fecha, profesor, profesor_normalizado, creadas, requeridas,
+               contenido, asistencia, firma, critico, archivo_origen,
+               profesor_plataforma, profesor_email, usuario_id, actualizado_en
+        FROM libro_registros
+        ORDER BY id ASC
+    `);
+
+    return todos.filter(item => {
+        const pNorm = normalizarTexto(item.profesor);
+        const pPlatNorm = normalizarTexto(item.profesor_plataforma);
+        if (blacklistNorm.includes(pNorm) || (pPlatNorm && blacklistNorm.includes(pPlatNorm))) return false;
+        if (diasExcluidosNorm.includes(formatearFechaTexto(item.fecha))) return false;
+        if (item.requeridas <= 0) return false;
+        return true;
+    });
+}
+
+// ==========================================
 // ENDPOINT: DASHBOARD Y CONSULTA DE REGISTROS
 // ==========================================
 
 router.get('/dashboard', async (req, res) => {
     try {
-        // Cargar exclusiones
-        const configRows = await queryAll("SELECT clave, valor FROM libro_config");
-        let blacklist = [];
-        let diasExcluidos = [];
-        configRows.forEach(r => {
-            try {
-                if (r.clave === 'blacklist') blacklist = JSON.parse(r.valor);
-                if (r.clave === 'dias_excluidos') diasExcluidos = JSON.parse(r.valor);
-            } catch (e) {}
-        });
-        
-        const blacklistNorm = blacklist.map(b => normalizarTexto(b));
-        const diasExcluidosNorm = diasExcluidos.map(d => formatearFechaTexto(d));
-        
-        const todos = await queryAll(`
-            SELECT id, fecha, profesor, profesor_normalizado, creadas, requeridas,
-                   contenido, asistencia, firma, critico, archivo_origen,
-                   profesor_plataforma, profesor_email, usuario_id, actualizado_en
-            FROM libro_registros
-            ORDER BY id ASC
-        `);
-        
-        // Filtrar en memoria por si se agregaron nuevos exentos posteriormente
-        const filtrados = todos.filter(item => {
-            const pNorm = normalizarTexto(item.profesor);
-            const pPlatNorm = normalizarTexto(item.profesor_plataforma);
-            if (blacklistNorm.includes(pNorm) || (pPlatNorm && blacklistNorm.includes(pPlatNorm))) return false;
-            if (diasExcluidosNorm.includes(formatearFechaTexto(item.fecha))) return false;
-            if (item.requeridas <= 0) return false;
-            return true;
-        });
+        const filtrados = await obtenerRegistrosFiltrados();
         
         let countCriticos = 0;
         let countPendientes = 0;
@@ -538,7 +565,7 @@ router.get('/dashboard', async (req, res) => {
             
             return {
                 id: r.id,
-                Fecha: r.fecha,
+                Fecha: formatearFechaTexto(r.fecha),
                 Profesor: nombreMostrado,
                 ProfesorOriginal: r.profesor,
                 ProfesorPlataforma: r.profesor_plataforma || '',
@@ -853,7 +880,8 @@ router.post('/enviar-alertas-docentes', async (req, res) => {
         }
         
         const transporter = crearTransporter();
-        const registros = await queryAll("SELECT * FROM libro_registros WHERE critico = 1 OR firma < requeridas");
+        const filtrados = await obtenerRegistrosFiltrados();
+        const registros = filtrados.filter(r => r.critico === 1 || (r.requeridas > 0 && r.creadas === 0) || r.firma < r.requeridas);
         const usuarios = await queryAll("SELECT id, nombre, email FROM usuarios");
         const aliasRows = await queryAll("SELECT * FROM libro_alias_docentes");
         
@@ -901,6 +929,8 @@ router.post('/enviar-alertas-docentes', async (req, res) => {
         const noEncontrados = [];
         
         for (const [key, data] of faltasPorDocente.entries()) {
+            if (!data.faltas || data.faltas.length === 0) continue;
+
             if (!data.email) {
                 noEncontrados.push(data.nombreOriginal);
                 continue;
@@ -916,10 +946,11 @@ router.post('/enviar-alertas-docentes', async (req, res) => {
             `;
             
             data.faltas.forEach(f => {
-                const esCrit = f.critico === 1 || f.creadas === 0;
+                const esCrit = f.critico === 1 || (f.requeridas > 0 && f.creadas === 0);
+                const fechaLimpia = formatearFechaTexto(f.fecha);
                 tablaHtml += `
                     <tr>
-                        <td align="center">${f.fecha}</td>
+                        <td align="center">${fechaLimpia}</td>
                         <td align="center">${f.creadas}/${f.requeridas}</td>
                         <td style="color: ${esCrit ? '#dc2626' : '#d97706'}; font-weight: bold;">
                             ${esCrit ? '🚨 SIN CLASES CREADAS' : '✍️ FALTAN FIRMAS'}
@@ -987,9 +1018,9 @@ router.post('/enviar-resumen-admin', async (req, res) => {
             destinatarios = ['pabascal@colegiocerrogrande.cl'];
         }
         
-        const registros = await queryAll("SELECT * FROM libro_registros");
+        const registros = await obtenerRegistrosFiltrados();
         
-        const totalCriticos = registros.filter(f => f.critico === 1 || f.creadas === 0).length;
+        const totalCriticos = registros.filter(f => f.critico === 1 || (f.requeridas > 0 && f.creadas === 0)).length;
         const totalPendientes = registros.filter(f => f.critico === 0 && f.creadas > 0 && f.firma < f.requeridas).length;
         
         const resumenProfesores = {};
@@ -1003,7 +1034,7 @@ router.post('/enviar-resumen-admin', async (req, res) => {
                     sinFirmar: 0
                 };
             }
-            if (f.critico === 1 || f.creadas === 0) {
+            if (f.critico === 1 || (f.requeridas > 0 && f.creadas === 0)) {
                 resumenProfesores[profVisible].sinCrear++;
             } else if (f.firma < f.requeridas) {
                 resumenProfesores[profVisible].sinFirmar++;

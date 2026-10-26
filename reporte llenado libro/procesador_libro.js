@@ -15,9 +15,15 @@ const db = new sqlite3.Database(dbPath);
 
 function formatearFechaTexto(val) {
     if (val === null || val === undefined) return '';
-    if (typeof val === 'number') {
+    if (val instanceof Date) {
+        const d = String(val.getDate()).padStart(2, '0');
+        const m = String(val.getMonth() + 1).padStart(2, '0');
+        const y = val.getFullYear();
+        return `${d}/${m}/${y}`;
+    }
+    if (typeof val === 'number' || (!isNaN(Number(val)) && String(val).trim() !== '' && Number(val) > 30000 && Number(val) < 70000)) {
         try {
-            const dateObj = xlsx.SSF.parse_date_code(val);
+            const dateObj = xlsx.SSF.parse_date_code(Number(val));
             if (dateObj) {
                 const d = String(dateObj.d).padStart(2, '0');
                 const m = String(dateObj.m).padStart(2, '0');
@@ -27,13 +33,27 @@ function formatearFechaTexto(val) {
         } catch (e) {}
     }
     const str = String(val).trim();
-    const matchDDMM = str.match(/^(\d{1,2})[\/\-](\d{1,2})[\/\-](\d{4})$/);
+    const matchDDMM = str.match(/\b(\d{1,2})[\/\-](\d{1,2})[\/\-](\d{4})\b/);
     if (matchDDMM) {
-        return `${String(matchDDMM[1]).padStart(2, '0')}/${String(matchDDMM[2]).padStart(2, '0')}/${matchDDMM[3]}`;
+        const d = String(matchDDMM[1]).padStart(2, '0');
+        const m = String(matchDDMM[2]).padStart(2, '0');
+        const y = matchDDMM[3];
+        return `${d}/${m}/${y}`;
     }
-    const matchISO = str.match(/^(\d{4})[\/\-](\d{1,2})[\/\-](\d{1,2})$/);
+    const matchISO = str.match(/\b(\d{4})[\/\-](\d{1,2})[\/\-](\d{1,2})\b/);
     if (matchISO) {
-        return `${String(matchISO[3]).padStart(2, '0')}/${String(matchISO[2]).padStart(2, '0')}/${matchISO[1]}`;
+        const y = matchISO[1];
+        const m = String(matchISO[2]).padStart(2, '0');
+        const d = String(matchISO[3]).padStart(2, '0');
+        return `${d}/${m}/${y}`;
+    }
+    const matchYY = str.match(/\b(\d{1,2})[\/\-](\d{1,2})[\/\-](\d{2})\b/);
+    if (matchYY) {
+        const d = String(matchYY[1]).padStart(2, '0');
+        const m = String(matchYY[2]).padStart(2, '0');
+        let y = parseInt(matchYY[3], 10);
+        y = y < 70 ? 2000 + y : 1900 + y;
+        return `${d}/${m}/${y}`;
     }
     return str;
 }

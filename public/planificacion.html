@@ -340,6 +340,11 @@
         <i class="bi bi-speedometer2 me-1"></i> Dashboard de Cobertura Curricular
       </button>
     </li>
+    <li class="nav-item" id="nav-item-hitos">
+      <button class="nav-link" data-bs-toggle="tab" data-bs-target="#tab-hitos" type="button" onclick="cargarHitosColegio()">
+        <i class="bi bi-calendar-event me-1"></i> Hitos & Orientaciones UTP
+      </button>
+    </li>
     <li class="nav-item" id="nav-item-curriculo">
       <button class="nav-link" data-bs-toggle="tab" data-bs-target="#tab-curriculo" type="button">
         <i class="bi bi-collection me-1"></i> Catálogo MINEDUC & Planes Propios
@@ -352,11 +357,21 @@
 
     <!-- 1. MIS PLANIFICACIONES (VISTA DOCENTE) -->
     <div class="tab-pane fade show active" id="tab-mis-planes" role="tabpanel">
-      <div class="d-flex justify-content-between align-items-center mb-3">
-        <h6 class="fw-bold text-secondary text-uppercase mb-0" style="font-size: 0.8rem; letter-spacing: 0.5px;">
-          <i class="bi bi-clock-history me-1"></i> Carga Horaria y Asignaciones del Docente
-        </h6>
-        <span class="badge bg-light text-secondary border" id="badgeTotalAsignaciones">0 cursos detectados</span>
+      <div class="d-flex justify-content-between align-items-center mb-3 flex-wrap gap-2">
+        <div>
+          <h6 class="fw-bold text-secondary text-uppercase mb-0" style="font-size: 0.8rem; letter-spacing: 0.5px;">
+            <i class="bi bi-clock-history me-1"></i> Carga Horaria y Asignaciones del Docente
+          </h6>
+          <span class="badge bg-light text-secondary border mt-1" id="badgeTotalAsignaciones">0 cursos detectados</span>
+        </div>
+        <div class="d-flex gap-2">
+          <button class="btn btn-sm btn-outline-success" onclick="descargarPlantillaPlanificaciones()" title="Descargar formato Excel para planificaciones anuales">
+            <i class="bi bi-file-earmark-excel me-1"></i> Formato XLS
+          </button>
+          <button class="btn btn-sm btn-outline-primary" onclick="abrirModalImportarPlanificaciones()" title="Importar todas sus planificaciones juntas desde un archivo Excel">
+            <i class="bi bi-cloud-arrow-up me-1"></i> Importar XLS
+          </button>
+        </div>
       </div>
 
       <div class="row g-3 mb-4" id="misCursosContainer">
@@ -366,6 +381,17 @@
 
     <!-- 2. MATRIZ DE PLANIFICACIONES DEL COLEGIO & VISADO (COORDINACIÓN) -->
     <div class="tab-pane fade" id="tab-matriz" role="tabpanel">
+      <div class="d-flex justify-content-between align-items-center mb-3 flex-wrap gap-2 no-print">
+        <span class="badge bg-light text-secondary border">Visado y Matriz Curricular Institucional</span>
+        <div class="d-flex gap-2">
+          <button class="btn btn-sm btn-outline-success" onclick="descargarPlantillaPlanificaciones()" title="Descargar formato Excel para planificaciones anuales masivas">
+            <i class="bi bi-file-earmark-excel me-1"></i> Formato XLS
+          </button>
+          <button class="btn btn-sm btn-outline-primary" onclick="abrirModalImportarPlanificaciones()" title="Importar planificaciones anuales masivamente desde Excel">
+            <i class="bi bi-cloud-arrow-up me-1"></i> Importar XLS
+          </button>
+        </div>
+      </div>
       <div class="card-custom p-3 mb-4 no-print">
         <div class="row g-3">
           <div class="col-md-4">
@@ -489,14 +515,90 @@
       </div>
     </div>
 
-    <!-- 4. CATÁLOGO MINEDUC & PLANES PROPIOS -->
+    <!-- 4. HITOS Y ORIENTACIONES PEDAGÓGICAS INSTITUCIONALES (UTP / ADMIN) -->
+    <div class="tab-pane fade" id="tab-hitos" role="tabpanel">
+      <div class="d-flex justify-content-between align-items-center mb-3 flex-wrap gap-2">
+        <div>
+          <h5 class="fw-bold text-dark mb-0"><i class="bi bi-calendar-event text-primary me-2"></i>Hitos Institucionales y Orientaciones Pedagógicas UTP</h5>
+          <p class="text-muted small mb-0">Marca hitos pedagógicos (semanas temáticas, mes STEM, efemérides), segmenta por cursos/asignaturas con exclusiones y brinda lineamientos curriculares y OAs/DUA a los docentes.</p>
+        </div>
+        <div class="d-flex gap-2 align-items-center" id="adminHitosBtns">
+          <button class="btn btn-sm btn-outline-success" onclick="descargarPlantillaHitos()" title="Descargar formato Excel para carga masiva de hitos">
+            <i class="bi bi-file-earmark-excel me-1"></i> Formato XLS
+          </button>
+          <button class="btn btn-sm btn-outline-primary" onclick="abrirModalImportarHitos()" title="Importar hitos masivamente desde Excel">
+            <i class="bi bi-cloud-arrow-up me-1"></i> Importar XLS
+          </button>
+          <button class="btn btn-sm btn-primary" onclick="abrirModalCrearHito()">
+            <i class="bi bi-plus-circle me-1"></i> Nuevo Hito Institucional
+          </button>
+        </div>
+      </div>
+
+      <!-- Filtros de Hitos -->
+      <div class="card-custom p-3 mb-4">
+        <div class="row g-3">
+          <div class="col-md-4">
+            <label class="form-label text-muted small mb-1">Buscar por Título / Lineamiento</label>
+            <input type="text" id="filtroTextoHitos" class="form-control form-control-sm" placeholder="Ej: Semana del Teatro, Mes STEM, Efemérides..." oninput="filtrarHitosTabla()">
+          </div>
+          <div class="col-md-4">
+            <label class="form-label text-muted small mb-1">Tipo de Hito</label>
+            <select id="filtroTipoHitos" class="form-select form-select-sm" onchange="filtrarHitosTabla()">
+              <option value="todos">Todos los tipos</option>
+              <option value="Hito Pedagógico">Hito Pedagógico</option>
+              <option value="Semana Temática">Semana Temática</option>
+              <option value="Mes Temático">Mes Temático</option>
+              <option value="Efeméride Institucional">Efeméride Institucional</option>
+              <option value="Evaluación Institucional">Evaluación Institucional</option>
+              <option value="Proyecto Interdisciplinario">Proyecto Interdisciplinario</option>
+            </select>
+          </div>
+          <div class="col-md-4">
+            <label class="form-label text-muted small mb-1">Estado</label>
+            <select id="filtroEstadoHitos" class="form-select form-select-sm" onchange="filtrarHitosTabla()">
+              <option value="todos">Todos los estados</option>
+              <option value="activos" selected>Solo Activos</option>
+              <option value="inactivos">Inactivos</option>
+            </select>
+          </div>
+        </div>
+      </div>
+
+      <!-- Tabla de Hitos -->
+      <div class="card-custom overflow-hidden mb-4">
+        <div class="table-responsive">
+          <table class="table table-hover align-middle mb-0" style="font-size: 0.88rem;">
+            <thead class="table-light text-secondary" style="font-size: 0.78rem; text-transform: uppercase;">
+              <tr>
+                <th style="width: 50px;" class="text-center">Hito</th>
+                <th style="width: 220px;">Título & Tipo</th>
+                <th style="width: 170px;">Fechas de Vigencia</th>
+                <th style="width: 220px;">Segmentación Cursos</th>
+                <th style="width: 200px;">Asignaturas</th>
+                <th>Orientaciones & Lineamientos UTP</th>
+                <th style="width: 110px;" class="text-end">Acciones</th>
+              </tr>
+            </thead>
+            <tbody id="tablaHitosBody">
+              <!-- Render dinámico -->
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+
+    <!-- 5. CATÁLOGO MINEDUC & PLANES PROPIOS -->
     <div class="tab-pane fade" id="tab-curriculo" role="tabpanel">
-      <div class="d-flex justify-content-between align-items-center mb-3">
+      <div class="d-flex justify-content-between align-items-center mb-3 flex-wrap gap-2">
         <div>
           <h6 class="fw-bold text-dark mb-0"><i class="bi bi-collection text-primary me-1"></i> Catálogo de Planes y Programas Vigentes</h6>
           <p class="small text-muted mb-0">Consulta los Objetivos de Aprendizaje oficiales y gestiona planes propios del establecimiento.</p>
         </div>
         <div class="d-flex gap-2" id="adminCurriculoBtns">
+          <a href="/api/planificacion/curriculo/plantilla" class="btn btn-sm btn-outline-secondary" title="Descargar formato Excel de ejemplo para planes propios y currículo">
+            <i class="bi bi-file-earmark-excel me-1"></i> Formato XLS
+          </a>
           <button class="btn btn-sm btn-outline-success" onclick="abrirModalImportarCurriculo()">
             <i class="bi bi-file-earmark-spreadsheet me-1"></i> Actualizar MINEDUC (Excel)
           </button>
@@ -730,11 +832,22 @@
 
             <!-- 2. PESTAÑA UNIDADES & DESGLOSE SEMANAL -->
             <div class="tab-pane fade" id="edit-unidades">
-              <div class="d-flex justify-content-between align-items-center mb-3">
-                <h6 class="fw-bold text-dark mb-0"><i class="bi bi-stack text-primary me-2"></i>Unidades Pedagógicas Programadas</h6>
-                <button class="btn btn-sm btn-primary" onclick="agregarNuevaUnidad()">
-                  <i class="bi bi-plus-circle me-1"></i> Agregar Unidad
-                </button>
+              <div class="d-flex justify-content-between align-items-center mb-3 flex-wrap gap-2">
+                <div>
+                  <h6 class="fw-bold text-dark mb-0"><i class="bi bi-stack text-primary me-2"></i>Unidades Pedagógicas y Desglose Semanal</h6>
+                  <p class="text-muted small mb-0">Organiza las unidades, OAs MINEDUC, metodologías DUA y el desglose de clases por semana.</p>
+                </div>
+                <div class="d-flex gap-2">
+                  <button class="btn btn-sm btn-outline-success" onclick="descargarPlantillaUnidadesActual()" title="Descargar formato Excel con las unidades y semanas de este curso">
+                    <i class="bi bi-file-earmark-excel me-1"></i> Formato XLS
+                  </button>
+                  <button class="btn btn-sm btn-outline-primary" onclick="abrirModalImportarUnidadesActual()" title="Importar unidades y semanas desde archivo Excel">
+                    <i class="bi bi-cloud-arrow-up me-1"></i> Importar XLS
+                  </button>
+                  <button class="btn btn-sm btn-primary" onclick="agregarNuevaUnidad()">
+                    <i class="bi bi-plus-circle me-1"></i> Agregar Unidad
+                  </button>
+                </div>
               </div>
 
               <div id="unidadesAcordeonContainer">
@@ -1177,6 +1290,271 @@
     </div>
   </div>
 
+  <!-- ============================================================== -->
+  <!-- MODAL EDITOR DE HITO INSTITUCIONAL UTP                         -->
+  <!-- ============================================================== -->
+  <div class="modal fade" id="modalEditorHito" tabindex="-1">
+    <div class="modal-dialog modal-lg">
+      <div class="modal-content">
+        <div class="modal-header bg-primary text-white py-2 px-3">
+          <h6 class="modal-title fw-bold" id="tituloModalEditorHito"><i class="bi bi-flag-fill me-2"></i>Nuevo Hito Institucional UTP</h6>
+          <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+        </div>
+        <div class="modal-body p-4">
+          <input type="hidden" id="inputHitoId" value="">
+          <div class="row g-3">
+            <div class="col-md-7">
+              <label class="form-label small fw-semibold">Nombre o Título del Hito <span class="text-danger">*</span></label>
+              <input type="text" id="inputHitoTitulo" class="form-control form-control-sm" placeholder="Ej: Semana del Teatro, Mes STEM, Efemérides...">
+            </div>
+            <div class="col-md-5">
+              <label class="form-label small fw-semibold">Tipo de Hito</label>
+              <select id="selectHitoTipo" class="form-select form-select-sm">
+                <option value="Hito Pedagógico">Hito Pedagógico</option>
+                <option value="Semana Temática">Semana Temática</option>
+                <option value="Mes Temático">Mes Temático</option>
+                <option value="Efeméride Institucional">Efeméride Institucional</option>
+                <option value="Evaluación Institucional">Evaluación Institucional</option>
+                <option value="Proyecto Interdisciplinario">Proyecto Interdisciplinario</option>
+              </select>
+            </div>
+
+            <!-- Icono y Color -->
+            <div class="col-md-6">
+              <label class="form-label small fw-semibold">Icono Representativo</label>
+              <div class="d-flex align-items-center gap-2">
+                <input type="text" id="inputHitoIcono" class="form-control form-control-sm text-center" style="width: 55px; font-size: 1.2rem;" value="🎭">
+                <div class="d-flex flex-wrap gap-1">
+                  <button type="button" class="btn btn-xs btn-outline-secondary py-0 px-2" onclick="document.getElementById('inputHitoIcono').value='🎭'">🎭</button>
+                  <button type="button" class="btn btn-xs btn-outline-secondary py-0 px-2" onclick="document.getElementById('inputHitoIcono').value='🔬'">🔬</button>
+                  <button type="button" class="btn btn-xs btn-outline-secondary py-0 px-2" onclick="document.getElementById('inputHitoIcono').value='📚'">📚</button>
+                  <button type="button" class="btn btn-xs btn-outline-secondary py-0 px-2" onclick="document.getElementById('inputHitoIcono').value='💡'">💡</button>
+                  <button type="button" class="btn btn-xs btn-outline-secondary py-0 px-2" onclick="document.getElementById('inputHitoIcono').value='🌍'">🌍</button>
+                  <button type="button" class="btn btn-xs btn-outline-secondary py-0 px-2" onclick="document.getElementById('inputHitoIcono').value='🎨'">🎨</button>
+                  <button type="button" class="btn btn-xs btn-outline-secondary py-0 px-2" onclick="document.getElementById('inputHitoIcono').value='🏆'">🏆</button>
+                  <button type="button" class="btn btn-xs btn-outline-secondary py-0 px-2" onclick="document.getElementById('inputHitoIcono').value='⭐'">⭐</button>
+                </div>
+              </div>
+            </div>
+            <div class="col-md-6">
+              <label class="form-label small fw-semibold">Color del Marcador</label>
+              <div class="d-flex align-items-center gap-2">
+                <input type="color" id="inputHitoColor" class="form-control form-control-color" value="#2563eb" style="width: 48px; height: 31px;">
+                <div class="d-flex gap-1">
+                  <button type="button" class="btn btn-xs rounded-circle p-0" style="width: 24px; height: 24px; background: #2563eb;" onclick="document.getElementById('inputHitoColor').value='#2563eb'"></button>
+                  <button type="button" class="btn btn-xs rounded-circle p-0" style="width: 24px; height: 24px; background: #16a34a;" onclick="document.getElementById('inputHitoColor').value='#16a34a'"></button>
+                  <button type="button" class="btn btn-xs rounded-circle p-0" style="width: 24px; height: 24px; background: #d97706;" onclick="document.getElementById('inputHitoColor').value='#d97706'"></button>
+                  <button type="button" class="btn btn-xs rounded-circle p-0" style="width: 24px; height: 24px; background: #dc2626;" onclick="document.getElementById('inputHitoColor').value='#dc2626'"></button>
+                  <button type="button" class="btn btn-xs rounded-circle p-0" style="width: 24px; height: 24px; background: #9333ea;" onclick="document.getElementById('inputHitoColor').value='#9333ea'"></button>
+                  <button type="button" class="btn btn-xs rounded-circle p-0" style="width: 24px; height: 24px; background: #0891b2;" onclick="document.getElementById('inputHitoColor').value='#0891b2'"></button>
+                </div>
+              </div>
+            </div>
+
+            <!-- Fechas -->
+            <div class="col-md-6">
+              <label class="form-label small fw-semibold">Fecha de Inicio <span class="text-danger">*</span></label>
+              <input type="date" id="inputHitoFechaInicio" class="form-control form-control-sm">
+            </div>
+            <div class="col-md-6">
+              <label class="form-label small fw-semibold">Fecha de Término <span class="text-danger">*</span></label>
+              <input type="date" id="inputHitoFechaFin" class="form-control form-control-sm">
+            </div>
+
+            <!-- Segmentación por Asignaturas -->
+            <div class="col-12">
+              <div class="border rounded p-3 bg-light">
+                <div class="d-flex justify-content-between align-items-center mb-2">
+                  <div class="form-check form-switch mb-0">
+                    <input class="form-check-input" type="checkbox" id="chkHitoTodasAsignaturas" checked onchange="toggleSegmentacionAsignaturasHito(this.checked)">
+                    <label class="form-check-label fw-bold small text-dark" for="chkHitoTodasAsignaturas">Aplicar a TODAS las Asignaturas</label>
+                  </div>
+                  <div id="btnAtajosAsigHito" class="d-none">
+                    <button type="button" class="btn btn-xs btn-outline-primary py-0" style="font-size: 0.72rem;" onclick="seleccionarAsignaturasHitoRapido(['LENGUAJE Y COMUNICACION', 'LENGUA Y LITERATURA'])">Lenguaje / Literatura</button>
+                    <button type="button" class="btn btn-xs btn-outline-primary py-0" style="font-size: 0.72rem;" onclick="seleccionarAsignaturasHitoRapido(['MATEMATICA', 'CIENCIAS NATURALES', 'TECNOLOGIA'])">STEM</button>
+                  </div>
+                </div>
+                <div id="boxAsignaturasEspecificasHito" class="d-none mt-2">
+                  <div class="small text-muted mb-1">Selecciona las asignaturas que participan de este hito:</div>
+                  <div id="gridAsignaturasHito" class="d-flex flex-wrap gap-1 p-2 bg-white rounded border" style="max-height: 120px; overflow-y: auto;">
+                    <!-- Render de checkboxes de asignaturas -->
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            <!-- Segmentación por Cursos y Exclusiones -->
+            <div class="col-12">
+              <div class="border rounded p-3 bg-light">
+                <div class="form-check form-switch mb-2">
+                  <input class="form-check-input" type="checkbox" id="chkHitoTodosCursos" checked onchange="toggleSegmentacionCursosHito(this.checked)">
+                  <label class="form-check-label fw-bold small text-dark" for="chkHitoTodosCursos">Aplicar a TODOS los Cursos y Niveles</label>
+                </div>
+                <div id="boxCursosEspecificosHito" class="d-none mb-3">
+                  <div class="small text-muted mb-1">Selecciona los cursos participantes:</div>
+                  <div id="gridCursosHito" class="d-flex flex-wrap gap-1 p-2 bg-white rounded border" style="max-height: 120px; overflow-y: auto;">
+                    <!-- Render de checkboxes de cursos -->
+                  </div>
+                </div>
+
+                <!-- EXCLUSIONES EXPLICITAS (Ej: Salvo 1° y 2° Básico) -->
+                <div class="p-2 rounded bg-warning-subtle border border-warning-subtle mt-2">
+                  <div class="d-flex justify-content-between align-items-center mb-1">
+                    <label class="form-label small fw-bold text-dark mb-0"><i class="bi bi-shield-x me-1 text-danger"></i>Cursos o Niveles Excluidos (Excepciones)</label>
+                    <div class="btn-group btn-group-xs">
+                      <button type="button" class="btn btn-xs btn-outline-dark py-0" style="font-size: 0.68rem;" onclick="agregarExclusionRapida('1° BÁSICO, 2° BÁSICO')">+ Salvo 1° y 2° Básico</button>
+                      <button type="button" class="btn btn-xs btn-outline-dark py-0" style="font-size: 0.68rem;" onclick="agregarExclusionRapida('KINDER, PRE-KINDER')">+ Salvo Parvularia</button>
+                    </div>
+                  </div>
+                  <input type="text" id="inputHitoCursosExcluidos" class="form-control form-control-sm" placeholder="Ej: 1° BASICO, 2° BASICO (separados por coma)">
+                  <div class="small text-muted mt-1" style="font-size: 0.72rem;">Los docentes de estos cursos quedarán expresamente excluidos de este hito y no verán pop-ups ni lineamientos asociados.</div>
+                </div>
+              </div>
+            </div>
+
+            <!-- Lineamientos Pedagógicos UTP -->
+            <div class="col-12">
+              <label class="form-label small fw-semibold">Orientaciones Curriculares y Lineamientos Pedagógicos de UTP</label>
+              <textarea id="txtHitoLineamientos" class="form-control form-control-sm" rows="3" placeholder="Indique directrices metodológicas, articulación interdisciplinaria, criterios de evaluación y orientaciones para que el docente guíe su planificación..."></textarea>
+            </div>
+
+            <!-- OAs Sugeridos y Metodologías DUA -->
+            <div class="col-md-6">
+              <label class="form-label small fw-semibold">OAs Sugeridos por UTP</label>
+              <input type="text" id="inputHitoOAs" class="form-control form-control-sm" placeholder="Ej: OA 01, OA 03, OA 07 (separados por coma)">
+              <div class="form-text small" style="font-size: 0.72rem;">El docente podrá adoptarlos en 1 clic en su unidad correspondiente.</div>
+            </div>
+            <div class="col-md-6">
+              <label class="form-label small fw-semibold">Metodologías DUA Sugeridas</label>
+              <input type="text" id="inputHitoMetodologias" class="form-control form-control-sm" placeholder="Ej: ABP (Proyectos), STEAM, Rutinas de Pensamiento">
+              <div class="form-text small" style="font-size: 0.72rem;">Etiquetas pedagógicas que el docente podrá asociar a sus clases.</div>
+            </div>
+
+            <!-- Recursos y Enlaces -->
+            <div class="col-12">
+              <label class="form-label small fw-semibold">Recursos, Enlaces o Material de Apoyo (Opcional)</label>
+              <textarea id="txtHitoRecursos" class="form-control form-control-sm" rows="2" placeholder="Enlaces a Google Drive, carpetas de recursos, bases o pautas institucionales (uno por línea)..."></textarea>
+            </div>
+          </div>
+        </div>
+        <div class="modal-footer py-2">
+          <button type="button" class="btn btn-sm btn-secondary" data-bs-dismiss="modal">Cancelar</button>
+          <button type="button" class="btn btn-sm btn-primary px-3" onclick="guardarHitoSubmit()">
+            <i class="bi bi-save me-1"></i> Guardar Hito Institucional
+          </button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ============================================================== -->
+  <!-- MODAL GUIA PEDAGOGICA DEL HITO (VISTA DOCENTE EN PLANIFICADOR) -->
+  <!-- ============================================================== -->
+  <div class="modal fade" id="modalGuiaHito" tabindex="-1">
+    <div class="modal-dialog modal-lg">
+      <div class="modal-content">
+        <div class="modal-header py-3 px-4 text-white" id="headerModalGuiaHito" style="background-color: #2563eb;">
+          <div class="d-flex align-items-center gap-3">
+            <span class="fs-2" id="lblGuiaHitoIcono">🎭</span>
+            <div>
+              <h5 class="modal-title fw-bold mb-0" id="lblGuiaHitoTitulo">Hito Institucional</h5>
+              <div class="small opacity-75" id="lblGuiaHitoFechas">Fechas de vigencia</div>
+            </div>
+          </div>
+          <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+        </div>
+        <div class="modal-body p-4">
+          <!-- Orientaciones UTP -->
+          <div class="p-3 bg-light rounded border mb-4">
+            <h6 class="fw-bold text-primary mb-2"><i class="bi bi-compass me-1"></i>Orientaciones y Lineamientos de UTP</h6>
+            <div class="text-dark small" id="lblGuiaHitoLineamientos" style="white-space: pre-wrap; line-height: 1.5;">Sin lineamientos registrados.</div>
+          </div>
+
+          <!-- OAs Sugeridos -->
+          <div class="card p-3 border mb-3">
+            <div class="d-flex justify-content-between align-items-center mb-2 flex-wrap gap-2">
+              <div>
+                <h6 class="fw-bold text-dark mb-0 small"><i class="bi bi-bullseye text-primary me-1"></i>Objetivos de Aprendizaje Sugeridos</h6>
+                <span class="text-muted" style="font-size: 0.75rem;">Haz clic en el botón para integrarlos directamente a tu unidad activa.</span>
+              </div>
+              <button type="button" class="btn btn-sm btn-outline-primary" id="btnAdoptarOAsHito" onclick="adoptarOAsGuiaHitoSubmit()">
+                <i class="bi bi-plus-circle me-1"></i> Adoptar OAs en esta Unidad
+              </button>
+            </div>
+            <div id="boxGuiaHitoOAs" class="d-flex flex-wrap gap-1 mt-1">
+              <span class="text-muted small">No hay OAs sugeridos específicos para este hito.</span>
+            </div>
+          </div>
+
+          <!-- Metodologías DUA Sugeridas -->
+          <div class="card p-3 border mb-3">
+            <div class="d-flex justify-content-between align-items-center mb-2 flex-wrap gap-2">
+              <div>
+                <h6 class="fw-bold text-dark mb-0 small"><i class="bi bi-tags text-primary me-1"></i>Metodologías y Estrategias DUA Sugeridas</h6>
+                <span class="text-muted" style="font-size: 0.75rem;">Adopta las etiquetas recomendadas en esta semana de planificación.</span>
+              </div>
+              <button type="button" class="btn btn-sm btn-outline-success" id="btnAdoptarTagsHito" onclick="adoptarTagsGuiaHitoSubmit()">
+                <i class="bi bi-check2-circle me-1"></i> Adoptar en esta Semana
+              </button>
+            </div>
+            <div id="boxGuiaHitoTags" class="d-flex flex-wrap gap-1 mt-1">
+              <span class="text-muted small">No hay etiquetas metodológicas sugeridas.</span>
+            </div>
+          </div>
+
+          <!-- Recursos y Enlaces -->
+          <div id="boxGuiaHitoRecursosCont" class="p-3 bg-light-subtle rounded border d-none">
+            <h6 class="fw-bold text-secondary mb-2 small"><i class="bi bi-link-45deg me-1"></i>Recursos y Enlaces de Apoyo</h6>
+            <div id="boxGuiaHitoRecursos" class="small"></div>
+          </div>
+        </div>
+        <div class="modal-footer py-2">
+          <button type="button" class="btn btn-sm btn-secondary" data-bs-dismiss="modal">Cerrar</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ============================================================== -->
+  <!-- MODAL IMPORTADOR EXCEL (.XLSX) REUTILIZABLE                    -->
+  <!-- ============================================================== -->
+  <div class="modal fade" id="modalImportadorExcel" tabindex="-1">
+    <div class="modal-dialog">
+      <div class="modal-content">
+        <div class="modal-header bg-dark text-white py-2 px-3">
+          <h6 class="modal-title fw-bold" id="modalImportadorTitulo"><i class="bi bi-file-earmark-spreadsheet me-2 text-success"></i>Importar desde Excel</h6>
+          <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+        </div>
+        <div class="modal-body p-4">
+          <p class="small text-muted mb-3" id="modalImportadorSubtitulo">Selecciona o arrastra el archivo Excel oficial (.xlsx) para procesar los datos de manera masiva.</p>
+
+          <!-- Dropzone -->
+          <div class="border border-2 border-dashed rounded p-4 text-center cursor-pointer bg-light" id="dropzoneExcel" onclick="document.getElementById('inputExcelImportar').click()" style="transition: all 0.2s ease;">
+            <i class="bi bi-cloud-arrow-up-fill fs-1 text-primary d-block mb-2"></i>
+            <span class="fw-bold text-dark d-block">Arrastra tu archivo Excel (.xlsx) aquí</span>
+            <span class="small text-muted d-block mb-2">o haz clic para buscar en tu equipo</span>
+            <span class="badge bg-secondary-subtle text-secondary border px-2 py-1" id="lblNombreArchivoExcel">Ningún archivo seleccionado</span>
+            <input type="file" id="inputExcelImportar" class="d-none" accept=".xlsx, .xls" onchange="seleccionarArchivoExcel(this)">
+          </div>
+
+          <!-- Descarga de Plantilla Oficial -->
+          <div class="mt-3 p-2 bg-light-subtle rounded border d-flex justify-content-between align-items-center">
+            <small class="text-muted"><i class="bi bi-info-circle me-1"></i>¿Necesitas la plantilla oficial de ejemplo?</small>
+            <button type="button" class="btn btn-xs btn-outline-secondary" onclick="descargarPlantillaModalActual()">
+              <i class="bi bi-download me-1"></i> Descargar XLS
+            </button>
+          </div>
+        </div>
+        <div class="modal-footer py-2">
+          <button type="button" class="btn btn-sm btn-secondary" data-bs-dismiss="modal">Cancelar</button>
+          <button type="button" class="btn btn-sm btn-primary px-3" id="btnEjecutarImportacionExcel" onclick="ejecutarImportacionExcelSubmit()">
+            <i class="bi bi-cloud-arrow-up me-1"></i> Subir e Importar
+          </button>
+        </div>
+      </div>
+    </div>
+  </div>
+
   <!-- Scripts -->
   <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
   <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
@@ -1200,7 +1578,14 @@
     let modalSelectorTagsObj = null;
     let modalSolicitarEliminacionObj = null;
     let modalGestionEliminacionAdminObj = null;
+    let modalEditorHitoObj = null;
+    let modalGuiaHitoObj = null;
+    let modalImportadorExcelObj = null;
     let planIdGestionEliminacion = null;
+    let hitosColegioCache = [];
+    let guiaHitoActivo = null;
+    let modoImportadorExcel = 'planificaciones';
+    let archivoExcelSeleccionado = null;
 
     // Estado del selector de etiquetas
     let tagTarget = { tipo: 'unidad', uIdx: 0, sIdx: null };
@@ -1270,6 +1655,9 @@
       modalSelectorTagsObj = new bootstrap.Modal(document.getElementById('modalSelectorTags'));
       modalSolicitarEliminacionObj = new bootstrap.Modal(document.getElementById('modalSolicitarEliminacion'));
       modalGestionEliminacionAdminObj = new bootstrap.Modal(document.getElementById('modalGestionEliminacionAdmin'));
+      modalEditorHitoObj = new bootstrap.Modal(document.getElementById('modalEditorHito'));
+      modalGuiaHitoObj = new bootstrap.Modal(document.getElementById('modalGuiaHito'));
+      modalImportadorExcelObj = new bootstrap.Modal(document.getElementById('modalImportadorExcel'));
 
       await cargarUsuario();
       await cargarPoolDocentes();
@@ -1290,6 +1678,8 @@
             const navCob = document.getElementById('nav-item-cobertura');
             if (navCob) navCob.classList.add('d-none');
             document.getElementById('adminCurriculoBtns').classList.add('d-none');
+            const adminHitos = document.getElementById('adminHitosBtns');
+            if (adminHitos) adminHitos.classList.add('d-none');
           }
         }
       } catch (e) {
@@ -1348,6 +1738,7 @@
       await cargarMisCursos();
       await cargarMatrizColegio();
       await cargarDashboardCobertura();
+      await cargarHitosColegio();
       await cargarObjetivosCurriculo();
     }
 
@@ -1866,6 +2257,19 @@
           console.error("Error al consultar horario semanal:", eSes);
         }
 
+        // Consultar hitos institucionales vigentes para este curso y asignatura
+        try {
+          const resH = await fetch(`/api/planificacion/hitos/vigentes?anio=${planActivo.anio}&curso=${encodeURIComponent(planActivo.curso)}&asignatura=${encodeURIComponent(planActivo.asignatura)}`);
+          if (resH.ok) {
+            planActivo.hitosVigentes = await resH.json();
+          } else {
+            planActivo.hitosVigentes = [];
+          }
+        } catch (eH) {
+          console.error("Error al consultar hitos vigentes:", eH);
+          planActivo.hitosVigentes = [];
+        }
+
         // Render Unidades
         renderizarUnidadesAcordeon();
 
@@ -2055,9 +2459,14 @@
                         <h6 class="fw-bold text-dark mb-0"><i class="bi bi-calendar-week text-primary me-2"></i>Desglose Semanal de Clases, DUA & Metodologías</h6>
                         <span class="small text-muted">Arrastra las filas desde el icono <i class="bi bi-grip-vertical"></i> para reordenar semanas.</span>
                       </div>
-                      <button class="btn btn-sm btn-outline-secondary" onclick="agregarSemanaAUnidad(${idx})">
-                        <i class="bi bi-plus-lg me-1"></i> Agregar Semana
-                      </button>
+                      <div class="d-flex gap-2">
+                        <button type="button" class="btn btn-sm btn-outline-primary" onclick="generarSemanasAutomaticas(${idx})" title="Genera de lunes a viernes todas las semanas comprendidas entre la Fecha de Inicio y Término de la unidad">
+                          <i class="bi bi-magic me-1"></i> Generar Semanas Automáticas
+                        </button>
+                        <button type="button" class="btn btn-sm btn-outline-secondary" onclick="agregarSemanaAUnidad(${idx})">
+                          <i class="bi bi-plus-lg me-1"></i> Agregar Semana
+                        </button>
+                      </div>
                     </div>
 
                     <div class="table-responsive">
@@ -2066,7 +2475,7 @@
                           <tr>
                             <th style="width: 35px;" class="text-center"></th>
                             <th style="width: 80px;" class="text-center">Semana</th>
-                            <th style="width: 130px;">Fechas</th>
+                            <th style="width: 140px;">Fechas</th>
                             <th style="width: 170px;">Tema / Contenido</th>
                             <th>Actividades de Aprendizaje</th>
                             <th style="width: 150px;">Recursos</th>
@@ -2078,6 +2487,21 @@
                           ${(u.desglose_semanal || []).map((s, sIdx) => {
                             const semTags = s.tags || [];
                             const tieneClases = s.dividir_clases && Array.isArray(s.clases) && s.clases.length > 0;
+                            const hitosEnSemana = (planActivo.hitosVigentes || []).filter(h => {
+                              if (!h.fecha_inicio || !h.fecha_fin || !s.fecha_inicio || !s.fecha_fin) return false;
+                              return !(h.fecha_fin < s.fecha_inicio || h.fecha_inicio > s.fecha_fin);
+                            });
+                            const hitosBadgeHtml = hitosEnSemana.map(h => `
+                              <div class="mt-1">
+                                <span class="badge cursor-pointer text-wrap d-inline-flex align-items-center gap-1 shadow-sm text-white" 
+                                      style="background-color: ${h.color || '#2563eb'}; font-size: 0.69rem; cursor: pointer; padding: 2px 5px;" 
+                                      onclick="abrirModalGuiaHito(${h.id}, ${idx}, ${sIdx})" 
+                                      title="Lineamientos UTP: Haz clic para ver orientaciones y adoptar OAs/DUA">
+                                  <span>${h.icono || '🎭'}</span>
+                                  <span class="text-truncate" style="max-width: 100px;">${escapeHtml(h.titulo)}</span>
+                                </span>
+                              </div>
+                            `).join('');
                             return `
                             <tr data-semana-idx="${sIdx}">
                               <td class="text-center">
@@ -2096,7 +2520,8 @@
                               </td>
                               <td>
                                 <input type="date" class="form-control form-control-sm p-1 mb-1" value="${s.fecha_inicio || ''}" onchange="actualizarCampoSemana(${idx}, ${sIdx}, 'fecha_inicio', this.value)">
-                                <input type="date" class="form-control form-control-sm p-1" value="${s.fecha_fin || ''}" onchange="actualizarCampoSemana(${idx}, ${sIdx}, 'fecha_fin', this.value)">
+                                <input type="date" class="form-control form-control-sm p-1" id="semana_fin_${idx}_${sIdx}" value="${s.fecha_fin || ''}" onchange="actualizarCampoSemana(${idx}, ${sIdx}, 'fecha_fin', this.value)">
+                                ${hitosBadgeHtml}
                               </td>
                               <td>
                                 <input type="text" class="form-control form-control-sm" value="${s.tema || ''}" placeholder="Contenido..." onchange="actualizarCampoSemana(${idx}, ${sIdx}, 'tema', this.value)">
@@ -2447,13 +2872,41 @@
       const u = planActivo.unidades[uIdx];
       u.desglose_semanal = u.desglose_semanal || [];
       const num = u.desglose_semanal.length + 1;
+
+      let nIni = '';
+      let nFin = '';
+      const prev = u.desglose_semanal[u.desglose_semanal.length - 1];
+      if (prev && prev.fecha_inicio) {
+        try {
+          const d = new Date(prev.fecha_inicio + 'T00:00:00');
+          d.setDate(d.getDate() + 7);
+          nIni = d.toISOString().slice(0, 10);
+          const dFin = new Date(d);
+          dFin.setDate(dFin.getDate() + 4);
+          nFin = dFin.toISOString().slice(0, 10);
+        } catch(e) {}
+      } else if (u.fecha_inicio) {
+        nIni = u.fecha_inicio;
+        try {
+          const d = new Date(u.fecha_inicio + 'T00:00:00');
+          const day = d.getDay();
+          const add = (day >= 1 && day <= 5) ? (5 - day) : 4;
+          d.setDate(d.getDate() + add);
+          nFin = d.toISOString().slice(0, 10);
+        } catch(e) {}
+      }
+
       u.desglose_semanal.push({
         semana: num,
+        fecha_inicio: nIni,
+        fecha_fin: nFin,
         tema: '',
         actividades_formativas: '',
         recursos: '',
         dua_adecuaciones: '',
-        tags: []
+        tags: [],
+        dividir_clases: false,
+        clases: []
       });
       renderizarUnidadesAcordeon();
     }
@@ -2464,9 +2917,114 @@
     }
 
     function actualizarCampoSemana(uIdx, sIdx, campo, valor) {
-      if (planActivo.unidades[uIdx].desglose_semanal[sIdx]) {
-        planActivo.unidades[uIdx].desglose_semanal[sIdx][campo] = valor;
+      if (!planActivo || !planActivo.unidades[uIdx] || !planActivo.unidades[uIdx].desglose_semanal[sIdx]) return;
+      const s = planActivo.unidades[uIdx].desglose_semanal[sIdx];
+      s[campo] = valor;
+
+      if (campo === 'fecha_inicio' && valor) {
+        try {
+          const d = new Date(valor + 'T00:00:00');
+          const day = d.getDay();
+          const add = (day >= 1 && day <= 5) ? (5 - day) : 4;
+          d.setDate(d.getDate() + add);
+          const friStr = d.toISOString().slice(0, 10);
+          s.fecha_fin = friStr;
+          const inpFin = document.getElementById(`semana_fin_${uIdx}_${sIdx}`);
+          if (inpFin) inpFin.value = friStr;
+
+          // Detectar si la semana intersecta con un hito institucional UTP
+          if (Array.isArray(planActivo.hitosVigentes) && planActivo.hitosVigentes.length > 0) {
+            const hCoincide = planActivo.hitosVigentes.find(h => !(h.fecha_fin < valor || h.fecha_inicio > friStr));
+            if (hCoincide) {
+              Swal.fire({
+                toast: true,
+                position: 'top-end',
+                icon: 'info',
+                title: `${hCoincide.icono || '🎭'} Hito UTP: ${hCoincide.titulo}`,
+                html: `<small>Esta semana coincide con un hito pedagógico. Haz clic en el marcador de la semana para ver las orientaciones de UTP.</small>`,
+                showConfirmButton: false,
+                timer: 4500
+              });
+              renderizarUnidadesAcordeon();
+            }
+          }
+        } catch (e) {}
       }
+    }
+
+    async function generarSemanasAutomaticas(uIdx) {
+      if (!planActivo || !planActivo.unidades || !planActivo.unidades[uIdx]) return;
+      const u = planActivo.unidades[uIdx];
+
+      if (!u.fecha_inicio || !u.fecha_fin) {
+        return Swal.fire({
+          icon: 'warning',
+          title: 'Fechas de Unidad Requeridas',
+          text: 'Por favor asigna primero la "Fecha Inicio" y la "Fecha Término" de esta unidad para calcular el calendario de semanas.'
+        });
+      }
+
+      const fIni = new Date(u.fecha_inicio + 'T00:00:00');
+      const fFin = new Date(u.fecha_fin + 'T00:00:00');
+
+      if (fFin < fIni) {
+        return Swal.fire('Error', 'La fecha de término no puede ser anterior a la fecha de inicio.', 'error');
+      }
+
+      if (Array.isArray(u.desglose_semanal) && u.desglose_semanal.length > 0) {
+        const conf = await Swal.fire({
+          title: '¿Generar semanas automáticamente?',
+          text: `Esta unidad ya contiene ${u.desglose_semanal.length} semana(s). ¿Deseas recalcular y desglosar las semanas de lunes a viernes entre ${u.fecha_inicio} y ${u.fecha_fin}?`,
+          icon: 'question',
+          showCancelButton: true,
+          confirmButtonText: 'Sí, generar semanas',
+          cancelButtonText: 'Cancelar'
+        });
+        if (!conf.isConfirmed) return;
+      }
+
+      // Ajustar al lunes de la semana de inicio
+      let cur = new Date(fIni);
+      const day = cur.getDay(); // 0: Dom, 1: Lun, ... 6: Sab
+      if (day === 0) cur.setDate(cur.getDate() + 1); // Si es domingo, mover a lunes
+      else if (day > 1) cur.setDate(cur.getDate() - (day - 1)); // Retroceder al lunes
+
+      const nuevasSemanas = [];
+      let numSem = 1;
+
+      while (cur <= fFin) {
+        const inicioSemStr = cur.toISOString().slice(0, 10);
+        const finDate = new Date(cur);
+        finDate.setDate(finDate.getDate() + 4); // Viernes (+4 días)
+        const finSemStr = finDate.toISOString().slice(0, 10);
+
+        nuevasSemanas.push({
+          semana: numSem,
+          fecha_inicio: inicioSemStr,
+          fecha_fin: finSemStr,
+          tema: '',
+          actividades_formativas: '',
+          recursos: '',
+          dua_adecuaciones: '',
+          tags: [],
+          dividir_clases: false,
+          clases: []
+        });
+
+        numSem++;
+        cur.setDate(cur.getDate() + 7); // Siguiente lunes
+      }
+
+      u.desglose_semanal = nuevasSemanas;
+      renderizarUnidadesAcordeon();
+
+      Swal.fire({
+        icon: 'success',
+        title: '¡Semanas Generadas!',
+        text: `Se generaron exitosamente ${nuevasSemanas.length} semanas de clases de lunes a viernes.`,
+        timer: 2500,
+        showConfirmButton: false
+      });
     }
 
     function toggleDividirClasesSemana(uIdx, sIdx, checked) {
@@ -3669,6 +4227,603 @@
         await recargarDatos();
       } catch (err) {
         Swal.fire('Error', err.message, 'error');
+      }
+    }
+
+    // -------------------------------------------------------------
+    // GESTIÓN DE HITOS INSTITUCIONALES (UTP / ADMIN)
+    // -------------------------------------------------------------
+    async function cargarHitosColegio() {
+      const tbody = document.getElementById('tablaHitosBody');
+      if (!tbody) return;
+      tbody.innerHTML = '<tr><td colspan="7" class="text-center py-4 text-muted"><span class="spinner-border spinner-border-sm me-2"></span>Cargando hitos institucionales...</td></tr>';
+
+      try {
+        const res = await fetch(`/api/planificacion/hitos?anio=${anioActivo}`);
+        if (!res.ok) throw new Error('Error al cargar hitos institucionales.');
+        hitosColegioCache = await res.json();
+        renderizarTablaHitos(hitosColegioCache);
+      } catch (e) {
+        tbody.innerHTML = `<tr><td colspan="7" class="text-center text-danger py-4">${escapeHtml(e.message)}</td></tr>`;
+      }
+    }
+
+    function renderizarTablaHitos(hitos) {
+      const tbody = document.getElementById('tablaHitosBody');
+      if (!tbody) return;
+
+      if (!hitos || hitos.length === 0) {
+        tbody.innerHTML = `
+          <tr>
+            <td colspan="7" class="text-center py-5 text-muted">
+              <i class="bi bi-calendar-x fs-1 d-block mb-2 text-secondary opacity-50"></i>
+              No hay hitos institucionales registrados para el año escolar ${anioActivo}.
+              <div class="mt-2">
+                <button class="btn btn-sm btn-outline-primary" onclick="abrirModalCrearHito()"><i class="bi bi-plus-lg me-1"></i>Crear Primer Hito</button>
+              </div>
+            </td>
+          </tr>
+        `;
+        return;
+      }
+
+      const rolNorm = (usuarioActual.rol || '').toLowerCase();
+      const esAdminOCoord = rolNorm.includes('admin') || rolNorm.includes('directiv') || rolNorm.includes('coordinaci');
+
+      tbody.innerHTML = hitos.map(h => {
+        const asigsTxt = h.todas_asignaturas
+          ? '<span class="badge bg-primary-subtle text-primary border">Todas las Asignaturas</span>'
+          : (Array.isArray(h.asignaturas) && h.asignaturas.length > 0
+              ? `<span class="badge bg-light text-dark border" title="${escapeHtml(h.asignaturas.join(', '))}">${h.asignaturas.length} asignatura(s)</span>`
+              : '<span class="text-muted small">Ninguna</span>');
+
+        let cursosTxt = h.todos_cursos
+          ? '<span class="badge bg-info-subtle text-info border">Todos los Cursos</span>'
+          : (Array.isArray(h.cursos) && h.cursos.length > 0
+              ? `<span class="badge bg-light text-dark border" title="${escapeHtml(h.cursos.join(', '))}">${h.cursos.length} curso(s)</span>`
+              : '<span class="text-muted small">Ninguno</span>');
+
+        if (Array.isArray(h.cursos_excluidos) && h.cursos_excluidos.length > 0) {
+          cursosTxt += `<div class="mt-1"><span class="badge bg-danger-subtle text-danger border" style="font-size: 0.68rem;" title="Cursos Excluidos"><i class="bi bi-shield-x me-1"></i>Salvo: ${escapeHtml(h.cursos_excluidos.join(', '))}</span></div>`;
+        }
+
+        const oasCount = Array.isArray(h.oas_sugeridos) ? h.oas_sugeridos.length : 0;
+        const tagsCount = Array.isArray(h.metodologias_sugeridas) ? h.metodologias_sugeridas.length : 0;
+
+        return `
+          <tr class="${h.activo === 0 ? 'opacity-50' : ''}">
+            <td class="text-center">
+              <span class="d-inline-flex align-items-center justify-content-center rounded-circle text-white shadow-sm" style="width: 36px; height: 36px; background-color: ${h.color || '#2563eb'}; font-size: 1.1rem;">
+                ${h.icono || '🎭'}
+              </span>
+            </td>
+            <td>
+              <div class="fw-bold text-dark">${escapeHtml(h.titulo)}</div>
+              <span class="badge bg-secondary-subtle text-secondary" style="font-size: 0.72rem;">${escapeHtml(h.tipo)}</span>
+            </td>
+            <td>
+              <div class="small fw-semibold text-dark"><i class="bi bi-calendar3 me-1 text-primary"></i>${h.fecha_inicio} al ${h.fecha_fin}</div>
+            </td>
+            <td>${cursosTxt}</td>
+            <td>${asigsTxt}</td>
+            <td>
+              <div class="small text-truncate" style="max-width: 280px;" title="${escapeHtml(h.lineamientos || '')}">${escapeHtml(h.lineamientos || 'Sin lineamientos')}</div>
+              <div class="d-flex gap-1 mt-1">
+                ${oasCount > 0 ? `<span class="badge bg-primary-subtle text-primary border" style="font-size: 0.68rem;"><i class="bi bi-bullseye me-1"></i>${oasCount} OA(s)</span>` : ''}
+                ${tagsCount > 0 ? `<span class="badge bg-success-subtle text-success border" style="font-size: 0.68rem;"><i class="bi bi-tags me-1"></i>${tagsCount} DUA</span>` : ''}
+              </div>
+            </td>
+            <td class="text-end">
+              <div class="btn-group btn-group-sm">
+                <button class="btn btn-outline-secondary" onclick="abrirModalEditarHito(${h.id})" title="Editar Hito"><i class="bi bi-pencil"></i></button>
+                ${esAdminOCoord ? `<button class="btn btn-outline-danger" onclick="eliminarHitoClick(${h.id})" title="Eliminar Hito"><i class="bi bi-trash"></i></button>` : ''}
+              </div>
+            </td>
+          </tr>
+        `;
+      }).join('');
+    }
+
+    function filtrarHitosTabla() {
+      const txt = (document.getElementById('filtroTextoHitos').value || '').toLowerCase().trim();
+      const tipo = document.getElementById('filtroTipoHitos').value;
+      const estado = document.getElementById('filtroEstadoHitos').value;
+
+      const filtrados = (hitosColegioCache || []).filter(h => {
+        if (txt) {
+          const matchTit = (h.titulo || '').toLowerCase().includes(txt);
+          const matchLin = (h.lineamientos || '').toLowerCase().includes(txt);
+          if (!matchTit && !matchLin) return false;
+        }
+        if (tipo !== 'todos' && h.tipo !== tipo) return false;
+        if (estado === 'activos' && h.activo === 0) return false;
+        if (estado === 'inactivos' && h.activo !== 0) return false;
+        return true;
+      });
+
+      renderizarTablaHitos(filtrados);
+    }
+
+    function toggleSegmentacionAsignaturasHito(todas) {
+      const box = document.getElementById('boxAsignaturasEspecificasHito');
+      const atajos = document.getElementById('btnAtajosAsigHito');
+      if (box) box.classList.toggle('d-none', todas);
+      if (atajos) atajos.classList.toggle('d-none', todas);
+    }
+
+    function toggleSegmentacionCursosHito(todos) {
+      const box = document.getElementById('boxCursosEspecificosHito');
+      if (box) box.classList.toggle('d-none', todos);
+    }
+
+    function seleccionarAsignaturasHitoRapido(lista) {
+      const chk = document.getElementById('chkHitoTodasAsignaturas');
+      if (chk) {
+        chk.checked = false;
+        toggleSegmentacionAsignaturasHito(false);
+      }
+      const boxes = document.querySelectorAll('#gridAsignaturasHito input[type="checkbox"]');
+      boxes.forEach(b => {
+        b.checked = lista.includes(b.value);
+      });
+    }
+
+    function agregarExclusionRapida(texto) {
+      const inp = document.getElementById('inputHitoCursosExcluidos');
+      if (!inp) return;
+      const actual = inp.value.trim();
+      if (!actual) {
+        inp.value = texto;
+      } else {
+        inp.value = actual + ', ' + texto;
+      }
+    }
+
+    function abrirModalCrearHito() {
+      document.getElementById('tituloModalEditorHito').innerHTML = '<i class="bi bi-flag-fill me-2"></i>Nuevo Hito Institucional UTP';
+      document.getElementById('inputHitoId').value = '';
+      document.getElementById('inputHitoTitulo').value = '';
+      document.getElementById('selectHitoTipo').value = 'Semana Temática';
+      document.getElementById('inputHitoIcono').value = '🎭';
+      document.getElementById('inputHitoColor').value = '#2563eb';
+      document.getElementById('inputHitoFechaInicio').value = '';
+      document.getElementById('inputHitoFechaFin').value = '';
+      document.getElementById('txtHitoLineamientos').value = '';
+      document.getElementById('inputHitoOAs').value = '';
+      document.getElementById('inputHitoMetodologias').value = '';
+      document.getElementById('txtHitoRecursos').value = '';
+      document.getElementById('inputHitoCursosExcluidos').value = '';
+
+      document.getElementById('chkHitoTodasAsignaturas').checked = true;
+      toggleSegmentacionAsignaturasHito(true);
+
+      document.getElementById('chkHitoTodosCursos').checked = true;
+      toggleSegmentacionCursosHito(true);
+
+      // Render checkboxes de asignaturas
+      const gridA = document.getElementById('gridAsignaturasHito');
+      const asigs = datosDocente.todasLasAsignaturas || [];
+      gridA.innerHTML = asigs.map(a => `
+        <label class="form-check form-check-inline small me-2 mb-1" style="font-size: 0.76rem;">
+          <input class="form-check-input" type="checkbox" value="${escapeHtml(a)}">
+          <span>${escapeHtml(a)}</span>
+        </label>
+      `).join('');
+
+      // Render checkboxes de cursos
+      const gridC = document.getElementById('gridCursosHito');
+      const cursos = datosDocente.todosLosCursos || [];
+      gridC.innerHTML = cursos.map(c => `
+        <label class="form-check form-check-inline small me-2 mb-1" style="font-size: 0.76rem;">
+          <input class="form-check-input" type="checkbox" value="${escapeHtml(c)}">
+          <span>${escapeHtml(c)}</span>
+        </label>
+      `).join('');
+
+      if (modalEditorHitoObj) modalEditorHitoObj.show();
+    }
+
+    function abrirModalEditarHito(id) {
+      const h = (hitosColegioCache || []).find(x => x.id === id);
+      if (!h) return;
+
+      document.getElementById('tituloModalEditorHito').innerHTML = '<i class="bi bi-pencil-square me-2"></i>Editar Hito Institucional UTP';
+      document.getElementById('inputHitoId').value = h.id;
+      document.getElementById('inputHitoTitulo').value = h.titulo || '';
+      document.getElementById('selectHitoTipo').value = h.tipo || 'Hito Pedagógico';
+      document.getElementById('inputHitoIcono').value = h.icono || '🎭';
+      document.getElementById('inputHitoColor').value = h.color || '#2563eb';
+      document.getElementById('inputHitoFechaInicio').value = h.fecha_inicio || '';
+      document.getElementById('inputHitoFechaFin').value = h.fecha_fin || '';
+      document.getElementById('txtHitoLineamientos').value = h.lineamientos || '';
+      document.getElementById('inputHitoOAs').value = Array.isArray(h.oas_sugeridos) ? h.oas_sugeridos.join(', ') : '';
+      document.getElementById('inputHitoMetodologias').value = Array.isArray(h.metodologias_sugeridas) ? h.metodologias_sugeridas.join(', ') : '';
+      document.getElementById('txtHitoRecursos').value = Array.isArray(h.recursos_enlaces) ? h.recursos_enlaces.join('\n') : '';
+      document.getElementById('inputHitoCursosExcluidos').value = Array.isArray(h.cursos_excluidos) ? h.cursos_excluidos.join(', ') : '';
+
+      const todasA = h.todas_asignaturas === 1 || h.todas_asignaturas === true;
+      document.getElementById('chkHitoTodasAsignaturas').checked = todasA;
+      toggleSegmentacionAsignaturasHito(todasA);
+
+      const todosC = h.todos_cursos === 1 || h.todos_cursos === true;
+      document.getElementById('chkHitoTodosCursos').checked = todosC;
+      toggleSegmentacionCursosHito(todosC);
+
+      const asigsInc = (h.asignaturas || []).map(a => String(a).toUpperCase());
+      const gridA = document.getElementById('gridAsignaturasHito');
+      const asigs = datosDocente.todasLasAsignaturas || [];
+      gridA.innerHTML = asigs.map(a => `
+        <label class="form-check form-check-inline small me-2 mb-1" style="font-size: 0.76rem;">
+          <input class="form-check-input" type="checkbox" value="${escapeHtml(a)}" ${asigsInc.includes(a.toUpperCase()) ? 'checked' : ''}>
+          <span>${escapeHtml(a)}</span>
+        </label>
+      `).join('');
+
+      const cursosInc = (h.cursos || []).map(c => String(c).toUpperCase());
+      const gridC = document.getElementById('gridCursosHito');
+      const cursos = datosDocente.todosLosCursos || [];
+      gridC.innerHTML = cursos.map(c => `
+        <label class="form-check form-check-inline small me-2 mb-1" style="font-size: 0.76rem;">
+          <input class="form-check-input" type="checkbox" value="${escapeHtml(c)}" ${cursosInc.includes(c.toUpperCase()) ? 'checked' : ''}>
+          <span>${escapeHtml(c)}</span>
+        </label>
+      `).join('');
+
+      if (modalEditorHitoObj) modalEditorHitoObj.show();
+    }
+
+    async function guardarHitoSubmit() {
+      const id = document.getElementById('inputHitoId').value;
+      const titulo = document.getElementById('inputHitoTitulo').value.trim();
+      const tipo = document.getElementById('selectHitoTipo').value;
+      const icono = document.getElementById('inputHitoIcono').value.trim() || '🎭';
+      const color = document.getElementById('inputHitoColor').value || '#2563eb';
+      const fecha_inicio = document.getElementById('inputHitoFechaInicio').value;
+      const fecha_fin = document.getElementById('inputHitoFechaFin').value;
+      const lineamientos = document.getElementById('txtHitoLineamientos').value.trim();
+
+      if (!titulo) return Swal.fire('Campo requerido', 'Por favor ingresa el título del hito institucional.', 'warning');
+      if (!fecha_inicio || !fecha_fin) return Swal.fire('Fechas requeridas', 'Por favor define la fecha de inicio y de término del hito.', 'warning');
+      if (fecha_fin < fecha_inicio) return Swal.fire('Fechas inválidas', 'La fecha de término no puede ser anterior a la fecha de inicio.', 'error');
+
+      const todas_asignaturas = document.getElementById('chkHitoTodasAsignaturas').checked ? 1 : 0;
+      const asignaturas = [];
+      if (!todas_asignaturas) {
+        document.querySelectorAll('#gridAsignaturasHito input[type="checkbox"]:checked').forEach(c => asignaturas.push(c.value));
+      }
+
+      const todos_cursos = document.getElementById('chkHitoTodosCursos').checked ? 1 : 0;
+      const cursos = [];
+      if (!todos_cursos) {
+        document.querySelectorAll('#gridCursosHito input[type="checkbox"]:checked').forEach(c => cursos.push(c.value));
+      }
+
+      const cursos_excluidos = document.getElementById('inputHitoCursosExcluidos').value
+        .split(',')
+        .map(x => x.trim())
+        .filter(Boolean);
+
+      const oas_sugeridos = document.getElementById('inputHitoOAs').value
+        .split(',')
+        .map(x => x.trim())
+        .filter(Boolean);
+
+      const metodologias_sugeridas = document.getElementById('inputHitoMetodologias').value
+        .split(',')
+        .map(x => x.trim())
+        .filter(Boolean);
+
+      const recursos_enlaces = document.getElementById('txtHitoRecursos').value
+        .split('\n')
+        .map(x => x.trim())
+        .filter(Boolean);
+
+      const payload = {
+        anio: anioActivo,
+        titulo,
+        tipo,
+        icono,
+        color,
+        fecha_inicio,
+        fecha_fin,
+        todas_asignaturas,
+        asignaturas,
+        todos_cursos,
+        cursos,
+        cursos_excluidos,
+        lineamientos,
+        oas_sugeridos,
+        metodologias_sugeridas,
+        recursos_enlaces
+      };
+
+      try {
+        Swal.showLoading();
+        const url = id ? `/api/planificacion/hitos/${id}` : '/api/planificacion/hitos';
+        const method = id ? 'PUT' : 'POST';
+
+        const res = await fetch(url, {
+          method,
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(payload)
+        });
+        const data = await res.json();
+        if (!res.ok) throw new Error(data.error || 'Error al guardar hito institucional.');
+
+        if (modalEditorHitoObj) modalEditorHitoObj.hide();
+        await Swal.fire('¡Hito Guardado!', 'El hito institucional fue registrado y guiará las planificaciones de los docentes.', 'success');
+        await cargarHitosColegio();
+      } catch (e) {
+        Swal.fire('Error', e.message, 'error');
+      }
+    }
+
+    async function eliminarHitoClick(id) {
+      const conf = await Swal.fire({
+        title: '¿Eliminar Hito?',
+        text: 'Se removerá este hito pedagógico institucional.',
+        icon: 'warning',
+        showCancelButton: true,
+        confirmButtonColor: '#dc3545',
+        confirmButtonText: 'Sí, eliminar',
+        cancelButtonText: 'Cancelar'
+      });
+      if (!conf.isConfirmed) return;
+
+      try {
+        Swal.showLoading();
+        const res = await fetch(`/api/planificacion/hitos/${id}`, { method: 'DELETE' });
+        const data = await res.json();
+        if (!res.ok) throw new Error(data.error || 'Error al eliminar hito.');
+        await Swal.fire('Eliminado', 'El hito fue eliminado correctamente.', 'success');
+        await cargarHitosColegio();
+      } catch (e) {
+        Swal.fire('Error', e.message, 'error');
+      }
+    }
+
+    // -------------------------------------------------------------
+    // MODAL GUÍA DE HITO (POP-UP PEDAGÓGICO PARA EL DOCENTE)
+    // -------------------------------------------------------------
+    function abrirModalGuiaHito(hitoId, uIdx, sIdx) {
+      let hito = null;
+      if (planActivo && Array.isArray(planActivo.hitosVigentes)) {
+        hito = planActivo.hitosVigentes.find(x => x.id === hitoId);
+      }
+      if (!hito && Array.isArray(hitosColegioCache)) {
+        hito = hitosColegioCache.find(x => x.id === hitoId);
+      }
+      if (!hito) return;
+
+      guiaHitoActivo = { hito, uIdx, sIdx };
+
+      const header = document.getElementById('headerModalGuiaHito');
+      if (header) header.style.backgroundColor = hito.color || '#2563eb';
+
+      document.getElementById('lblGuiaHitoIcono').innerText = hito.icono || '🎭';
+      document.getElementById('lblGuiaHitoTitulo').innerText = hito.titulo || 'Hito Institucional';
+      document.getElementById('lblGuiaHitoFechas').innerText = `Período: ${hito.fecha_inicio} al ${hito.fecha_fin} • ${hito.tipo || 'Hito Pedagógico'}`;
+      document.getElementById('lblGuiaHitoLineamientos').innerText = hito.lineamientos || 'Sin lineamientos registrados para este hito.';
+
+      // OAs Sugeridos
+      const boxOAs = document.getElementById('boxGuiaHitoOAs');
+      const oas = Array.isArray(hito.oas_sugeridos) ? hito.oas_sugeridos : [];
+      if (oas.length > 0) {
+        boxOAs.innerHTML = oas.map(cod => `<span class="badge bg-primary px-2 py-1">${escapeHtml(cod)}</span>`).join('');
+        document.getElementById('btnAdoptarOAsHito').classList.remove('d-none');
+      } else {
+        boxOAs.innerHTML = '<span class="text-muted small">No hay OAs sugeridos específicos para este hito.</span>';
+        document.getElementById('btnAdoptarOAsHito').classList.add('d-none');
+      }
+
+      // Metodologías / DUA Sugeridas
+      const boxTags = document.getElementById('boxGuiaHitoTags');
+      const tags = Array.isArray(hito.metodologias_sugeridas) ? hito.metodologias_sugeridas : [];
+      if (tags.length > 0) {
+        boxTags.innerHTML = tags.map(t => `<span class="badge ${obtenerClaseTag(t)} tag-chip py-1 px-2">${escapeHtml(t)}</span>`).join('');
+        document.getElementById('btnAdoptarTagsHito').classList.remove('d-none');
+      } else {
+        boxTags.innerHTML = '<span class="text-muted small">No hay etiquetas metodológicas sugeridas.</span>';
+        document.getElementById('btnAdoptarTagsHito').classList.add('d-none');
+      }
+
+      // Recursos y enlaces
+      const boxRecCont = document.getElementById('boxGuiaHitoRecursosCont');
+      const boxRec = document.getElementById('boxGuiaHitoRecursos');
+      const recursos = Array.isArray(hito.recursos_enlaces) ? hito.recursos_enlaces : [];
+      if (recursos.length > 0) {
+        boxRecCont.classList.remove('d-none');
+        boxRec.innerHTML = recursos.map(r => {
+          if (r.startsWith('http://') || r.startsWith('https://')) {
+            return `<div><a href="${escapeHtml(r)}" target="_blank" class="text-primary text-decoration-underline"><i class="bi bi-box-arrow-up-right me-1"></i>${escapeHtml(r)}</a></div>`;
+          }
+          return `<div><i class="bi bi-dot me-1"></i>${escapeHtml(r)}</div>`;
+        }).join('');
+      } else {
+        boxRecCont.classList.add('d-none');
+      }
+
+      if (modalGuiaHitoObj) modalGuiaHitoObj.show();
+    }
+
+    function adoptarOAsGuiaHitoSubmit() {
+      if (!guiaHitoActivo || !planActivo) return;
+      const { hito, uIdx } = guiaHitoActivo;
+      if (!planActivo.unidades || !planActivo.unidades[uIdx]) return;
+
+      const u = planActivo.unidades[uIdx];
+      u.oas_seleccionados = u.oas_seleccionados || [];
+      const oas = Array.isArray(hito.oas_sugeridos) ? hito.oas_sugeridos : [];
+
+      let agregados = 0;
+      oas.forEach(cod => {
+        const yaExiste = u.oas_seleccionados.some(o => (typeof o === 'object' ? o.codigo : o) === cod);
+        if (!yaExiste) {
+          let matchOa = null;
+          if (Array.isArray(planActivo.oas_disponibles)) {
+            matchOa = planActivo.oas_disponibles.find(x => x.codigo === cod);
+          }
+          u.oas_seleccionados.push(matchOa ? { ...matchOa } : { codigo: cod, categoria: 'Basal', descripcion: `Objetivo sugerido por UTP (${hito.titulo})` });
+          agregados++;
+        }
+      });
+
+      renderizarUnidadesAcordeon();
+      if (modalGuiaHitoObj) modalGuiaHitoObj.hide();
+
+      Swal.fire({
+        toast: true,
+        position: 'top-end',
+        icon: 'success',
+        title: `Se adoptaron ${agregados} OA(s) del hito en la Unidad ${u.numero_unidad}`,
+        showConfirmButton: false,
+        timer: 3000
+      });
+    }
+
+    function adoptarTagsGuiaHitoSubmit() {
+      if (!guiaHitoActivo || !planActivo) return;
+      const { hito, uIdx, sIdx } = guiaHitoActivo;
+      if (!planActivo.unidades || !planActivo.unidades[uIdx]) return;
+      const s = planActivo.unidades[uIdx].desglose_semanal ? planActivo.unidades[uIdx].desglose_semanal[sIdx] : null;
+      if (!s) return;
+
+      s.tags = s.tags || [];
+      const tagsHito = Array.isArray(hito.metodologias_sugeridas) ? hito.metodologias_sugeridas : [];
+
+      let agregados = 0;
+      tagsHito.forEach(t => {
+        if (!s.tags.includes(t)) {
+          s.tags.push(t);
+          agregados++;
+        }
+      });
+
+      renderizarUnidadesAcordeon();
+      if (modalGuiaHitoObj) modalGuiaHitoObj.hide();
+
+      Swal.fire({
+        toast: true,
+        position: 'top-end',
+        icon: 'success',
+        title: `Se aplicaron ${agregados} metodología(s) DUA en la Semana ${s.semana || (sIdx + 1)}`,
+        showConfirmButton: false,
+        timer: 3000
+      });
+    }
+
+    // -------------------------------------------------------------
+    // IMPORTACIONES Y PLANTILLAS EXCEL (.XLSX)
+    // -------------------------------------------------------------
+    function descargarPlantillaHitos() {
+      window.location.href = '/api/planificacion/hitos/plantilla';
+    }
+
+    function descargarPlantillaPlanificaciones() {
+      window.location.href = `/api/planificacion/plantilla-masiva?anio=${anioActivo}`;
+    }
+
+    function descargarPlantillaUnidadesActual() {
+      if (!planActivo || !planActivo.id) return;
+      window.location.href = `/api/planificacion/${planActivo.id}/plantilla-unidades`;
+    }
+
+    function descargarPlantillaModalActual() {
+      if (modoImportadorExcel === 'hitos') {
+        descargarPlantillaHitos();
+      } else if (modoImportadorExcel === 'unidades') {
+        descargarPlantillaUnidadesActual();
+      } else {
+        descargarPlantillaPlanificaciones();
+      }
+    }
+
+    function abrirModalImportarHitos() {
+      modoImportadorExcel = 'hitos';
+      archivoExcelSeleccionado = null;
+      document.getElementById('inputExcelImportar').value = '';
+      document.getElementById('lblNombreArchivoExcel').innerText = 'Ningún archivo seleccionado';
+      document.getElementById('modalImportadorTitulo').innerHTML = '<i class="bi bi-flag-fill me-2 text-primary"></i>Importar Hitos Institucionales (Excel)';
+      document.getElementById('modalImportadorSubtitulo').innerText = 'Sube un archivo Excel (.xlsx) con los hitos institucionales de UTP (fechas, segmentación y lineamientos) para cargarlos masivamente.';
+      if (modalImportadorExcelObj) modalImportadorExcelObj.show();
+    }
+
+    function abrirModalImportarPlanificaciones() {
+      modoImportadorExcel = 'planificaciones';
+      archivoExcelSeleccionado = null;
+      document.getElementById('inputExcelImportar').value = '';
+      document.getElementById('lblNombreArchivoExcel').innerText = 'Ningún archivo seleccionado';
+      document.getElementById('modalImportadorTitulo').innerHTML = '<i class="bi bi-file-earmark-spreadsheet me-2 text-success"></i>Importar Planificaciones Anuales (Excel)';
+      document.getElementById('modalImportadorSubtitulo').innerText = 'Permite a los profesores o administración subir en un solo Excel todas las planificaciones del año escolar correspondientes a sus cursos.';
+      if (modalImportadorExcelObj) modalImportadorExcelObj.show();
+    }
+
+    function abrirModalImportarUnidadesActual() {
+      if (!planActivo || !planActivo.id) return;
+      modoImportadorExcel = 'unidades';
+      archivoExcelSeleccionado = null;
+      document.getElementById('inputExcelImportar').value = '';
+      document.getElementById('lblNombreArchivoExcel').innerText = 'Ningún archivo seleccionado';
+      document.getElementById('modalImportadorTitulo').innerHTML = `<i class="bi bi-stack me-2 text-primary"></i>Importar Unidades y Semanas: ${planActivo.curso} - ${planActivo.asignatura}`;
+      document.getElementById('modalImportadorSubtitulo').innerText = 'Carga el desglose completo de unidades, objetivos OAs y semanas clase a clase directamente desde una hoja Excel.';
+      if (modalImportadorExcelObj) modalImportadorExcelObj.show();
+    }
+
+    function seleccionarArchivoExcel(input) {
+      if (input.files && input.files[0]) {
+        archivoExcelSeleccionado = input.files[0];
+        document.getElementById('lblNombreArchivoExcel').innerText = `${archivoExcelSeleccionado.name} (${(archivoExcelSeleccionado.size / 1024).toFixed(1)} KB)`;
+      } else {
+        archivoExcelSeleccionado = null;
+        document.getElementById('lblNombreArchivoExcel').innerText = 'Ningún archivo seleccionado';
+      }
+    }
+
+    async function ejecutarImportacionExcelSubmit() {
+      if (!archivoExcelSeleccionado) {
+        return Swal.fire('Archivo requerido', 'Por favor selecciona o arrastra un archivo Excel (.xlsx) antes de procesar.', 'warning');
+      }
+
+      const formData = new FormData();
+      formData.append('archivo', archivoExcelSeleccionado);
+      formData.append('anio', anioActivo);
+
+      let url = '';
+      if (modoImportadorExcel === 'hitos') {
+        url = '/api/planificacion/hitos/importar';
+      } else if (modoImportadorExcel === 'unidades') {
+        if (!planActivo || !planActivo.id) return;
+        url = `/api/planificacion/${planActivo.id}/importar-unidades`;
+      } else {
+        url = '/api/planificacion/importar-masivo';
+      }
+
+      try {
+        Swal.showLoading();
+        const res = await fetch(url, {
+          method: 'POST',
+          body: formData
+        });
+        const data = await res.json();
+        if (!res.ok) throw new Error(data.error || 'Error al procesar el archivo Excel.');
+
+        if (modalImportadorExcelObj) modalImportadorExcelObj.hide();
+
+        await Swal.fire({
+          icon: 'success',
+          title: '¡Importación Completada!',
+          text: data.mensaje || 'Los registros fueron procesados exitosamente desde el archivo Excel.'
+        });
+
+        if (modoImportadorExcel === 'hitos') {
+          await cargarHitosColegio();
+        } else if (modoImportadorExcel === 'unidades') {
+          await abrirEditor(planActivo.id);
+        } else {
+          await recargarDatos();
+        }
+      } catch (e) {
+        Swal.fire('Error en la importación', e.message, 'error');
       }
     }
   </script>

@@ -429,6 +429,168 @@ router.get('/:id/exportar-excel', async (req, res) => {
     }
 });
 
+// -------------------------------------------------------------
+// HITOS Y LINEAMIENTOS INSTITUCIONALES (UTP / DOCENTES)
+// -------------------------------------------------------------
+
+// Listar hitos del año
+router.get('/hitos', async (req, res) => {
+    try {
+        const anio = req.query.anio || 2026;
+        const hitos = await planificacion.listarHitos(anio);
+        res.json(hitos);
+    } catch (e) {
+        res.status(500).json({ error: e.message });
+    }
+});
+
+// Obtener hitos vigentes para un curso y asignatura específicos
+router.get('/hitos/vigentes', async (req, res) => {
+    try {
+        const { anio, curso, asignatura } = req.query;
+        const hitos = await planificacion.obtenerHitosParaPlan(anio || 2026, curso, asignatura);
+        res.json(hitos);
+    } catch (e) {
+        res.status(500).json({ error: e.message });
+    }
+});
+
+// Descargar plantilla Excel para hitos institucionales
+router.get('/hitos/plantilla', async (req, res) => {
+    try {
+        const buf = planificacion.generarPlantillaHitosExcel();
+        res.setHeader('Content-Type', 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet');
+        res.setHeader('Content-Disposition', 'attachment; filename="Plantilla_Hitos_Institucionales.xlsx"');
+        res.send(buf);
+    } catch (e) {
+        res.status(500).json({ error: e.message });
+    }
+});
+
+// Importar hitos masivamente desde Excel (Exclusivo UTP / Admin)
+router.post('/hitos/importar', upload.single('archivo'), async (req, res) => {
+    if (!req.esAdminOCoordinacion) {
+        return res.status(403).json({ error: 'Acceso denegado: Solo Coordinación o Administración pueden importar hitos.' });
+    }
+    try {
+        if (!req.file || !req.file.buffer) {
+            return res.status(400).json({ error: 'Debe adjuntar un archivo Excel (.xlsx).' });
+        }
+        const anio = req.body.anio || 2026;
+        const resultado = await planificacion.importarHitosExcel(req.file.buffer, anio, req.user);
+        res.json(resultado);
+    } catch (e) {
+        res.status(500).json({ error: e.message });
+    }
+});
+
+// Crear nuevo hito (Exclusivo UTP / Admin)
+router.post('/hitos', async (req, res) => {
+    if (!req.esAdminOCoordinacion) {
+        return res.status(403).json({ error: 'Acceso denegado: Solo Coordinación o Administración pueden crear hitos.' });
+    }
+    try {
+        const resultado = await planificacion.crearHito(req.body, req.user);
+        res.json(resultado);
+    } catch (e) {
+        res.status(500).json({ error: e.message });
+    }
+});
+
+// Actualizar hito existente (Exclusivo UTP / Admin)
+router.put('/hitos/:id', async (req, res) => {
+    if (!req.esAdminOCoordinacion) {
+        return res.status(403).json({ error: 'Acceso denegado: Solo Coordinación o Administración pueden modificar hitos.' });
+    }
+    try {
+        const resultado = await planificacion.actualizarHito(req.params.id, req.body, req.user);
+        res.json(resultado);
+    } catch (e) {
+        res.status(500).json({ error: e.message });
+    }
+});
+
+// Eliminar hito (Exclusivo UTP / Admin)
+router.delete('/hitos/:id', async (req, res) => {
+    if (!req.esAdminOCoordinacion) {
+        return res.status(403).json({ error: 'Acceso denegado: Solo Coordinación o Administración pueden eliminar hitos.' });
+    }
+    try {
+        const resultado = await planificacion.eliminarHito(req.params.id, req.user);
+        res.json(resultado);
+    } catch (e) {
+        res.status(500).json({ error: e.message });
+    }
+});
+
+// -------------------------------------------------------------
+// PLANTILLAS E IMPORTACIONES MASIVAS (PLANIFICACIONES & CURRICULO)
+// -------------------------------------------------------------
+
+// Descargar plantilla Excel para planificaciones anuales masivas
+router.get('/plantilla-masiva', async (req, res) => {
+    try {
+        const anio = req.query.anio || 2026;
+        const buf = planificacion.generarPlantillaPlanificacionesExcel(anio);
+        res.setHeader('Content-Type', 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet');
+        res.setHeader('Content-Disposition', `attachment; filename="Plantilla_Planificaciones_${anio}.xlsx"`);
+        res.send(buf);
+    } catch (e) {
+        res.status(500).json({ error: e.message });
+    }
+});
+
+// Importar planificaciones anuales masivamente desde Excel
+router.post('/importar-masivo', upload.single('archivo'), async (req, res) => {
+    try {
+        if (!req.file || !req.file.buffer) {
+            return res.status(400).json({ error: 'Debe adjuntar un archivo Excel (.xlsx).' });
+        }
+        const anio = req.body.anio || 2026;
+        const resultado = await planificacion.importarPlanificacionesMasivasExcel(req.file.buffer, anio, req.user);
+        res.json(resultado);
+    } catch (e) {
+        res.status(500).json({ error: e.message });
+    }
+});
+
+// Descargar plantilla de currículo / planes propios
+router.get('/curriculo/plantilla', async (req, res) => {
+    try {
+        const buf = planificacion.generarPlantillaCurriculoExcel();
+        res.setHeader('Content-Type', 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet');
+        res.setHeader('Content-Disposition', 'attachment; filename="Plantilla_Curriculo_MINEDUC_Planes_Propios.xlsx"');
+        res.send(buf);
+    } catch (e) {
+        res.status(500).json({ error: e.message });
+    }
+});
+
+// Descargar plantilla Excel para unidades y semanas de una planificación
+router.get('/:id/plantilla-unidades', async (req, res) => {
+    try {
+        const buf = await planificacion.generarPlantillaUnidadesExcel(req.params.id);
+        res.setHeader('Content-Type', 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet');
+        res.setHeader('Content-Disposition', `attachment; filename="Plantilla_Unidades_Plan_${req.params.id}.xlsx"`);
+        res.send(buf);
+    } catch (e) {
+        res.status(500).json({ error: e.message });
+    }
+});
+
+// Importar unidades y desglose semanal desde Excel para una planificación
+router.post('/:id/importar-unidades', upload.single('archivo'), async (req, res) => {
+    try {
+        if (!req.file || !req.file.buffer) {
+            return res.status(400).json({ error: 'Debe adjuntar un archivo Excel (.xlsx).' });
+        }
+        const resultado = await planificacion.importarUnidadesSemanasExcel(req.params.id, req.file.buffer, req.user);
+        res.json(resultado);
+    } catch (e) {
+        res.status(500).json({ error: e.message });
+    }
+});
+
 // 16. Solicitar Eliminación de Planificación (Creador, Docente o Admin)
 router.post('/:id/solicitar-eliminacion', async (req, res) => {
     try {

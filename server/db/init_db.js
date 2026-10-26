@@ -317,7 +317,32 @@ const schemas = [
       descripcion TEXT,
       creado_en DATETIME DEFAULT CURRENT_TIMESTAMP,
       actualizado_en DATETIME DEFAULT CURRENT_TIMESTAMP
-    )`
+    )`,
+  `CREATE TABLE IF NOT EXISTS planificaciones_hitos (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      anio INTEGER NOT NULL DEFAULT 2026,
+      titulo TEXT NOT NULL,
+      tipo TEXT NOT NULL DEFAULT 'Hito Pedagógico',
+      icono TEXT DEFAULT '🎭',
+      color TEXT DEFAULT '#2563eb',
+      fecha_inicio TEXT NOT NULL,
+      fecha_fin TEXT NOT NULL,
+      todas_asignaturas INTEGER DEFAULT 0,
+      asignaturas TEXT DEFAULT '[]',
+      todos_cursos INTEGER DEFAULT 0,
+      cursos TEXT DEFAULT '[]',
+      cursos_excluidos TEXT DEFAULT '[]',
+      lineamientos TEXT,
+      oas_sugeridos TEXT DEFAULT '[]',
+      metodologias_sugeridas TEXT DEFAULT '[]',
+      recursos_enlaces TEXT DEFAULT '[]',
+      bloquear_edicion INTEGER DEFAULT 0,
+      activo INTEGER DEFAULT 1,
+      creado_por TEXT,
+      creado_en DATETIME DEFAULT CURRENT_TIMESTAMP,
+      actualizado_en DATETIME DEFAULT CURRENT_TIMESTAMP
+  )`,
+  `CREATE INDEX IF NOT EXISTS idx_hitos_anio ON planificaciones_hitos(anio, fecha_inicio, fecha_fin)`
 ];
 
 db.serialize(() => {
