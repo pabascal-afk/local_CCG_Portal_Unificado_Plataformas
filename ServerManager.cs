@@ -210,7 +210,7 @@ namespace CCGServerManager
                 Subtitle = "Dashboard :3000  |  Botonera Docente",
                 MainPort = 3000,
                 BackendPort = 0,
-                RepoUrl = "",
+                RepoUrl = "https://github.com/pabascal-afk/labdeskUbuntu.git",
                 IsNextJs = false,
                 EntryScript = "server\\src\\index.js",
                 FolderPath = defaultLabdesk,
@@ -258,6 +258,15 @@ namespace CCGServerManager
             if (!string.IsNullOrEmpty(parentDir))
             {
                 candidateRoots.Add(Path.Combine(parentDir, "New folder"));
+                try
+                {
+                    DirectoryInfo grandParent = Directory.GetParent(parentDir);
+                    if (grandParent != null)
+                    {
+                        candidateRoots.Add(Path.Combine(grandParent.FullName, "New folder"));
+                    }
+                }
+                catch { }
             }
             if (!string.IsNullOrEmpty(userProfile))
             {
@@ -773,7 +782,7 @@ namespace CCGServerManager
             srv.BtnRestart = btnRestart;
 
             // Action Buttons Row 2: Actualizar | Abrir en Navegador (Y=226)
-            string updateBtnText = srv.Id == "LABDESK" ? "⬇️ Actualizar (NPM)" : "⬇️ Actualizar (Git + Build)";
+            string updateBtnText = srv.Id == "LABDESK" ? "⬇️ Actualizar (Git)" : (srv.IsNextJs ? "⬇️ Actualizar (Git + Build)" : "⬇️ Actualizar (Git)");
             Button btnUpdate = CreateStyledButton(updateBtnText, srv.AccentColor, Color.White, 182, 34);
             btnUpdate.Location = new Point(12, 226);
             btnUpdate.Click += async (s, e) => await UpdateServiceAsync(srv);
@@ -1119,9 +1128,23 @@ namespace CCGServerManager
 
             if (!Directory.Exists(srv.FolderPath))
             {
-                AppendLog(generalLogBox, string.Format("[AVISO] La carpeta de {0} no existe en '{1}'. Iniciando instalación automática...", srv.Id, srv.FolderPath));
-                await UpdateServiceAsync(srv);
-                return;
+                if (!string.IsNullOrEmpty(srv.RepoUrl))
+                {
+                    AppendLog(generalLogBox, string.Format("[AVISO] La carpeta de {0} no existe en '{1}'. Iniciando clonación e instalación automática desde GitHub...", srv.Id, srv.FolderPath));
+                    await UpdateServiceAsync(srv);
+                    return;
+                }
+                else
+                {
+                    AppendLog(generalLogBox, string.Format("❌ [ERROR] La carpeta de {0} no existe en '{1}'.", srv.Id, srv.FolderPath));
+                    MessageBox.Show(
+                        string.Format("La carpeta de {0} no existe en:\n{1}\n\nSelecciona la carpeta correcta con el botón '📁 Ruta'.", srv.Title, srv.FolderPath),
+                        "Carpeta no encontrada",
+                        MessageBoxButtons.OK,
+                        MessageBoxIcon.Warning
+                    );
+                    return;
+                }
             }
 
             string workingDir;
@@ -1148,6 +1171,14 @@ namespace CCGServerManager
             {
                 try
                 {
+                    // Liberar puerto antes de arrancar para asegurar que no queden procesos huérfanos
+                    KillProcessByPort(srv.MainPort);
+                    if (srv.BackendPort > 0)
+                    {
+                        KillProcessByPort(srv.BackendPort);
+                    }
+                    Thread.Sleep(300);
+
                     // Ensure PRUEBAS has isolated port 3601 in backend/.env
                     if (srv.Id == "PRUEBAS")
                     {
@@ -1480,9 +1511,18 @@ namespace CCGServerManager
             srv.IsBusy = false;
             UpdateAllStatuses();
 
-            // Restart server automatically after update
-            await StartServiceAsync(srv);
-            AppendLog(generalLogBox, string.Format("✅ [ÉXITO] {0} actualizado y en línea en http://{1}:{2}", srv.Title, localIpAddress, srv.MainPort));
+            // Restart server automatically after update only if folder and entry script exist
+            string postWorkingDir;
+            string postEntryFull;
+            if (Directory.Exists(srv.FolderPath) && ResolveServiceExecution(srv, out postWorkingDir, out postEntryFull))
+            {
+                await StartServiceAsync(srv);
+                AppendLog(generalLogBox, string.Format("✅ [ÉXITO] {0} actualizado y en línea en http://{1}:{2}", srv.Title, localIpAddress, srv.MainPort));
+            }
+            else
+            {
+                AppendLog(generalLogBox, string.Format("⚠️ [AVISO] {0} fue actualizado pero no se encontró el script de inicio para arrancarlo automáticamente.", srv.Title));
+            }
         }
 
         private void UnlockManagerExeBeforeGit(string folderPath)

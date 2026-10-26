@@ -6,9 +6,22 @@ if %errorlevel% equ 0 (
     echo [OK] Gestor_Servidores_CCG.exe compilado exitosamente.
     copy /y "Gestor_Servidores_CCG.exe" "ccg.exe" >nul
     echo [OK] Copiado a ccg.exe
-    if exist "..\ENSAYOS SIMCE" copy /y "Gestor_Servidores_CCG.exe" "..\ENSAYOS SIMCE\" >nul
-    if exist "..\PRUEBAS CCG" copy /y "Gestor_Servidores_CCG.exe" "..\PRUEBAS CCG\" >nul
-    if exist "..\New folder\labdesk" copy /y "Gestor_Servidores_CCG.exe" "..\New folder\labdesk\" >nul
+    if exist "..\ENSAYOS SIMCE" (
+        copy /y "Gestor_Servidores_CCG.exe" "..\ENSAYOS SIMCE\" >nul
+        copy /y "ccg.exe" "..\ENSAYOS SIMCE\" >nul
+    )
+    if exist "..\PRUEBAS CCG" (
+        copy /y "Gestor_Servidores_CCG.exe" "..\PRUEBAS CCG\" >nul
+        copy /y "ccg.exe" "..\PRUEBAS CCG\" >nul
+    )
+    if exist "..\..\New folder\labdesk" (
+        copy /y "Gestor_Servidores_CCG.exe" "..\..\New folder\labdesk\" >nul
+        copy /y "ccg.exe" "..\..\New folder\labdesk\" >nul
+    )
+    if exist "..\New folder\labdesk" (
+        copy /y "Gestor_Servidores_CCG.exe" "..\New folder\labdesk\" >nul
+        copy /y "ccg.exe" "..\New folder\labdesk\" >nul
+    )
 ) else (
     echo [ERROR] Fallo la compilacion de Gestor_Servidores_CCG.exe.
     pause
