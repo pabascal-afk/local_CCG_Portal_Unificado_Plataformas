@@ -20,6 +20,7 @@ function getDb() {
             dbInstance.run("ALTER TABLE planificaciones ADD COLUMN solicitud_eliminacion_motivo TEXT", () => {});
             dbInstance.run("ALTER TABLE planificaciones ADD COLUMN solicitud_eliminacion_por TEXT", () => {});
             dbInstance.run("ALTER TABLE planificaciones ADD COLUMN solicitud_eliminacion_fecha DATETIME", () => {});
+            dbInstance.run("ALTER TABLE planificaciones ADD COLUMN hitos_completados TEXT DEFAULT '[]'", () => {});
             dbInstance.run(`CREATE TABLE IF NOT EXISTS planificaciones_hitos (
                 id INTEGER PRIMARY KEY AUTOINCREMENT,
                 anio INTEGER NOT NULL DEFAULT 2026,
@@ -605,6 +606,11 @@ async function obtenerPlanificacionDetalle(id) {
     } catch (e) {
         plan.cursos_vinculados = [];
     }
+    try {
+        plan.hitos_completados = JSON.parse(plan.hitos_completados || '[]');
+    } catch (e) {
+        plan.hitos_completados = [];
+    }
 
     // Unidades ordenadas
     const unidades = await queryAll(`
@@ -856,6 +862,7 @@ async function guardarPlanificacion(id, payload, usuario) {
             cursos_vinculados = COALESCE(?, cursos_vinculados),
             metas_anuales = COALESCE(?, metas_anuales),
             horas_anuales = COALESCE(?, horas_anuales),
+            hitos_completados = COALESCE(?, hitos_completados),
             actualizado_en = CURRENT_TIMESTAMP
         WHERE id = ?
     `, [
@@ -865,6 +872,7 @@ async function guardarPlanificacion(id, payload, usuario) {
         payload.cursos_vinculados ? JSON.stringify(payload.cursos_vinculados) : null,
         payload.metas_anuales,
         payload.horas_anuales,
+        payload.hitos_completados ? JSON.stringify(payload.hitos_completados) : null,
         id
     ]);
 
@@ -2014,6 +2022,43 @@ async function eliminarHito(id, usuario = {}) {
     return { success: true, mensaje: `Hito "${hito.titulo}" eliminado correctamente.` };
 }
 
+async function marcarHitoCompletadoPlan(planId, hitoId, completado, usuario = {}) {
+    const plan = await queryGet(`SELECT id, titulo, curso, asignatura, anio, hitos_completados FROM planificaciones WHERE id = ?`, [planId]);
+    if (!plan) throw new Error("Planificación no encontrada.");
+
+    let completados = [];
+    try {
+        completados = JSON.parse(plan.hitos_completados || '[]');
+    } catch (e) {
+        completados = [];
+    }
+
+    const hId = parseInt(hitoId);
+    if (completado) {
+        if (!completados.includes(hId)) {
+            completados.push(hId);
+        }
+    } else {
+        completados = completados.filter(id => id !== hId);
+    }
+
+    await queryRun(`UPDATE planificaciones SET hitos_completados = ?, actualizado_en = CURRENT_TIMESTAMP WHERE id = ?`, [JSON.stringify(completados), planId]);
+
+    auditoria.registrarAuditoria({
+        usuario,
+        modulo: 'PLANIFICACIONES',
+        accion: completado ? 'Completar Hito' : 'Reactivar Hito',
+        descripcion: `Hito ID ${hId} marcado como ${completado ? 'completado/planificado' : 'pendiente'} en planificación de ${plan.curso} - ${plan.asignatura}`,
+        detalles: { plan_id: planId, hito_id: hId, completado },
+        usuario_email: usuario ? usuario.email : null,
+        usuario_nombre: usuario ? usuario.nombre : null,
+        rol: usuario ? usuario.rol : null,
+        nivel: 'info'
+    });
+
+    return { success: true, hitos_completados: completados };
+}
+
 // -------------------------------------------------------------
 // 20. PLANTILLAS E IMPORTACIÓN MASIVA XLS
 // -------------------------------------------------------------
@@ -2517,6 +2562,7 @@ module.exports = {
     crearHito,
     actualizarHito,
     eliminarHito,
+    marcarHitoCompletadoPlan,
     generarPlantillaHitosExcel,
     importarHitosExcel,
     generarPlantillaPlanificacionesExcel,

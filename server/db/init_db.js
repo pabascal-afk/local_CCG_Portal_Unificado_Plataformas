@@ -256,6 +256,7 @@ const schemas = [
     creado_por TEXT,
     creado_en DATETIME DEFAULT CURRENT_TIMESTAMP,
     actualizado_en DATETIME DEFAULT CURRENT_TIMESTAMP,
+    hitos_completados TEXT DEFAULT '[]',
     UNIQUE(anio, curso, asignatura)
   )`,
   `CREATE INDEX IF NOT EXISTS idx_plan_curso_asig ON planificaciones(anio, curso, asignatura)`,

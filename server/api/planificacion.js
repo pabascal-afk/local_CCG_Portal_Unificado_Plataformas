@@ -403,6 +403,17 @@ router.put('/:id', async (req, res) => {
     }
 });
 
+// 10a. Marcar / desmarcar hito completado en una planificación
+router.post('/:id/hitos/:hitoId/completar', async (req, res) => {
+    try {
+        const { completado } = req.body;
+        const resultado = await planificacion.marcarHitoCompletadoPlan(req.params.id, parseInt(req.params.hitoId), completado !== false, req.user);
+        res.json(resultado);
+    } catch (e) {
+        res.status(500).json({ error: e.message });
+    }
+});
+
 // 10b. Clonar Planificación a otro paralelo
 router.post('/:id/clonar', async (req, res) => {
     try {

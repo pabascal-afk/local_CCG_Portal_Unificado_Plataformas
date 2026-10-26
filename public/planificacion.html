@@ -1626,8 +1626,11 @@
             <div id="boxGuiaHitoRecursos" class="small"></div>
           </div>
         </div>
-        <div class="modal-footer py-2">
-          <button type="button" class="btn btn-sm btn-secondary" data-bs-dismiss="modal">Cerrar</button>
+        <div class="modal-footer py-2 d-flex justify-content-between align-items-center">
+          <div id="footerGuiaHitoEstado"></div>
+          <div class="d-flex gap-2">
+            <button type="button" class="btn btn-sm btn-secondary" data-bs-dismiss="modal">Cerrar</button>
+          </div>
         </div>
       </div>
     </div>
@@ -2397,6 +2400,9 @@
           planActivo.hitosVigentes = [];
         }
 
+        // Garantizar array de hitos completados
+        planActivo.hitos_completados = Array.isArray(planActivo.hitos_completados) ? planActivo.hitos_completados : [];
+
         // Render Banner Hitos Vigentes UTP
         renderizarBannerHitosPlan();
 
@@ -2429,14 +2435,70 @@
       const cont = document.getElementById('bannerHitosVigentesPlan');
       if (!cont) return;
 
-      const hitos = (planActivo && Array.isArray(planActivo.hitosVigentes)) ? planActivo.hitosVigentes : [];
-      if (hitos.length === 0) {
+      const todosLosHitos = (planActivo && Array.isArray(planActivo.hitosVigentes)) ? planActivo.hitosVigentes : [];
+      if (todosLosHitos.length === 0) {
         cont.classList.add('d-none');
         cont.innerHTML = '';
         return;
       }
 
+      const completados = (planActivo && Array.isArray(planActivo.hitos_completados)) ? planActivo.hitos_completados : [];
+      const pendientes = todosLosHitos.filter(h => !completados.includes(h.id));
+      const terminados = todosLosHitos.filter(h => completados.includes(h.id));
+
       cont.classList.remove('d-none');
+
+      // Si todos los hitos fueron completados
+      if (pendientes.length === 0 && terminados.length > 0) {
+        cont.innerHTML = `
+          <div class="card border-0 shadow-sm mb-3" style="background: linear-gradient(135deg, #065f46, #059669); color: white; border-radius: 12px; overflow: hidden;">
+            <div class="p-3">
+              <div class="d-flex align-items-center justify-content-between flex-wrap gap-2">
+                <div class="d-flex align-items-center gap-2">
+                  <span class="fs-4">🎉</span>
+                  <div>
+                    <h6 class="fw-bold mb-0 text-white">Lineamientos Institucionales UTP Planificados (${terminados.length}/${todosLosHitos.length})</h6>
+                    <div class="small text-white-50" style="font-size: 0.75rem;">
+                      ¡Excelente trabajo! Has planificado e integrado todos los hitos y orientaciones UTP para este curso y asignatura.
+                    </div>
+                  </div>
+                </div>
+                <button type="button" class="btn btn-sm btn-light text-success fw-bold shadow-sm" onclick="toggleHitosCompletadosColapsable()">
+                  <i class="bi bi-clock-history me-1"></i>Ver / Restaurar Recordatorios (${terminados.length})
+                </button>
+              </div>
+
+              <div id="seccionHitosCompletadosColapsable" class="mt-3 pt-3 border-top border-white border-opacity-25 d-none">
+                <div class="d-flex flex-column gap-2">
+                  ${terminados.map(h => `
+                    <div class="p-2 px-3 rounded bg-white bg-opacity-10 border border-white border-opacity-25 d-flex justify-content-between align-items-center flex-wrap gap-2">
+                      <div class="d-flex align-items-center gap-2">
+                        <span class="fs-5">${h.icono || '🎭'}</span>
+                        <div>
+                          <strong class="text-white">${escapeHtml(h.titulo)}</strong>
+                          <span class="badge bg-success ms-1 py-0 px-1" style="font-size: 0.65rem;"><i class="bi bi-check2"></i> Planificado</span>
+                          <span class="small text-white-50 ms-2">${h.fecha_inicio} al ${h.fecha_fin}</span>
+                        </div>
+                      </div>
+                      <div class="d-flex gap-2">
+                        <button type="button" class="btn btn-xs btn-light text-primary fw-bold" onclick="abrirModalGuiaHito(${h.id}, 0)">
+                          <i class="bi bi-compass me-1"></i>Ver Guía
+                        </button>
+                        <button type="button" class="btn btn-xs btn-outline-light" onclick="confirmarReactivarHito(${h.id})" title="Reactivar recordatorio activo">
+                          <i class="bi bi-arrow-counterclockwise me-1"></i>Reactivar Recordatorio
+                        </button>
+                      </div>
+                    </div>
+                  `).join('')}
+                </div>
+              </div>
+            </div>
+          </div>
+        `;
+        return;
+      }
+
+      // Si hay pendientes
       cont.innerHTML = `
         <div class="card border-0 shadow-sm mb-3" style="background: linear-gradient(135deg, #1e3a8a, #2563eb); color: white; border-radius: 12px; overflow: hidden;">
           <div class="p-3">
@@ -2446,7 +2508,8 @@
                 <div>
                   <h6 class="fw-bold mb-0 text-white">Lineamientos Pedagógicos Institucionales UTP Vigentes</h6>
                   <div class="small text-white-50" style="font-size: 0.75rem;">
-                    Se aplican <strong>${hitos.length}</strong> hito(s) institucional(es) o semana(s) temática(s) a este curso (${escapeHtml(planActivo.curso)}) y asignatura (${escapeHtml(planActivo.asignatura)}).
+                    Se aplican <strong>${todosLosHitos.length}</strong> hito(s) institucional(es) a este curso (${escapeHtml(planActivo.curso)}) y asignatura (${escapeHtml(planActivo.asignatura)}).
+                    ${terminados.length > 0 ? `<strong>${pendientes.length}</strong> pendiente(s) • <span class="badge bg-success-subtle text-white border border-light border-opacity-25">${terminados.length} ya planificado(s)</span>` : ''}
                   </div>
                 </div>
               </div>
@@ -2456,7 +2519,7 @@
             </div>
 
             <div class="d-flex flex-column gap-2">
-              ${hitos.map(h => {
+              ${pendientes.map(h => {
                 const oas = Array.isArray(h.oas_sugeridos) ? h.oas_sugeridos : [];
                 const tags = Array.isArray(h.metodologias_sugeridas) ? h.metodologias_sugeridas : [];
                 const oasTxt = oas.map(o => (typeof o === 'object' ? o.codigo : o)).join(', ');
@@ -2488,15 +2551,46 @@
                         ` : ''}
                       </div>
                     </div>
-                    <div class="text-end text-nowrap">
+                    <div class="d-flex flex-column flex-sm-row gap-2 text-nowrap">
                       <button type="button" class="btn btn-sm btn-light text-primary fw-bold shadow-sm" onclick="abrirModalGuiaHito(${h.id}, 0)">
-                        <i class="bi bi-compass me-1"></i>Ver Guía Completa & Adoptar
+                        <i class="bi bi-compass me-1"></i>Ver Guía & Adoptar
+                      </button>
+                      <button type="button" class="btn btn-sm btn-success fw-bold shadow-sm" onclick="confirmarCompletarHito(${h.id})" title="Marcar este lineamiento como planificado y sacar el recordatorio">
+                        <i class="bi bi-check2-circle me-1"></i>Marcar como Completo
                       </button>
                     </div>
                   </div>
                 `;
               }).join('')}
             </div>
+
+            ${terminados.length > 0 ? `
+              <div class="mt-2 pt-2 border-top border-white border-opacity-25 d-flex justify-content-between align-items-center flex-wrap gap-1">
+                <span class="small text-white-50" style="font-size: 0.75rem;">
+                  <i class="bi bi-check-all text-warning me-1"></i>${terminados.length} hito(s) institucional(es) ya marcado(s) como planificado(s).
+                </span>
+                <button type="button" class="btn btn-xs btn-outline-light py-0 px-2" onclick="toggleHitosCompletadosColapsable()">
+                  <i class="bi bi-eye me-1"></i>Ver / Restaurar (${terminados.length})
+                </button>
+              </div>
+              <div id="seccionHitosCompletadosColapsable" class="mt-2 d-none">
+                <div class="d-flex flex-column gap-1">
+                  ${terminados.map(h => `
+                    <div class="p-2 px-3 rounded bg-black bg-opacity-20 border border-white border-opacity-10 d-flex justify-content-between align-items-center flex-wrap gap-2">
+                      <div class="d-flex align-items-center gap-2">
+                        <span>${h.icono || '🎭'}</span>
+                        <strong class="text-white small">${escapeHtml(h.titulo)}</strong>
+                        <span class="badge bg-success py-0 px-1" style="font-size: 0.62rem;"><i class="bi bi-check2"></i> Planificado</span>
+                      </div>
+                      <div class="d-flex gap-1">
+                        <button type="button" class="btn btn-xs btn-light text-primary py-0" onclick="abrirModalGuiaHito(${h.id}, 0)">Guía</button>
+                        <button type="button" class="btn btn-xs btn-outline-light py-0" onclick="confirmarReactivarHito(${h.id})" title="Reactivar recordatorio activo">Reactivar Recordatorio</button>
+                      </div>
+                    </div>
+                  `).join('')}
+                </div>
+              </div>
+            ` : ''}
           </div>
         </div>
       `;
@@ -2674,44 +2768,74 @@
                       return false;
                     });
                     if (hitosEnUnidad.length === 0) return '';
+                    const completados = (planActivo && Array.isArray(planActivo.hitos_completados)) ? planActivo.hitos_completados : [];
+
                     return `
                       <!-- ALERTA DESTACADA DE HITOS Y LINEAMIENTOS UTP EN ESTA UNIDAD -->
                       <div class="mb-3">
-                        ${hitosEnUnidad.map(hu => `
-                          <div class="alert alert-info border-2 d-flex flex-column flex-md-row align-items-start align-items-md-center justify-content-between p-3 mb-2 shadow-sm rounded-3" 
-                               style="background: #eff6ff; border-left: 5px solid ${hu.color || '#2563eb'} !important;">
-                            <div class="d-flex align-items-center gap-3 mb-2 mb-md-0">
-                              <span class="fs-1">${hu.icono || '🎭'}</span>
-                              <div>
-                                <div class="fw-bold text-dark fs-6 mb-1 d-flex align-items-center gap-2 flex-wrap">
-                                  <span>${escapeHtml(hu.titulo)}</span>
-                                  <span class="badge" style="background-color: ${hu.color || '#2563eb'}; font-size: 0.72rem;">${escapeHtml(hu.tipo || 'Hito')}</span>
-                                  <span class="badge bg-light text-secondary border small"><i class="bi bi-calendar3 me-1"></i>${hu.fecha_inicio} al ${hu.fecha_fin}</span>
+                        ${hitosEnUnidad.map(hu => {
+                          const esComp = completados.includes(hu.id);
+                          if (esComp) {
+                            return `
+                              <div class="alert alert-success border-1 d-flex flex-column flex-md-row align-items-start align-items-md-center justify-content-between p-2 px-3 mb-2 rounded-3 bg-success-subtle border-success">
+                                <div class="d-flex align-items-center gap-2">
+                                  <span class="fs-4">${hu.icono || '🎭'}</span>
+                                  <div>
+                                    <div class="fw-bold text-dark fs-6 d-flex align-items-center gap-2 flex-wrap">
+                                      <span>${escapeHtml(hu.titulo)}</span>
+                                      <span class="badge bg-success" style="font-size: 0.7rem;"><i class="bi bi-check2 me-1"></i>Hito Planificado</span>
+                                      <span class="badge bg-light text-secondary border small"><i class="bi bi-calendar3 me-1"></i>${hu.fecha_inicio} al ${hu.fecha_fin}</span>
+                                    </div>
+                                    <div class="small text-muted text-truncate" style="max-width: 520px;">${escapeHtml(hu.lineamientos || '')}</div>
+                                  </div>
                                 </div>
-                                <div class="text-secondary small mb-1" style="line-height: 1.45;">
-                                  <strong>Lineamientos Pedagógicos UTP:</strong> ${escapeHtml(hu.lineamientos || 'Directrices institucionales para guiar la planificación docente.')}
-                                </div>
-                                <div class="d-flex flex-wrap gap-1 align-items-center">
-                                  ${(hu.oas_sugeridos || []).length > 0 ? `
-                                    <span class="badge bg-primary-subtle text-primary border border-primary-subtle" style="font-size: 0.72rem;">
-                                      <i class="bi bi-bullseye me-1"></i>${(hu.oas_sugeridos || []).length} OAs sugeridos por UTP
-                                    </span>
-                                  ` : ''}
-                                  ${(hu.metodologias_sugeridas || []).length > 0 ? `
-                                    <span class="badge bg-success-subtle text-success border border-success-subtle" style="font-size: 0.72rem;">
-                                      <i class="bi bi-tags me-1"></i>${(hu.metodologias_sugeridas || []).length} DUA / Metodologías
-                                    </span>
-                                  ` : ''}
+                                <div class="d-flex gap-1 ms-md-2 mt-2 mt-md-0 text-nowrap">
+                                  <button type="button" class="btn btn-xs btn-outline-primary" onclick="abrirModalGuiaHito(${hu.id}, ${idx})"><i class="bi bi-compass me-1"></i>Ver Guía</button>
+                                  <button type="button" class="btn btn-xs btn-outline-secondary" onclick="confirmarReactivarHito(${hu.id})" title="Reactivar recordatorio activo"><i class="bi bi-arrow-counterclockwise me-1"></i>Reactivar</button>
                                 </div>
                               </div>
+                            `;
+                          }
+
+                          return `
+                            <div class="alert alert-info border-2 d-flex flex-column flex-md-row align-items-start align-items-md-center justify-content-between p-3 mb-2 shadow-sm rounded-3" 
+                                 style="background: #eff6ff; border-left: 5px solid ${hu.color || '#2563eb'} !important;">
+                              <div class="d-flex align-items-center gap-3 mb-2 mb-md-0">
+                                <span class="fs-1">${hu.icono || '🎭'}</span>
+                                <div>
+                                  <div class="fw-bold text-dark fs-6 mb-1 d-flex align-items-center gap-2 flex-wrap">
+                                    <span>${escapeHtml(hu.titulo)}</span>
+                                    <span class="badge" style="background-color: ${hu.color || '#2563eb'}; font-size: 0.72rem;">${escapeHtml(hu.tipo || 'Hito')}</span>
+                                    <span class="badge bg-light text-secondary border small"><i class="bi bi-calendar3 me-1"></i>${hu.fecha_inicio} al ${hu.fecha_fin}</span>
+                                  </div>
+                                  <div class="text-secondary small mb-1" style="line-height: 1.45;">
+                                    <strong>Lineamientos Pedagógicos UTP:</strong> ${escapeHtml(hu.lineamientos || 'Directrices institucionales para guiar la planificación docente.')}
+                                  </div>
+                                  <div class="d-flex flex-wrap gap-1 align-items-center">
+                                    ${(hu.oas_sugeridos || []).length > 0 ? `
+                                      <span class="badge bg-primary-subtle text-primary border border-primary-subtle" style="font-size: 0.72rem;">
+                                        <i class="bi bi-bullseye me-1"></i>${(hu.oas_sugeridos || []).length} OAs sugeridos por UTP
+                                      </span>
+                                    ` : ''}
+                                    ${(hu.metodologias_sugeridas || []).length > 0 ? `
+                                      <span class="badge bg-success-subtle text-success border border-success-subtle" style="font-size: 0.72rem;">
+                                        <i class="bi bi-tags me-1"></i>${(hu.metodologias_sugeridas || []).length} DUA / Metodologías
+                                      </span>
+                                    ` : ''}
+                                  </div>
+                                </div>
+                              </div>
+                              <div class="d-flex flex-column flex-sm-row gap-2 text-nowrap ms-md-3 mt-2 mt-md-0">
+                                <button type="button" class="btn btn-sm btn-primary shadow-sm" onclick="abrirModalGuiaHito(${hu.id}, ${idx})">
+                                  <i class="bi bi-compass me-1"></i>Ver Guía & Adoptar
+                                </button>
+                                <button type="button" class="btn btn-sm btn-success fw-bold shadow-sm" onclick="confirmarCompletarHito(${hu.id})" title="Marcar como planificado y sacar el recordatorio">
+                                  <i class="bi bi-check2-circle me-1"></i>Marcar Completo
+                                </button>
+                              </div>
                             </div>
-                            <div class="text-end text-nowrap ms-md-3">
-                              <button type="button" class="btn btn-sm btn-primary shadow-sm" onclick="abrirModalGuiaHito(${hu.id}, ${idx})">
-                                <i class="bi bi-compass me-1"></i>Ver Orientaciones & Adoptar
-                              </button>
-                            </div>
-                          </div>
-                        `).join('')}
+                          `;
+                        }).join('')}
                       </div>
                     `;
                   })()}
@@ -2755,22 +2879,25 @@
                               if (!h.fecha_inicio || !h.fecha_fin || !s.fecha_inicio || !s.fecha_fin) return false;
                               return !(h.fecha_fin < s.fecha_inicio || h.fecha_inicio > s.fecha_fin);
                             });
-                            const hitosBadgeHtml = hitosEnSemana.map(h => `
-                              <div class="mt-1">
-                                <div class="p-1 px-2 rounded text-white d-flex align-items-center justify-content-between shadow-sm cursor-pointer" 
-                                     style="background: linear-gradient(135deg, ${h.color || '#2563eb'}, #1e40af); font-size: 0.74rem; border: 1px solid rgba(255,255,255,0.25);" 
-                                     onclick="abrirModalGuiaHito(${h.id}, ${idx}, ${sIdx})" 
-                                     title="Lineamientos UTP: Haz clic para ver orientaciones y adoptar OAs/DUA">
-                                  <div class="d-flex align-items-center gap-1 text-truncate">
-                                    <span class="fs-6">${h.icono || '🎭'}</span>
-                                    <span class="fw-bold text-truncate" style="max-width: 95px;">${escapeHtml(h.titulo)}</span>
+                            const hitosBadgeHtml = hitosEnSemana.map(h => {
+                              const esCompSem = completados.includes(h.id);
+                              return `
+                                <div class="mt-1">
+                                  <div class="p-1 px-2 rounded text-white d-flex align-items-center justify-content-between shadow-sm cursor-pointer" 
+                                       style="background: ${esCompSem ? 'linear-gradient(135deg, #059669, #047857)' : `linear-gradient(135deg, ${h.color || '#2563eb'}, #1e40af)`}; font-size: 0.74rem; border: 1px solid rgba(255,255,255,0.25);" 
+                                       onclick="abrirModalGuiaHito(${h.id}, ${idx}, ${sIdx})" 
+                                       title="${esCompSem ? 'Lineamiento UTP Planificado' : 'Lineamientos UTP: Haz clic para ver orientaciones y adoptar OAs/DUA'}">
+                                    <div class="d-flex align-items-center gap-1 text-truncate">
+                                      <span class="fs-6">${h.icono || '🎭'}</span>
+                                      <span class="fw-bold text-truncate" style="max-width: 95px;">${escapeHtml(h.titulo)}</span>
+                                    </div>
+                                    <span class="badge ${esCompSem ? 'bg-success text-white border border-light border-opacity-50' : 'bg-light text-dark'} ms-1 py-0 px-1" style="font-size: 0.65rem;">
+                                      ${esCompSem ? '<i class="bi bi-check-all"></i> Listo' : '<i class="bi bi-compass"></i> Guía'}
+                                    </span>
                                   </div>
-                                  <span class="badge bg-light text-dark ms-1 py-0 px-1" style="font-size: 0.65rem;">
-                                    <i class="bi bi-compass"></i> Guía
-                                  </span>
                                 </div>
-                              </div>
-                            `).join('');
+                              `;
+                            }).join('');
                             return `
                             <tr data-semana-idx="${sIdx}" ${hitosEnSemana.length > 0 ? `style="border-left: 4px solid ${hitosEnSemana[0].color || '#2563eb'}; background-color: rgba(37, 99, 235, 0.02);"` : ''}>
                               <td class="text-center">
@@ -3680,6 +3807,7 @@
           docente_responsable: document.getElementById('inputPlanDocente').value,
           docentes_colaboradores: colaboradoresSeleccionados,
           metas_anuales: document.getElementById('inputPlanMetas').value,
+          hitos_completados: planActivo.hitos_completados || [],
           unidades: planActivo.unidades
         };
 
@@ -4805,13 +4933,36 @@
       }
     }
 
+    function sonOAsIguales(a, b) {
+      if (!a || !b) return false;
+      if (typeof a === 'object' && typeof b === 'object' && a.id && b.id) {
+        if (String(a.id) === String(b.id)) return true;
+      }
+
+      const codA = (typeof a === 'object' ? a.codigo : a) || '';
+      const codB = (typeof b === 'object' ? b.codigo : b) || '';
+      if (String(codA).trim().toUpperCase() !== String(codB).trim().toUpperCase()) {
+        return false;
+      }
+
+      const asigA = (typeof a === 'object' && a.asignatura ? a.asignatura.trim().toLowerCase() : '');
+      const asigB = (typeof b === 'object' && b.asignatura ? b.asignatura.trim().toLowerCase() : '');
+      const nivA = (typeof a === 'object' && a.nivel ? a.nivel.trim().toLowerCase() : '');
+      const nivB = (typeof b === 'object' && b.nivel ? b.nivel.trim().toLowerCase() : '');
+
+      if (asigA && asigB && asigA !== asigB) return false;
+      if (nivA && nivB && nivA !== nivB) return false;
+
+      return true;
+    }
+
     function agregarOAHito(oaObj) {
-      const cod = typeof oaObj === 'object' ? oaObj.codigo : oaObj;
-      if (!cod) return;
-      const yaExiste = hitosOAsSugeridosList.some(o => (typeof o === 'object' ? o.codigo : o).toUpperCase() === String(cod).toUpperCase());
+      if (!oaObj) return;
+      const yaExiste = hitosOAsSugeridosList.some(o => sonOAsIguales(o, oaObj));
       if (!yaExiste) {
         hitosOAsSugeridosList.push(oaObj);
         renderizarTagsOAsHito();
+        actualizarBotonesExploradorOAs();
       }
     }
 
@@ -4819,7 +4970,29 @@
       if (idx >= 0 && idx < hitosOAsSugeridosList.length) {
         hitosOAsSugeridosList.splice(idx, 1);
         renderizarTagsOAsHito();
+        actualizarBotonesExploradorOAs();
       }
+    }
+
+    function actualizarBotonesExploradorOAs() {
+      const container = document.getElementById('listaResultadosExploradorOAsHito');
+      if (!container) return;
+      const btns = container.querySelectorAll('button[data-oa-raw]');
+      btns.forEach(btn => {
+        try {
+          const item = JSON.parse(decodeURIComponent(btn.getAttribute('data-oa-raw')));
+          const ya = hitosOAsSugeridosList.some(o => sonOAsIguales(o, item));
+          if (ya) {
+            btn.className = 'btn btn-xs btn-success text-nowrap';
+            btn.disabled = true;
+            btn.innerHTML = '<i class="bi bi-check me-1"></i>Agregado';
+          } else {
+            btn.className = 'btn btn-xs btn-outline-primary text-nowrap';
+            btn.disabled = false;
+            btn.innerHTML = '<i class="bi bi-plus me-1"></i>Agregar';
+          }
+        } catch (e) {}
+      });
     }
 
     function agregarOAHitoManual() {
@@ -4863,7 +5036,9 @@
           }
 
           dd.innerHTML = objetivos.slice(0, 15).map(item => {
+            const ya = hitosOAsSugeridosList.some(o => sonOAsIguales(o, item));
             const safeObj = JSON.stringify({
+              id: item.id,
               codigo: item.codigo,
               categoria: item.categoria || 'Basal',
               descripcion: item.descripcion || '',
@@ -4872,9 +5047,13 @@
             }).replace(/"/g, '&quot;');
 
             return `
-              <button type="button" class="list-group-item list-group-item-action p-2 text-start" onclick="seleccionarOABusquedaHito(${safeObj})">
+              <button type="button" class="list-group-item list-group-item-action p-2 text-start ${ya ? 'bg-success-subtle' : ''}" onclick="seleccionarOABusquedaHito(${safeObj})">
                 <div class="d-flex justify-content-between align-items-center">
-                  <span class="fw-bold text-primary">${escapeHtml(item.codigo)} <span class="badge ${item.categoria === 'Basal' ? 'bg-primary' : 'bg-secondary'} ms-1" style="font-size: 0.65rem;">${item.categoria || 'Basal'}</span></span>
+                  <span class="fw-bold ${ya ? 'text-success' : 'text-primary'}">
+                    ${escapeHtml(item.codigo)}
+                    <span class="badge ${item.categoria === 'Basal' ? 'bg-primary' : 'bg-secondary'} ms-1" style="font-size: 0.65rem;">${item.categoria || 'Basal'}</span>
+                    ${ya ? '<span class="badge bg-success ms-1" style="font-size: 0.62rem;"><i class="bi bi-check me-1"></i>Ya agregado</span>' : ''}
+                  </span>
                   <span class="badge bg-light text-dark border small" style="font-size: 0.68rem;">${escapeHtml(item.nivel || '')} • ${escapeHtml(item.asignatura || '')}</span>
                 </div>
                 <div class="small text-muted text-truncate mt-1" style="max-width: 100%; font-size: 0.73rem;">${escapeHtml(item.descripcion || '')}</div>
@@ -4947,8 +5126,17 @@
         }
 
         lista.innerHTML = oas.slice(0, 30).map(item => {
-          const ya = hitosOAsSugeridosList.some(o => (typeof o === 'object' ? o.codigo : o).toUpperCase() === item.codigo.toUpperCase());
+          const ya = hitosOAsSugeridosList.some(o => sonOAsIguales(o, item));
+          const safeData = encodeURIComponent(JSON.stringify({
+            id: item.id,
+            codigo: item.codigo,
+            categoria: item.categoria || 'Basal',
+            descripcion: item.descripcion || '',
+            nivel: item.nivel || '',
+            asignatura: item.asignatura || ''
+          }));
           const safeObj = JSON.stringify({
+            id: item.id,
             codigo: item.codigo,
             categoria: item.categoria || 'Basal',
             descripcion: item.descripcion || '',
@@ -4962,7 +5150,7 @@
                 <div class="fw-bold text-dark">${escapeHtml(item.codigo)} <span class="badge ${item.categoria === 'Basal' ? 'bg-primary' : 'bg-secondary'} py-0 px-1" style="font-size: 0.65rem;">${item.categoria || 'Basal'}</span> <span class="text-secondary">(${escapeHtml(item.nivel || '')} • ${escapeHtml(item.asignatura || '')})</span></div>
                 <div class="text-muted text-truncate" style="max-width: 480px;">${escapeHtml(item.descripcion || '')}</div>
               </div>
-              <button type="button" class="btn btn-xs ${ya ? 'btn-success' : 'btn-outline-primary'} text-nowrap" onclick="seleccionarOABusquedaHito(${safeObj})" ${ya ? 'disabled' : ''}>
+              <button type="button" class="btn btn-xs ${ya ? 'btn-success' : 'btn-outline-primary'} text-nowrap" data-oa-raw="${safeData}" onclick="seleccionarOABusquedaHito(${safeObj})" ${ya ? 'disabled' : ''}>
                 ${ya ? '<i class="bi bi-check me-1"></i>Agregado' : '<i class="bi bi-plus me-1"></i>Agregar'}
               </button>
             </div>
@@ -5311,7 +5499,10 @@
         boxRecCont.classList.add('d-none');
       }
 
-      if (modalGuiaHitoObj) modalGuiaHitoObj.show();
+      if (modalGuiaHitoObj) {
+        actualizarFooterModalGuiaHito();
+        modalGuiaHitoObj.show();
+      }
     }
 
     function adoptarUnOAGuiaHito(cod, uIdx) {
@@ -5419,6 +5610,140 @@
         showConfirmButton: false,
         timer: 3000
       });
+    }
+
+    // -------------------------------------------------------------
+    // GESTIÓN DE ESTADO DE HITOS (MARCAR COMO COMPLETO / RECORDATORIOS)
+    // -------------------------------------------------------------
+    function actualizarFooterModalGuiaHito() {
+      const footerCont = document.getElementById('footerGuiaHitoEstado');
+      if (!footerCont || !guiaHitoActivo || !guiaHitoActivo.hito) return;
+      const hId = guiaHitoActivo.hito.id;
+      const completados = (planActivo && Array.isArray(planActivo.hitos_completados)) ? planActivo.hitos_completados : [];
+      const yaComp = completados.includes(hId);
+
+      if (yaComp) {
+        footerCont.innerHTML = `
+          <div class="d-flex align-items-center gap-2">
+            <span class="badge bg-success-subtle text-success border border-success-subtle py-1 px-2">
+              <i class="bi bi-check-circle-fill me-1"></i>Hito marcado como planificado en este curso
+            </span>
+            <button type="button" class="btn btn-xs btn-outline-secondary" onclick="confirmarReactivarHito(${hId})">
+              <i class="bi bi-arrow-counterclockwise me-1"></i>Reactivar Recordatorio
+            </button>
+          </div>
+        `;
+      } else {
+        footerCont.innerHTML = `
+          <button type="button" class="btn btn-sm btn-success fw-bold shadow-sm" onclick="confirmarCompletarHito(${hId})">
+            <i class="bi bi-check2-circle me-1"></i>Marcar Hito como Completo / Sacar Recordatorio
+          </button>
+        `;
+      }
+    }
+
+    async function confirmarCompletarHito(hitoId) {
+      let h = null;
+      if (planActivo && Array.isArray(planActivo.hitosVigentes)) {
+        h = planActivo.hitosVigentes.find(x => x.id === hitoId);
+      }
+      if (!h && Array.isArray(hitosColegioCache)) {
+        h = hitosColegioCache.find(x => x.id === hitoId);
+      }
+      const titulo = h ? h.titulo : 'este hito institucional';
+
+      const result = await Swal.fire({
+        title: '¿Marcar Hito como Completo?',
+        html: `¿Confirmas que ya incorporaste o planificaste los lineamientos de <strong>"${escapeHtml(titulo)}"</strong> en este curso?<br><br>
+               <div class="p-2 rounded bg-light border text-start small text-muted">
+                 <i class="bi bi-info-circle text-primary me-1"></i>
+                 Al marcarlo como <strong>Completo</strong>, se retirará el recordatorio activo de tu panel y semanas para mantener tu planificación despejada y ordenada. Siempre podrás revisarlo o reactivarlo si lo deseas.
+               </div>`,
+        icon: 'question',
+        showCancelButton: true,
+        confirmButtonColor: '#16a34a',
+        cancelButtonColor: '#64748b',
+        confirmButtonText: '<i class="bi bi-check2-circle me-1"></i>Sí, marcar como completo',
+        cancelButtonText: 'Cancelar'
+      });
+
+      if (result.isConfirmed) {
+        await ejecutarCompletarHito(hitoId, true);
+      }
+    }
+
+    async function confirmarReactivarHito(hitoId) {
+      let h = null;
+      if (planActivo && Array.isArray(planActivo.hitosVigentes)) {
+        h = planActivo.hitosVigentes.find(x => x.id === hitoId);
+      }
+      if (!h && Array.isArray(hitosColegioCache)) {
+        h = hitosColegioCache.find(x => x.id === hitoId);
+      }
+      const titulo = h ? h.titulo : 'este hito';
+
+      const result = await Swal.fire({
+        title: '¿Reactivar Recordatorio?',
+        html: `¿Deseas reactivar el recordatorio de <strong>"${escapeHtml(titulo)}"</strong> para que vuelva a mostrarse en los lineamientos activos de este curso?`,
+        icon: 'question',
+        showCancelButton: true,
+        confirmButtonColor: '#2563eb',
+        cancelButtonColor: '#64748b',
+        confirmButtonText: '<i class="bi bi-arrow-counterclockwise me-1"></i>Sí, reactivar recordatorio',
+        cancelButtonText: 'Cancelar'
+      });
+
+      if (result.isConfirmed) {
+        await ejecutarCompletarHito(hitoId, false);
+      }
+    }
+
+    async function ejecutarCompletarHito(hitoId, completado) {
+      if (!planActivo || !planActivo.id) return;
+      try {
+        planActivo.hitos_completados = Array.isArray(planActivo.hitos_completados) ? planActivo.hitos_completados : [];
+        const hId = parseInt(hitoId);
+        if (completado) {
+          if (!planActivo.hitos_completados.includes(hId)) {
+            planActivo.hitos_completados.push(hId);
+          }
+        } else {
+          planActivo.hitos_completados = planActivo.hitos_completados.filter(id => id !== hId);
+        }
+
+        // Persistir en servidor inmediatamente
+        const res = await fetch(`/api/planificacion/${planActivo.id}/hitos/${hId}/completar`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ completado })
+        });
+        if (res.ok) {
+          const data = await res.json();
+          if (data && Array.isArray(data.hitos_completados)) {
+            planActivo.hitos_completados = data.hitos_completados;
+          }
+        }
+
+        renderizarBannerHitosPlan();
+        renderizarUnidadesAcordeon();
+        actualizarFooterModalGuiaHito();
+
+        Swal.fire({
+          toast: true,
+          position: 'top-end',
+          icon: completado ? 'success' : 'info',
+          title: completado ? 'Hito marcado como planificado' : 'Recordatorio reactivado',
+          showConfirmButton: false,
+          timer: 2500
+        });
+      } catch (err) {
+        Swal.fire('Error', err.message, 'error');
+      }
+    }
+
+    function toggleHitosCompletadosColapsable() {
+      const el = document.getElementById('seccionHitosCompletadosColapsable');
+      if (el) el.classList.toggle('d-none');
     }
 
     // -------------------------------------------------------------
