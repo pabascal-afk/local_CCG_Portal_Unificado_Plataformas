@@ -655,6 +655,14 @@ router.get('/alias', async (req, res) => {
         const aliasGuardados = await queryAll("SELECT * FROM libro_alias_docentes ORDER BY nombre_plataforma ASC");
         const distinctProfesores = await queryAll("SELECT DISTINCT profesor FROM libro_registros ORDER BY profesor ASC");
         
+        // Obtener lista de docentes exentos (blacklist) para separar pendientes reales
+        const configRows = await queryAll("SELECT clave, valor FROM libro_config WHERE clave = 'blacklist'");
+        let blacklist = [];
+        if (configRows.length > 0) {
+            try { blacklist = JSON.parse(configRows[0].valor || '[]'); } catch (e) { blacklist = []; }
+        }
+        const blacklistNormSet = new Set((blacklist || []).map(b => normalizarTexto(b)));
+
         const aliasMap = new Map();
         aliasGuardados.forEach(a => aliasMap.set(normalizarTexto(a.nombre_reporte), a));
         
@@ -667,6 +675,7 @@ router.get('/alias', async (req, res) => {
             const norm = normalizarTexto(nombreReporte);
             if (aliasMap.has(norm)) {
                 const a = aliasMap.get(norm);
+                const esExcluido = blacklistNormSet.has(norm) || (a.nombre_plataforma && blacklistNormSet.has(normalizarTexto(a.nombre_plataforma)));
                 listaDocentes.push({
                     id: a.id,
                     nombreReporte: a.nombre_reporte,
@@ -675,10 +684,12 @@ router.get('/alias', async (req, res) => {
                     usuarioId: a.usuario_id,
                     origen: a.origen || 'auto',
                     vinculado: true,
+                    excluido: !!esExcluido,
                     actualizadoEn: a.actualizado_en
                 });
             } else {
                 const match = resolverCoincidencia(nombreReporte, usuarios);
+                const esExcluido = blacklistNormSet.has(norm) || (match && match.usuario && blacklistNormSet.has(normalizarTexto(match.usuario.nombre)));
                 listaDocentes.push({
                     id: null,
                     nombreReporte: nombreReporte,
@@ -687,6 +698,7 @@ router.get('/alias', async (req, res) => {
                     usuarioId: match ? match.usuario.id : null,
                     origen: match ? 'sugerido' : 'sin_vincular',
                     vinculado: false,
+                    excluido: !!esExcluido,
                     confianza: match ? match.confianza : 0,
                     metodo: match ? match.metodo : null
                 });
@@ -695,12 +707,19 @@ router.get('/alias', async (req, res) => {
         
         listaDocentes.sort((a, b) => a.nombreReporte.localeCompare(b.nombreReporte));
         
+        const docentesActivos = listaDocentes.filter(d => !d.excluido);
+        const vinculados = docentesActivos.filter(d => d.vinculado).length;
+        const sinVincular = docentesActivos.filter(d => !d.vinculado).length;
+        const excluidosCount = listaDocentes.filter(d => d.excluido).length;
+
         res.json({
             docentes: listaDocentes,
             usuarios: usuarios,
             total: listaDocentes.length,
-            vinculados: listaDocentes.filter(d => d.vinculado).length,
-            sinVincular: listaDocentes.filter(d => !d.vinculado).length
+            totalActivos: docentesActivos.length,
+            vinculados: vinculados,
+            sinVincular: sinVincular,
+            excluidos: excluidosCount
         });
     } catch (err) {
         console.error('Error obteniendo alias de docentes:', err);
@@ -763,21 +782,37 @@ router.post('/alias', async (req, res) => {
 // Disparador de auto-vinculación masiva inteligente
 router.post('/alias/auto-vincular', async (req, res) => {
     try {
+        const configRows = await queryAll("SELECT clave, valor FROM libro_config WHERE clave = 'blacklist'");
+        let blacklist = [];
+        if (configRows.length > 0) {
+            try { blacklist = JSON.parse(configRows[0].valor || '[]'); } catch (e) { blacklist = []; }
+        }
+        const blacklistNormSet = new Set((blacklist || []).map(b => normalizarTexto(b)));
+
         const usuarios = await queryAll("SELECT id, nombre, email FROM usuarios");
         const distinctProfesores = await queryAll("SELECT DISTINCT profesor FROM libro_registros");
         const aliasGuardados = await queryAll("SELECT nombre_reporte FROM libro_alias_docentes");
         const aliasSet = new Set(aliasGuardados.map(a => normalizarTexto(a.nombre_reporte)));
         
         let vinculados = 0;
+        let omitidosExcluidos = 0;
         const noCoincidentes = [];
         
         for (const row of distinctProfesores) {
             const rep = row.profesor;
             const norm = normalizarTexto(rep);
             if (aliasSet.has(norm)) continue;
+            if (blacklistNormSet.has(norm)) {
+                omitidosExcluidos++;
+                continue;
+            }
             
             const match = resolverCoincidencia(rep, usuarios);
             if (match) {
+                if (blacklistNormSet.has(normalizarTexto(match.usuario.nombre))) {
+                    omitidosExcluidos++;
+                    continue;
+                }
                 await run(`
                     INSERT INTO libro_alias_docentes (
                         nombre_reporte, nombre_normalizado, usuario_id, nombre_plataforma, email, origen, actualizado_en
@@ -809,16 +844,17 @@ router.post('/alias/auto-vincular', async (req, res) => {
             modulo: 'Libro de Clases',
             accion: 'Auto-vinculación Inteligente',
             nivel: 'info',
-            descripcion: `Auto-vinculación de docentes ejecutada: ${vinculados} vinculados, ${noCoincidentes.length} sin coincidencia`,
-            detalles: { vinculados, noCoincidentes }
+            descripcion: `Auto-vinculación de docentes ejecutada: ${vinculados} vinculados, ${omitidosExcluidos} omitidos por lista de exentos, ${noCoincidentes.length} sin coincidencia`,
+            detalles: { vinculados, omitidosExcluidos, noCoincidentes }
         });
 
         res.json({
             success: true,
             vinculados,
+            omitidosExcluidos,
             totalRevisados: distinctProfesores.length,
             noCoincidentes,
-            message: `Se vincularon automáticamente ${vinculados} docentes con la plataforma.`
+            message: `Se vincularon automáticamente ${vinculados} docentes con la plataforma (${omitidosExcluidos} omitidos por exención).`
         });
     } catch (err) {
         console.error('Error en auto-vinculación de docentes:', err);

@@ -416,8 +416,9 @@
               <div class="col-md-3">
                 <select id="filtroEstadoAlias" class="form-select" onchange="renderizarTablaAlias()">
                   <option value="todos">Todos los docentes</option>
-                  <option value="sin_vincular">⚠️ Pendientes de vincular</option>
+                  <option value="sin_vincular">⚠️ Pendientes de vincular (activos)</option>
                   <option value="vinculados">✅ Vinculados con plataforma</option>
+                  <option value="excluidos">🚫 Excluidos (Exentos)</option>
                 </select>
               </div>
               <div class="col-md-4 text-md-end">
@@ -482,30 +483,74 @@
           <!-- Días Excluidos (Feriados / Paros) -->
           <div class="col-md-6">
             <div class="card border-0 shadow-sm h-100">
-              <div class="card-body p-4">
-                <div class="d-flex justify-content-between align-items-center mb-2">
+              <div class="card-body p-4 d-flex flex-column">
+                <div class="d-flex flex-wrap justify-content-between align-items-center gap-2 mb-2">
                   <h5 class="fw-bold mb-0">
                     <i class="bi bi-calendar-x text-warning me-2"></i>Días Excluidos (Feriados / Paros)
                     <span class="badge bg-warning text-dark ms-1" id="badgeTotalFeriados">0</span>
                   </h5>
                   <div class="btn-group btn-group-sm">
-                    <button class="btn btn-outline-warning text-dark fw-semibold" onclick="abrirModalFechasMasivas()" title="Pegar lista de fechas masivas">
-                      <i class="bi bi-clipboard-plus me-1"></i> Carga Masiva
+                    <button class="btn btn-outline-primary fw-semibold" onclick="abrirModalRangoFechas()" title="Excluir o habilitar un intervalo de fechas">
+                      <i class="bi bi-calendar-range me-1"></i>Rango
+                    </button>
+                    <button class="btn btn-outline-success fw-semibold" onclick="cargarFeriadosOficialesChile()" title="Cargar feriados oficiales de Chile 2026">
+                      <i class="bi bi-flag me-1"></i>Chile 2026
+                    </button>
+                    <button class="btn btn-outline-secondary" onclick="abrirModalFechasMasivas()" title="Pegar lista de fechas masivas">
+                      <i class="bi bi-clipboard-plus"></i>
                     </button>
                     <button class="btn btn-outline-danger" onclick="limpiarTodosLosFeriados()" title="Eliminar todas las fechas excluidas">
                       <i class="bi bi-trash"></i>
                     </button>
                   </div>
                 </div>
-                <p class="text-muted small mb-3">Fechas en las que no hubo clases ordinarias (feriados, suspensiones o eventos institucionales).</p>
+                <p class="text-muted small mb-2">Haz clic directamente sobre cualquier día del calendario para marcarlo o desmarcarlo como feriado o suspensión.</p>
 
-                <div class="input-group mb-3">
-                  <input type="date" id="inNuevoFeriado" class="form-control">
-                  <button class="btn btn-warning fw-bold" onclick="agregarFeriado()"><i class="bi bi-plus-lg me-1"></i>Agregar Fecha</button>
+                <!-- Barra de navegación del calendario mensual -->
+                <div class="d-flex justify-content-between align-items-center p-2 bg-light rounded border mb-2">
+                  <div class="btn-group btn-group-sm">
+                    <button class="btn btn-white border btn-sm shadow-sm" onclick="cambiarMesCalendario(-1)" title="Mes anterior">
+                      <i class="bi bi-chevron-left"></i>
+                    </button>
+                    <button class="btn btn-white border btn-sm shadow-sm" onclick="irAMesHoy()" title="Ir al mes actual">
+                      Hoy
+                    </button>
+                    <button class="btn btn-white border btn-sm shadow-sm" onclick="cambiarMesCalendario(1)" title="Mes siguiente">
+                      <i class="bi bi-chevron-right"></i>
+                    </button>
+                  </div>
+                  <span class="fw-bold text-dark font-monospace" id="calMesTitulo">Marzo 2026</span>
+                  <div class="small d-none d-sm-block">
+                    <span class="badge bg-danger-subtle text-danger border border-danger-subtle"><i class="bi bi-slash-circle me-1"></i>Excluido</span>
+                    <span class="badge bg-white text-muted border ms-1">Hábil</span>
+                  </div>
                 </div>
 
-                <div id="listaFeriados" class="d-flex flex-wrap gap-2 p-3 bg-light rounded border" style="min-height: 120px; max-height: 250px; overflow-y: auto;">
-                  <span class="text-muted small">Cargando lista...</span>
+                <!-- Grilla Interactiva del Calendario -->
+                <div id="contenedorCalendarioMes" class="mb-3">
+                  <div class="text-center py-4 text-muted small">Cargando calendario...</div>
+                </div>
+
+                <!-- Resumen de fechas ordenadas por mes -->
+                <div class="mt-auto">
+                  <div class="d-flex justify-content-between align-items-center mb-1">
+                    <span class="fw-bold small text-muted"><i class="bi bi-list-check me-1"></i>Resumen por Meses</span>
+                    <button class="btn btn-link btn-sm p-0 text-decoration-none small" type="button" data-bs-toggle="collapse" data-bs-target="#colapsoAgregarFechaManual">
+                      <i class="bi bi-plus-circle me-1"></i>Agregar fecha manual
+                    </button>
+                  </div>
+
+                  <!-- Campo manual colapsable -->
+                  <div class="collapse mb-2" id="colapsoAgregarFechaManual">
+                    <div class="input-group input-group-sm">
+                      <input type="date" id="inNuevoFeriado" class="form-control">
+                      <button class="btn btn-warning fw-bold" onclick="agregarFeriado()"><i class="bi bi-plus-lg me-1"></i>Agregar</button>
+                    </div>
+                  </div>
+
+                  <div id="listaFeriados" class="p-2 bg-light rounded border" style="min-height: 80px; max-height: 160px; overflow-y: auto;">
+                    <span class="text-muted small">Cargando lista...</span>
+                  </div>
                 </div>
               </div>
             </div>
@@ -596,6 +641,55 @@
           <button type="button" class="btn btn-warning fw-bold px-4" id="btnGuardarFechasMasivas" onclick="guardarFechasMasivas()" disabled>
             <i class="bi bi-check2-circle me-1"></i>Incorporar Fechas
           </button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- MODAL DE EXCLUSIÓN POR RANGO DE FECHAS -->
+  <div class="modal fade" id="modalRangoFechas" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered">
+      <div class="modal-content border-0 shadow-lg">
+        <div class="modal-header bg-warning bg-opacity-25 border-0">
+          <h5 class="modal-title fw-bold text-dark">
+            <i class="bi bi-calendar-range text-warning me-2"></i>Excluir / Habilitar Rango de Fechas
+          </h5>
+          <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Cerrar"></button>
+        </div>
+        <div class="modal-body p-4">
+          <p class="text-muted small mb-3">
+            Aplica una acción en lote a un intervalo completo de días (por ejemplo: vacaciones de invierno, semanas de paro o recesos escolares).
+          </p>
+          <div class="row g-3 mb-3">
+            <div class="col-6">
+              <label class="form-label fw-bold small text-muted">Fecha Inicio (Desde)</label>
+              <input type="date" id="rangoFechaInicio" class="form-control" onchange="actualizarResumenRangoFechas()">
+            </div>
+            <div class="col-6">
+              <label class="form-label fw-bold small text-muted">Fecha Fin (Hasta)</label>
+              <input type="date" id="rangoFechaFin" class="form-control" onchange="actualizarResumenRangoFechas()">
+            </div>
+          </div>
+          <div class="form-check mb-3">
+            <input class="form-check-input" type="checkbox" id="chkRangoSoloHabiles" checked onchange="actualizarResumenRangoFechas()">
+            <label class="form-check-label small" for="chkRangoSoloHabiles">
+              <strong>Solo días de lunes a viernes</strong> (omitir sábados y domingos)
+            </label>
+          </div>
+          <div class="alert alert-light border small py-2 px-3 mb-0" id="resumenRangoFechas">
+            Selecciona un rango de fechas para previsualizar los días afectados.
+          </div>
+        </div>
+        <div class="modal-footer border-0 bg-light d-flex justify-content-between">
+          <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">Cancelar</button>
+          <div class="btn-group">
+            <button type="button" class="btn btn-outline-danger fw-semibold" onclick="aplicarRangoFechas('quitar')">
+              <i class="bi bi-calendar-check me-1"></i>Habilitar Días
+            </button>
+            <button type="button" class="btn btn-warning fw-bold text-dark" onclick="aplicarRangoFechas('agregar')">
+              <i class="bi bi-slash-circle me-1"></i>Excluir Días
+            </button>
+          </div>
         </div>
       </div>
     </div>
@@ -1079,6 +1173,31 @@
       }
     }
 
+    // Variables de navegación del calendario mensual de días excluidos
+    let calMesActual = new Date().getMonth();
+    let calAnioActual = new Date().getFullYear();
+    const MESES_NOMBRES = ['Enero', 'Febrero', 'Marzo', 'Abril', 'Mayo', 'Junio', 'Julio', 'Agosto', 'Septiembre', 'Octubre', 'Noviembre', 'Diciembre'];
+
+    // Feriados Oficiales de Chile (Año Escolar 2026)
+    const FERIADOS_CHILE_2026 = [
+      { fecha: '01/01/2026', nombre: 'Año Nuevo' },
+      { fecha: '03/04/2026', nombre: 'Viernes Santo' },
+      { fecha: '04/04/2026', nombre: 'Sábado Santo' },
+      { fecha: '01/05/2026', nombre: 'Día Nacional del Trabajo' },
+      { fecha: '21/05/2026', nombre: 'Día de las Glorias Navales' },
+      { fecha: '29/06/2026', nombre: 'San Pedro y San Pablo' },
+      { fecha: '16/07/2026', nombre: 'Día de la Virgen del Carmen' },
+      { fecha: '15/08/2026', nombre: 'Asunción de la Virgen' },
+      { fecha: '18/09/2026', nombre: 'Independencia Nacional' },
+      { fecha: '19/09/2026', nombre: 'Día de las Glorias del Ejército' },
+      { fecha: '20/09/2026', nombre: 'Fiestas Patrias' },
+      { fecha: '12/10/2026', nombre: 'Encuentro de Dos Mundos' },
+      { fecha: '31/10/2026', nombre: 'Día de las Iglesias Evangélicas' },
+      { fecha: '01/11/2026', nombre: 'Día de Todos los Santos' },
+      { fecha: '08/12/2026', nombre: 'Inmaculada Concepción' },
+      { fecha: '25/12/2026', nombre: 'Navidad' }
+    ];
+
     function renderizarExentos() {
       const cont = document.getElementById('listaExentos');
       if (!configActual.blacklist || configActual.blacklist.length === 0) {
@@ -1107,25 +1226,190 @@
       });
     }
 
+    function cambiarMesCalendario(delta) {
+      calMesActual += delta;
+      if (calMesActual < 0) {
+        calMesActual = 11;
+        calAnioActual--;
+      } else if (calMesActual > 11) {
+        calMesActual = 0;
+        calAnioActual++;
+      }
+      renderizarCalendarioFeriados();
+    }
+
+    function irAMesHoy() {
+      const ahora = new Date();
+      calMesActual = ahora.getMonth();
+      calAnioActual = ahora.getFullYear();
+      renderizarCalendarioFeriados();
+    }
+
+    function saltarAMesCalendario(mes, anio) {
+      calMesActual = mes;
+      calAnioActual = anio;
+      renderizarCalendarioFeriados();
+    }
+
+    function renderizarCalendarioFeriados() {
+      const cont = document.getElementById('contenedorCalendarioMes');
+      const tituloEl = document.getElementById('calMesTitulo');
+      if (tituloEl) tituloEl.innerText = `${MESES_NOMBRES[calMesActual]} ${calAnioActual}`;
+      if (!cont) return;
+
+      const primerDiaMes = new Date(calAnioActual, calMesActual, 1);
+      // Lunes=0 ... Domingo=6
+      const primerDiaSemana = (primerDiaMes.getDay() + 6) % 7; 
+      const diasEnMes = new Date(calAnioActual, calMesActual + 1, 0).getDate();
+      const diasEnMesAnterior = new Date(calAnioActual, calMesActual, 0).getDate();
+
+      const hoy = new Date();
+      const setExcluidos = new Set(configActual.dias_excluidos || []);
+
+      let html = '<div class="table-responsive"><table class="table table-bordered table-sm text-center align-middle mb-0" style="table-layout: fixed; font-size: 0.85rem;">';
+      html += '<thead class="table-light small"><tr>';
+      ['Lun', 'Mar', 'Mié', 'Jue', 'Vie', 'Sáb', 'Dom'].forEach((d, idx) => {
+        const isWknd = idx >= 5;
+        html += `<th class="${isWknd ? 'text-secondary bg-light bg-opacity-75' : 'text-dark'}" style="width: 14.28%;">${d}</th>`;
+      });
+      html += '</tr></thead><tbody><tr>';
+
+      let col = 0;
+      // Celdas del mes anterior
+      for (let i = 0; i < primerDiaSemana; i++) {
+        const diaNum = diasEnMesAnterior - primerDiaSemana + i + 1;
+        html += `<td class="text-muted bg-light bg-opacity-50 small opacity-50 py-2">${diaNum}</td>`;
+        col++;
+      }
+
+      // Celdas del mes actual
+      for (let d = 1; d <= diasEnMes; d++) {
+        if (col === 7) {
+          html += '</tr><tr>';
+          col = 0;
+        }
+
+        const diaSemana = col; // 0=Lun ... 6=Dom
+        const esFDS = (diaSemana >= 5);
+        const diaStr = String(d).padStart(2, '0');
+        const mesStr = String(calMesActual + 1).padStart(2, '0');
+        const fechaStr = `${diaStr}/${mesStr}/${calAnioActual}`;
+        const esExcluido = setExcluidos.has(fechaStr);
+        const esHoy = (calAnioActual === hoy.getFullYear() && calMesActual === hoy.getMonth() && d === hoy.getDate());
+
+        let claseTd = 'user-select-none py-1';
+        let estiloTd = 'cursor: pointer; height: 42px; transition: all 0.15s ease-in-out;';
+        let contenido = `<span class="fw-bold ${esHoy ? 'text-primary text-decoration-underline' : ''}">${d}</span>`;
+
+        if (esExcluido) {
+          claseTd += ' bg-danger-subtle text-danger border-danger';
+          contenido += `<div class="badge bg-danger text-white rounded-pill mt-1" style="font-size: 0.62rem; display: block;"><i class="bi bi-slash-circle me-1"></i>Excluido</div>`;
+        } else if (esFDS) {
+          claseTd += ' bg-light text-muted';
+          contenido += `<div class="text-muted small" style="font-size: 0.6rem;">FDS</div>`;
+        } else {
+          claseTd += ' bg-white hover-bg-light';
+          contenido += `<div class="text-success small" style="font-size: 0.6rem;">Hábil</div>`;
+        }
+
+        html += `<td class="${claseTd}" style="${estiloTd}" onclick="toggleDiaExcluido('${fechaStr}')" title="${esExcluido ? 'Día Excluido (Clic para habilitar)' : 'Día Hábil (Clic para marcar como feriado/paro)'}">
+          ${contenido}
+        </td>`;
+
+        col++;
+      }
+
+      // Rellenar resto de la última semana
+      if (col > 0 && col < 7) {
+        let diaSiguiente = 1;
+        while (col < 7) {
+          html += `<td class="text-muted bg-light bg-opacity-50 small opacity-50 py-2">${diaSiguiente++}</td>`;
+          col++;
+        }
+      }
+      html += '</tr></tbody></table></div>';
+
+      cont.innerHTML = html;
+    }
+
+    async function toggleDiaExcluido(fechaStr) {
+      if (!configActual.dias_excluidos) configActual.dias_excluidos = [];
+      const idx = configActual.dias_excluidos.indexOf(fechaStr);
+      if (idx >= 0) {
+        configActual.dias_excluidos.splice(idx, 1);
+      } else {
+        configActual.dias_excluidos.push(fechaStr);
+      }
+      configActual.dias_excluidos = ordenarFechasDDMMYYYY(configActual.dias_excluidos);
+      renderizarFeriados();
+      await guardarConfigServidor();
+      cargarDashboard();
+    }
+
+    async function quitarFeriadoPorFecha(fechaStr) {
+      if (!configActual.dias_excluidos) return;
+      configActual.dias_excluidos = configActual.dias_excluidos.filter(f => f !== fechaStr);
+      renderizarFeriados();
+      await guardarConfigServidor();
+      cargarDashboard();
+    }
+
     function renderizarFeriados() {
-      const cont = document.getElementById('listaFeriados');
       const badgeTotal = document.getElementById('badgeTotalFeriados');
       if (badgeTotal) badgeTotal.innerText = (configActual.dias_excluidos || []).length;
 
+      // Renderizar el widget interactivo del mes
+      renderizarCalendarioFeriados();
+
+      const cont = document.getElementById('listaFeriados');
+      if (!cont) return;
+
       if (!configActual.dias_excluidos || configActual.dias_excluidos.length === 0) {
-        cont.innerHTML = '<span class="text-muted small">No hay fechas excluidas registradas.</span>';
+        cont.innerHTML = '<span class="text-muted small py-2 d-block text-center"><i class="bi bi-info-circle me-1"></i>No hay fechas excluidas registradas. Haz clic sobre cualquier día del calendario para marcarlo.</span>';
         return;
       }
       
       // Ordenar cronológicamente para presentación limpia
       configActual.dias_excluidos = ordenarFechasDDMMYYYY(configActual.dias_excluidos);
 
-      cont.innerHTML = configActual.dias_excluidos.map((f, i) => `
-        <span class="badge bg-white text-dark border p-2 d-flex align-items-center gap-2 shadow-sm">
-          <i class="bi bi-calendar-event text-warning"></i> ${f}
-          <i class="bi bi-x-circle text-danger cursor-pointer" onclick="quitarFeriado(${i})" title="Eliminar fecha"></i>
-        </span>
-      `).join('');
+      // Agrupar por mes y año
+      const grupos = {};
+      configActual.dias_excluidos.forEach((f, idxOriginal) => {
+        const p = f.split('/');
+        if (p.length === 3) {
+          const mNum = parseInt(p[1], 10) - 1;
+          const yNum = parseInt(p[2], 10);
+          const key = `${yNum}-${String(mNum).padStart(2, '0')}`;
+          const nombreMes = `${MESES_NOMBRES[mNum] || 'Mes ' + p[1]} ${yNum}`;
+          if (!grupos[key]) grupos[key] = { nombre: nombreMes, anio: yNum, mes: mNum, fechas: [] };
+          grupos[key].fechas.push({ fecha: f, idx: idxOriginal });
+        }
+      });
+
+      let html = '';
+      Object.keys(grupos).sort().forEach(key => {
+        const grp = grupos[key];
+        html += `
+          <div class="mb-2 pb-1 border-bottom">
+            <div class="d-flex justify-content-between align-items-center mb-1">
+              <span class="fw-bold small text-dark cursor-pointer text-decoration-underline" onclick="saltarAMesCalendario(${grp.mes}, ${grp.anio})" title="Ver este mes en el calendario">
+                <i class="bi bi-calendar3 text-warning me-1"></i>${grp.nombre} (${grp.fechas.length})
+              </span>
+              <small class="text-muted" style="font-size: 0.7rem;">Clic para ver mes</small>
+            </div>
+            <div class="d-flex flex-wrap gap-1">
+              ${grp.fechas.map(item => `
+                <span class="badge bg-white text-dark border p-1 px-2 d-inline-flex align-items-center gap-1 shadow-sm" style="font-size: 0.78rem;">
+                  <i class="bi bi-calendar-x text-danger" style="font-size: 0.7rem;"></i> ${item.fecha}
+                  <i class="bi bi-x-circle text-danger cursor-pointer ms-1" onclick="quitarFeriadoPorFecha('${item.fecha}')" title="Eliminar fecha"></i>
+                </span>
+              `).join('')}
+            </div>
+          </div>
+        `;
+      });
+
+      cont.innerHTML = html;
     }
 
     function renderizarDestinatarios() {
@@ -1164,6 +1448,7 @@
         renderizarExentos();
         await guardarConfigServidor();
         cargarDashboard();
+        await cargarAliasDocentes();
       }
     }
 
@@ -1172,6 +1457,7 @@
       renderizarExentos();
       await guardarConfigServidor();
       cargarDashboard();
+      await cargarAliasDocentes();
     }
 
     async function agregarFeriado() {
@@ -1195,6 +1481,162 @@
       renderizarFeriados();
       await guardarConfigServidor();
       cargarDashboard();
+    }
+
+    // Herramienta de exclusión por rango de fechas
+    function abrirModalRangoFechas() {
+      const modEl = document.getElementById('modalRangoFechas');
+      if (!modEl) return;
+      const inInicio = document.getElementById('rangoFechaInicio');
+      const inFin = document.getElementById('rangoFechaFin');
+      if (inInicio && !inInicio.value) {
+        const ahora = new Date();
+        const y = ahora.getFullYear();
+        const m = String(ahora.getMonth() + 1).padStart(2, '0');
+        const d = String(ahora.getDate()).padStart(2, '0');
+        const hoyIso = `${y}-${m}-${d}`;
+        inInicio.value = hoyIso;
+        inFin.value = hoyIso;
+      }
+      actualizarResumenRangoFechas();
+      const modal = bootstrap.Modal.getOrCreateInstance(modEl);
+      modal.show();
+    }
+
+    function calcularDiasRango(inicioVal, finVal, soloHabiles) {
+      if (!inicioVal || !finVal) return [];
+      const dInicio = new Date(inicioVal + 'T00:00:00');
+      const dFin = new Date(finVal + 'T00:00:00');
+      if (dInicio > dFin) return [];
+
+      const lista = [];
+      const curr = new Date(dInicio);
+      while (curr <= dFin) {
+        const diaSemana = curr.getDay(); // 0=Dom, 6=Sab
+        const esFDS = (diaSemana === 0 || diaSemana === 6);
+        if (!soloHabiles || !esFDS) {
+          const dd = String(curr.getDate()).padStart(2, '0');
+          const mm = String(curr.getMonth() + 1).padStart(2, '0');
+          const yyyy = curr.getFullYear();
+          lista.push(`${dd}/${mm}/${yyyy}`);
+        }
+        curr.setDate(curr.getDate() + 1);
+      }
+      return lista;
+    }
+
+    function actualizarResumenRangoFechas() {
+      const inInicio = document.getElementById('rangoFechaInicio')?.value;
+      const inFin = document.getElementById('rangoFechaFin')?.value;
+      const soloHabiles = document.getElementById('chkRangoSoloHabiles')?.checked ?? true;
+      const resEl = document.getElementById('resumenRangoFechas');
+      if (!resEl) return;
+
+      if (!inInicio || !inFin) {
+        resEl.innerHTML = '<span class="text-muted">Ingresa fecha de inicio y fecha de fin.</span>';
+        return;
+      }
+
+      const dias = calcularDiasRango(inInicio, inFin, soloHabiles);
+      if (dias.length === 0) {
+        resEl.innerHTML = '<span class="text-danger fw-semibold"><i class="bi bi-exclamation-circle me-1"></i>La fecha de fin debe ser posterior o igual a la de inicio.</span>';
+      } else {
+        resEl.innerHTML = `Intervalo de <b>${dias.length}</b> días ${soloHabiles ? '(solo lunes a viernes)' : '(todos los días)'} comprendidos entre el <b>${dias[0]}</b> y el <b>${dias[dias.length - 1]}</b>.`;
+      }
+    }
+
+    async function aplicarRangoFechas(accion) {
+      const inInicio = document.getElementById('rangoFechaInicio')?.value;
+      const inFin = document.getElementById('rangoFechaFin')?.value;
+      const soloHabiles = document.getElementById('chkRangoSoloHabiles')?.checked ?? true;
+
+      const dias = calcularDiasRango(inInicio, inFin, soloHabiles);
+      if (dias.length === 0) {
+        Swal.fire('Atención', 'Selecciona un rango de fechas válido.', 'warning');
+        return;
+      }
+
+      if (!configActual.dias_excluidos) configActual.dias_excluidos = [];
+      const setExistentes = new Set(configActual.dias_excluidos);
+      let afectados = 0;
+
+      if (accion === 'agregar') {
+        dias.forEach(d => {
+          if (!setExistentes.has(d)) {
+            configActual.dias_excluidos.push(d);
+            afectados++;
+          }
+        });
+      } else { // quitar
+        const setRango = new Set(dias);
+        const antes = configActual.dias_excluidos.length;
+        configActual.dias_excluidos = configActual.dias_excluidos.filter(d => !setRango.has(d));
+        afectados = antes - configActual.dias_excluidos.length;
+      }
+
+      configActual.dias_excluidos = ordenarFechasDDMMYYYY(configActual.dias_excluidos);
+
+      const modalEl = document.getElementById('modalRangoFechas');
+      const modalInstance = bootstrap.Modal.getInstance(modalEl);
+      if (modalInstance) modalInstance.hide();
+
+      renderizarFeriados();
+      await guardarConfigServidor();
+      cargarDashboard();
+
+      Swal.fire({
+        icon: 'success',
+        title: accion === 'agregar' ? 'Días Excluidos' : 'Días Habilitados',
+        text: accion === 'agregar' 
+          ? `Se excluyeron ${afectados} días del rango seleccionado.` 
+          : `Se habilitaron ${afectados} días que estaban previamente excluidos.`,
+        timer: 1800,
+        showConfirmButton: false
+      });
+    }
+
+    // Precarga de Feriados Oficiales de Chile
+    async function cargarFeriadosOficialesChile() {
+      const feriados = FERIADOS_CHILE_2026;
+      const { isConfirmed } = await Swal.fire({
+        title: '¿Cargar Feriados de Chile (2026)?',
+        html: `
+          <p class="text-muted small mb-2">Se agregarán <b>${feriados.length}</b> feriados nacionales oficiales al calendario escolar:</p>
+          <div class="text-start bg-light p-2 rounded border small font-monospace" style="max-height: 180px; overflow-y: auto;">
+            ${feriados.map(f => `<div>• <b>${f.fecha}</b>: ${f.nombre}</div>`).join('')}
+          </div>
+        `,
+        icon: 'question',
+        showCancelButton: true,
+        confirmButtonColor: '#0d6efd',
+        confirmButtonText: 'Sí, cargar feriados',
+        cancelButtonText: 'Cancelar'
+      });
+
+      if (!isConfirmed) return;
+
+      if (!configActual.dias_excluidos) configActual.dias_excluidos = [];
+      const existentes = new Set(configActual.dias_excluidos);
+      let nuevos = 0;
+      feriados.forEach(f => {
+        if (!existentes.has(f.fecha)) {
+          configActual.dias_excluidos.push(f.fecha);
+          nuevos++;
+        }
+      });
+
+      configActual.dias_excluidos = ordenarFechasDDMMYYYY(configActual.dias_excluidos);
+      renderizarFeriados();
+      await guardarConfigServidor();
+      cargarDashboard();
+
+      Swal.fire({
+        icon: 'success',
+        title: 'Feriados Oficiales Incorporados',
+        text: `Se incorporaron ${nuevos} nuevos feriados al calendario escolar.`,
+        timer: 2000,
+        showConfirmButton: false
+      });
     }
 
     function extraerFechasDeTexto(txt) {
@@ -1474,7 +1916,8 @@
         // Actualizar resumen textual
         const resumen = document.getElementById('resumenContadorAlias');
         if (resumen) {
-          resumen.innerHTML = `<b>${data.vinculados}</b> de <b>${data.total}</b> vinculados (${data.sinVincular} pendientes)`;
+          const totalEval = data.totalActivos ?? data.total;
+          resumen.innerHTML = `<b>${data.vinculados}</b> de <b>${totalEval}</b> activos vinculados <span class="text-muted">(${data.sinVincular} pendientes, ${data.excluidos || 0} excluidos)</span>`;
         }
 
         // Poblar selector del modal manual
@@ -1498,8 +1941,9 @@
       const filtroEstado = document.getElementById('filtroEstadoAlias')?.value || 'todos';
 
       const filtrados = listaDocentesGlobal.filter(d => {
-        if (filtroEstado === 'sin_vincular' && d.vinculado) return false;
-        if (filtroEstado === 'vinculados' && !d.vinculado) return false;
+        if (filtroEstado === 'sin_vincular' && (d.vinculado || d.excluido)) return false;
+        if (filtroEstado === 'vinculados' && (!d.vinculado || d.excluido)) return false;
+        if (filtroEstado === 'excluidos' && !d.excluido) return false;
         if (filtroTexto) {
           const matchReporte = d.nombreReporte.toLowerCase().includes(filtroTexto);
           const matchPlat = (d.nombrePlataforma || '').toLowerCase().includes(filtroTexto);
@@ -1523,10 +1967,13 @@
       let html = '';
       filtrados.forEach((d, idx) => {
         const esVinc = d.vinculado;
-        const tieneSugerencia = !esVinc && d.origen === 'sugerido';
+        const esExcluido = !!d.excluido;
+        const tieneSugerencia = !esVinc && !esExcluido && d.origen === 'sugerido';
         
         let badgeEstado = '';
-        if (esVinc) {
+        if (esExcluido) {
+          badgeEstado = `<span class="badge bg-secondary-subtle text-secondary border border-secondary fw-semibold" title="Docente exento de cálculo en configuración"><i class="bi bi-slash-circle me-1"></i>Docente Excluido</span>`;
+        } else if (esVinc) {
           const origenLabel = d.origen === 'manual' ? 'Manual' : 'Automático';
           badgeEstado = `<span class="badge bg-success-subtle text-success border border-success-subtle fw-semibold" title="Docente enlazado correctamente"><i class="bi bi-check-circle-fill me-1"></i>Vinculado (${origenLabel})</span>`;
         } else if (tieneSugerencia) {
@@ -1542,9 +1989,10 @@
         }).join('');
 
         const emailMostrado = d.email || '';
+        const rowClass = esExcluido ? 'table-light opacity-75' : (!esVinc ? 'table-warning bg-opacity-25' : '');
 
         html += `
-          <tr class="${!esVinc ? 'table-warning bg-opacity-25' : ''}">
+          <tr class="${rowClass}">
             <td>
               <div class="fw-bold font-monospace text-dark text-break">${d.nombreReporte}</div>
               <small class="text-muted"><i class="bi bi-file-earmark-excel me-1"></i>Nombre en reporte</small>
@@ -1552,26 +2000,37 @@
             <td>${badgeEstado}</td>
             <td>
               <div class="d-flex flex-column gap-1">
-                <select class="form-select form-select-sm" id="selUser_${idx}" onchange="alCambiarSelectFila(${idx})">
+                <select class="form-select form-select-sm" id="selUser_${idx}" onchange="alCambiarSelectFila(${idx})" ${esExcluido ? 'disabled' : ''}>
                   <option value="">-- Seleccionar usuario plataforma --</option>
                   ${optionsUsers}
                 </select>
                 <div class="input-group input-group-sm">
                   <span class="input-group-text bg-white"><i class="bi bi-envelope text-muted"></i></span>
-                  <input type="email" class="form-control form-control-sm" id="inEmail_${idx}" value="${emailMostrado}" placeholder="correo@colegiocerrogrande.cl">
+                  <input type="email" class="form-control form-control-sm" id="inEmail_${idx}" value="${emailMostrado}" placeholder="correo@colegiocerrogrande.cl" ${esExcluido ? 'disabled' : ''}>
                 </div>
               </div>
             </td>
             <td class="text-end">
               <div class="btn-group btn-group-sm">
-                <button type="button" class="btn btn-sm ${esVinc ? 'btn-outline-primary' : 'btn-success fw-bold'}" onclick="guardarFilaAlias(${idx})" title="Guardar correspondencia">
-                  <i class="bi bi-check-lg me-1"></i>${esVinc ? 'Actualizar' : 'Vincular'}
-                </button>
-                ${esVinc && d.id ? `
-                  <button type="button" class="btn btn-sm btn-outline-danger" onclick="eliminarFilaAlias(${d.id}, '${encodeURIComponent(d.nombreReporte)}')" title="Quitar vinculación">
-                    <i class="bi bi-x-lg"></i>
+                ${esExcluido ? `
+                  <button type="button" class="btn btn-sm btn-outline-secondary" onclick="desexcluirDocenteDesdeAlias('${encodeURIComponent(d.nombreReporte)}')" title="Quitar de exentos y volver a incluir en reportes">
+                    <i class="bi bi-arrow-counterclockwise me-1"></i>Restaurar
                   </button>
-                ` : ''}
+                ` : `
+                  <button type="button" class="btn btn-sm ${esVinc ? 'btn-outline-primary' : 'btn-success fw-bold'}" onclick="guardarFilaAlias(${idx}, '${encodeURIComponent(d.nombreReporte)}')" title="Guardar correspondencia">
+                    <i class="bi bi-check-lg me-1"></i>${esVinc ? 'Actualizar' : 'Vincular'}
+                  </button>
+                  ${!esVinc ? `
+                    <button type="button" class="btn btn-sm btn-outline-danger" onclick="excluirDocenteDesdeAlias('${encodeURIComponent(d.nombreReporte)}')" title="Excluir docente de cálculos y reportes">
+                      <i class="bi bi-person-x me-1"></i>Excluir
+                    </button>
+                  ` : ''}
+                  ${esVinc && d.id ? `
+                    <button type="button" class="btn btn-sm btn-outline-danger" onclick="eliminarFilaAlias(${d.id}, '${encodeURIComponent(d.nombreReporte)}')" title="Quitar vinculación">
+                      <i class="bi bi-x-lg"></i>
+                    </button>
+                  ` : ''}
+                `}
               </div>
             </td>
           </tr>
@@ -1592,23 +2051,31 @@
       }
     }
 
-    async function guardarFilaAlias(idx) {
-      const filtroTexto = (document.getElementById('filtroTextoAlias')?.value || '').toLowerCase().trim();
-      const filtroEstado = document.getElementById('filtroEstadoAlias')?.value || 'todos';
+    async function guardarFilaAlias(idx, encodedNombre) {
+      const nombreReporteTarget = encodedNombre ? decodeURIComponent(encodedNombre) : null;
+      let d = null;
 
-      const filtrados = listaDocentesGlobal.filter(d => {
-        if (filtroEstado === 'sin_vincular' && d.vinculado) return false;
-        if (filtroEstado === 'vinculados' && !d.vinculado) return false;
-        if (filtroTexto) {
-          const matchReporte = d.nombreReporte.toLowerCase().includes(filtroTexto);
-          const matchPlat = (d.nombrePlataforma || '').toLowerCase().includes(filtroTexto);
-          const matchMail = (d.email || '').toLowerCase().includes(filtroTexto);
-          if (!matchReporte && !matchPlat && !matchMail) return false;
-        }
-        return true;
-      });
+      if (nombreReporteTarget) {
+        d = listaDocentesGlobal.find(doc => doc.nombreReporte === nombreReporteTarget);
+      }
+      if (!d) {
+        const filtroTexto = (document.getElementById('filtroTextoAlias')?.value || '').toLowerCase().trim();
+        const filtroEstado = document.getElementById('filtroEstadoAlias')?.value || 'todos';
 
-      const d = filtrados[idx];
+        const filtrados = listaDocentesGlobal.filter(doc => {
+          if (filtroEstado === 'sin_vincular' && (doc.vinculado || doc.excluido)) return false;
+          if (filtroEstado === 'vinculados' && (!doc.vinculado || doc.excluido)) return false;
+          if (filtroEstado === 'excluidos' && !doc.excluido) return false;
+          if (filtroTexto) {
+            const matchReporte = doc.nombreReporte.toLowerCase().includes(filtroTexto);
+            const matchPlat = (doc.nombrePlataforma || '').toLowerCase().includes(filtroTexto);
+            const matchMail = (doc.email || '').toLowerCase().includes(filtroTexto);
+            if (!matchReporte && !matchPlat && !matchMail) return false;
+          }
+          return true;
+        });
+        d = filtrados[idx];
+      }
       if (!d) return;
 
       const sel = document.getElementById(`selUser_${idx}`);
@@ -1652,6 +2119,57 @@
       } catch (err) {
         Swal.fire('Error', err.message, 'error');
       }
+    }
+
+    async function excluirDocenteDesdeAlias(encodedNombre) {
+      const nombreReporte = decodeURIComponent(encodedNombre || '');
+      if (!nombreReporte) return;
+
+      const { isConfirmed } = await Swal.fire({
+        title: '¿Excluir docente?',
+        html: `¿Deseas agregar a <b>"${nombreReporte}"</b> a la lista de docentes exentos?<br><br><span class="text-muted small">No se computarán sus faltas en los reportes y dejará de figurar como pendiente de vincular.</span>`,
+        icon: 'question',
+        showCancelButton: true,
+        confirmButtonColor: '#dc2626',
+        confirmButtonText: 'Sí, excluir docente',
+        cancelButtonText: 'Cancelar'
+      });
+      if (!isConfirmed) return;
+
+      if (!configActual.blacklist) configActual.blacklist = [];
+      if (!configActual.blacklist.includes(nombreReporte)) {
+        configActual.blacklist.push(nombreReporte);
+        await guardarConfigServidor();
+        renderizarExentos();
+        await cargarAliasDocentes();
+        cargarDashboard();
+        Swal.fire({
+          icon: 'success',
+          title: 'Docente Excluido',
+          text: `"${nombreReporte}" fue agregado a la lista de exentos.`,
+          timer: 1600,
+          showConfirmButton: false
+        });
+      }
+    }
+
+    async function desexcluirDocenteDesdeAlias(encodedNombre) {
+      const nombreReporte = decodeURIComponent(encodedNombre || '');
+      if (!nombreReporte) return;
+
+      const norm = nombreReporte.trim().toLowerCase();
+      configActual.blacklist = (configActual.blacklist || []).filter(n => n.trim().toLowerCase() !== norm);
+      await guardarConfigServidor();
+      renderizarExentos();
+      await cargarAliasDocentes();
+      cargarDashboard();
+      Swal.fire({
+        icon: 'success',
+        title: 'Docente Restaurado',
+        text: `"${nombreReporte}" volvió a quedar activo para evaluación.`,
+        timer: 1600,
+        showConfirmButton: false
+      });
     }
 
     async function eliminarFilaAlias(id, encodedNombre) {
