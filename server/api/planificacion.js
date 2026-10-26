@@ -468,7 +468,7 @@ router.post('/:id/cambiar-propietario', async (req, res) => {
         return res.status(403).json({ error: 'Acceso denegado: Solo Coordinación o Administración pueden reasignar el propietario.' });
     }
     try {
-        const { nuevo_propietario } = req.body;
+        const nuevo_propietario = req.body.nuevo_propietario || req.body.nuevoDocente || req.body.propietario;
         const resultado = await planificacion.cambiarPropietarioPlan(req.params.id, nuevo_propietario, req.user);
         res.json(resultado);
     } catch (e) {

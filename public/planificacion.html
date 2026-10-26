@@ -3598,7 +3598,7 @@
         const res = await fetch(`/api/planificacion/${planIdGestionEliminacion}/cambiar-propietario`, {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ nuevoDocente })
+          body: JSON.stringify({ nuevoDocente, nuevo_propietario: nuevoDocente })
         });
         const data = await res.json();
         if (!res.ok) throw new Error(data.error || 'Error al reasignar docente.');
@@ -3622,7 +3622,7 @@
         const res = await fetch(`/api/planificacion/${planIdGestionEliminacion}/resolver-eliminacion`, {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ resolucion: 'denegar', observacion })
+          body: JSON.stringify({ accion: 'denegar', resolucion: 'denegar', observacion, motivo_respuesta: observacion })
         });
         const data = await res.json();
         if (!res.ok) throw new Error(data.error || 'Error al denegar solicitud.');
@@ -3656,7 +3656,7 @@
         const res = await fetch(`/api/planificacion/${planIdGestionEliminacion}/resolver-eliminacion`, {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ resolucion: 'aceptar' })
+          body: JSON.stringify({ accion: 'aceptar', resolucion: 'aceptar' })
         });
         const data = await res.json();
         if (!res.ok) throw new Error(data.error || 'Error al eliminar planificación.');

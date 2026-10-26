@@ -1670,6 +1670,24 @@ async function eliminarPlanificacion(planId, usuario = {}) {
     const plan = await queryGet(`SELECT * FROM planificaciones WHERE id = ?`, [planId]);
     if (!plan) throw new Error("Planificación no encontrada.");
 
+    // Desvincular de otras planificaciones si estaba en cursos_vinculados
+    try {
+        const planesVinculantes = await queryAll(
+            `SELECT id, cursos_vinculados FROM planificaciones WHERE anio = ? AND asignatura = ? AND id != ?`,
+            [plan.anio, plan.asignatura, planId]
+        );
+        for (const pv of planesVinculantes) {
+            let vArr = [];
+            try { vArr = JSON.parse(pv.cursos_vinculados || '[]'); } catch(e) { vArr = []; }
+            if (vArr.includes(plan.curso)) {
+                vArr = vArr.filter(c => c !== plan.curso);
+                await queryRun(`UPDATE planificaciones SET cursos_vinculados = ? WHERE id = ?`, [JSON.stringify(vArr), pv.id]);
+            }
+        }
+    } catch(eVinc) {
+        console.warn("Advertencia limpiando vínculos paralelos:", eVinc);
+    }
+
     // Borrado en cascada
     await queryRun(`DELETE FROM planificaciones_observaciones WHERE planificacion_id = ?`, [planId]);
     await queryRun(`DELETE FROM planificaciones_versiones WHERE planificacion_id = ?`, [planId]);
@@ -1688,13 +1706,17 @@ async function eliminarPlanificacion(planId, usuario = {}) {
     return { success: true, message: `La planificación de ${plan.curso} - ${plan.asignatura} fue eliminada exitosamente.` };
 }
 
-async function resolverEliminacionPlan(planId, { accion, nuevo_propietario = '', motivo_respuesta = '' } = {}, usuario = {}) {
+async function resolverEliminacionPlan(planId, params = {}, usuario = {}) {
+    const accion = (params.accion || params.resolucion || '').toLowerCase();
+    const nuevo_propietario = params.nuevo_propietario || params.nuevoDocente || '';
+    const motivo_respuesta = params.motivo_respuesta || params.observacion || '';
+
     const plan = await queryGet(`SELECT * FROM planificaciones WHERE id = ?`, [planId]);
     if (!plan) throw new Error("Planificación no encontrada.");
 
-    if (accion === 'aceptar') {
+    if (accion === 'aceptar' || accion === 'eliminar') {
         return await eliminarPlanificacion(planId, usuario);
-    } else if (accion === 'denegar') {
+    } else if (accion === 'denegar' || accion === 'rechazar') {
         await queryRun(`
             UPDATE planificaciones 
             SET solicitud_eliminacion = 0,
@@ -1706,8 +1728,8 @@ async function resolverEliminacionPlan(planId, { accion, nuevo_propietario = '',
 
         if (motivo_respuesta && motivo_respuesta.trim()) {
             await queryRun(`
-                INSERT INTO planificaciones_observaciones (planificacion_id, usuario_email, usuario_nombre, comentario, resuelto)
-                VALUES (?, ?, ?, ?, 1)
+                INSERT INTO planificaciones_observaciones (planificacion_id, seccion, autor_email, autor_nombre, autor_rol, comentario, resuelto)
+                VALUES (?, 'general', ?, ?, 'Administración', ?, 1)
             `, [planId, usuario.email || 'admin@colegiocerrogrande.cl', usuario.nombre || 'Administración', `Solicitud de eliminación denegada: ${motivo_respuesta.trim()}`]);
         }
 
@@ -1721,7 +1743,7 @@ async function resolverEliminacionPlan(planId, { accion, nuevo_propietario = '',
         });
 
         return { success: true, message: 'La solicitud de eliminación fue denegada. La planificación permanece activa.' };
-    } else if (accion === 'cambiar_propietario') {
+    } else if (accion === 'cambiar_propietario' || accion === 'reasignar') {
         if (!nuevo_propietario || !nuevo_propietario.trim()) {
             throw new Error("Debe indicar el nombre o correo del nuevo docente propietario.");
         }
@@ -1747,7 +1769,7 @@ async function resolverEliminacionPlan(planId, { accion, nuevo_propietario = '',
 
         return { success: true, message: `Propietario actualizado a "${propietarioFinal}". La solicitud de eliminación ha sido resuelta.` };
     } else {
-        throw new Error("Acción no válida. Debe ser 'aceptar', 'denegar' o 'cambiar_propietario'.");
+        throw new Error(`Acción no válida ('${accion}'). Debe ser 'aceptar', 'denegar' o 'cambiar_propietario'.`);
     }
 }
 
