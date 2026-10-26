@@ -762,6 +762,9 @@
             <div id="editorBotonesAlertaEliminacion" class="d-flex gap-2"></div>
           </div>
 
+          <!-- Banner Destacado de Hitos y Orientaciones Pedagógicas UTP -->
+          <div id="bannerHitosVigentesPlan" class="mb-3 d-none"></div>
+
           <!-- Pestañas internas del Editor -->
           <ul class="nav nav-pills mb-4 bg-white p-2 rounded border" id="editorTabs">
             <li class="nav-item">
@@ -1322,17 +1325,44 @@
             <!-- Icono y Color -->
             <div class="col-md-6">
               <label class="form-label small fw-semibold">Icono Representativo</label>
-              <div class="d-flex align-items-center gap-2">
-                <input type="text" id="inputHitoIcono" class="form-control form-control-sm text-center" style="width: 55px; font-size: 1.2rem;" value="🎭">
-                <div class="d-flex flex-wrap gap-1">
-                  <button type="button" class="btn btn-xs btn-outline-secondary py-0 px-2" onclick="document.getElementById('inputHitoIcono').value='🎭'">🎭</button>
-                  <button type="button" class="btn btn-xs btn-outline-secondary py-0 px-2" onclick="document.getElementById('inputHitoIcono').value='🔬'">🔬</button>
-                  <button type="button" class="btn btn-xs btn-outline-secondary py-0 px-2" onclick="document.getElementById('inputHitoIcono').value='📚'">📚</button>
-                  <button type="button" class="btn btn-xs btn-outline-secondary py-0 px-2" onclick="document.getElementById('inputHitoIcono').value='💡'">💡</button>
-                  <button type="button" class="btn btn-xs btn-outline-secondary py-0 px-2" onclick="document.getElementById('inputHitoIcono').value='🌍'">🌍</button>
-                  <button type="button" class="btn btn-xs btn-outline-secondary py-0 px-2" onclick="document.getElementById('inputHitoIcono').value='🎨'">🎨</button>
-                  <button type="button" class="btn btn-xs btn-outline-secondary py-0 px-2" onclick="document.getElementById('inputHitoIcono').value='🏆'">🏆</button>
-                  <button type="button" class="btn btn-xs btn-outline-secondary py-0 px-2" onclick="document.getElementById('inputHitoIcono').value='⭐'">⭐</button>
+              <div class="d-flex align-items-center gap-2 mb-1">
+                <input type="text" id="inputHitoIcono" class="form-control form-control-sm text-center" style="width: 55px; font-size: 1.3rem;" value="🎭">
+                <div class="d-flex flex-wrap gap-1 align-items-center">
+                  <button type="button" class="btn btn-xs btn-outline-secondary py-0 px-2" onclick="seleccionarEmojiHito('🎭')">🎭</button>
+                  <button type="button" class="btn btn-xs btn-outline-secondary py-0 px-2" onclick="seleccionarEmojiHito('🔬')">🔬</button>
+                  <button type="button" class="btn btn-xs btn-outline-secondary py-0 px-2" onclick="seleccionarEmojiHito('📚')">📚</button>
+                  <button type="button" class="btn btn-xs btn-outline-secondary py-0 px-2" onclick="seleccionarEmojiHito('💡')">💡</button>
+                  <button type="button" class="btn btn-xs btn-outline-secondary py-0 px-2" onclick="seleccionarEmojiHito('🌍')">🌍</button>
+                  <button type="button" class="btn btn-xs btn-outline-secondary py-0 px-2" onclick="seleccionarEmojiHito('🎨')">🎨</button>
+                  <button type="button" class="btn btn-xs btn-outline-secondary py-0 px-2" onclick="seleccionarEmojiHito('🏆')">🏆</button>
+                  <button type="button" class="btn btn-xs btn-outline-secondary py-0 px-2" onclick="seleccionarEmojiHito('⭐')">⭐</button>
+                  <button type="button" class="btn btn-xs btn-outline-primary py-0 px-2" style="font-size: 0.73rem;" onclick="toggleGaleriaEmojisHito()">
+                    <i class="bi bi-emoji-smile me-1"></i>Más Emojis (60+)
+                  </button>
+                </div>
+              </div>
+
+              <!-- Galería Categorizada de Emojis Expandible -->
+              <div id="panelGaleriaEmojisHito" class="d-none p-2 bg-light border rounded mt-1 shadow-sm">
+                <ul class="nav nav-pills nav-fill mb-2" id="pillsEmojisHito" style="font-size: 0.72rem;">
+                  <li class="nav-item">
+                    <button type="button" class="nav-link active py-0 px-1" onclick="cambiarTabEmojisHito('academicos')">📚 Académico</button>
+                  </li>
+                  <li class="nav-item">
+                    <button type="button" class="nav-link py-0 px-1" onclick="cambiarTabEmojisHito('artes')">🎭 Artes</button>
+                  </li>
+                  <li class="nav-item">
+                    <button type="button" class="nav-link py-0 px-1" onclick="cambiarTabEmojisHito('eventos')">🏆 Hitos</button>
+                  </li>
+                  <li class="nav-item">
+                    <button type="button" class="nav-link py-0 px-1" onclick="cambiarTabEmojisHito('stem')">🌱 STEM</button>
+                  </li>
+                  <li class="nav-item">
+                    <button type="button" class="nav-link py-0 px-1" onclick="cambiarTabEmojisHito('valores')">❤️ Convivencia</button>
+                  </li>
+                </ul>
+                <div id="grillaEmojisHito" class="d-flex flex-wrap gap-1 p-1 bg-white rounded border justify-content-center" style="max-height: 120px; overflow-y: auto; font-size: 1.25rem;">
+                  <!-- Emojis cargados dinámicamente -->
                 </div>
               </div>
             </div>
@@ -1340,13 +1370,15 @@
               <label class="form-label small fw-semibold">Color del Marcador</label>
               <div class="d-flex align-items-center gap-2">
                 <input type="color" id="inputHitoColor" class="form-control form-control-color" value="#2563eb" style="width: 48px; height: 31px;">
-                <div class="d-flex gap-1">
+                <div class="d-flex gap-1 flex-wrap">
                   <button type="button" class="btn btn-xs rounded-circle p-0" style="width: 24px; height: 24px; background: #2563eb;" onclick="document.getElementById('inputHitoColor').value='#2563eb'"></button>
                   <button type="button" class="btn btn-xs rounded-circle p-0" style="width: 24px; height: 24px; background: #16a34a;" onclick="document.getElementById('inputHitoColor').value='#16a34a'"></button>
                   <button type="button" class="btn btn-xs rounded-circle p-0" style="width: 24px; height: 24px; background: #d97706;" onclick="document.getElementById('inputHitoColor').value='#d97706'"></button>
                   <button type="button" class="btn btn-xs rounded-circle p-0" style="width: 24px; height: 24px; background: #dc2626;" onclick="document.getElementById('inputHitoColor').value='#dc2626'"></button>
                   <button type="button" class="btn btn-xs rounded-circle p-0" style="width: 24px; height: 24px; background: #9333ea;" onclick="document.getElementById('inputHitoColor').value='#9333ea'"></button>
                   <button type="button" class="btn btn-xs rounded-circle p-0" style="width: 24px; height: 24px; background: #0891b2;" onclick="document.getElementById('inputHitoColor').value='#0891b2'"></button>
+                  <button type="button" class="btn btn-xs rounded-circle p-0" style="width: 24px; height: 24px; background: #e11d48;" onclick="document.getElementById('inputHitoColor').value='#e11d48'"></button>
+                  <button type="button" class="btn btn-xs rounded-circle p-0" style="width: 24px; height: 24px; background: #475569;" onclick="document.getElementById('inputHitoColor').value='#475569'"></button>
                 </div>
               </div>
             </div>
@@ -1397,17 +1429,42 @@
                   </div>
                 </div>
 
-                <!-- EXCLUSIONES EXPLICITAS (Ej: Salvo 1° y 2° Básico) -->
-                <div class="p-2 rounded bg-warning-subtle border border-warning-subtle mt-2">
-                  <div class="d-flex justify-content-between align-items-center mb-1">
-                    <label class="form-label small fw-bold text-dark mb-0"><i class="bi bi-shield-x me-1 text-danger"></i>Cursos o Niveles Excluidos (Excepciones)</label>
+                <!-- EXCLUSIONES EXPLICITAS (Pool de Tags) -->
+                <div class="p-3 rounded bg-warning-subtle border border-warning-subtle mt-2">
+                  <div class="d-flex justify-content-between align-items-center mb-2 flex-wrap gap-1">
+                    <label class="form-label small fw-bold text-dark mb-0">
+                      <i class="bi bi-shield-x me-1 text-danger"></i>Cursos o Niveles Excluidos (Excepciones)
+                    </label>
                     <div class="btn-group btn-group-xs">
-                      <button type="button" class="btn btn-xs btn-outline-dark py-0" style="font-size: 0.68rem;" onclick="agregarExclusionRapida('1° BÁSICO, 2° BÁSICO')">+ Salvo 1° y 2° Básico</button>
-                      <button type="button" class="btn btn-xs btn-outline-dark py-0" style="font-size: 0.68rem;" onclick="agregarExclusionRapida('KINDER, PRE-KINDER')">+ Salvo Parvularia</button>
+                      <button type="button" class="btn btn-xs btn-outline-dark py-0" style="font-size: 0.7rem;" onclick="aplicarPresetExclusion('1y2basico')">+ Salvo 1° y 2° Básico</button>
+                      <button type="button" class="btn btn-xs btn-outline-dark py-0" style="font-size: 0.7rem;" onclick="aplicarPresetExclusion('parvularia')">+ Salvo Parvularia</button>
+                      <button type="button" class="btn btn-xs btn-outline-dark py-0" style="font-size: 0.7rem;" onclick="aplicarPresetExclusion('media')">+ Salvo Media</button>
+                      <button type="button" class="btn btn-xs btn-outline-danger py-0" style="font-size: 0.7rem;" onclick="limpiarExclusionesHito()">Limpiar</button>
                     </div>
                   </div>
-                  <input type="text" id="inputHitoCursosExcluidos" class="form-control form-control-sm" placeholder="Ej: 1° BASICO, 2° BASICO (separados por coma)">
-                  <div class="small text-muted mt-1" style="font-size: 0.72rem;">Los docentes de estos cursos quedarán expresamente excluidos de este hito y no verán pop-ups ni lineamientos asociados.</div>
+
+                  <!-- Contenedor de Tags seleccionados -->
+                  <div id="contenedorTagsExcluidosHito" class="d-flex flex-wrap gap-1 p-2 bg-white rounded border mb-2" style="min-height: 42px;">
+                    <!-- Chips de exclusiones activas -->
+                  </div>
+
+                  <!-- Selector rápido por chips de niveles (pool) -->
+                  <div class="mb-2">
+                    <div class="small fw-semibold text-secondary mb-1" style="font-size: 0.73rem;">Pool de Niveles rápidos (haz clic para alternar exclusión):</div>
+                    <div id="poolChipsExclusionesHito" class="d-flex flex-wrap gap-1">
+                      <!-- Render de botones toggle por nivel -->
+                    </div>
+                  </div>
+
+                  <!-- Entrada manual para cursos específicos -->
+                  <div class="input-group input-group-sm">
+                    <span class="input-group-text bg-white text-muted" style="font-size: 0.75rem;"><i class="bi bi-tag me-1"></i>Curso específico:</span>
+                    <input type="text" id="inputEscribirExclusionHito" class="form-control form-control-sm" placeholder="Ej: 1° BÁSICO B, Taller..." onkeydown="if(event.key==='Enter'){event.preventDefault(); agregarTagExcluidoManual();}">
+                    <button type="button" class="btn btn-secondary btn-sm" onclick="agregarTagExcluidoManual()"><i class="bi bi-plus-lg me-1"></i>Agregar Tag</button>
+                  </div>
+                  <div class="small text-muted mt-1" style="font-size: 0.72rem;">
+                    Los docentes de estos cursos quedarán expresamente excluidos de este hito y no verán pop-ups ni lineamientos asociados.
+                  </div>
                 </div>
               </div>
             </div>
@@ -1418,16 +1475,77 @@
               <textarea id="txtHitoLineamientos" class="form-control form-control-sm" rows="3" placeholder="Indique directrices metodológicas, articulación interdisciplinaria, criterios de evaluación y orientaciones para que el docente guíe su planificación..."></textarea>
             </div>
 
-            <!-- OAs Sugeridos y Metodologías DUA -->
-            <div class="col-md-6">
-              <label class="form-label small fw-semibold">OAs Sugeridos por UTP</label>
-              <input type="text" id="inputHitoOAs" class="form-control form-control-sm" placeholder="Ej: OA 01, OA 03, OA 07 (separados por coma)">
-              <div class="form-text small" style="font-size: 0.72rem;">El docente podrá adoptarlos en 1 clic en su unidad correspondiente.</div>
+            <!-- OAs Sugeridos por UTP (Pool con Autocompletado y Explorador) -->
+            <div class="col-12">
+              <div class="border rounded p-3 bg-light">
+                <div class="d-flex justify-content-between align-items-center mb-2 flex-wrap gap-2">
+                  <div>
+                    <label class="form-label small fw-bold text-dark mb-0">
+                      <i class="bi bi-bullseye text-primary me-1"></i>Objetivos de Aprendizaje (OAs) Sugeridos por UTP
+                    </label>
+                    <div class="text-muted small" style="font-size: 0.74rem;">
+                      Carga OAs curriculares oficiales (ej: OA 1 Lenguaje 3° básico). El docente podrá adoptarlos con 1 clic en su unidad.
+                    </div>
+                  </div>
+                  <button type="button" class="btn btn-xs btn-outline-primary" onclick="toggleExploradorOAsHito()">
+                    <i class="bi bi-search me-1"></i>Explorar Catálogo Curricular MINEDUC
+                  </button>
+                </div>
+
+                <!-- Tags de OAs Seleccionados -->
+                <div id="contenedorOAsSugeridosHito" class="d-flex flex-wrap gap-2 p-2 bg-white rounded border mb-2" style="min-height: 44px;">
+                  <!-- Chips de OAs seleccionados -->
+                </div>
+
+                <!-- Buscador / Autocompletado en vivo -->
+                <div class="position-relative mb-2">
+                  <div class="input-group input-group-sm">
+                    <span class="input-group-text bg-white"><i class="bi bi-search text-muted"></i></span>
+                    <input type="text" id="inputBuscarOAHito" class="form-control" placeholder="Escribe para buscar OA (ej: 'OA 1 Lenguaje 3° básico', 'Fracciones', 'Lectura')..." autocomplete="off" oninput="buscarOAsHitoEnVivo(this.value)">
+                    <button type="button" class="btn btn-outline-secondary" onclick="agregarOAHitoManual()"><i class="bi bi-plus-lg me-1"></i>Agregar Código Manual</button>
+                  </div>
+                  <!-- Dropdown flotante de resultados -->
+                  <div id="dropdownResultadosOAHito" class="list-group position-absolute w-100 shadow-lg d-none" style="z-index: 1055; max-height: 260px; overflow-y: auto;">
+                  </div>
+                </div>
+
+                <!-- Explorador Colapsable de OAs MINEDUC -->
+                <div id="panelExploradorOAsHito" class="d-none p-3 bg-white border rounded">
+                  <div class="row g-2 mb-2">
+                    <div class="col-md-5">
+                      <select id="selectNivelExploradorOAsHito" class="form-select form-select-sm" onchange="cargarPoolOAsHito()">
+                        <option value="">-- Todos los Niveles --</option>
+                      </select>
+                    </div>
+                    <div class="col-md-5">
+                      <select id="selectAsignaturaExploradorOAsHito" class="form-select form-select-sm" onchange="cargarPoolOAsHito()">
+                        <option value="">-- Todas las Asignaturas --</option>
+                      </select>
+                    </div>
+                    <div class="col-md-2">
+                      <button type="button" class="btn btn-sm btn-primary w-100" onclick="cargarPoolOAsHito()"><i class="bi bi-funnel me-1"></i>Filtrar</button>
+                    </div>
+                  </div>
+                  <div id="listaResultadosExploradorOAsHito" class="d-flex flex-column gap-1" style="max-height: 220px; overflow-y: auto;">
+                    <span class="text-muted small p-2">Selecciona un nivel o asignatura para explorar los OAs disponibles.</span>
+                  </div>
+                </div>
+              </div>
             </div>
-            <div class="col-md-6">
-              <label class="form-label small fw-semibold">Metodologías DUA Sugeridas</label>
+
+            <!-- Metodologías DUA y Estrategias Sugeridas -->
+            <div class="col-12">
+              <label class="form-label small fw-semibold">Metodologías DUA y Estrategias Sugeridas</label>
+              <div class="d-flex flex-wrap gap-1 mb-1">
+                <button type="button" class="btn btn-xs btn-outline-secondary py-0" onclick="agregarMetodologiaHitoRapido('ABP (Proyectos)')">+ ABP</button>
+                <button type="button" class="btn btn-xs btn-outline-secondary py-0" onclick="agregarMetodologiaHitoRapido('STEAM')">+ STEAM</button>
+                <button type="button" class="btn btn-xs btn-outline-secondary py-0" onclick="agregarMetodologiaHitoRapido('Rutinas de Pensamiento')">+ Rutinas de Pensamiento</button>
+                <button type="button" class="btn btn-xs btn-outline-secondary py-0" onclick="agregarMetodologiaHitoRapido('Evaluación Auténtica')">+ Eval. Auténtica</button>
+                <button type="button" class="btn btn-xs btn-outline-secondary py-0" onclick="agregarMetodologiaHitoRapido('Gamificación')">+ Gamificación</button>
+                <button type="button" class="btn btn-xs btn-outline-secondary py-0" onclick="agregarMetodologiaHitoRapido('DUA - Múltiples Formas de Representación')">+ DUA Repr.</button>
+              </div>
               <input type="text" id="inputHitoMetodologias" class="form-control form-control-sm" placeholder="Ej: ABP (Proyectos), STEAM, Rutinas de Pensamiento">
-              <div class="form-text small" style="font-size: 0.72rem;">Etiquetas pedagógicas que el docente podrá asociar a sus clases.</div>
+              <div class="form-text small" style="font-size: 0.72rem;">Etiquetas pedagógicas que el docente podrá adoptar en sus clases.</div>
             </div>
 
             <!-- Recursos y Enlaces -->
@@ -1584,6 +1702,9 @@
     let planIdGestionEliminacion = null;
     let hitosColegioCache = [];
     let guiaHitoActivo = null;
+    let hitosCursosExcluidosTags = [];
+    let hitosOAsSugeridosList = [];
+    let debounceBuscarOAsHitoTimer = null;
     let modoImportadorExcel = 'planificaciones';
     let archivoExcelSeleccionado = null;
 
@@ -1658,6 +1779,12 @@
       modalEditorHitoObj = new bootstrap.Modal(document.getElementById('modalEditorHito'));
       modalGuiaHitoObj = new bootstrap.Modal(document.getElementById('modalGuiaHito'));
       modalImportadorExcelObj = new bootstrap.Modal(document.getElementById('modalImportadorExcel'));
+
+      document.addEventListener('click', (e) => {
+        if (!e.target.closest('#dropdownResultadosOAHito') && !e.target.closest('#inputBuscarOAHito')) {
+          cerrarDropdownOAsHito();
+        }
+      });
 
       await cargarUsuario();
       await cargarPoolDocentes();
@@ -2270,6 +2397,9 @@
           planActivo.hitosVigentes = [];
         }
 
+        // Render Banner Hitos Vigentes UTP
+        renderizarBannerHitosPlan();
+
         // Render Unidades
         renderizarUnidadesAcordeon();
 
@@ -2293,6 +2423,83 @@
       } catch (err) {
         Swal.fire('Error', err.message, 'error');
       }
+    }
+
+    function renderizarBannerHitosPlan() {
+      const cont = document.getElementById('bannerHitosVigentesPlan');
+      if (!cont) return;
+
+      const hitos = (planActivo && Array.isArray(planActivo.hitosVigentes)) ? planActivo.hitosVigentes : [];
+      if (hitos.length === 0) {
+        cont.classList.add('d-none');
+        cont.innerHTML = '';
+        return;
+      }
+
+      cont.classList.remove('d-none');
+      cont.innerHTML = `
+        <div class="card border-0 shadow-sm mb-3" style="background: linear-gradient(135deg, #1e3a8a, #2563eb); color: white; border-radius: 12px; overflow: hidden;">
+          <div class="p-3">
+            <div class="d-flex align-items-center justify-content-between flex-wrap gap-2 mb-2 pb-2 border-bottom border-white border-opacity-25">
+              <div class="d-flex align-items-center gap-2">
+                <span class="fs-4">🎯</span>
+                <div>
+                  <h6 class="fw-bold mb-0 text-white">Lineamientos Pedagógicos Institucionales UTP Vigentes</h6>
+                  <div class="small text-white-50" style="font-size: 0.75rem;">
+                    Se aplican <strong>${hitos.length}</strong> hito(s) institucional(es) o semana(s) temática(s) a este curso (${escapeHtml(planActivo.curso)}) y asignatura (${escapeHtml(planActivo.asignatura)}).
+                  </div>
+                </div>
+              </div>
+              <span class="badge bg-warning text-dark px-2 py-1 shadow-sm" style="font-size: 0.75rem;">
+                <i class="bi bi-shield-check me-1"></i>Orientaciones Oficiales UTP
+              </span>
+            </div>
+
+            <div class="d-flex flex-column gap-2">
+              ${hitos.map(h => {
+                const oas = Array.isArray(h.oas_sugeridos) ? h.oas_sugeridos : [];
+                const tags = Array.isArray(h.metodologias_sugeridas) ? h.metodologias_sugeridas : [];
+                const oasTxt = oas.map(o => (typeof o === 'object' ? o.codigo : o)).join(', ');
+
+                return `
+                  <div class="p-3 rounded bg-white bg-opacity-10 border border-white border-opacity-25 d-flex flex-column flex-md-row justify-content-between align-items-start align-items-md-center gap-3">
+                    <div style="flex: 1;">
+                      <div class="d-flex align-items-center gap-2 mb-1 flex-wrap">
+                        <span class="fs-4">${h.icono || '🎭'}</span>
+                        <h6 class="fw-bold text-white mb-0 fs-6">${escapeHtml(h.titulo)}</h6>
+                        <span class="badge bg-white text-dark ms-1" style="font-size: 0.7rem;">${escapeHtml(h.tipo || 'Hito')}</span>
+                        <span class="badge bg-light text-primary border" style="font-size: 0.7rem;">
+                          <i class="bi bi-calendar3 me-1"></i>${h.fecha_inicio} al ${h.fecha_fin}
+                        </span>
+                      </div>
+                      <div class="text-white small mb-2 ps-2" style="font-size: 0.82rem; line-height: 1.45; border-left: 3px solid #fbbf24;">
+                        <strong>Orientaciones UTP:</strong> ${escapeHtml(h.lineamientos || 'Siga las directrices institucionales para enriquecer la experiencia de aprendizaje durante este período.')}
+                      </div>
+                      <div class="d-flex flex-wrap gap-1 align-items-center">
+                        ${oas.length > 0 ? `
+                          <span class="badge bg-primary text-white border border-light border-opacity-25" style="font-size: 0.72rem;">
+                            <i class="bi bi-bullseye me-1"></i>${oas.length} OAs Sugeridos: ${escapeHtml(oasTxt)}
+                          </span>
+                        ` : ''}
+                        ${tags.length > 0 ? `
+                          <span class="badge bg-success text-white border border-light border-opacity-25" style="font-size: 0.72rem;">
+                            <i class="bi bi-tags me-1"></i>DUA: ${escapeHtml(tags.join(', '))}
+                          </span>
+                        ` : ''}
+                      </div>
+                    </div>
+                    <div class="text-end text-nowrap">
+                      <button type="button" class="btn btn-sm btn-light text-primary fw-bold shadow-sm" onclick="abrirModalGuiaHito(${h.id}, 0)">
+                        <i class="bi bi-compass me-1"></i>Ver Guía Completa & Adoptar
+                      </button>
+                    </div>
+                  </div>
+                `;
+              }).join('')}
+            </div>
+          </div>
+        </div>
+      `;
     }
 
     function renderizarUnidadesAcordeon() {
@@ -2452,6 +2659,63 @@
                     </div>
                   </div>
 
+                  ${(() => {
+                    const hitosEnUnidad = (planActivo.hitosVigentes || []).filter(h => {
+                      if (!h.fecha_inicio || !h.fecha_fin) return false;
+                      if (u.fecha_inicio && u.fecha_fin) {
+                        if (!(h.fecha_fin < u.fecha_inicio || h.fecha_inicio > u.fecha_fin)) return true;
+                      }
+                      if (Array.isArray(u.desglose_semanal)) {
+                        return u.desglose_semanal.some(s => {
+                          if (!s.fecha_inicio || !s.fecha_fin) return false;
+                          return !(h.fecha_fin < s.fecha_inicio || h.fecha_inicio > s.fecha_fin);
+                        });
+                      }
+                      return false;
+                    });
+                    if (hitosEnUnidad.length === 0) return '';
+                    return `
+                      <!-- ALERTA DESTACADA DE HITOS Y LINEAMIENTOS UTP EN ESTA UNIDAD -->
+                      <div class="mb-3">
+                        ${hitosEnUnidad.map(hu => `
+                          <div class="alert alert-info border-2 d-flex flex-column flex-md-row align-items-start align-items-md-center justify-content-between p-3 mb-2 shadow-sm rounded-3" 
+                               style="background: #eff6ff; border-left: 5px solid ${hu.color || '#2563eb'} !important;">
+                            <div class="d-flex align-items-center gap-3 mb-2 mb-md-0">
+                              <span class="fs-1">${hu.icono || '🎭'}</span>
+                              <div>
+                                <div class="fw-bold text-dark fs-6 mb-1 d-flex align-items-center gap-2 flex-wrap">
+                                  <span>${escapeHtml(hu.titulo)}</span>
+                                  <span class="badge" style="background-color: ${hu.color || '#2563eb'}; font-size: 0.72rem;">${escapeHtml(hu.tipo || 'Hito')}</span>
+                                  <span class="badge bg-light text-secondary border small"><i class="bi bi-calendar3 me-1"></i>${hu.fecha_inicio} al ${hu.fecha_fin}</span>
+                                </div>
+                                <div class="text-secondary small mb-1" style="line-height: 1.45;">
+                                  <strong>Lineamientos Pedagógicos UTP:</strong> ${escapeHtml(hu.lineamientos || 'Directrices institucionales para guiar la planificación docente.')}
+                                </div>
+                                <div class="d-flex flex-wrap gap-1 align-items-center">
+                                  ${(hu.oas_sugeridos || []).length > 0 ? `
+                                    <span class="badge bg-primary-subtle text-primary border border-primary-subtle" style="font-size: 0.72rem;">
+                                      <i class="bi bi-bullseye me-1"></i>${(hu.oas_sugeridos || []).length} OAs sugeridos por UTP
+                                    </span>
+                                  ` : ''}
+                                  ${(hu.metodologias_sugeridas || []).length > 0 ? `
+                                    <span class="badge bg-success-subtle text-success border border-success-subtle" style="font-size: 0.72rem;">
+                                      <i class="bi bi-tags me-1"></i>${(hu.metodologias_sugeridas || []).length} DUA / Metodologías
+                                    </span>
+                                  ` : ''}
+                                </div>
+                              </div>
+                            </div>
+                            <div class="text-end text-nowrap ms-md-3">
+                              <button type="button" class="btn btn-sm btn-primary shadow-sm" onclick="abrirModalGuiaHito(${hu.id}, ${idx})">
+                                <i class="bi bi-compass me-1"></i>Ver Orientaciones & Adoptar
+                              </button>
+                            </div>
+                          </div>
+                        `).join('')}
+                      </div>
+                    `;
+                  })()}
+
                   <!-- DESGLOSE SEMANAL (CLASE A CLASE SIMPLIFICADO) -->
                   <div class="bg-white p-3 rounded border">
                     <div class="d-flex justify-content-between align-items-center mb-3">
@@ -2493,17 +2757,22 @@
                             });
                             const hitosBadgeHtml = hitosEnSemana.map(h => `
                               <div class="mt-1">
-                                <span class="badge cursor-pointer text-wrap d-inline-flex align-items-center gap-1 shadow-sm text-white" 
-                                      style="background-color: ${h.color || '#2563eb'}; font-size: 0.69rem; cursor: pointer; padding: 2px 5px;" 
-                                      onclick="abrirModalGuiaHito(${h.id}, ${idx}, ${sIdx})" 
-                                      title="Lineamientos UTP: Haz clic para ver orientaciones y adoptar OAs/DUA">
-                                  <span>${h.icono || '🎭'}</span>
-                                  <span class="text-truncate" style="max-width: 100px;">${escapeHtml(h.titulo)}</span>
-                                </span>
+                                <div class="p-1 px-2 rounded text-white d-flex align-items-center justify-content-between shadow-sm cursor-pointer" 
+                                     style="background: linear-gradient(135deg, ${h.color || '#2563eb'}, #1e40af); font-size: 0.74rem; border: 1px solid rgba(255,255,255,0.25);" 
+                                     onclick="abrirModalGuiaHito(${h.id}, ${idx}, ${sIdx})" 
+                                     title="Lineamientos UTP: Haz clic para ver orientaciones y adoptar OAs/DUA">
+                                  <div class="d-flex align-items-center gap-1 text-truncate">
+                                    <span class="fs-6">${h.icono || '🎭'}</span>
+                                    <span class="fw-bold text-truncate" style="max-width: 95px;">${escapeHtml(h.titulo)}</span>
+                                  </div>
+                                  <span class="badge bg-light text-dark ms-1 py-0 px-1" style="font-size: 0.65rem;">
+                                    <i class="bi bi-compass"></i> Guía
+                                  </span>
+                                </div>
                               </div>
                             `).join('');
                             return `
-                            <tr data-semana-idx="${sIdx}">
+                            <tr data-semana-idx="${sIdx}" ${hitosEnSemana.length > 0 ? `style="border-left: 4px solid ${hitosEnSemana[0].color || '#2563eb'}; background-color: rgba(37, 99, 235, 0.02);"` : ''}>
                               <td class="text-center">
                                 <span class="drag-handle-semana text-secondary"><i class="bi bi-grip-vertical fs-6"></i></span>
                               </td>
@@ -4368,14 +4637,349 @@
       });
     }
 
-    function agregarExclusionRapida(texto) {
-      const inp = document.getElementById('inputHitoCursosExcluidos');
-      if (!inp) return;
-      const actual = inp.value.trim();
-      if (!actual) {
-        inp.value = texto;
+    // -------------------------------------------------------------
+    // GESTION DE EMOJIS, EXCLUSIONES Y OAS EN HITOS INSTITUCIONALES
+    // -------------------------------------------------------------
+    const EMOJIS_CATEGORIAS_HITO = {
+      academicos: ['📚', '📖', '✏️', '📝', '🎓', '🎒', '📐', '📏', '🔬', '🧪', '🧬', '🔭', '🧮', '💻', '💡', '🧠'],
+      artes: ['🎭', '🎨', '🎵', '🎶', '🎸', '🎻', '🎬', '📷', '🏛️', '🌍', '🗺️', '📜', '🗣️', '✍️', '🕊️', '🤝'],
+      eventos: ['🏆', '🥇', '⚽', '🏀', '🏐', '🏃', '🎖️', '🎯', '🎪', '🎉', '🎈', '🌟', '⭐', '🚀', '🔔', '📅'],
+      stem: ['🌱', '🌿', '🌳', '☀️', '🌊', '♻️', '🤖', '⚡', '🔍', '🧭', '🧩', '🛠️', '🪐', '🛸', '🧲', '📊'],
+      valores: ['❤️', '💛', '💚', '🤝', '🫂', '🕊️', '🌈', '✨', '💬', '🛡️', '⚖️', '🩺', '🍎', '🏅', '📢', '🚩']
+    };
+
+    const NIVELES_ESCOLARES_ESTANDAR = [
+      'Pre-Kínder', 'Kínder',
+      '1° Básico', '2° Básico', '3° Básico', '4° Básico',
+      '5° Básico', '6° Básico', '7° Básico', '8° Básico',
+      '1° Medio', '2° Medio', '3° Medio', '4° Medio'
+    ];
+
+    function toggleGaleriaEmojisHito() {
+      const panel = document.getElementById('panelGaleriaEmojisHito');
+      if (panel) {
+        panel.classList.toggle('d-none');
+        if (!panel.classList.contains('d-none')) {
+          cambiarTabEmojisHito('academicos');
+        }
+      }
+    }
+
+    function cambiarTabEmojisHito(cat) {
+      document.querySelectorAll('#pillsEmojisHito .nav-link').forEach(btn => btn.classList.remove('active'));
+      const activeBtn = (window.event && window.event.currentTarget) ? window.event.currentTarget : document.querySelector(`#pillsEmojisHito button[onclick*="${cat}"]`);
+      if (activeBtn) activeBtn.classList.add('active');
+
+      const grilla = document.getElementById('grillaEmojisHito');
+      if (!grilla) return;
+      const emojis = EMOJIS_CATEGORIAS_HITO[cat] || [];
+      grilla.innerHTML = emojis.map(em => `
+        <button type="button" class="btn btn-sm btn-light border p-1" style="font-size: 1.25rem; line-height: 1;" onclick="seleccionarEmojiHito('${em}')" title="${em}">
+          ${em}
+        </button>
+      `).join('');
+    }
+
+    function seleccionarEmojiHito(em) {
+      const inp = document.getElementById('inputHitoIcono');
+      if (inp) inp.value = em;
+    }
+
+    function renderizarTagsExcluidosHito() {
+      const cont = document.getElementById('contenedorTagsExcluidosHito');
+      if (!cont) return;
+      if (!hitosCursosExcluidosTags || hitosCursosExcluidosTags.length === 0) {
+        cont.innerHTML = '<span class="text-muted small fst-italic py-1" id="placeholderTagsExcluidos">No hay exclusiones. Se aplica a todos los cursos seleccionados arriba.</span>';
       } else {
-        inp.value = actual + ', ' + texto;
+        cont.innerHTML = hitosCursosExcluidosTags.map((tag, idx) => `
+          <span class="badge bg-danger-subtle text-danger border border-danger-subtle d-inline-flex align-items-center gap-1 py-1 px-2" style="font-size: 0.8rem;">
+            <span><i class="bi bi-slash-circle me-1"></i>${escapeHtml(tag)}</span>
+            <i class="bi bi-x-circle cursor-pointer text-danger ms-1" onclick="quitarTagExcluidoHito(${idx})" title="Quitar exclusión"></i>
+          </span>
+        `).join('');
+      }
+
+      renderizarChipsPoolNivelesHito();
+    }
+
+    function renderizarChipsPoolNivelesHito() {
+      const poolCont = document.getElementById('poolChipsExclusionesHito');
+      if (!poolCont) return;
+
+      const excluidosNorm = (hitosCursosExcluidosTags || []).map(t => String(t).toLowerCase());
+
+      poolCont.innerHTML = NIVELES_ESCOLARES_ESTANDAR.map(nivel => {
+        const estaExcluido = excluidosNorm.includes(nivel.toLowerCase());
+        return `
+          <button type="button" 
+                  class="btn btn-xs ${estaExcluido ? 'btn-danger' : 'btn-outline-secondary'} py-0 px-2" 
+                  style="font-size: 0.72rem;" 
+                  onclick="toggleExclusionNivelHito('${nivel}')">
+            ${estaExcluido ? '<i class="bi bi-x-circle me-1"></i>' : '<i class="bi bi-plus me-1"></i>'}${nivel}
+          </button>
+        `;
+      }).join('');
+    }
+
+    function toggleExclusionNivelHito(nivel) {
+      const idx = hitosCursosExcluidosTags.findIndex(t => String(t).toLowerCase() === nivel.toLowerCase());
+      if (idx >= 0) {
+        hitosCursosExcluidosTags.splice(idx, 1);
+      } else {
+        hitosCursosExcluidosTags.push(nivel);
+      }
+      renderizarTagsExcluidosHito();
+    }
+
+    function agregarTagExcluidoManual() {
+      const inp = document.getElementById('inputEscribirExclusionHito');
+      if (!inp) return;
+      const val = inp.value.trim();
+      if (!val) return;
+      if (!hitosCursosExcluidosTags.some(t => String(t).toLowerCase() === val.toLowerCase())) {
+        hitosCursosExcluidosTags.push(val);
+      }
+      inp.value = '';
+      renderizarTagsExcluidosHito();
+    }
+
+    function quitarTagExcluidoHito(idx) {
+      if (idx >= 0 && idx < hitosCursosExcluidosTags.length) {
+        hitosCursosExcluidosTags.splice(idx, 1);
+        renderizarTagsExcluidosHito();
+      }
+    }
+
+    function aplicarPresetExclusion(tipo) {
+      if (tipo === '1y2basico') {
+        ['1° Básico', '2° Básico'].forEach(niv => {
+          if (!hitosCursosExcluidosTags.some(t => String(t).toLowerCase() === niv.toLowerCase())) {
+            hitosCursosExcluidosTags.push(niv);
+          }
+        });
+      } else if (tipo === 'parvularia') {
+        ['Pre-Kínder', 'Kínder'].forEach(niv => {
+          if (!hitosCursosExcluidosTags.some(t => String(t).toLowerCase() === niv.toLowerCase())) {
+            hitosCursosExcluidosTags.push(niv);
+          }
+        });
+      } else if (tipo === 'media') {
+        ['1° Medio', '2° Medio', '3° Medio', '4° Medio'].forEach(niv => {
+          if (!hitosCursosExcluidosTags.some(t => String(t).toLowerCase() === niv.toLowerCase())) {
+            hitosCursosExcluidosTags.push(niv);
+          }
+        });
+      }
+      renderizarTagsExcluidosHito();
+    }
+
+    function limpiarExclusionesHito() {
+      hitosCursosExcluidosTags = [];
+      renderizarTagsExcluidosHito();
+    }
+
+    function renderizarTagsOAsHito() {
+      const cont = document.getElementById('contenedorOAsSugeridosHito');
+      if (!cont) return;
+      if (!hitosOAsSugeridosList || hitosOAsSugeridosList.length === 0) {
+        cont.innerHTML = '<span class="text-muted small fst-italic py-1" id="placeholderOAsSugeridos">No hay OAs sugeridos seleccionados todavía.</span>';
+      } else {
+        cont.innerHTML = hitosOAsSugeridosList.map((oa, idx) => {
+          const cod = typeof oa === 'object' ? oa.codigo : oa;
+          const cat = (typeof oa === 'object' && oa.categoria) ? oa.categoria : 'Basal';
+          const nivel = (typeof oa === 'object' && oa.nivel) ? oa.nivel : '';
+          const asig = (typeof oa === 'object' && oa.asignatura) ? oa.asignatura : '';
+          const desc = (typeof oa === 'object' && oa.descripcion) ? oa.descripcion : '';
+          const subTitle = [asig, nivel].filter(Boolean).join(' • ');
+
+          return `
+            <span class="badge ${cat === 'Basal' ? 'badge-oa-basal' : 'badge-oa-comp'} d-inline-flex align-items-center gap-1 p-2 shadow-sm text-start" style="font-size: 0.78rem;" title="${escapeHtml(desc || cod)}">
+              <div>
+                <div class="fw-bold">${escapeHtml(cod)} <span class="badge bg-light text-dark ms-1" style="font-size: 0.65rem;">${cat}</span></div>
+                ${subTitle ? `<div class="small text-truncate opacity-75" style="max-width: 170px; font-size: 0.68rem;">${escapeHtml(subTitle)}</div>` : ''}
+              </div>
+              <i class="bi bi-x-circle cursor-pointer text-danger ms-2 fs-6" onclick="quitarOAHito(${idx})" title="Quitar OA"></i>
+            </span>
+          `;
+        }).join('');
+      }
+    }
+
+    function agregarOAHito(oaObj) {
+      const cod = typeof oaObj === 'object' ? oaObj.codigo : oaObj;
+      if (!cod) return;
+      const yaExiste = hitosOAsSugeridosList.some(o => (typeof o === 'object' ? o.codigo : o).toUpperCase() === String(cod).toUpperCase());
+      if (!yaExiste) {
+        hitosOAsSugeridosList.push(oaObj);
+        renderizarTagsOAsHito();
+      }
+    }
+
+    function quitarOAHito(idx) {
+      if (idx >= 0 && idx < hitosOAsSugeridosList.length) {
+        hitosOAsSugeridosList.splice(idx, 1);
+        renderizarTagsOAsHito();
+      }
+    }
+
+    function agregarOAHitoManual() {
+      const inp = document.getElementById('inputBuscarOAHito');
+      if (!inp) return;
+      const cod = inp.value.trim();
+      if (!cod) return;
+      agregarOAHito({ codigo: cod.toUpperCase(), categoria: 'Basal', descripcion: 'Objetivo sugerido institucional UTP' });
+      inp.value = '';
+      cerrarDropdownOAsHito();
+    }
+
+    function cerrarDropdownOAsHito() {
+      const dd = document.getElementById('dropdownResultadosOAHito');
+      if (dd) {
+        dd.classList.add('d-none');
+        dd.innerHTML = '';
+      }
+    }
+
+    async function buscarOAsHitoEnVivo(termino) {
+      clearTimeout(debounceBuscarOAsHitoTimer);
+      const dd = document.getElementById('dropdownResultadosOAHito');
+      const q = (termino || '').trim();
+      if (!q || q.length < 2) {
+        cerrarDropdownOAsHito();
+        return;
+      }
+
+      debounceBuscarOAsHitoTimer = setTimeout(async () => {
+        try {
+          const res = await fetch(`/api/planificacion/curriculo/objetivos?q=${encodeURIComponent(q)}&anio=${anioActivo}&anno=${anioActivo}`);
+          if (!res.ok) throw new Error('Error al buscar OAs');
+          const data = await res.json();
+          const objetivos = data.objetivos || data || [];
+
+          if (objetivos.length === 0) {
+            dd.innerHTML = `<div class="list-group-item list-group-item-action text-muted small p-2">No se encontraron OAs para "${escapeHtml(q)}". Puedes agregarlo como código manual con el botón derecho.</div>`;
+            dd.classList.remove('d-none');
+            return;
+          }
+
+          dd.innerHTML = objetivos.slice(0, 15).map(item => {
+            const safeObj = JSON.stringify({
+              codigo: item.codigo,
+              categoria: item.categoria || 'Basal',
+              descripcion: item.descripcion || '',
+              nivel: item.nivel || '',
+              asignatura: item.asignatura || ''
+            }).replace(/"/g, '&quot;');
+
+            return `
+              <button type="button" class="list-group-item list-group-item-action p-2 text-start" onclick="seleccionarOABusquedaHito(${safeObj})">
+                <div class="d-flex justify-content-between align-items-center">
+                  <span class="fw-bold text-primary">${escapeHtml(item.codigo)} <span class="badge ${item.categoria === 'Basal' ? 'bg-primary' : 'bg-secondary'} ms-1" style="font-size: 0.65rem;">${item.categoria || 'Basal'}</span></span>
+                  <span class="badge bg-light text-dark border small" style="font-size: 0.68rem;">${escapeHtml(item.nivel || '')} • ${escapeHtml(item.asignatura || '')}</span>
+                </div>
+                <div class="small text-muted text-truncate mt-1" style="max-width: 100%; font-size: 0.73rem;">${escapeHtml(item.descripcion || '')}</div>
+              </button>
+            `;
+          }).join('');
+          dd.classList.remove('d-none');
+        } catch (err) {
+          console.error("Error buscando OAs:", err);
+        }
+      }, 250);
+    }
+
+    function seleccionarOABusquedaHito(oaObj) {
+      agregarOAHito(oaObj);
+      const inp = document.getElementById('inputBuscarOAHito');
+      if (inp) inp.value = '';
+      cerrarDropdownOAsHito();
+    }
+
+    function toggleExploradorOAsHito() {
+      const panel = document.getElementById('panelExploradorOAsHito');
+      if (!panel) return;
+      panel.classList.toggle('d-none');
+      if (!panel.classList.contains('d-none')) {
+        inicializarExploradorOAsHito();
+      }
+    }
+
+    function inicializarExploradorOAsHito() {
+      const selNiv = document.getElementById('selectNivelExploradorOAsHito');
+      const selAsig = document.getElementById('selectAsignaturaExploradorOAsHito');
+
+      if (selNiv && selNiv.options.length <= 1) {
+        selNiv.innerHTML = '<option value="">-- Todos los Niveles --</option>' +
+          NIVELES_ESCOLARES_ESTANDAR.map(n => `<option value="${escapeHtml(n)}">${escapeHtml(n)}</option>`).join('');
+      }
+
+      if (selAsig && selAsig.options.length <= 1) {
+        const asigs = datosDocente.todasLasAsignaturas || [];
+        selAsig.innerHTML = '<option value="">-- Todas las Asignaturas --</option>' +
+          asigs.map(a => `<option value="${escapeHtml(a)}">${escapeHtml(a)}</option>`).join('');
+      }
+      cargarPoolOAsHito();
+    }
+
+    async function cargarPoolOAsHito() {
+      const selN = document.getElementById('selectNivelExploradorOAsHito');
+      const selA = document.getElementById('selectAsignaturaExploradorOAsHito');
+      const niv = selN ? selN.value : '';
+      const asig = selA ? selA.value : '';
+      const lista = document.getElementById('listaResultadosExploradorOAsHito');
+      if (!lista) return;
+
+      lista.innerHTML = '<div class="text-center py-2 text-muted small"><div class="spinner-border spinner-border-sm text-primary me-2"></div>Cargando catálogo curricular...</div>';
+
+      try {
+        let url = `/api/planificacion/curriculo/objetivos?anio=${anioActivo}&anno=${anioActivo}`;
+        if (niv) url += `&nivel=${encodeURIComponent(niv)}`;
+        if (asig) url += `&asignatura=${encodeURIComponent(asig)}`;
+
+        const res = await fetch(url);
+        if (!res.ok) throw new Error('Error al cargar objetivos');
+        const data = await res.json();
+        const oas = data.objetivos || data || [];
+
+        if (oas.length === 0) {
+          lista.innerHTML = '<div class="text-muted small p-2">No se encontraron OAs para la combinación seleccionada.</div>';
+          return;
+        }
+
+        lista.innerHTML = oas.slice(0, 30).map(item => {
+          const ya = hitosOAsSugeridosList.some(o => (typeof o === 'object' ? o.codigo : o).toUpperCase() === item.codigo.toUpperCase());
+          const safeObj = JSON.stringify({
+            codigo: item.codigo,
+            categoria: item.categoria || 'Basal',
+            descripcion: item.descripcion || '',
+            nivel: item.nivel || '',
+            asignatura: item.asignatura || ''
+          }).replace(/"/g, '&quot;');
+
+          return `
+            <div class="d-flex align-items-center justify-content-between p-2 border rounded bg-light mb-1">
+              <div class="me-2" style="font-size: 0.75rem;">
+                <div class="fw-bold text-dark">${escapeHtml(item.codigo)} <span class="badge ${item.categoria === 'Basal' ? 'bg-primary' : 'bg-secondary'} py-0 px-1" style="font-size: 0.65rem;">${item.categoria || 'Basal'}</span> <span class="text-secondary">(${escapeHtml(item.nivel || '')} • ${escapeHtml(item.asignatura || '')})</span></div>
+                <div class="text-muted text-truncate" style="max-width: 480px;">${escapeHtml(item.descripcion || '')}</div>
+              </div>
+              <button type="button" class="btn btn-xs ${ya ? 'btn-success' : 'btn-outline-primary'} text-nowrap" onclick="seleccionarOABusquedaHito(${safeObj})" ${ya ? 'disabled' : ''}>
+                ${ya ? '<i class="bi bi-check me-1"></i>Agregado' : '<i class="bi bi-plus me-1"></i>Agregar'}
+              </button>
+            </div>
+          `;
+        }).join('');
+      } catch (e) {
+        lista.innerHTML = `<div class="text-danger small p-2">${escapeHtml(e.message)}</div>`;
+      }
+    }
+
+    function agregarMetodologiaHitoRapido(tag) {
+      const inp = document.getElementById('inputHitoMetodologias');
+      if (!inp) return;
+      const actual = inp.value.split(',').map(x => x.trim()).filter(Boolean);
+      if (!actual.includes(tag)) {
+        actual.push(tag);
+        inp.value = actual.join(', ');
       }
     }
 
@@ -4389,10 +4993,18 @@
       document.getElementById('inputHitoFechaInicio').value = '';
       document.getElementById('inputHitoFechaFin').value = '';
       document.getElementById('txtHitoLineamientos').value = '';
-      document.getElementById('inputHitoOAs').value = '';
       document.getElementById('inputHitoMetodologias').value = '';
       document.getElementById('txtHitoRecursos').value = '';
-      document.getElementById('inputHitoCursosExcluidos').value = '';
+
+      hitosCursosExcluidosTags = [];
+      hitosOAsSugeridosList = [];
+      renderizarTagsExcluidosHito();
+      renderizarTagsOAsHito();
+
+      const panelGal = document.getElementById('panelGaleriaEmojisHito');
+      if (panelGal) panelGal.classList.add('d-none');
+      const panelExp = document.getElementById('panelExploradorOAsHito');
+      if (panelExp) panelExp.classList.add('d-none');
 
       document.getElementById('chkHitoTodasAsignaturas').checked = true;
       toggleSegmentacionAsignaturasHito(true);
@@ -4436,10 +5048,43 @@
       document.getElementById('inputHitoFechaInicio').value = h.fecha_inicio || '';
       document.getElementById('inputHitoFechaFin').value = h.fecha_fin || '';
       document.getElementById('txtHitoLineamientos').value = h.lineamientos || '';
-      document.getElementById('inputHitoOAs').value = Array.isArray(h.oas_sugeridos) ? h.oas_sugeridos.join(', ') : '';
       document.getElementById('inputHitoMetodologias').value = Array.isArray(h.metodologias_sugeridas) ? h.metodologias_sugeridas.join(', ') : '';
       document.getElementById('txtHitoRecursos').value = Array.isArray(h.recursos_enlaces) ? h.recursos_enlaces.join('\n') : '';
-      document.getElementById('inputHitoCursosExcluidos').value = Array.isArray(h.cursos_excluidos) ? h.cursos_excluidos.join(', ') : '';
+
+      // Parsear cursos excluidos
+      if (Array.isArray(h.cursos_excluidos)) {
+        hitosCursosExcluidosTags = [...h.cursos_excluidos];
+      } else if (typeof h.cursos_excluidos === 'string' && h.cursos_excluidos.trim()) {
+        try {
+          const parsed = JSON.parse(h.cursos_excluidos);
+          hitosCursosExcluidosTags = Array.isArray(parsed) ? parsed : [h.cursos_excluidos];
+        } catch {
+          hitosCursosExcluidosTags = h.cursos_excluidos.split(',').map(x => x.trim()).filter(Boolean);
+        }
+      } else {
+        hitosCursosExcluidosTags = [];
+      }
+      renderizarTagsExcluidosHito();
+
+      // Parsear OAs sugeridos
+      if (Array.isArray(h.oas_sugeridos)) {
+        hitosOAsSugeridosList = [...h.oas_sugeridos];
+      } else if (typeof h.oas_sugeridos === 'string' && h.oas_sugeridos.trim()) {
+        try {
+          const parsed = JSON.parse(h.oas_sugeridos);
+          hitosOAsSugeridosList = Array.isArray(parsed) ? parsed : [h.oas_sugeridos];
+        } catch {
+          hitosOAsSugeridosList = h.oas_sugeridos.split(',').map(x => x.trim()).filter(Boolean);
+        }
+      } else {
+        hitosOAsSugeridosList = [];
+      }
+      renderizarTagsOAsHito();
+
+      const panelGal = document.getElementById('panelGaleriaEmojisHito');
+      if (panelGal) panelGal.classList.add('d-none');
+      const panelExp = document.getElementById('panelExploradorOAsHito');
+      if (panelExp) panelExp.classList.add('d-none');
 
       const todasA = h.todas_asignaturas === 1 || h.todas_asignaturas === true;
       document.getElementById('chkHitoTodasAsignaturas').checked = todasA;
@@ -4498,15 +5143,8 @@
         document.querySelectorAll('#gridCursosHito input[type="checkbox"]:checked').forEach(c => cursos.push(c.value));
       }
 
-      const cursos_excluidos = document.getElementById('inputHitoCursosExcluidos').value
-        .split(',')
-        .map(x => x.trim())
-        .filter(Boolean);
-
-      const oas_sugeridos = document.getElementById('inputHitoOAs').value
-        .split(',')
-        .map(x => x.trim())
-        .filter(Boolean);
+      const cursos_excluidos = hitosCursosExcluidosTags;
+      const oas_sugeridos = hitosOAsSugeridosList;
 
       const metodologias_sugeridas = document.getElementById('inputHitoMetodologias').value
         .split(',')
@@ -4596,7 +5234,7 @@
       }
       if (!hito) return;
 
-      guiaHitoActivo = { hito, uIdx, sIdx };
+      guiaHitoActivo = { hito, uIdx: uIdx !== undefined ? uIdx : 0, sIdx };
 
       const header = document.getElementById('headerModalGuiaHito');
       if (header) header.style.backgroundColor = hito.color || '#2563eb';
@@ -4606,11 +5244,40 @@
       document.getElementById('lblGuiaHitoFechas').innerText = `Período: ${hito.fecha_inicio} al ${hito.fecha_fin} • ${hito.tipo || 'Hito Pedagógico'}`;
       document.getElementById('lblGuiaHitoLineamientos').innerText = hito.lineamientos || 'Sin lineamientos registrados para este hito.';
 
-      // OAs Sugeridos
+      // OAs Sugeridos Enriquecidos
       const boxOAs = document.getElementById('boxGuiaHitoOAs');
       const oas = Array.isArray(hito.oas_sugeridos) ? hito.oas_sugeridos : [];
       if (oas.length > 0) {
-        boxOAs.innerHTML = oas.map(cod => `<span class="badge bg-primary px-2 py-1">${escapeHtml(cod)}</span>`).join('');
+        boxOAs.innerHTML = oas.map(o => {
+          const cod = typeof o === 'object' ? o.codigo : o;
+          const cat = (typeof o === 'object' && o.categoria) ? o.categoria : 'Basal';
+          const nivel = (typeof o === 'object' && o.nivel) ? o.nivel : '';
+          const asig = (typeof o === 'object' && o.asignatura) ? o.asignatura : '';
+          let desc = (typeof o === 'object' && o.descripcion) ? o.descripcion : '';
+          if (!desc && planActivo && Array.isArray(planActivo.oas_disponibles)) {
+            const m = planActivo.oas_disponibles.find(x => x.codigo === cod);
+            if (m) desc = m.descripcion;
+          }
+
+          const targetU = (guiaHitoActivo && guiaHitoActivo.uIdx !== undefined) ? guiaHitoActivo.uIdx : 0;
+
+          return `
+            <div class="card p-2 border mb-2 w-100 bg-light-subtle">
+              <div class="d-flex justify-content-between align-items-center mb-1 flex-wrap gap-2">
+                <div>
+                  <span class="badge ${cat === 'Basal' ? 'badge-oa-basal' : 'badge-oa-comp'} py-1 px-2 fw-bold">${escapeHtml(cod)} (${cat})</span>
+                  ${(nivel || asig) ? `<span class="small text-muted ms-2">${escapeHtml(asig)} • ${escapeHtml(nivel)}</span>` : ''}
+                </div>
+                <button type="button" class="btn btn-xs btn-outline-primary" onclick="adoptarUnOAGuiaHito('${cod}', ${targetU})">
+                  <i class="bi bi-plus-circle me-1"></i>Adoptar este OA
+                </button>
+              </div>
+              <div class="small text-dark" style="font-size: 0.78rem; line-height: 1.45;">
+                ${escapeHtml(desc || 'Objetivo de Aprendizaje sugerido por UTP institucional.')}
+              </div>
+            </div>
+          `;
+        }).join('');
         document.getElementById('btnAdoptarOAsHito').classList.remove('d-none');
       } else {
         boxOAs.innerHTML = '<span class="text-muted small">No hay OAs sugeridos específicos para este hito.</span>';
@@ -4647,24 +5314,65 @@
       if (modalGuiaHitoObj) modalGuiaHitoObj.show();
     }
 
+    function adoptarUnOAGuiaHito(cod, uIdx) {
+      if (!planActivo || !planActivo.unidades || !planActivo.unidades[uIdx]) return;
+      const u = planActivo.unidades[uIdx];
+      u.oas_seleccionados = u.oas_seleccionados || [];
+      const yaExiste = u.oas_seleccionados.some(o => (typeof o === 'object' ? o.codigo : o) === cod);
+      if (yaExiste) {
+        return Swal.fire({
+          toast: true,
+          position: 'top-end',
+          icon: 'info',
+          title: `El objetivo ${cod} ya está en la Unidad ${u.numero_unidad}`,
+          showConfirmButton: false,
+          timer: 2500
+        });
+      }
+
+      let matchOa = null;
+      if (Array.isArray(planActivo.oas_disponibles)) {
+        matchOa = planActivo.oas_disponibles.find(x => x.codigo === cod);
+      }
+      u.oas_seleccionados.push(matchOa ? { ...matchOa } : { codigo: cod, categoria: 'Basal', descripcion: `Objetivo sugerido por UTP (${guiaHitoActivo?.hito?.titulo || 'Hito'})` });
+
+      renderizarUnidadesAcordeon();
+      Swal.fire({
+        toast: true,
+        position: 'top-end',
+        icon: 'success',
+        title: `Se adoptó ${cod} en la Unidad ${u.numero_unidad}`,
+        showConfirmButton: false,
+        timer: 2500
+      });
+    }
+
     function adoptarOAsGuiaHitoSubmit() {
       if (!guiaHitoActivo || !planActivo) return;
       const { hito, uIdx } = guiaHitoActivo;
-      if (!planActivo.unidades || !planActivo.unidades[uIdx]) return;
+      const targetU = (uIdx !== undefined && planActivo.unidades && planActivo.unidades[uIdx]) ? uIdx : 0;
+      if (!planActivo.unidades || !planActivo.unidades[targetU]) return;
 
-      const u = planActivo.unidades[uIdx];
+      const u = planActivo.unidades[targetU];
       u.oas_seleccionados = u.oas_seleccionados || [];
       const oas = Array.isArray(hito.oas_sugeridos) ? hito.oas_sugeridos : [];
 
       let agregados = 0;
-      oas.forEach(cod => {
+      oas.forEach(item => {
+        const cod = typeof item === 'object' ? item.codigo : item;
         const yaExiste = u.oas_seleccionados.some(o => (typeof o === 'object' ? o.codigo : o) === cod);
         if (!yaExiste) {
           let matchOa = null;
           if (Array.isArray(planActivo.oas_disponibles)) {
             matchOa = planActivo.oas_disponibles.find(x => x.codigo === cod);
           }
-          u.oas_seleccionados.push(matchOa ? { ...matchOa } : { codigo: cod, categoria: 'Basal', descripcion: `Objetivo sugerido por UTP (${hito.titulo})` });
+          if (matchOa) {
+            u.oas_seleccionados.push({ ...matchOa });
+          } else if (typeof item === 'object') {
+            u.oas_seleccionados.push({ ...item });
+          } else {
+            u.oas_seleccionados.push({ codigo: cod, categoria: 'Basal', descripcion: `Objetivo sugerido por UTP (${hito.titulo})` });
+          }
           agregados++;
         }
       });

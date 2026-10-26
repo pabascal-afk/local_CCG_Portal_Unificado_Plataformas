@@ -1839,34 +1839,47 @@ async function listarHitos(anio) {
     });
 }
 
+function normTextoHito(s) {
+    return String(s || '').normalize("NFD").replace(/[\u0300-\u036f]/g, "").toUpperCase().replace(/\s+/g, ' ').trim();
+}
+
 async function obtenerHitosParaPlan(anio, curso, asignatura) {
     const hitos = await listarHitos(anio);
-    const cNorm = (curso || '').trim().toUpperCase();
-    const aNorm = (asignatura || '').trim().toUpperCase();
+    const cNorm = normTextoHito(curso);
+    const aNorm = normTextoHito(asignatura);
 
     return hitos.filter(h => {
         if (h.activo === 0) return false;
 
         // 1. Exclusiones de cursos (prioridad máxima)
-        const excluidos = (h.cursos_excluidos || []).map(c => String(c).trim().toUpperCase());
-        if (excluidos.some(exc => cNorm === exc || (exc.length > 2 && cNorm.includes(exc)))) {
+        const excluidos = (h.cursos_excluidos || []).map(c => normTextoHito(c));
+        if (excluidos.some(exc => {
+            if (!exc) return false;
+            return cNorm === exc || (exc.length >= 2 && (cNorm.includes(exc) || exc.includes(cNorm)));
+        })) {
             return false;
         }
 
         // 2. Inclusión de cursos
         if (!h.todos_cursos) {
-            const cursosInc = (h.cursos || []).map(c => String(c).trim().toUpperCase());
+            const cursosInc = (h.cursos || []).map(c => normTextoHito(c));
             if (cursosInc.length > 0 && !cursosInc.includes('TODOS')) {
-                const coincideCurso = cursosInc.some(inc => cNorm === inc || (inc.length > 2 && cNorm.includes(inc)));
+                const coincideCurso = cursosInc.some(inc => {
+                    if (!inc) return false;
+                    return cNorm === inc || (inc.length >= 2 && (cNorm.includes(inc) || inc.includes(cNorm)));
+                });
                 if (!coincideCurso) return false;
             }
         }
 
         // 3. Inclusión de asignaturas
         if (!h.todas_asignaturas) {
-            const asigsInc = (h.asignaturas || []).map(a => String(a).trim().toUpperCase());
+            const asigsInc = (h.asignaturas || []).map(a => normTextoHito(a));
             if (asigsInc.length > 0 && !asigsInc.includes('TODAS')) {
-                const coincideAsig = asigsInc.some(inc => aNorm === inc || (inc.length > 3 && (aNorm.includes(inc) || inc.includes(aNorm))));
+                const coincideAsig = asigsInc.some(inc => {
+                    if (!inc) return false;
+                    return aNorm === inc || (inc.length >= 3 && (aNorm.includes(inc) || inc.includes(aNorm)));
+                });
                 if (!coincideAsig) return false;
             }
         }
@@ -2015,10 +2028,10 @@ function generarPlantillaHitosExcel() {
             fecha_fin: '2026-05-15',
             asignaturas: 'LENGUAJE Y COMUNICACION, LENGUA Y LITERATURA',
             cursos: 'TODOS',
-            cursos_excluidos: '1° BASICO A, 1° BASICO B, 2° BASICO A, 2° BASICO B',
-            lineamientos: 'Desarrollar una obra teatral o lectura dramatizada articulando expresión oral y comprensión lectora.',
-            oas_sugeridos: 'OA 03, OA 08, OA 14',
-            metodologias: 'ABP, DUA II: Acción y Expresión, Aprendizaje Colaborativo'
+            cursos_excluidos: '1° BASICO, 2° BASICO',
+            lineamientos: 'Desarrollar una obra teatral o lectura dramatizada articulando expresión oral, comprensión lectora y puesta en escena escolar.',
+            oas_sugeridos: 'OA 01 Lenguaje y Comunicación (3° Básico), OA 03 Lenguaje y Comunicación (3° Básico)',
+            metodologias: 'ABP (Proyectos), DUA II: Acción y Expresión, Aprendizaje Colaborativo'
         },
         {
             titulo: 'Mes de la Ciencia y STEM',
@@ -2030,9 +2043,9 @@ function generarPlantillaHitosExcel() {
             asignaturas: 'CIENCIAS NATURALES, FISICA, QUIMICA, BIOLOGIA, MATEMATICA, TECNOLOGIA',
             cursos: 'TODOS',
             cursos_excluidos: '',
-            lineamientos: 'Feria de ciencias escolar con enfoque experimental y resolución de problemas cotidianos.',
-            oas_sugeridos: 'OA 01, OA 04',
-            metodologias: 'STEAM, ABP, Rutinas de Pensamiento'
+            lineamientos: 'Feria de ciencias escolar con enfoque experimental y resolución de problemas cotidianos mediante proyectos STEAM.',
+            oas_sugeridos: 'OA 01 Ciencias Naturales (4° Básico), OA 04 Matemática (4° Básico)',
+            metodologias: 'STEAM, ABP (Proyectos), Rutinas de Pensamiento'
         },
         {
             titulo: 'Día Internacional del Libro',
@@ -2044,18 +2057,18 @@ function generarPlantillaHitosExcel() {
             asignaturas: 'TODAS',
             cursos: 'TODOS',
             cursos_excluidos: '',
-            lineamientos: 'Actividades de fomento lector y narración oral en todas las materias.',
-            oas_sugeridos: '',
-            metodologias: 'DUA III: Compromiso'
+            lineamientos: 'Actividades transversales de fomento lector, creación literaria y narración oral en todas las materias.',
+            oas_sugeridos: 'OA 02 Lenguaje y Comunicación (2° Básico)',
+            metodologias: 'DUA III: Compromiso y Motivación'
         }
     ];
 
     const wb = xlsx.utils.book_new();
     const ws = xlsx.utils.json_to_sheet(ejemplo);
     ws['!cols'] = [
-        { wch: 25 }, { wch: 20 }, { wch: 8 }, { wch: 10 },
-        { wch: 14 }, { wch: 14 }, { wch: 30 }, { wch: 15 },
-        { wch: 30 }, { wch: 45 }, { wch: 20 }, { wch: 30 }
+        { wch: 25 }, { wch: 22 }, { wch: 8 }, { wch: 10 },
+        { wch: 14 }, { wch: 14 }, { wch: 32 }, { wch: 15 },
+        { wch: 30 }, { wch: 50 }, { wch: 35 }, { wch: 35 }
     ];
     xlsx.utils.book_append_sheet(wb, ws, "Hitos");
     return xlsx.write(wb, { type: 'buffer', bookType: 'xlsx' });
@@ -2071,9 +2084,9 @@ async function importarHitosExcel(buffer, anio, usuario = {}) {
     let creados = 0;
 
     for (const r of rows) {
-        const titulo = (r['titulo'] || r['Titulo'] || r['Nombre'] || '').toString().trim();
-        const fInicio = (r['fecha_inicio'] || r['Fecha Inicio'] || r['Desde'] || '').toString().trim();
-        const fFin = (r['fecha_fin'] || r['Fecha Fin'] || r['Hasta'] || '').toString().trim();
+        const titulo = (r['titulo'] || r['Titulo'] || r['Nombre'] || r['Hito'] || '').toString().trim();
+        const fInicio = (r['fecha_inicio'] || r['Fecha Inicio'] || r['Desde'] || r['fecha inicio'] || '').toString().trim();
+        const fFin = (r['fecha_fin'] || r['Fecha Fin'] || r['Hasta'] || r['fecha fin'] || '').toString().trim();
         if (!titulo || !fInicio || !fFin) continue;
 
         const tipo = (r['tipo'] || r['Tipo'] || 'Semana Temática').toString().trim();
@@ -2082,21 +2095,54 @@ async function importarHitosExcel(buffer, anio, usuario = {}) {
         
         const asigsRaw = (r['asignaturas'] || r['Asignaturas'] || 'TODAS').toString().trim();
         const todasAsigs = asigsRaw.toUpperCase() === 'TODAS' || asigsRaw === '';
-        const asignaturasArr = todasAsigs ? [] : asigsRaw.split(',').map(s => s.trim().toUpperCase()).filter(Boolean);
+        const asignaturasArr = todasAsigs ? [] : asigsRaw.split(/[,;\n]/).map(s => s.trim().toUpperCase()).filter(Boolean);
 
         const cursosRaw = (r['cursos'] || r['Cursos'] || 'TODOS').toString().trim();
         const todosCursos = cursosRaw.toUpperCase() === 'TODOS' || cursosRaw === '';
-        const cursosArr = todosCursos ? [] : cursosRaw.split(',').map(s => s.trim().toUpperCase()).filter(Boolean);
+        const cursosArr = todosCursos ? [] : cursosRaw.split(/[,;\n]/).map(s => s.trim().toUpperCase()).filter(Boolean);
 
-        const excluidosRaw = (r['cursos_excluidos'] || r['Excluidos'] || '').toString().trim();
-        const excluidosArr = excluidosRaw ? excluidosRaw.split(',').map(s => s.trim().toUpperCase()).filter(Boolean) : [];
+        // Cursos o Niveles Excluidos (Excepciones)
+        const excluidosRaw = (r['cursos_excluidos'] || r['Excluidos'] || r['cursos excluidos'] || r['Cursos Excluidos'] || r['Niveles Excluidos'] || r['Excepciones'] || '').toString().trim();
+        const excluidosArr = excluidosRaw ? excluidosRaw.split(/[,;\n]/).map(s => s.trim().toUpperCase()).filter(Boolean) : [];
 
-        const lineamientos = (r['lineamientos'] || r['Lineamientos'] || r['Orientaciones'] || '').toString().trim();
-        const oasRaw = (r['oas_sugeridos'] || r['OAs'] || '').toString().trim();
-        const oasArr = oasRaw ? oasRaw.split(',').map(s => s.trim()).filter(Boolean) : [];
+        const lineamientos = (r['lineamientos'] || r['Lineamientos'] || r['Orientaciones'] || r['orientaciones'] || '').toString().trim();
+        
+        // OAs sugeridos con enriquecimiento automático desde currículo MINEDUC
+        const oasRaw = (r['oas_sugeridos'] || r['OAs'] || r['oas'] || r['OAs Sugeridos'] || r['OA'] || r['Objetivos'] || '').toString().trim();
+        const oasArr = oasRaw ? oasRaw.split(/[,;\n]/).map(s => s.trim()).filter(Boolean) : [];
+        const enrichedOas = [];
 
-        const metRaw = (r['metodologias'] || r['Metodologias'] || r['DUA'] || '').toString().trim();
-        const metArr = metRaw ? metRaw.split(',').map(s => s.trim()).filter(Boolean) : [];
+        for (const rawOa of oasArr) {
+            const oaTrim = rawOa.trim();
+            if (!oaTrim) continue;
+            const matchCod = oaTrim.match(/OA\s*\d+/i);
+            if (matchCod) {
+                const codClean = matchCod[0].toUpperCase().replace(/\s+/, ' ');
+                try {
+                    const found = await queryGet(`
+                        SELECT o.codigo, o.descripcion, o.categoria, cp.nivel, cp.asignatura 
+                        FROM curriculo_objetivos o
+                        JOIN curriculo_planes cp ON cp.id = o.plan_id
+                        WHERE cp.anio = ? AND (LOWER(o.codigo) = LOWER(?) OR o.codigo LIKE ?)
+                        LIMIT 1
+                    `, [anioNum, codClean, `%${codClean}%`]);
+                    if (found) {
+                        enrichedOas.push({
+                            codigo: found.codigo,
+                            nivel: found.nivel,
+                            asignatura: found.asignatura,
+                            categoria: found.categoria || 'Basal',
+                            descripcion: found.descripcion
+                        });
+                        continue;
+                    }
+                } catch(e) {}
+            }
+            enrichedOas.push(oaTrim);
+        }
+
+        const metRaw = (r['metodologias'] || r['Metodologias'] || r['DUA'] || r['dua'] || r['Estrategias'] || '').toString().trim();
+        const metArr = metRaw ? metRaw.split(/[,;\n]/).map(s => s.trim()).filter(Boolean) : [];
 
         await crearHito({
             anio: anioNum,
@@ -2112,7 +2158,7 @@ async function importarHitosExcel(buffer, anio, usuario = {}) {
             cursos: cursosArr,
             cursos_excluidos: excluidosArr,
             lineamientos,
-            oas_sugeridos: oasArr,
+            oas_sugeridos: enrichedOas,
             metodologias_sugeridas: metArr
         }, usuario);
         creados++;
