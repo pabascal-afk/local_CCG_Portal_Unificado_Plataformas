@@ -2,7 +2,7 @@
 <html lang="es">
 <head>
   <meta charset="UTF-8">
-  <title>Inicio / Muro - Plataforma</title>
+  <title>Inicio - Plataforma</title>
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
   <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.10.5/font/bootstrap-icons.css">
@@ -382,7 +382,7 @@
 
   <!-- TARJETAS DE INDICADORES (KPIs) -->
   <div class="row g-3 mb-4">
-    <div class="col-6 col-md-3">
+    <div class="col-12 col-md-4">
       <div class="kpi-card">
         <div>
           <div class="kpi-num" id="kpi-evals">0</div>
@@ -391,7 +391,7 @@
         <div class="kpi-icon text-primary"><i class="bi bi-file-earmark-check"></i></div>
       </div>
     </div>
-    <div class="col-6 col-md-3">
+    <div class="col-12 col-md-4">
       <div class="kpi-card" id="kpi-extra-card">
         <div>
           <div class="kpi-num" id="kpi-extra-num">0</div>
@@ -400,22 +400,13 @@
         <div class="kpi-icon text-danger" id="kpi-extra-icon"><i class="bi bi-paperclip"></i></div>
       </div>
     </div>
-    <div class="col-6 col-md-3">
+    <div class="col-12 col-md-4">
       <div class="kpi-card">
         <div>
           <div class="kpi-num" id="kpi-reservas">0</div>
           <div class="kpi-label">Mis Reservas</div>
         </div>
         <div class="kpi-icon text-success"><i class="bi bi-laptop"></i></div>
-      </div>
-    </div>
-    <div class="col-6 col-md-3">
-      <div class="kpi-card">
-        <div>
-          <div class="kpi-num" id="kpi-avisos">0</div>
-          <div class="kpi-label" id="kpi-avisos-label">Avisos en Tablón</div>
-        </div>
-        <div class="kpi-icon text-secondary"><i class="bi bi-chat-left-dots"></i></div>
       </div>
     </div>
   </div>
@@ -737,7 +728,9 @@
         // 3. KPIs / Métricas
         document.getElementById('kpi-evals').innerText = (data.stats && data.stats.misEvals !== undefined) ? data.stats.misEvals : (data.evaluaciones ? data.evaluaciones.length : 0);
         document.getElementById('kpi-reservas').innerText = (data.stats && data.stats.misReservas !== undefined) ? data.stats.misReservas : (data.reservas ? data.reservas.length : 0);
-        document.getElementById('kpi-avisos').innerText = data.avisos ? data.avisos.length : 0;
+        if (document.getElementById('kpi-avisos')) {
+          document.getElementById('kpi-avisos').innerText = data.avisos ? data.avisos.length : 0;
+        }
 
         if (esAdmin && data.stats && data.stats.colegioEvalsMes !== undefined) {
           document.getElementById('kpi-extra-num').innerText = data.stats.colegioEvalsMes;

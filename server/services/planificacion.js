@@ -15,6 +15,10 @@ let dbInstance = null;
 function getDb() {
     if (!dbInstance) {
         dbInstance = new sqlite3.Database(dbPath);
+        dbInstance.run("ALTER TABLE planificaciones ADD COLUMN solicitud_eliminacion INTEGER DEFAULT 0", () => {});
+        dbInstance.run("ALTER TABLE planificaciones ADD COLUMN solicitud_eliminacion_motivo TEXT", () => {});
+        dbInstance.run("ALTER TABLE planificaciones ADD COLUMN solicitud_eliminacion_por TEXT", () => {});
+        dbInstance.run("ALTER TABLE planificaciones ADD COLUMN solicitud_eliminacion_fecha DATETIME", () => {});
     }
     return dbInstance;
 }
@@ -182,6 +186,7 @@ async function obtenerCursosDocente(usuarioEmail, usuarioNombre, anio = 2026) {
     const planificacionesExistentes = await queryAll(`
         SELECT p.id, p.anio, p.curso, p.asignatura, p.titulo, p.docente_responsable, 
                p.docentes_colaboradores, p.creado_por, p.cursos_vinculados, p.estado, p.visado_por, p.visado_fecha, p.actualizado_en,
+               p.solicitud_eliminacion, p.solicitud_eliminacion_motivo, p.solicitud_eliminacion_por, p.solicitud_eliminacion_fecha,
                (SELECT COUNT(*) FROM planificaciones_unidades u WHERE u.planificacion_id = p.id) as total_unidades
         FROM planificaciones p
         WHERE p.anio = ?
@@ -518,7 +523,8 @@ async function listarPlanificaciones({ anio = 2026, curso = '', asignatura = '',
     const sql = `
         SELECT p.id, p.anio, p.curso, p.asignatura, p.titulo, p.docente_responsable,
                p.docentes_colaboradores, p.cursos_vinculados, p.estado, p.visado_por, p.visado_fecha, p.visado_comentario,
-               p.horas_anuales, p.actualizado_en, p.creado_en,
+               p.horas_anuales, p.actualizado_en, p.creado_en, p.creado_por,
+               p.solicitud_eliminacion, p.solicitud_eliminacion_motivo, p.solicitud_eliminacion_por, p.solicitud_eliminacion_fecha,
                (SELECT COUNT(*) FROM planificaciones_unidades u WHERE u.planificacion_id = p.id) as total_unidades,
                (SELECT COUNT(*) FROM planificaciones_versiones v WHERE v.planificacion_id = p.id) as total_versiones,
                (SELECT COUNT(*) FROM planificaciones_observaciones o WHERE o.planificacion_id = p.id AND o.resuelto = 0) as observaciones_pendientes
@@ -1588,6 +1594,185 @@ async function obtenerDashboardCoberturaColegio(anio = 2026) {
     };
 }
 
+// -------------------------------------------------------------
+// 12. Gestión de Solicitud de Eliminación y Cambio de Propietario
+// -------------------------------------------------------------
+
+async function solicitarEliminacionPlan(planId, { motivo = '' } = {}, usuario = {}) {
+    const plan = await queryGet(`SELECT * FROM planificaciones WHERE id = ?`, [planId]);
+    if (!plan) throw new Error("Planificación no encontrada.");
+
+    const uEmail = (usuario.email || '').trim().toLowerCase();
+    const uNombre = (usuario.nombre || '').trim().toLowerCase();
+    const rolNorm = (usuario.rol || '').trim().toLowerCase();
+    const esAdmin = rolNorm.includes('admin') || rolNorm.includes('directiv') || rolNorm.includes('coordinaci');
+
+    const esCreador = (plan.creado_por && plan.creado_por.toLowerCase() === uEmail) ||
+                      (plan.docente_responsable && (plan.docente_responsable.toLowerCase() === uNombre || plan.docente_responsable.toLowerCase() === uEmail));
+
+    if (!esCreador && !esAdmin) {
+        throw new Error("Solo el creador, docente responsable o un administrador pueden solicitar la eliminación de esta planificación.");
+    }
+
+    const motivoFinal = motivo.trim() || 'El docente indicó que se equivocó de curso o asignatura.';
+    const solicitadoPor = usuario.nombre || usuario.email || 'Docente';
+
+    await queryRun(`
+        UPDATE planificaciones 
+        SET solicitud_eliminacion = 1,
+            solicitud_eliminacion_motivo = ?,
+            solicitud_eliminacion_por = ?,
+            solicitud_eliminacion_fecha = CURRENT_TIMESTAMP
+        WHERE id = ?
+    `, [motivoFinal, solicitadoPor, planId]);
+
+    auditoria.registrarAuditoria({
+        usuario,
+        modulo: 'PLANIFICACIONES',
+        accion: 'Solicitud Eliminación',
+        descripcion: `${solicitadoPor} solicitó eliminar la planificación de ${plan.curso} - ${plan.asignatura}: "${motivoFinal}"`,
+        detalles: { plan_id: planId, curso: plan.curso, asignatura: plan.asignatura, motivo: motivoFinal },
+        nivel: 'warning'
+    });
+
+    return {
+        success: true,
+        message: 'Solicitud de eliminación registrada. Quedará pendiente de aprobación por el equipo directivo/UTP.'
+    };
+}
+
+async function cancelarSolicitudEliminacion(planId, usuario = {}) {
+    const plan = await queryGet(`SELECT * FROM planificaciones WHERE id = ?`, [planId]);
+    if (!plan) throw new Error("Planificación no encontrada.");
+
+    await queryRun(`
+        UPDATE planificaciones 
+        SET solicitud_eliminacion = 0,
+            solicitud_eliminacion_motivo = NULL,
+            solicitud_eliminacion_por = NULL,
+            solicitud_eliminacion_fecha = NULL
+        WHERE id = ?
+    `, [planId]);
+
+    auditoria.registrarAuditoria({
+        usuario,
+        modulo: 'PLANIFICACIONES',
+        accion: 'Cancelar Solicitud Eliminación',
+        descripcion: `Se canceló la solicitud de eliminación de la planificación de ${plan.curso} - ${plan.asignatura}`,
+        detalles: { plan_id: planId },
+        nivel: 'info'
+    });
+
+    return { success: true, message: 'Solicitud de eliminación cancelada. La planificación sigue activa.' };
+}
+
+async function eliminarPlanificacion(planId, usuario = {}) {
+    const plan = await queryGet(`SELECT * FROM planificaciones WHERE id = ?`, [planId]);
+    if (!plan) throw new Error("Planificación no encontrada.");
+
+    // Borrado en cascada
+    await queryRun(`DELETE FROM planificaciones_observaciones WHERE planificacion_id = ?`, [planId]);
+    await queryRun(`DELETE FROM planificaciones_versiones WHERE planificacion_id = ?`, [planId]);
+    await queryRun(`DELETE FROM planificaciones_unidades WHERE planificacion_id = ?`, [planId]);
+    await queryRun(`DELETE FROM planificaciones WHERE id = ?`, [planId]);
+
+    auditoria.registrarAuditoria({
+        usuario,
+        modulo: 'PLANIFICACIONES',
+        accion: 'Eliminar Planificación',
+        descripcion: `Se eliminó definitivamente la planificación de ${plan.curso} - ${plan.asignatura} (Año ${plan.anio})`,
+        detalles: { plan_id: planId, curso: plan.curso, asignatura: plan.asignatura, anio: plan.anio },
+        nivel: 'danger'
+    });
+
+    return { success: true, message: `La planificación de ${plan.curso} - ${plan.asignatura} fue eliminada exitosamente.` };
+}
+
+async function resolverEliminacionPlan(planId, { accion, nuevo_propietario = '', motivo_respuesta = '' } = {}, usuario = {}) {
+    const plan = await queryGet(`SELECT * FROM planificaciones WHERE id = ?`, [planId]);
+    if (!plan) throw new Error("Planificación no encontrada.");
+
+    if (accion === 'aceptar') {
+        return await eliminarPlanificacion(planId, usuario);
+    } else if (accion === 'denegar') {
+        await queryRun(`
+            UPDATE planificaciones 
+            SET solicitud_eliminacion = 0,
+                solicitud_eliminacion_motivo = NULL,
+                solicitud_eliminacion_por = NULL,
+                solicitud_eliminacion_fecha = NULL
+            WHERE id = ?
+        `, [planId]);
+
+        if (motivo_respuesta && motivo_respuesta.trim()) {
+            await queryRun(`
+                INSERT INTO planificaciones_observaciones (planificacion_id, usuario_email, usuario_nombre, comentario, resuelto)
+                VALUES (?, ?, ?, ?, 1)
+            `, [planId, usuario.email || 'admin@colegiocerrogrande.cl', usuario.nombre || 'Administración', `Solicitud de eliminación denegada: ${motivo_respuesta.trim()}`]);
+        }
+
+        auditoria.registrarAuditoria({
+            usuario,
+            modulo: 'PLANIFICACIONES',
+            accion: 'Denegar Eliminación',
+            descripcion: `Se denegó la solicitud de eliminación de ${plan.curso} - ${plan.asignatura}`,
+            detalles: { plan_id: planId, motivo_respuesta },
+            nivel: 'info'
+        });
+
+        return { success: true, message: 'La solicitud de eliminación fue denegada. La planificación permanece activa.' };
+    } else if (accion === 'cambiar_propietario') {
+        if (!nuevo_propietario || !nuevo_propietario.trim()) {
+            throw new Error("Debe indicar el nombre o correo del nuevo docente propietario.");
+        }
+        const propietarioFinal = nuevo_propietario.trim();
+        await queryRun(`
+            UPDATE planificaciones 
+            SET docente_responsable = ?,
+                solicitud_eliminacion = 0,
+                solicitud_eliminacion_motivo = NULL,
+                solicitud_eliminacion_por = NULL,
+                solicitud_eliminacion_fecha = NULL
+            WHERE id = ?
+        `, [propietarioFinal, planId]);
+
+        auditoria.registrarAuditoria({
+            usuario,
+            modulo: 'PLANIFICACIONES',
+            accion: 'Cambiar Propietario',
+            descripcion: `Se cambió el propietario de la planificación de ${plan.curso} - ${plan.asignatura} de "${plan.docente_responsable}" a "${propietarioFinal}"`,
+            detalles: { plan_id: planId, anterior: plan.docente_responsable, nuevo: propietarioFinal },
+            nivel: 'info'
+        });
+
+        return { success: true, message: `Propietario actualizado a "${propietarioFinal}". La solicitud de eliminación ha sido resuelta.` };
+    } else {
+        throw new Error("Acción no válida. Debe ser 'aceptar', 'denegar' o 'cambiar_propietario'.");
+    }
+}
+
+async function cambiarPropietarioPlan(planId, nuevoPropietario, usuario = {}) {
+    const plan = await queryGet(`SELECT * FROM planificaciones WHERE id = ?`, [planId]);
+    if (!plan) throw new Error("Planificación no encontrada.");
+
+    if (!nuevoPropietario || !nuevoPropietario.trim()) {
+        throw new Error("Debe especificar el nuevo docente propietario.");
+    }
+    const prop = nuevoPropietario.trim();
+    await queryRun(`UPDATE planificaciones SET docente_responsable = ? WHERE id = ?`, [prop, planId]);
+
+    auditoria.registrarAuditoria({
+        usuario,
+        modulo: 'PLANIFICACIONES',
+        accion: 'Cambiar Propietario',
+        descripcion: `Se reasignó la planificación de ${plan.curso} - ${plan.asignatura} a: ${prop}`,
+        detalles: { plan_id: planId, anterior: plan.docente_responsable, nuevo: prop },
+        nivel: 'info'
+    });
+
+    return { success: true, message: `Propietario reasignado con éxito a "${prop}".` };
+}
+
 module.exports = {
     obtenerCursosDocente,
     obtenerPoolDocentes,
@@ -1603,6 +1788,11 @@ module.exports = {
     crearCheckpointVersion,
     restaurarVersion,
     cambiarEstadoVisado,
+    solicitarEliminacionPlan,
+    cancelarSolicitudEliminacion,
+    eliminarPlanificacion,
+    resolverEliminacionPlan,
+    cambiarPropietarioPlan,
     agregarObservacion,
     calcularCoberturaCurricular,
     obtenerDashboardCoberturaColegio,

@@ -429,4 +429,64 @@ router.get('/:id/exportar-excel', async (req, res) => {
     }
 });
 
+// 16. Solicitar Eliminación de Planificación (Creador, Docente o Admin)
+router.post('/:id/solicitar-eliminacion', async (req, res) => {
+    try {
+        const resultado = await planificacion.solicitarEliminacionPlan(req.params.id, req.body, req.user);
+        res.json(resultado);
+    } catch (e) {
+        res.status(500).json({ error: e.message });
+    }
+});
+
+// 17. Cancelar Solicitud de Eliminación (Creador o Admin)
+router.post('/:id/cancelar-solicitud-eliminacion', async (req, res) => {
+    try {
+        const resultado = await planificacion.cancelarSolicitudEliminacion(req.params.id, req.user);
+        res.json(resultado);
+    } catch (e) {
+        res.status(500).json({ error: e.message });
+    }
+});
+
+// 18. Resolver Solicitud de Eliminación (Exclusivo Coordinación/Admin)
+router.post('/:id/resolver-eliminacion', async (req, res) => {
+    if (!req.esAdminOCoordinacion) {
+        return res.status(403).json({ error: 'Acceso denegado: Solo Coordinación o Administración pueden resolver solicitudes de eliminación.' });
+    }
+    try {
+        const resultado = await planificacion.resolverEliminacionPlan(req.params.id, req.body, req.user);
+        res.json(resultado);
+    } catch (e) {
+        res.status(500).json({ error: e.message });
+    }
+});
+
+// 19. Cambiar Propietario de Planificación (Exclusivo Coordinación/Admin)
+router.post('/:id/cambiar-propietario', async (req, res) => {
+    if (!req.esAdminOCoordinacion) {
+        return res.status(403).json({ error: 'Acceso denegado: Solo Coordinación o Administración pueden reasignar el propietario.' });
+    }
+    try {
+        const { nuevo_propietario } = req.body;
+        const resultado = await planificacion.cambiarPropietarioPlan(req.params.id, nuevo_propietario, req.user);
+        res.json(resultado);
+    } catch (e) {
+        res.status(500).json({ error: e.message });
+    }
+});
+
+// 20. Eliminar Planificación Directamente (Exclusivo Coordinación/Admin)
+router.delete('/:id', async (req, res) => {
+    if (!req.esAdminOCoordinacion) {
+        return res.status(403).json({ error: 'Acceso denegado: Solo Coordinación o Administración pueden eliminar planificaciones.' });
+    }
+    try {
+        const resultado = await planificacion.eliminarPlanificacion(req.params.id, req.user);
+        res.json(resultado);
+    } catch (e) {
+        res.status(500).json({ error: e.message });
+    }
+});
+
 module.exports = router;

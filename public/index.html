@@ -26,7 +26,7 @@
     <ul class="nav flex-column mb-auto">
       <li class="nav-item">
         <a href="#" class="nav-link" onclick="loadApp('dashboard', this)" id="nav-dashboard">
-          <i class="bi bi-grid-1x2"></i> Inicio / Muro
+          <i class="bi bi-grid-1x2"></i> Inicio
         </a>
       </li>
       <li class="nav-item">
@@ -39,7 +39,7 @@
           <i class="bi bi-calendar-event"></i> Calendario Académico
         </a>
       </li>
-      <li class="nav-item">
+      <li class="nav-item d-none" id="nav-actividades-container">
         <a href="#" class="nav-link" onclick="loadApp('actividades', this)" id="nav-actividades">
           <i class="bi bi-briefcase"></i> Gestión de Actividades
         </a>
@@ -141,30 +141,34 @@
       
       if (esAdminActivo) {
         document.getElementById('nav-usuarios-container').classList.remove('d-none');
+        if (document.getElementById('nav-actividades-container')) document.getElementById('nav-actividades-container').classList.remove('d-none');
         if (document.getElementById('nav-libro-container')) document.getElementById('nav-libro-container').classList.remove('d-none');
         if (document.getElementById('nav-correos-container')) document.getElementById('nav-correos-container').classList.remove('d-none');
         if (document.getElementById('nav-horarios-container')) document.getElementById('nav-horarios-container').classList.remove('d-none');
         if (document.getElementById('nav-auditoria-container')) document.getElementById('nav-auditoria-container').classList.remove('d-none');
         if (document.getElementById('nav-annos-container')) document.getElementById('nav-annos-container').classList.remove('d-none');
+        if (document.getElementById('opt-pref-actividades')) document.getElementById('opt-pref-actividades').classList.remove('d-none');
         if (document.getElementById('opt-pref-horarios')) document.getElementById('opt-pref-horarios').classList.remove('d-none');
         if (document.getElementById('opt-pref-auditoria')) document.getElementById('opt-pref-auditoria').classList.remove('d-none');
         if (document.getElementById('opt-pref-annos')) document.getElementById('opt-pref-annos').classList.remove('d-none');
       } else {
         document.getElementById('nav-usuarios-container').classList.add('d-none');
+        if (document.getElementById('nav-actividades-container')) document.getElementById('nav-actividades-container').classList.add('d-none');
         if (document.getElementById('nav-libro-container')) document.getElementById('nav-libro-container').classList.add('d-none');
         if (document.getElementById('nav-correos-container')) document.getElementById('nav-correos-container').classList.add('d-none');
         if (document.getElementById('nav-horarios-container')) document.getElementById('nav-horarios-container').classList.add('d-none');
         if (document.getElementById('nav-auditoria-container')) document.getElementById('nav-auditoria-container').classList.add('d-none');
         if (document.getElementById('nav-annos-container')) document.getElementById('nav-annos-container').classList.add('d-none');
+        if (document.getElementById('opt-pref-actividades')) document.getElementById('opt-pref-actividades').classList.add('d-none');
         if (document.getElementById('opt-pref-horarios')) document.getElementById('opt-pref-horarios').classList.add('d-none');
         if (document.getElementById('opt-pref-auditoria')) document.getElementById('opt-pref-auditoria').classList.add('d-none');
         if (document.getElementById('opt-pref-annos')) document.getElementById('opt-pref-annos').classList.add('d-none');
-        if (document.getElementById('selectPrefTab') && (document.getElementById('selectPrefTab').value === 'horarios' || document.getElementById('selectPrefTab').value === 'auditoria' || document.getElementById('selectPrefTab').value === 'annos')) {
+        if (document.getElementById('selectPrefTab') && (document.getElementById('selectPrefTab').value === 'actividades' || document.getElementById('selectPrefTab').value === 'horarios' || document.getElementById('selectPrefTab').value === 'auditoria' || document.getElementById('selectPrefTab').value === 'annos')) {
           document.getElementById('selectPrefTab').value = 'dashboard';
         }
         // Si el usuario estaba visualizando módulos admin y pasa a vista profesor, redirigir a dashboard
         const frame = document.getElementById('appFrame');
-        if (frame && frame.src && (frame.src.includes('horarios.html') || frame.src.includes('auditoria.html') || frame.src.includes('annos.html'))) {
+        if (frame && frame.src && (frame.src.includes('actividades.html') || frame.src.includes('horarios.html') || frame.src.includes('auditoria.html') || frame.src.includes('annos.html'))) {
           loadApp('dashboard', document.getElementById('nav-dashboard'));
         }
       }
@@ -279,9 +283,10 @@
             <h6 class="fw-bold mb-3 mt-1"><i class="bi bi-pin-angle"></i> Pestaña de Inicio</h6>
             <div class="mb-4">
               <select class="form-select" id="selectPrefTab">
-                 <option value="dashboard">Inicio / Muro</option>
+                 <option value="dashboard">Inicio</option>
                  <option value="evaluaciones">Calendario de Pruebas</option>
                  <option value="calendario">Calendario Académico</option>
+                 <option value="actividades" id="opt-pref-actividades" class="d-none">Gestión de Actividades</option>
                  <option value="horarios" id="opt-pref-horarios">Visor de Horarios</option>
                  <option value="recursos">Reserva de Recursos</option>
                  <option value="planificacion">Planificación Curricular</option>
