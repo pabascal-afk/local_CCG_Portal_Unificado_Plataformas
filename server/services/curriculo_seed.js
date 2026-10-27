@@ -273,7 +273,7 @@ function inicializarCurriculo(db, callback, { forzarActualizacion = true } = {})
 /**
  * Procesa un archivo Excel/CSV cargado por UTP para actualizar o crear planes curriculares
  */
-function importarCurriculoExcel(db, buffer, anio, tipo = 'MINEDUC') {
+function importarCurriculoExcel(db, buffer, anio, tipo = 'MINEDUC', opciones = {}) {
   return new Promise((resolve, reject) => {
     try {
       const workbook = xlsx.read(buffer, { type: 'buffer' });
@@ -299,6 +299,8 @@ function importarCurriculoExcel(db, buffer, anio, tipo = 'MINEDUC') {
         const unidad = (r['Unidad'] || r['unidad'] || 'Unidad 1').toString().trim();
         const categoria = (r['Categoria'] || r['categoria'] || r['Priorizacion'] || 'Basal').toString().trim();
         const indicadoresRaw = (r['Indicadores'] || r['indicadores'] || '').toString().trim();
+        const suplantarRaw = (r['Suplantar_MINEDUC'] || r['suplantar_mineduc'] || r['Excluir_MINEDUC'] || r['excluir_mineduc'] || '').toString().trim().toUpperCase();
+        const suplantarColumna = (suplantarRaw === 'SI' || suplantarRaw === 'S' || suplantarRaw === '1' || suplantarRaw === 'TRUE');
 
         if (!nivel || !asignatura || !codigo || !descripcion) continue;
 
@@ -311,12 +313,16 @@ function importarCurriculoExcel(db, buffer, anio, tipo = 'MINEDUC') {
         if (!planesMap[key]) {
           const asigNorm = normalizarNombreAsignatura(asignatura);
           const habs = HABILIDADES_POR_ASIGNATURA[asigNorm] || HABILIDADES_POR_ASIGNATURA[asignatura] || [];
+          const excluirMineduc = suplantarColumna || (tipo === 'PROPIO' && opciones.excluir_oas_mineduc);
           planesMap[key] = {
             nivel,
             asignatura,
             habilidades: habs,
+            excluir_oas_mineduc: excluirMineduc ? 1 : 0,
             objetivos: []
           };
+        } else if (suplantarColumna) {
+          planesMap[key].excluir_oas_mineduc = 1;
         }
         planesMap[key].objetivos.push({ codigo, descripcion, eje, unidad, categoria, indicadores: indicadoresArr });
       }
@@ -344,6 +350,7 @@ function importarCurriculoExcel(db, buffer, anio, tipo = 'MINEDUC') {
 
           const item = planesMap[keys[index]];
           const habsJson = JSON.stringify(item.habilidades || []);
+          const excluyeVal = item.excluir_oas_mineduc ? 1 : 0;
           db.get(`SELECT id FROM curriculo_planes WHERE anio = ? AND nivel = ? AND asignatura = ? AND tipo = ?`,
             [anioNum, item.nivel, item.asignatura, tipo], (errFind, planRow) => {
               if (errFind) {
@@ -353,12 +360,12 @@ function importarCurriculoExcel(db, buffer, anio, tipo = 'MINEDUC') {
 
               if (planRow) {
                 const planId = planRow.id;
-                db.run(`UPDATE curriculo_planes SET habilidades_sugeridas = ? WHERE id = ?`, [habsJson, planId]);
+                db.run(`UPDATE curriculo_planes SET habilidades_sugeridas = ?, excluir_oas_mineduc = ?, activo = 1 WHERE id = ?`, [habsJson, excluyeVal, planId]);
                 insertarOAs(planId, item.objetivos, () => procesarPlan(index + 1));
               } else {
-                db.run(`INSERT INTO curriculo_planes (anio, tipo, nivel, asignatura, descripcion, habilidades_sugeridas, activo)
-                        VALUES (?, ?, ?, ?, ?, ?, 1)`,
-                  [anioNum, tipo, item.nivel, item.asignatura, `Plan ${tipo} ${item.asignatura} - ${item.nivel}`, habsJson],
+                db.run(`INSERT INTO curriculo_planes (anio, tipo, nivel, asignatura, descripcion, habilidades_sugeridas, excluir_oas_mineduc, activo)
+                        VALUES (?, ?, ?, ?, ?, ?, ?, 1)`,
+                  [anioNum, tipo, item.nivel, item.asignatura, `Plan ${tipo} ${item.asignatura} - ${item.nivel}`, habsJson, excluyeVal],
                   function (errIns) {
                     if (errIns) {
                       db.run("ROLLBACK");

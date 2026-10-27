@@ -363,6 +363,7 @@ db.serialize(() => {
     db.run("ALTER TABLE libro_registros ADD COLUMN profesor_email TEXT", () => {});
     db.run("ALTER TABLE libro_registros ADD COLUMN usuario_id INTEGER", () => {});
     db.run("ALTER TABLE curriculo_planes ADD COLUMN habilidades_sugeridas TEXT DEFAULT '[]'", () => {});
+    db.run("ALTER TABLE curriculo_planes ADD COLUMN excluir_oas_mineduc INTEGER DEFAULT 0", () => {});
     db.run("ALTER TABLE curriculo_objetivos ADD COLUMN unidad_sugerida TEXT DEFAULT 'Unidad 1'", () => {});
     db.run("ALTER TABLE planificaciones ADD COLUMN cursos_vinculados TEXT DEFAULT '[]'", () => {});
     db.run("ALTER TABLE planificaciones ADD COLUMN solicitud_eliminacion INTEGER DEFAULT 0", () => {});

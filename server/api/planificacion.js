@@ -108,8 +108,16 @@ router.get('/cobertura/colegio', async (req, res) => {
 
 // 4. Catálogo de Planes Curriculares
 router.get('/curriculo/planes', (req, res) => {
-    const anio = parseInt(req.query.anio) || 2026;
-    db.all(`SELECT * FROM curriculo_planes WHERE anio = ? AND activo = 1 ORDER BY nivel ASC, asignatura ASC`, [anio], (err, rows) => {
+    const anio = parseInt(req.query.anio || req.query.anno) || 2026;
+    const sql = `
+        SELECT cp.*, COUNT(co.id) as cantidad_oas
+        FROM curriculo_planes cp
+        LEFT JOIN curriculo_objetivos co ON co.plan_id = cp.id AND co.activo = 1
+        WHERE cp.anio = ? AND cp.activo = 1
+        GROUP BY cp.id
+        ORDER BY (CASE WHEN cp.tipo = 'PROPIO' THEN 0 ELSE 1 END) ASC, cp.nivel ASC, cp.asignatura ASC
+    `;
+    db.all(sql, [anio], (err, rows) => {
         if (err) return res.status(500).json({ error: err.message });
         res.json(rows || []);
     });
@@ -117,12 +125,12 @@ router.get('/curriculo/planes', (req, res) => {
 
 // 5. Búsqueda de Objetivos de Aprendizaje (OAs)
 router.get('/curriculo/objetivos', (req, res) => {
-    const { plan_id, nivel, asignatura, anio = 2026, q = '', unidad } = req.query;
+    const { plan_id, nivel, asignatura, anio = 2026, q = '', unidad, tipo_plan, solo_mineduc } = req.query;
     let sql = `
-        SELECT o.*, cp.nivel, cp.asignatura, cp.tipo as tipo_plan
+        SELECT o.*, cp.nivel, cp.asignatura, cp.tipo as tipo_plan, cp.excluir_oas_mineduc
         FROM curriculo_objetivos o
         JOIN curriculo_planes cp ON cp.id = o.plan_id
-        WHERE cp.anio = ? AND o.activo = 1
+        WHERE (cp.anio = ? OR cp.anio = 2026) AND o.activo = 1
     `;
     const params = [parseInt(anio) || 2026];
 
@@ -130,13 +138,17 @@ router.get('/curriculo/objetivos', (req, res) => {
         sql += ` AND o.plan_id = ?`;
         params.push(plan_id);
     }
+    if (tipo_plan) {
+        sql += ` AND cp.tipo = ?`;
+        params.push(tipo_plan);
+    }
     if (nivel) {
-        sql += ` AND cp.nivel = ?`;
-        params.push(nivel);
+        sql += ` AND (cp.nivel = ? OR cp.nivel LIKE ? OR ? LIKE '%' || cp.nivel || '%')`;
+        params.push(nivel, `%${nivel}%`, nivel);
     }
     if (asignatura) {
-        sql += ` AND (cp.asignatura = ? OR LOWER(cp.asignatura) LIKE '%' || LOWER(?) || '%')`;
-        params.push(asignatura, asignatura);
+        sql += ` AND (cp.asignatura = ? OR LOWER(cp.asignatura) LIKE '%' || LOWER(?) || '%' OR LOWER(?) LIKE '%' || LOWER(cp.asignatura) || '%')`;
+        params.push(asignatura, asignatura, asignatura);
     }
     if (unidad && unidad !== 'todas') {
         sql += ` AND (o.unidad_sugerida = ? OR o.unidad_sugerida LIKE ?)`;
@@ -146,6 +158,29 @@ router.get('/curriculo/objetivos', (req, res) => {
         sql += ` AND (LOWER(o.codigo) LIKE ? OR LOWER(o.descripcion) LIKE ? OR LOWER(o.eje_unidad) LIKE ?)`;
         const qParam = `%${q.trim().toLowerCase()}%`;
         params.push(qParam, qParam, qParam);
+    }
+
+    // Si NO se pide explícitamente ver solo MINEDUC ni se filtró por un plan_id específico,
+    // excluir los OAs de MINEDUC para aquellas asignaturas y niveles que tengan un Plan Propio con excluir_oas_mineduc = 1
+    if (!plan_id && tipo_plan !== 'MINEDUC' && !solo_mineduc) {
+        sql += `
+            AND NOT (
+                cp.tipo = 'MINEDUC' AND EXISTS (
+                    SELECT 1 FROM curriculo_planes cp_propio
+                    WHERE (cp_propio.anio = cp.anio OR cp_propio.anio = 2026)
+                      AND cp_propio.tipo = 'PROPIO'
+                      AND cp_propio.excluir_oas_mineduc = 1
+                      AND cp_propio.activo = 1
+                      AND (cp_propio.nivel = cp.nivel OR cp_propio.nivel = 'Todos los niveles' OR cp.nivel LIKE '%' || cp_propio.nivel || '%')
+                      AND (
+                        cp_propio.asignatura = cp.asignatura 
+                        OR LOWER(cp_propio.asignatura) = LOWER(cp.asignatura)
+                        OR LOWER(cp.asignatura) LIKE '%' || LOWER(cp_propio.asignatura) || '%'
+                        OR LOWER(cp_propio.asignatura) LIKE '%' || LOWER(cp.asignatura) || '%'
+                      )
+                )
+            )
+        `;
     }
 
     sql += ` ORDER BY o.orden ASC, o.codigo ASC`;
@@ -192,44 +227,152 @@ router.post('/curriculo/importar', upload.single('archivo'), async (req, res) =>
     try {
         const anio = req.body.anio || 2026;
         const tipo = req.body.tipo || 'MINEDUC';
-        const resultado = await curriculoSeed.importarCurriculoExcel(db, req.file.buffer, anio, tipo);
+        const excluir_oas_mineduc = (req.body.excluir_oas_mineduc === '1' || req.body.excluir_oas_mineduc === 'true' || req.body.excluir_oas_mineduc === true);
+        const resultado = await curriculoSeed.importarCurriculoExcel(db, req.file.buffer, anio, tipo, { excluir_oas_mineduc });
         res.json(resultado);
     } catch (e) {
         res.status(500).json({ error: e.message });
     }
 });
 
-// 7. Crear asignatura o plan propio del colegio
-router.post('/curriculo/propio', (req, res) => {
+// 7. Crear o actualizar asignatura o plan propio del colegio
+router.post('/curriculo/propio', async (req, res) => {
     if (!req.esAdminOCoordinacion) {
         return res.status(403).json({ error: 'Acceso denegado.' });
     }
-    const { anio = 2026, nivel, asignatura, descripcion, objetivos } = req.body;
+    const { anio = 2026, nivel, asignatura, descripcion, objetivos, excluir_oas_mineduc = 1 } = req.body;
     if (!nivel || !asignatura) {
         return res.status(400).json({ error: 'Nivel y Asignatura son obligatorios.' });
     }
 
-    db.run(`
-        INSERT INTO curriculo_planes (anio, tipo, nivel, asignatura, descripcion, activo)
-        VALUES (?, 'PROPIO', ?, ?, ?, 1)
-    `, [parseInt(anio) || 2026, nivel, asignatura.trim().toUpperCase(), descripcion || `Plan Propio Institucional ${asignatura} - ${nivel}`],
-    function (err) {
-        if (err) return res.status(500).json({ error: err.message });
-        const planId = this.lastID;
+    const anioNum = parseInt(anio) || 2026;
+    const asigUpper = asignatura.trim().toUpperCase();
+    const excluyeVal = (excluir_oas_mineduc === false || excluir_oas_mineduc === 0 || excluir_oas_mineduc === '0') ? 0 : 1;
 
-        // Si se enviaron OAs iniciales
-        if (Array.isArray(objetivos) && objetivos.length > 0) {
-            const stmt = db.prepare(`
-                INSERT INTO curriculo_objetivos (plan_id, tipo_objetivo, eje_unidad, codigo, descripcion, categoria, activo)
-                VALUES (?, 'OA', ?, ?, ?, ?, 1)
-            `);
-            objetivos.forEach(o => {
-                stmt.run([planId, o.eje || 'General', o.codigo, o.descripcion, o.categoria || 'Basal']);
+    // Soportar creación individual o multinivel
+    let nivelesArr = [];
+    if (Array.isArray(nivel)) {
+        nivelesArr = nivel;
+    } else {
+        const nNorm = nivel.toString().trim();
+        if (nNorm.toLowerCase().includes('todos los niveles') || nNorm.toLowerCase() === 'todos') {
+            nivelesArr = ['1° Básico', '2° Básico', '3° Básico', '4° Básico', '5° Básico', '6° Básico', '7° Básico', '8° Básico', 'I° Medio', 'II° Medio', 'III° Medio', 'IV° Medio'];
+        } else if (nNorm.toLowerCase().includes('basica') || nNorm.includes('1° a 8°')) {
+            nivelesArr = ['1° Básico', '2° Básico', '3° Básico', '4° Básico', '5° Básico', '6° Básico', '7° Básico', '8° Básico'];
+        } else if (nNorm.toLowerCase().includes('media') || nNorm.includes('I° a IV°')) {
+            nivelesArr = ['I° Medio', 'II° Medio', 'III° Medio', 'IV° Medio'];
+        } else if (nNorm.includes(',')) {
+            nivelesArr = nNorm.split(',').map(s => s.trim()).filter(Boolean);
+        } else {
+            nivelesArr = [nNorm];
+        }
+    }
+
+    try {
+        const planesCreados = [];
+        for (const niv of nivelesArr) {
+            const desc = descripcion || `Plan Propio Institucional ${asigUpper} - ${niv}`;
+            const planId = await new Promise((resolve, reject) => {
+                db.get(`SELECT id FROM curriculo_planes WHERE anio = ? AND tipo = 'PROPIO' AND nivel = ? AND asignatura = ?`,
+                    [anioNum, niv, asigUpper], (err, row) => {
+                        if (err) return reject(err);
+                        if (row) {
+                            db.run(`UPDATE curriculo_planes SET descripcion = ?, excluir_oas_mineduc = ?, activo = 1, actualizado_en = CURRENT_TIMESTAMP WHERE id = ?`,
+                                [desc, excluyeVal, row.id], (errUpd) => {
+                                    if (errUpd) return reject(errUpd);
+                                    resolve(row.id);
+                                });
+                        } else {
+                            db.run(`INSERT INTO curriculo_planes (anio, tipo, nivel, asignatura, descripcion, excluir_oas_mineduc, activo)
+                                    VALUES (?, 'PROPIO', ?, ?, ?, ?, 1)`,
+                                [anioNum, niv, asigUpper, desc, excluyeVal],
+                                function(errIns) {
+                                    if (errIns) return reject(errIns);
+                                    resolve(this.lastID);
+                                });
+                        }
+                    });
             });
-            stmt.finalize();
+
+            // Si se enviaron objetivos iniciales
+            if (Array.isArray(objetivos) && objetivos.length > 0) {
+                for (const o of objetivos) {
+                    await new Promise((resO, rejO) => {
+                        db.run(`INSERT INTO curriculo_objetivos (plan_id, tipo_objetivo, eje_unidad, unidad_sugerida, codigo, descripcion, categoria, activo)
+                                VALUES (?, 'OA', ?, ?, ?, ?, ?, 1)`,
+                            [planId, o.eje || 'General', o.unidad || 'Unidad 1', o.codigo, o.descripcion, o.categoria || 'Basal'],
+                            (errO) => errO ? rejO(errO) : resO());
+                    });
+                }
+            }
+            planesCreados.push({ id: planId, nivel: niv });
         }
 
-        res.json({ id: planId, mensaje: `Plan propio creado exitosamente.` });
+        res.json({
+            id: planesCreados[0] ? planesCreados[0].id : null,
+            mensaje: `Plan propio guardado exitosamente para ${planesCreados.length} nivel(es). ${excluyeVal ? '(Configurado para suplantar OAs estándar del MINEDUC)' : ''}`,
+            planes: planesCreados
+        });
+    } catch(e) {
+        res.status(500).json({ error: e.message });
+    }
+});
+
+// 7b. Alternar suplantación de OAs MINEDUC en un plan propio
+router.patch('/curriculo/planes/:id/suplantar', (req, res) => {
+    if (!req.esAdminOCoordinacion) {
+        return res.status(403).json({ error: 'Acceso denegado.' });
+    }
+    const { excluir_oas_mineduc } = req.body;
+    const val = (excluir_oas_mineduc === true || excluir_oas_mineduc === 1 || excluir_oas_mineduc === '1') ? 1 : 0;
+    db.run(`UPDATE curriculo_planes SET excluir_oas_mineduc = ?, actualizado_en = CURRENT_TIMESTAMP WHERE id = ?`, [val, req.params.id], function(err) {
+        if (err) return res.status(500).json({ error: err.message });
+        res.json({ success: true, excluir_oas_mineduc: val, mensaje: val ? 'Plan propio configurado para suplantar OAs del MINEDUC.' : 'Plan propio configurado sin suplantar MINEDUC.' });
+    });
+});
+
+// 7c. Eliminar un plan propio y sus OAs
+router.delete('/curriculo/planes/:id', (req, res) => {
+    if (!req.esAdminOCoordinacion) {
+        return res.status(403).json({ error: 'Acceso denegado.' });
+    }
+    db.run(`DELETE FROM curriculo_objetivos WHERE plan_id = ?`, [req.params.id], (err) => {
+        if (err) return res.status(500).json({ error: err.message });
+        db.run(`DELETE FROM curriculo_planes WHERE id = ? AND tipo = 'PROPIO'`, [req.params.id], function(err2) {
+            if (err2) return res.status(500).json({ error: err2.message });
+            res.json({ success: true, mensaje: 'Plan propio eliminado correctamente.' });
+        });
+    });
+});
+
+// 7d. Agregar OA a un plan propio
+router.post('/curriculo/planes/:id/objetivos', (req, res) => {
+    if (!req.esAdminOCoordinacion) {
+        return res.status(403).json({ error: 'Acceso denegado.' });
+    }
+    const { codigo, descripcion, eje = 'General', unidad = 'Unidad 1', categoria = 'Basal', indicadores = [] } = req.body;
+    if (!codigo || !descripcion) {
+        return res.status(400).json({ error: 'Código y Descripción son obligatorios.' });
+    }
+    const indArr = Array.isArray(indicadores) ? indicadores : (typeof indicadores === 'string' ? indicadores.split(';').map(x => x.trim()).filter(Boolean) : []);
+    db.run(`
+        INSERT INTO curriculo_objetivos (plan_id, tipo_objetivo, eje_unidad, unidad_sugerida, codigo, descripcion, categoria, indicadores_sugeridos, activo)
+        VALUES (?, 'OA', ?, ?, ?, ?, ?, ?, 1)
+    `, [req.params.id, eje, unidad, codigo.trim().toUpperCase(), descripcion.trim(), categoria, JSON.stringify(indArr)],
+    function(err) {
+        if (err) return res.status(500).json({ error: err.message });
+        res.json({ id: this.lastID, mensaje: 'Objetivo de aprendizaje agregado con éxito al plan propio.' });
+    });
+});
+
+// 7e. Eliminar OA de un plan
+router.delete('/curriculo/objetivos/:id', (req, res) => {
+    if (!req.esAdminOCoordinacion) {
+        return res.status(403).json({ error: 'Acceso denegado.' });
+    }
+    db.run(`DELETE FROM curriculo_objetivos WHERE id = ?`, [req.params.id], function(err) {
+        if (err) return res.status(500).json({ error: err.message });
+        res.json({ success: true, mensaje: 'Objetivo de aprendizaje eliminado.' });
     });
 });
 

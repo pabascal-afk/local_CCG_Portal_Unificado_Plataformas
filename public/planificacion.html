@@ -593,14 +593,14 @@
       <div class="d-flex justify-content-between align-items-center mb-3 flex-wrap gap-2">
         <div>
           <h6 class="fw-bold text-dark mb-0"><i class="bi bi-collection text-primary me-1"></i> Catálogo de Planes y Programas Vigentes</h6>
-          <p class="small text-muted mb-0">Consulta los Objetivos de Aprendizaje oficiales y gestiona planes propios del establecimiento.</p>
+          <p class="small text-muted mb-0">Consulta los Objetivos de Aprendizaje oficiales y gestiona planes propios del establecimiento con suplantación de OAs.</p>
         </div>
         <div class="d-flex gap-2" id="adminCurriculoBtns">
           <a href="/api/planificacion/curriculo/plantilla" class="btn btn-sm btn-outline-secondary" title="Descargar formato Excel de ejemplo para planes propios y currículo">
             <i class="bi bi-file-earmark-excel me-1"></i> Formato XLS
           </a>
           <button class="btn btn-sm btn-outline-success" onclick="abrirModalImportarCurriculo()">
-            <i class="bi bi-file-earmark-spreadsheet me-1"></i> Actualizar MINEDUC (Excel)
+            <i class="bi bi-file-earmark-spreadsheet me-1"></i> Actualizar Curriculo (Excel)
           </button>
           <button class="btn btn-sm btn-outline-primary" onclick="abrirModalPlanPropio()">
             <i class="bi bi-plus-circle me-1"></i> Crear Plan Propio
@@ -608,9 +608,12 @@
         </div>
       </div>
 
+      <!-- Contenedor dinámico de Planes Propios Institucionales -->
+      <div id="contenedorPlanesPropios" class="mb-3"></div>
+
       <div class="card-custom p-3 mb-4">
         <div class="row g-3">
-          <div class="col-md-4">
+          <div class="col-md-3">
             <label class="form-label text-muted small mb-1">Nivel Educativo</label>
             <select id="filtroNivelCurriculo" class="form-select form-select-sm" onchange="cargarObjetivosCurriculo()">
               <option value="">Todos los niveles</option>
@@ -650,6 +653,14 @@
             </select>
           </div>
           <div class="col-md-2">
+            <label class="form-label text-muted small mb-1">Tipo de Plan</label>
+            <select id="filtroTipoCurriculo" class="form-select form-select-sm" onchange="cargarObjetivosCurriculo()">
+              <option value="">OAs Vigentes</option>
+              <option value="PROPIO">Planes Propios</option>
+              <option value="MINEDUC">Oficial MINEDUC</option>
+            </select>
+          </div>
+          <div class="col-md-2">
             <label class="form-label text-muted small mb-1">Unidad</label>
             <select id="filtroUnidadCurriculo" class="form-select form-select-sm" onchange="cargarObjetivosCurriculo()">
               <option value="">Todas</option>
@@ -659,9 +670,9 @@
               <option value="Unidad 4">Unidad 4</option>
             </select>
           </div>
-          <div class="col-md-3">
+          <div class="col-md-2">
             <label class="form-label text-muted small mb-1">Búsqueda en OAs</label>
-            <input type="text" id="filtroTextoCurriculo" class="form-control form-control-sm" placeholder="Buscar por código o palabra clave..." oninput="cargarObjetivosCurriculo()">
+            <input type="text" id="filtroTextoCurriculo" class="form-control form-control-sm" placeholder="Código o texto..." oninput="cargarObjetivosCurriculo()">
           </div>
         </div>
       </div>
@@ -672,9 +683,10 @@
             <thead class="table-light text-secondary" style="font-size: 0.78rem; text-transform: uppercase;">
               <tr>
                 <th style="width: 100px;">Nivel</th>
-                <th style="width: 160px;">Asignatura</th>
+                <th style="width: 150px;">Asignatura</th>
+                <th style="width: 130px;">Programa / Tipo</th>
                 <th style="width: 95px;">Unidad</th>
-                <th style="width: 130px;">Eje</th>
+                <th style="width: 120px;">Eje</th>
                 <th style="width: 85px;">Código</th>
                 <th style="width: 105px;">Priorización</th>
                 <th>Descripción Oficial e Indicadores Sugeridos</th>
@@ -909,10 +921,11 @@
     <div class="modal-dialog modal-lg modal-dialog-scrollable">
       <div class="modal-content">
         <div class="modal-header bg-primary text-white">
-          <h6 class="modal-title fw-bold"><i class="bi bi-check2-square me-2"></i>Seleccionar Objetivos de Aprendizaje (MINEDUC)</h6>
+          <h6 class="modal-title fw-bold"><i class="bi bi-check2-square me-2"></i><span id="tituloModalSelectorOAs">Seleccionar Objetivos de Aprendizaje (MINEDUC)</span></h6>
           <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
         </div>
         <div class="modal-body p-3">
+          <div id="bannerPlanPropioModalOA"></div>
           <div class="row g-2 mb-3">
             <div class="col-md-4">
               <select id="filtroUnidadModalOA" class="form-select form-select-sm" onchange="renderizarModalOAs()">
@@ -2195,29 +2208,228 @@
     // -------------------------------------------------------------
     // 4. CATÁLOGO MINEDUC & PLANES PROPIOS
     // -------------------------------------------------------------
+    async function cargarPlanesPropiosCatalogo() {
+      const cont = document.getElementById('contenedorPlanesPropios');
+      if (!cont) return;
+      try {
+        const res = await fetch(`/api/planificacion/curriculo/planes?anio=${anioActivo}&anno=${anioActivo}`);
+        if (!res.ok) return;
+        const planes = await res.json();
+        const propios = planes.filter(p => p.tipo === 'PROPIO');
+        if (propios.length === 0) {
+          cont.innerHTML = `
+            <div class="card p-3 border-0 bg-light rounded-3 mb-3">
+              <div class="d-flex align-items-center justify-content-between flex-wrap gap-2">
+                <div>
+                  <span class="fw-bold text-dark"><i class="bi bi-shield-check text-muted me-1"></i>Planes Propios Institucionales del Colegio</span>
+                  <p class="small text-muted mb-0">No se han registrado planes propios para este año escolar. Si el establecimiento imparte asignaturas con programas propios (ej. Inglés propio), puedes crearlos y configurarlos para suplantar el currículo oficial del MINEDUC.</p>
+                </div>
+                <button class="btn btn-sm btn-outline-primary" onclick="abrirModalPlanPropio()"><i class="bi bi-plus-circle me-1"></i>Crear Plan Propio</button>
+              </div>
+            </div>
+          `;
+          return;
+        }
+
+        cont.innerHTML = `
+          <div class="card border border-primary-subtle shadow-sm p-3 mb-3 bg-white rounded-3">
+            <div class="d-flex align-items-center justify-content-between flex-wrap gap-2 mb-2 pb-2 border-bottom">
+              <div class="d-flex align-items-center gap-2">
+                <span class="fs-5 text-primary"><i class="bi bi-award"></i></span>
+                <div>
+                  <h6 class="fw-bold text-dark mb-0">Planes Propios Institucionales Configurados (${propios.length})</h6>
+                  <span class="small text-muted">Los planes marcados como "Suplanta MINEDUC" reemplazan los OAs oficiales del MINEDUC en las planificaciones docentes.</span>
+                </div>
+              </div>
+              <button class="btn btn-xs btn-outline-primary" onclick="abrirModalPlanPropio()"><i class="bi bi-plus-lg me-1"></i>Nuevo Plan Propio</button>
+            </div>
+            <div class="row g-2">
+              ${propios.map(p => `
+                <div class="col-md-6 col-lg-4">
+                  <div class="p-2 px-3 rounded border ${p.excluir_oas_mineduc ? 'border-success bg-success-subtle bg-opacity-25' : 'bg-light'} d-flex flex-column justify-content-between" style="min-height: 110px;">
+                    <div>
+                      <div class="d-flex justify-content-between align-items-start gap-1 mb-1">
+                        <span class="fw-bold text-dark text-truncate" title="${escapeHtml(p.asignatura)}">${escapeHtml(p.asignatura)}</span>
+                        <span class="badge bg-light text-dark border small">${escapeHtml(p.nivel)}</span>
+                      </div>
+                      <div class="small text-muted text-truncate mb-2" style="font-size:0.75rem;">${escapeHtml(p.descripcion || '')}</div>
+                    </div>
+                    <div class="d-flex align-items-center justify-content-between pt-1 border-top border-secondary-subtle">
+                      <div class="d-flex align-items-center gap-1">
+                        <span class="badge ${p.excluir_oas_mineduc ? 'bg-success text-white' : 'bg-secondary text-white'}" style="font-size:0.68rem;" title="${p.excluir_oas_mineduc ? 'Suplanta OAs oficiales del MINEDUC' : 'Complementa al MINEDUC'}">
+                          <i class="bi ${p.excluir_oas_mineduc ? 'bi-shield-check' : 'bi-layers'} me-1"></i>${p.excluir_oas_mineduc ? 'Suplanta MINEDUC' : 'Complementario'}
+                        </span>
+                        <span class="badge bg-light text-muted border" style="font-size:0.68rem;">${p.cantidad_oas || 0} OAs</span>
+                      </div>
+                      <div class="btn-group btn-group-sm">
+                        <button type="button" class="btn btn-xs btn-outline-secondary" onclick="toggleSuplantarPlanPropio(${p.id}, ${p.excluir_oas_mineduc ? 0 : 1})" title="${p.excluir_oas_mineduc ? 'Cambiar a no suplantar' : 'Activar suplantación de OAs MINEDUC'}">
+                          <i class="bi bi-arrow-repeat"></i>
+                        </button>
+                        <button type="button" class="btn btn-xs btn-outline-primary" onclick="abrirModalAgregarOAAlPlan(${p.id}, '${escapeHtml(p.asignatura)}', '${escapeHtml(p.nivel)}')" title="Agregar OA manual a este plan propio">
+                          <i class="bi bi-plus-lg"></i>
+                        </button>
+                        <button type="button" class="btn btn-xs btn-outline-danger" onclick="eliminarPlanPropio(${p.id}, '${escapeHtml(p.asignatura)} - ${escapeHtml(p.nivel)}')" title="Eliminar este plan propio">
+                          <i class="bi bi-trash"></i>
+                        </button>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              `).join('')}
+            </div>
+          </div>
+        `;
+      } catch(e) {
+        console.error("Error al cargar planes propios:", e);
+      }
+    }
+
+    async function toggleSuplantarPlanPropio(planId, nuevoValor) {
+      try {
+        const res = await fetch(`/api/planificacion/curriculo/planes/${planId}/suplantar`, {
+          method: 'PATCH',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ excluir_oas_mineduc: nuevoValor })
+        });
+        const data = await res.json();
+        if (!res.ok) throw new Error(data.error || 'Error al cambiar configuración');
+        Swal.fire({
+          toast: true,
+          position: 'top-end',
+          icon: 'success',
+          title: data.mensaje || 'Configuración actualizada',
+          showConfirmButton: false,
+          timer: 2500
+        });
+        cargarPlanesPropiosCatalogo();
+        cargarObjetivosCurriculo();
+      } catch(e) {
+        Swal.fire('Error', e.message, 'error');
+      }
+    }
+
+    async function eliminarPlanPropio(planId, nombrePlan) {
+      const result = await Swal.fire({
+        title: `¿Eliminar Plan Propio?`,
+        html: `¿Estás seguro de eliminar el plan propio <strong>${nombrePlan}</strong> y sus Objetivos de Aprendizaje asociados?`,
+        icon: 'warning',
+        showCancelButton: true,
+        confirmButtonColor: '#dc2626',
+        cancelButtonColor: '#64748b',
+        confirmButtonText: 'Sí, eliminar',
+        cancelButtonText: 'Cancelar'
+      });
+      if (result.isConfirmed) {
+        try {
+          const res = await fetch(`/api/planificacion/curriculo/planes/${planId}`, { method: 'DELETE' });
+          const data = await res.json();
+          if (!res.ok) throw new Error(data.error);
+          Swal.fire('Eliminado', data.mensaje, 'success');
+          cargarPlanesPropiosCatalogo();
+          cargarObjetivosCurriculo();
+        } catch(e) {
+          Swal.fire('Error', e.message, 'error');
+        }
+      }
+    }
+
+    function abrirModalAgregarOAAlPlan(planId, asignatura, nivel) {
+      Swal.fire({
+        title: `Agregar OA a Plan Propio`,
+        html: `
+          <div class="text-start small">
+            <p class="text-muted mb-2">Asignando OA para: <strong>${asignatura} (${nivel})</strong></p>
+            <label class="fw-semibold mb-1">Código del OA *</label>
+            <input type="text" id="swalOACodigo" class="form-control form-control-sm mb-2" placeholder="Ej: OA 01 o OA 1">
+            <label class="fw-semibold mb-1">Descripción del Objetivo *</label>
+            <textarea id="swalOADesc" class="form-control form-control-sm mb-2" rows="3" placeholder="Descripción detallada del aprendizaje esperado..."></textarea>
+            <div class="row g-2 mb-2">
+              <div class="col-6">
+                <label class="fw-semibold mb-1">Eje Temático</label>
+                <input type="text" id="swalOAEje" class="form-control form-control-sm" placeholder="Ej: Reading, Speaking, General">
+              </div>
+              <div class="col-6">
+                <label class="fw-semibold mb-1">Priorización</label>
+                <select id="swalOACat" class="form-select form-select-sm">
+                  <option value="Basal">Basal (Imprescindible)</option>
+                  <option value="Complementario">Complementario</option>
+                </select>
+              </div>
+            </div>
+            <label class="fw-semibold mb-1">Unidad Sugerida</label>
+            <input type="text" id="swalOAUnidad" class="form-control form-control-sm" placeholder="Ej: Unidad 1, Transversal, etc.">
+          </div>
+        `,
+        showCancelButton: true,
+        confirmButtonText: 'Guardar OA',
+        cancelButtonText: 'Cancelar',
+        preConfirm: () => {
+          const codigo = document.getElementById('swalOACodigo').value.trim();
+          const descripcion = document.getElementById('swalOADesc').value.trim();
+          const eje = document.getElementById('swalOAEje').value.trim() || 'General';
+          const categoria = document.getElementById('swalOACat').value;
+          const unidad = document.getElementById('swalOAUnidad').value.trim() || 'Unidad 1';
+          if (!codigo || !descripcion) {
+            Swal.showValidationMessage('El código y la descripción son obligatorios.');
+            return false;
+          }
+          return { codigo, descripcion, eje, categoria, unidad };
+        }
+      }).then(async r => {
+        if (r.isConfirmed && r.value) {
+          try {
+            const res = await fetch(`/api/planificacion/curriculo/planes/${planId}/objetivos`, {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify(r.value)
+            });
+            const data = await res.json();
+            if (!res.ok) throw new Error(data.error);
+            Swal.fire('Guardado', data.mensaje, 'success');
+            cargarPlanesPropiosCatalogo();
+            cargarObjetivosCurriculo();
+          } catch(e) {
+            Swal.fire('Error', e.message, 'error');
+          }
+        }
+      });
+    }
+
     async function cargarObjetivosCurriculo() {
       const nivel = document.getElementById('filtroNivelCurriculo').value;
       const asignatura = document.getElementById('filtroAsigCurriculo').value;
       const unidad = document.getElementById('filtroUnidadCurriculo') ? document.getElementById('filtroUnidadCurriculo').value : '';
+      const tipoPlan = document.getElementById('filtroTipoCurriculo') ? document.getElementById('filtroTipoCurriculo').value : '';
       const q = document.getElementById('filtroTextoCurriculo').value;
 
+      cargarPlanesPropiosCatalogo();
+
       try {
-        const res = await fetch(`/api/planificacion/curriculo/objetivos?anio=${anioActivo}&nivel=${encodeURIComponent(nivel)}&asignatura=${encodeURIComponent(asignatura)}&unidad=${encodeURIComponent(unidad)}&q=${encodeURIComponent(q)}`);
+        const res = await fetch(`/api/planificacion/curriculo/objetivos?anio=${anioActivo}&nivel=${encodeURIComponent(nivel)}&asignatura=${encodeURIComponent(asignatura)}&unidad=${encodeURIComponent(unidad)}&tipo_plan=${encodeURIComponent(tipoPlan)}&q=${encodeURIComponent(q)}`);
         if (!res.ok) return;
         const oas = await res.json();
         const tbody = document.getElementById('tablaCurriculoBody');
 
         if (oas.length === 0) {
-          tbody.innerHTML = '<tr><td colspan="7" class="text-center text-muted py-4">No se encontraron Objetivos de Aprendizaje con los filtros aplicados.</td></tr>';
+          tbody.innerHTML = '<tr><td colspan="8" class="text-center text-muted py-4">No se encontraron Objetivos de Aprendizaje con los filtros aplicados.</td></tr>';
           return;
         }
 
         tbody.innerHTML = oas.map(o => {
           const indics = Array.isArray(o.indicadores_sugeridos) ? o.indicadores_sugeridos : [];
+          const esPropio = o.tipo_plan === 'PROPIO';
           return `
             <tr>
               <td><span class="badge bg-light text-dark border">${o.nivel}</span></td>
               <td class="small fw-semibold">${o.asignatura}</td>
+              <td>
+                <span class="badge ${esPropio ? 'text-white' : 'bg-primary'}" style="${esPropio ? 'background:#7c3aed;' : ''}">${esPropio ? 'Plan Propio' : 'MINEDUC'}</span>
+                ${esPropio && o.excluir_oas_mineduc ? `
+                  <span class="badge bg-success-subtle text-success border border-success-subtle d-block mt-1" style="font-size:0.68rem;" title="Este plan propio suplanta los OAs oficiales del MINEDUC">
+                    <i class="bi bi-shield-check"></i> Suplanta MINEDUC
+                  </span>
+                ` : ''}
+              </td>
               <td><span class="badge bg-secondary-subtle text-secondary border">${o.unidad_sugerida || 'Unidad 1'}</span></td>
               <td class="small text-muted">${o.eje_unidad || 'General'}</td>
               <td class="fw-bold font-monospace text-primary">${o.codigo}</td>
@@ -2257,9 +2469,15 @@
 
         // Render datos de cabecera
         document.getElementById('editorTituloPlan').innerText = planActivo.titulo;
+        const badgePlanPropioHeader = (planActivo.plan_curricular && planActivo.plan_curricular.tipo === 'PROPIO')
+          ? `<span class="badge ${planActivo.plan_curricular.excluir_oas_mineduc ? 'bg-warning text-dark' : 'bg-info text-dark'} ms-2" title="${planActivo.plan_curricular.excluir_oas_mineduc ? 'Plan Propio Institucional Exclusivo (Suplanta MINEDUC)' : 'Plan Propio Institucional Complementario'}">
+              <i class="bi bi-shield-check me-1"></i>${escapeHtml(planActivo.plan_curricular.descripcion || planActivo.plan_curricular.nombre || 'Plan Propio')}${planActivo.plan_curricular.excluir_oas_mineduc ? ' (Suplanta MINEDUC)' : ''}
+            </span>`
+          : '';
         document.getElementById('editorSubtituloPlan').innerHTML = `
           <span>${planActivo.curso} • ${planActivo.asignatura} • Año Escolar ${planActivo.anio}</span>
           ${(planActivo.cursos_vinculados && planActivo.cursos_vinculados.length > 0) ? `<span class="badge badge-vinculado ms-2"><i class="bi bi-people me-1"></i>+${planActivo.cursos_vinculados.length} vinculado(s)</span>` : ''}
+          ${badgePlanPropioHeader}
         `;
         
         const bEstado = document.getElementById('editorBadgeEstado');
@@ -3574,6 +3792,41 @@
         selUnidad.value = tieneOAsUnidad ? nombreUnidadSugerida : 'todas';
       }
 
+      // Banner y título si es Plan Propio (con o sin suplantación de MINEDUC)
+      const pc = planActivo.plan_curricular;
+      const bannerEl = document.getElementById('bannerPlanPropioModalOA');
+      const tituloEl = document.getElementById('tituloModalSelectorOAs');
+      if (pc && pc.tipo === 'PROPIO') {
+        const nombrePlan = pc.descripcion || pc.nombre || 'Plan Propio';
+        if (tituloEl) tituloEl.textContent = `Seleccionar Objetivos (${nombrePlan})`;
+        if (bannerEl) {
+          if (pc.excluir_oas_mineduc) {
+            bannerEl.innerHTML = `
+              <div class="alert alert-warning border-0 shadow-sm py-2 px-3 mb-3 d-flex align-items-center justify-content-between">
+                <div>
+                  <i class="bi bi-shield-lock-fill text-warning fs-5 me-2 align-middle"></i>
+                  <strong>Plan Propio Exclusivo Vigente:</strong> Los Objetivos de Aprendizaje estándar del MINEDUC están <u>suplantados</u> por el Plan Propio institucional <em>${escapeHtml(nombrePlan)}</em>.
+                </div>
+                <span class="badge bg-warning text-dark px-2 py-1"><i class="bi bi-check-circle-fill me-1"></i>OAs Propios Únicos</span>
+              </div>
+            `;
+          } else {
+            bannerEl.innerHTML = `
+              <div class="alert alert-info border-0 shadow-sm py-2 px-3 mb-3 d-flex align-items-center justify-content-between">
+                <div>
+                  <i class="bi bi-info-circle-fill text-info fs-5 me-2 align-middle"></i>
+                  <strong>Plan Propio Complementario:</strong> Esta asignatura utiliza el Plan Propio <em>${escapeHtml(nombrePlan)}</em> junto al currículo base.
+                </div>
+                <span class="badge bg-info text-dark px-2 py-1">Plan Propio</span>
+              </div>
+            `;
+          }
+        }
+      } else {
+        if (tituloEl) tituloEl.textContent = 'Seleccionar Objetivos de Aprendizaje (MINEDUC)';
+        if (bannerEl) bannerEl.innerHTML = '';
+      }
+
       renderizarModalOAs();
       modalOAsObj.show();
     }
@@ -4272,25 +4525,51 @@
 
     function abrirModalImportarCurriculo() {
       Swal.fire({
-        title: 'Actualizar Planes MINEDUC (Excel)',
+        title: 'Importar Planes y OAs desde Excel',
         html: `
-          <p class="small text-muted">Seleccione una planilla Excel (.xlsx) con columnas: <code>Nivel, Asignatura, Codigo, Descripcion, Eje, Categoria</code></p>
-          <input type="file" id="swalFileCurriculo" class="form-control form-control-sm mb-2" accept=".xlsx,.csv">
+          <div class="text-start small">
+            <p class="text-muted mb-2">Seleccione una planilla Excel (.xlsx o .csv) con columnas: <code>Nivel, Asignatura, Codigo, Descripcion, Eje, Categoria</code></p>
+            
+            <label class="fw-semibold mb-1">Tipo de Plan a Cargar:</label>
+            <select id="swalTipoImportacionCurriculo" class="form-select form-select-sm mb-2" onchange="document.getElementById('boxOpcionSuplantarMineduc').style.display = this.value === 'PROPIO' ? 'block' : 'none';">
+              <option value="MINEDUC">Currículo Oficial MINEDUC (Estándar)</option>
+              <option value="PROPIO" selected>Plan Propio Institucional del Colegio</option>
+            </select>
+
+            <div id="boxOpcionSuplantarMineduc" class="form-check form-switch p-2 bg-light rounded border mb-2">
+              <input class="form-check-input ms-0 me-2" type="checkbox" id="swalExcluirMineducExcel" checked>
+              <label class="form-check-label fw-bold text-dark small" for="swalExcluirMineducExcel">
+                <i class="bi bi-shield-check text-success me-1"></i>Suplantar / Excluir OAs del MINEDUC
+              </label>
+              <div class="text-muted small mt-1" style="font-size:0.75rem;">
+                Las asignaturas y niveles de este archivo reemplazarán por completo los OAs normales del MINEDUC en las planificaciones docentes.
+              </div>
+            </div>
+
+            <label class="fw-semibold mb-1">Archivo Excel (.xlsx o .csv):</label>
+            <input type="file" id="swalFileCurriculo" class="form-control form-control-sm mb-2" accept=".xlsx,.csv">
+          </div>
         `,
         showCancelButton: true,
         confirmButtonText: 'Subir e Importar',
+        cancelButtonText: 'Cancelar',
         preConfirm: () => {
           const file = document.getElementById('swalFileCurriculo').files[0];
+          const tipo = document.getElementById('swalTipoImportacionCurriculo').value;
+          const excluir_oas_mineduc = (document.getElementById('swalExcluirMineducExcel') && document.getElementById('swalExcluirMineducExcel').checked) ? 1 : 0;
           if (!file) {
             Swal.showValidationMessage('Debe seleccionar un archivo Excel');
+            return false;
           }
-          return file;
+          return { file, tipo, excluir_oas_mineduc };
         }
       }).then(async r => {
         if (r.isConfirmed && r.value) {
           const formData = new FormData();
-          formData.append('archivo', r.value);
+          formData.append('archivo', r.value.file);
           formData.append('anio', anioActivo);
+          formData.append('tipo', r.value.tipo);
+          formData.append('excluir_oas_mineduc', r.value.excluir_oas_mineduc);
           try {
             Swal.showLoading();
             const res = await fetch('/api/planificacion/curriculo/importar', {
@@ -4300,6 +4579,7 @@
             const data = await res.json();
             if (!res.ok) throw new Error(data.error);
             Swal.fire('Éxito', data.mensaje, 'success');
+            cargarPlanesPropiosCatalogo();
             cargarObjetivosCurriculo();
           } catch (e) {
             Swal.fire('Error', e.message, 'error');
@@ -4314,27 +4594,72 @@
         html: `
           <div class="text-start">
             <label class="small fw-semibold mb-1">Nivel Educativo</label>
-            <input type="text" id="swalNivelPropio" class="form-control form-control-sm mb-2" placeholder="Ej: 3° Básico o Media">
-            <label class="small fw-semibold mb-1">Nombre de la Asignatura Propia</label>
-            <input type="text" id="swalAsigPropia" class="form-control form-control-sm mb-2" placeholder="Ej: Formación Valórica Institucional">
-            <label class="small fw-semibold mb-1">Descripción</label>
-            <textarea id="swalDescPropia" class="form-control form-control-sm" rows="2" placeholder="Propósito del plan propio..."></textarea>
+            <select id="swalNivelPropio" class="form-select form-select-sm mb-2">
+              <option value="Todos los niveles (1° Básico a IV° Medio)">⭐ Todos los niveles (1° Básico a IV° Medio)</option>
+              <option value="Enseñanza Básica (1° a 8° Básico)">Enseñanza Básica Completa (1° a 8° Básico)</option>
+              <option value="Primer Ciclo Básico (1° a 4° Básico)">Primer Ciclo Básico (1° a 4° Básico)</option>
+              <option value="Segundo Ciclo Básico (5° a 8° Básico)">Segundo Ciclo Básico (5° a 8° Básico)</option>
+              <option value="Enseñanza Media (I° a IV° Medio)">Enseñanza Media (I° a IV° Medio)</option>
+              <option value="1° Básico">1° Básico</option>
+              <option value="2° Básico">2° Básico</option>
+              <option value="3° Básico">3° Básico</option>
+              <option value="4° Básico">4° Básico</option>
+              <option value="5° Básico">5° Básico</option>
+              <option value="6° Básico">6° Básico</option>
+              <option value="7° Básico">7° Básico</option>
+              <option value="8° Básico">8° Básico</option>
+              <option value="I° Medio">I° Medio</option>
+              <option value="II° Medio">II° Medio</option>
+              <option value="III° Medio">III° Medio</option>
+              <option value="IV° Medio">IV° Medio</option>
+            </select>
+            <label class="small fw-semibold mb-1">Nombre de la Asignatura</label>
+            <input type="text" id="swalAsigPropia" list="datalistAsigsComunes" class="form-control form-control-sm mb-2" placeholder="Ej: INGLES, ROBOTICA, FORMACION VALORICA">
+            <datalist id="datalistAsigsComunes">
+              <option value="INGLES">
+              <option value="LENGUAJE Y COMUNICACION">
+              <option value="MATEMATICA">
+              <option value="CIENCIAS NATURALES">
+              <option value="HISTORIA, GEOGRAFIA Y CIENCIAS SOCIALES">
+              <option value="ARTES VISUALES">
+              <option value="MUSICA">
+              <option value="TECNOLOGIA">
+              <option value="EDUCACION FISICA Y SALUD">
+              <option value="FORMACION VALORICA">
+              <option value="ROBOTICA">
+            </datalist>
+            <label class="small fw-semibold mb-1">Descripción / Fundamento</label>
+            <textarea id="swalDescPropia" class="form-control form-control-sm mb-2" rows="2" placeholder="Propósito institucional o resolución del plan propio..."></textarea>
+            
+            <div class="form-check form-switch p-3 bg-light rounded border mt-3">
+              <input class="form-check-input ms-0 me-2" type="checkbox" id="swalExcluirMineduc" checked>
+              <label class="form-check-label fw-bold text-dark small" for="swalExcluirMineduc">
+                <i class="bi bi-shield-check text-success me-1"></i>Suplantar / Excluir OAs oficiales del MINEDUC
+              </label>
+              <div class="small text-muted mt-1" style="font-size:0.77rem; line-height: 1.35;">
+                Al activar esta casilla, los Objetivos de Aprendizaje de este plan propio <strong>sustituirán por completo</strong> los del MINEDUC para esta asignatura. Los OAs normales del MINEDUC no aparecerán para planificar.
+              </div>
+            </div>
           </div>
         `,
         showCancelButton: true,
         confirmButtonText: 'Crear Plan Propio',
+        cancelButtonText: 'Cancelar',
         preConfirm: () => {
           const nivel = document.getElementById('swalNivelPropio').value.trim();
           const asignatura = document.getElementById('swalAsigPropia').value.trim();
           const descripcion = document.getElementById('swalDescPropia').value.trim();
+          const excluir_oas_mineduc = document.getElementById('swalExcluirMineduc').checked ? 1 : 0;
           if (!nivel || !asignatura) {
             Swal.showValidationMessage('Nivel y Asignatura son obligatorios');
+            return false;
           }
-          return { nivel, asignatura, descripcion };
+          return { nivel, asignatura, descripcion, excluir_oas_mineduc };
         }
       }).then(async r => {
         if (r.isConfirmed && r.value) {
           try {
+            Swal.showLoading();
             const res = await fetch('/api/planificacion/curriculo/propio', {
               method: 'POST',
               headers: { 'Content-Type': 'application/json' },
@@ -4342,7 +4667,8 @@
             });
             const data = await res.json();
             if (!res.ok) throw new Error(data.error);
-            Swal.fire('Creado', data.mensaje, 'success');
+            Swal.fire('Éxito', data.mensaje, 'success');
+            cargarPlanesPropiosCatalogo();
             cargarObjetivosCurriculo();
           } catch (e) {
             Swal.fire('Error', e.message, 'error');

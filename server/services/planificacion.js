@@ -631,23 +631,52 @@ async function obtenerPlanificacionDetalle(id) {
     const nivel = inferirNivelDesdeCurso(plan.curso);
     const asigEstandar = normalizarAsignaturaMineduc(plan.asignatura, nivel);
 
-    // Buscar plan curricular correspondiente
+    // 1. Verificar si existe un Plan Propio institucional activo para esta asignatura y nivel que SUPLANTE al MINEDUC
+    const planPropioSuplantador = await queryGet(`
+        SELECT * FROM curriculo_planes 
+        WHERE (anio = ? OR anio = 2026) 
+          AND (nivel = ? OR nivel = 'Todos los niveles' OR nivel LIKE ? OR ? LIKE '%' || nivel || '%')
+          AND (
+            asignatura = ? 
+            OR asignatura = ?
+            OR LOWER(asignatura) LIKE '%' || LOWER(?) || '%' 
+            OR LOWER(?) LIKE '%' || LOWER(asignatura) || '%'
+          )
+          AND tipo = 'PROPIO'
+          AND excluir_oas_mineduc = 1
+          AND activo = 1
+        ORDER BY (CASE WHEN anio = ? THEN 0 ELSE 1 END) ASC, id DESC
+        LIMIT 1
+    `, [plan.anio, nivel, `%${nivel}%`, nivel, asigEstandar, plan.asignatura, plan.asignatura, plan.asignatura, plan.anio]);
+
     let planCurr = null;
-    if (plan.plan_curricular_id) {
-        planCurr = await queryGet(`SELECT * FROM curriculo_planes WHERE id = ?`, [plan.plan_curricular_id]);
+    if (planPropioSuplantador) {
+        // ¡El plan propio suplanta cualquier plan MINEDUC previo!
+        planCurr = planPropioSuplantador;
+        if (plan.plan_curricular_id !== planPropioSuplantador.id) {
+            await queryRun(`UPDATE planificaciones SET plan_curricular_id = ? WHERE id = ?`, [planPropioSuplantador.id, plan.id]);
+            plan.plan_curricular_id = planPropioSuplantador.id;
+        }
+    } else if (plan.plan_curricular_id) {
+        planCurr = await queryGet(`SELECT * FROM curriculo_planes WHERE id = ? AND activo = 1`, [plan.plan_curricular_id]);
     }
+
     if (!planCurr) {
         planCurr = await queryGet(`
             SELECT * FROM curriculo_planes 
             WHERE (anio = ? OR anio = 2026) 
-              AND (nivel = ? OR nivel LIKE ? OR ? LIKE '%' || nivel || '%')
+              AND (nivel = ? OR nivel = 'Todos los niveles' OR nivel LIKE ? OR ? LIKE '%' || nivel || '%')
               AND (
                 asignatura = ? 
                 OR asignatura = ?
                 OR LOWER(asignatura) LIKE '%' || LOWER(?) || '%' 
                 OR LOWER(?) LIKE '%' || LOWER(asignatura) || '%'
               )
-            ORDER BY (CASE WHEN anio = ? THEN 0 ELSE 1 END) ASC, id ASC
+              AND activo = 1
+            ORDER BY 
+              (CASE WHEN anio = ? THEN 0 ELSE 1 END) ASC, 
+              (CASE WHEN tipo = 'PROPIO' AND excluir_oas_mineduc = 1 THEN 0 WHEN tipo = 'PROPIO' THEN 1 ELSE 2 END) ASC, 
+              id ASC
             LIMIT 1
         `, [plan.anio, nivel, `%${nivel}%`, nivel, asigEstandar, plan.asignatura, plan.asignatura, plan.asignatura, plan.anio]);
 
@@ -675,8 +704,30 @@ async function obtenerPlanificacionDetalle(id) {
             WHERE plan_id = ? AND activo = 1
             ORDER BY orden ASC, codigo ASC
         `, [planCurr.id]);
+
+        // Si es un Plan Propio pero NO excluye al MINEDUC, se añaden también los OAs de MINEDUC para complementariedad
+        if (planCurr.tipo === 'PROPIO' && !planCurr.excluir_oas_mineduc) {
+            const oasMineduc = await queryAll(`
+                SELECT o.id, o.plan_id, o.tipo_objetivo, o.eje_unidad, o.unidad_sugerida, o.codigo, o.descripcion, o.categoria, o.indicadores_sugeridos, o.orden
+                FROM curriculo_objetivos o
+                JOIN curriculo_planes cp ON cp.id = o.plan_id
+                WHERE (cp.anio = ? OR cp.anio = 2026)
+                  AND (cp.nivel = ? OR cp.nivel LIKE ?)
+                  AND (
+                    cp.asignatura = ? 
+                    OR cp.asignatura = ?
+                    OR LOWER(cp.asignatura) LIKE '%' || LOWER(?) || '%' 
+                    OR LOWER(?) LIKE '%' || LOWER(cp.asignatura) || '%'
+                  )
+                  AND cp.tipo = 'MINEDUC'
+                  AND cp.activo = 1
+                  AND o.activo = 1
+                ORDER BY o.orden ASC, o.codigo ASC
+            `, [plan.anio, nivel, `%${nivel}%`, asigEstandar, plan.asignatura, plan.asignatura, plan.asignatura]);
+            oasDisponibles = [...oasDisponibles, ...oasMineduc];
+        }
     } else {
-        // Búsqueda flexible de OAs por nivel Y ASIGNATURA (NUNCA mezclar asignaturas ajenas)
+        // Búsqueda flexible de OAs por nivel Y ASIGNATURA (respetando exclusión si existe plan propio)
         oasDisponibles = await queryAll(`
             SELECT o.id, o.plan_id, o.tipo_objetivo, o.eje_unidad, o.unidad_sugerida, o.codigo, o.descripcion, o.categoria, o.indicadores_sugeridos, o.orden, cp.asignatura as asignatura_programa
             FROM curriculo_objetivos o
@@ -689,7 +740,22 @@ async function obtenerPlanificacionDetalle(id) {
                 OR LOWER(cp.asignatura) LIKE '%' || LOWER(?) || '%' 
                 OR LOWER(?) LIKE '%' || LOWER(cp.asignatura) || '%'
               )
+              AND cp.activo = 1
               AND o.activo = 1
+              AND NOT (
+                cp.tipo = 'MINEDUC' AND EXISTS (
+                    SELECT 1 FROM curriculo_planes cp_p 
+                    WHERE (cp_p.anio = cp.anio OR cp_p.anio = 2026)
+                      AND cp_p.tipo = 'PROPIO'
+                      AND cp_p.excluir_oas_mineduc = 1
+                      AND cp_p.activo = 1
+                      AND (cp_p.nivel = cp.nivel OR cp_p.nivel = 'Todos los niveles' OR cp.nivel LIKE '%' || cp_p.nivel || '%')
+                      AND (
+                        cp_p.asignatura = cp.asignatura 
+                        OR LOWER(cp_p.asignatura) = LOWER(cp.asignatura)
+                      )
+                )
+              )
             ORDER BY o.eje_unidad ASC, o.codigo ASC
         `, [plan.anio, nivel, `%${nivel}%`, asigEstandar, plan.asignatura, plan.asignatura, plan.asignatura]);
     }
@@ -786,7 +852,7 @@ async function crearPlanificacion(payload, usuario) {
         throw new Error(`Ya existe una planificación para ${curso} - ${asignatura} en el año ${anio}.`);
     }
 
-    // Vincular automáticamente con el plan oficial MINEDUC si existe
+    // Vincular automáticamente con el plan curricular (priorizando Plan Propio institucional si existe)
     const nivel = inferirNivelDesdeCurso(curso);
     const asigEstandar = normalizarAsignaturaMineduc(asignatura, nivel);
     let planCurricularId = payload.plan_curricular_id || null;
@@ -794,14 +860,18 @@ async function crearPlanificacion(payload, usuario) {
         const pc = await queryGet(`
             SELECT id FROM curriculo_planes 
             WHERE (anio = ? OR anio = 2026) 
-              AND (nivel = ? OR nivel LIKE ? OR ? LIKE '%' || nivel || '%')
+              AND (nivel = ? OR nivel = 'Todos los niveles' OR nivel LIKE ? OR ? LIKE '%' || nivel || '%')
               AND (
                 asignatura = ? 
                 OR asignatura = ?
                 OR LOWER(asignatura) LIKE '%' || LOWER(?) || '%' 
                 OR LOWER(?) LIKE '%' || LOWER(asignatura) || '%'
               )
-            ORDER BY (CASE WHEN anio = ? THEN 0 ELSE 1 END) ASC, id ASC
+              AND activo = 1
+            ORDER BY 
+              (CASE WHEN anio = ? THEN 0 ELSE 1 END) ASC, 
+              (CASE WHEN tipo = 'PROPIO' AND excluir_oas_mineduc = 1 THEN 0 WHEN tipo = 'PROPIO' THEN 1 ELSE 2 END) ASC, 
+              id ASC
             LIMIT 1
         `, [anio, nivel, `%${nivel}%`, nivel, asigEstandar, asignatura, asignatura, asignatura, anio]);
         if (pc) planCurricularId = pc.id;
@@ -2501,31 +2571,33 @@ function generarPlantillaCurriculoExcel() {
     const ejemplo = [
         {
             Nivel: '4° Básico',
-            Asignatura: 'Taller de Robótica y Pensamiento Computacional',
-            Eje: 'Programación y Circuitos',
+            Asignatura: 'Inglés Institucional (Plan Propio)',
+            Eje: 'Comprensión Oral y Escrita',
             Codigo_OA: 'OA 01',
-            Descripcion_OA: 'Diseñar, construir y programar prototipos robóticos sencillos para resolver desafíos cotidianos.',
+            Descripcion_OA: 'Demostrar comprensión de textos orales y escritos propios del programa institucional.',
             Basal_Complementario: 'Basal',
-            Habilidades: 'Pensamiento lógico, resolución colaborativa de problemas',
-            Actitudes: 'Trabajo en equipo, curiosidad e interés por la tecnología'
+            Suplantar_MINEDUC: 'SI',
+            Habilidades: 'Comprensión auditiva, expresión oral y escrita',
+            Actitudes: 'Interés por comunicarse en un idioma extranjero'
         },
         {
             Nivel: '4° Básico',
-            Asignatura: 'Taller de Robótica y Pensamiento Computacional',
-            Eje: 'Programación y Circuitos',
+            Asignatura: 'Inglés Institucional (Plan Propio)',
+            Eje: 'Expresión y Producción',
             Codigo_OA: 'OA 02',
-            Descripcion_OA: 'Utilizar sensores de luz y movimiento para condicionar el comportamiento de un robot.',
-            Basal_Complementario: 'Complementario',
-            Habilidades: 'Experimentación, análisis de causa y efecto',
-            Actitudes: 'Perseverancia frente al error'
+            Descripcion_OA: 'Participar en diálogos sencillos y formular preguntas sobre situaciones cotidianas.',
+            Basal_Complementario: 'Basal',
+            Suplantar_MINEDUC: 'SI',
+            Habilidades: 'Fluidez, pronunciación y vocabulario activo',
+            Actitudes: 'Respeto e inclusión cultural'
         }
     ];
 
     const wb = xlsx.utils.book_new();
     const ws = xlsx.utils.json_to_sheet(ejemplo);
     ws['!cols'] = [
-        { wch: 15 }, { wch: 40 }, { wch: 30 }, { wch: 14 },
-        { wch: 60 }, { wch: 20 }, { wch: 40 }, { wch: 40 }
+        { wch: 15 }, { wch: 38 }, { wch: 30 }, { wch: 14 },
+        { wch: 60 }, { wch: 20 }, { wch: 20 }, { wch: 38 }, { wch: 38 }
     ];
     xlsx.utils.book_append_sheet(wb, ws, "Curriculo");
     return xlsx.write(wb, { type: 'buffer', bookType: 'xlsx' });
