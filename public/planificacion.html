@@ -2599,6 +2599,7 @@
     function renderizarUnidadesAcordeon() {
       const cont = document.getElementById('unidadesAcordeonContainer');
       const unidades = planActivo.unidades || [];
+      const completados = (planActivo && Array.isArray(planActivo.hitos_completados)) ? planActivo.hitos_completados : [];
 
       if (unidades.length === 0) {
         cont.innerHTML = `
