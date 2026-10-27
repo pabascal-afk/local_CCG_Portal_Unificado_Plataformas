@@ -322,6 +322,17 @@
               </div>
             </div>
 
+            <!-- Banner Alerta de Conflicto con Otro Recurso -->
+            <div id="alertaConflictoRecurso" class="alert alert-danger border-danger shadow-sm py-2 px-3 mb-3" style="display: none;">
+              <div class="d-flex align-items-start gap-2">
+                <i class="bi bi-x-circle-fill fs-5 text-danger flex-shrink-0 mt-1"></i>
+                <div>
+                  <b class="d-block" style="font-size:0.95em;">Conflicto de Horario Detectado</b>
+                  <span class="small" id="textoAlertaConflicto">Ya tienes reservado otro recurso en este mismo bloque horario.</span>
+                </div>
+              </div>
+            </div>
+
             <!-- Motivo de la Reserva con Tags Jerárquicos y Plantillas -->
             <div class="mb-2">
               <label class="fw-bold text-dark small mb-1"><i class="bi bi-card-text"></i> Motivo / Actividad</label>
@@ -1153,7 +1164,37 @@
       actualizarInfoResponsableRecurso(rec);
 
       bloquesSeleccionados.clear();
-      (bloquesIniciales || []).forEach(b => bloquesSeleccionados.add(parseInt(b)));
+      const fechaVal = document.getElementById('inFecha').value;
+      const miEmail = (usuarioActivo && usuarioActivo.email) ? usuarioActivo.email.toLowerCase().trim() : 'dev@colegio.edu';
+
+      if (bloquesIniciales && bloquesIniciales.length > 0 && fechaVal) {
+        const bloqueConflicto = bloquesIniciales.find(b => todasReservas.some(res => 
+          res.fecha === fechaVal && 
+          res.recurso !== rec && 
+          res.estado !== 'Cancelada' && res.estado !== 'Rechazada' &&
+          res.profesor_email && res.profesor_email.toLowerCase().trim() === miEmail &&
+          (res.bloques ? res.bloques.split(',').map(x => parseInt(x.trim())) : []).includes(parseInt(b))
+        ));
+        if (bloqueConflicto) {
+          const resConf = todasReservas.find(res => 
+            res.fecha === fechaVal && 
+            res.recurso !== rec && 
+            res.estado !== 'Cancelada' && res.estado !== 'Rechazada' &&
+            res.profesor_email && res.profesor_email.toLowerCase().trim() === miEmail &&
+            (res.bloques ? res.bloques.split(',').map(x => parseInt(x.trim())) : []).includes(parseInt(bloqueConflicto))
+          );
+          setTimeout(() => {
+            Swal.fire({
+              icon: 'info',
+              title: 'Bloque Ya Reservado por Ti',
+              text: `Ya tienes reservado el recurso "${resConf.recurso}" en el Bloque ${bloqueConflicto} para esta fecha. Por favor selecciona otro horario.`,
+              confirmButtonText: 'Entendido'
+            });
+          }, 300);
+        } else {
+          bloquesIniciales.forEach(b => bloquesSeleccionados.add(parseInt(b)));
+        }
+      }
 
       cerrarSubTags();
       cargarPlantillasSelect();
@@ -1481,6 +1522,22 @@
         });
       });
 
+      const miEmail = (usuarioActivo && usuarioActivo.email) ? usuarioActivo.email.toLowerCase().trim() : 'dev@colegio.edu';
+      const mapaMisOtrosRecursos = {};
+      todasReservas.forEach(res => {
+        if (res.fecha === fecha && 
+            res.recurso !== recNombre && 
+            res.id !== idEdicion && 
+            res.estado !== 'Cancelada' && 
+            res.estado !== 'Rechazada' && 
+            res.profesor_email && res.profesor_email.toLowerCase().trim() === miEmail) {
+          (res.bloques ? res.bloques.split(',') : []).forEach(b => {
+            const bNum = parseInt(b.trim());
+            if (!isNaN(bNum)) mapaMisOtrosRecursos[bNum] = res.recurso;
+          });
+        }
+      });
+
       let grupos = [];
       if (r.bloques_agrupados) {
         try { grupos = JSON.parse(r.bloques_agrupados); } catch(e){}
@@ -1534,6 +1591,10 @@
 
         const bloqueadoInst = bloqueosInst.has(b);
         const ocupadoPor = mapaOcupados[b];
+        const otroRecursoMio = mapaMisOtrosRecursos[b];
+        if (otroRecursoMio && bloquesSeleccionados.has(b)) {
+          bloquesSeleccionados.delete(b);
+        }
         const isSelected = bloquesSeleccionados.has(b);
 
         const card = document.createElement('div');
@@ -1549,6 +1610,20 @@
         } else if (ocupadoPor) {
           card.classList.add('occupied', 'disabled');
           badgeHtml = `<small class="badge bg-danger-subtle text-danger text-truncate" style="max-width:130px;" title="${ocupadoPor}">Tomado</small>`;
+        } else if (otroRecursoMio) {
+          card.classList.add('occupied', 'disabled');
+          card.style.background = '#fff8e6';
+          card.style.borderColor = '#ffc107';
+          badgeHtml = `<small class="badge bg-warning text-dark text-truncate" style="max-width:145px;" title="Ya tienes reservado: ${otroRecursoMio}"><i class="bi bi-clock-history"></i> Tu reserva: ${otroRecursoMio}</small>`;
+          card.onclick = (e) => {
+            e.stopPropagation();
+            Swal.fire({
+              icon: 'info',
+              title: 'Bloque No Disponible',
+              text: `Ya tienes reservado el recurso "${otroRecursoMio}" en el Bloque ${b} para esta fecha. No puedes solicitar más de un recurso al mismo tiempo.`,
+              confirmButtonText: 'Entendido'
+            });
+          };
         } else {
           if (isSelected) card.classList.add('selected');
           badgeHtml = `<span class="badge ${isSelected ? 'bg-white text-primary' : 'bg-success-subtle text-success'}">${isSelected ? 'Seleccionado ✓' : 'Disponible'}</span>`;
@@ -1575,7 +1650,7 @@
           `;
         }
 
-        return { card, isSelected, disponible: permitidoSemanal && !bloqueadoInst && !ocupadoPor };
+        return { card, isSelected, disponible: permitidoSemanal && !bloqueadoInst && !ocupadoPor && !otroRecursoMio };
       };
 
       const gridCols = document.createElement('div');
@@ -1671,6 +1746,29 @@
           });
         }
       } else {
+        const fecha = document.getElementById('inFecha').value;
+        const recNombre = document.getElementById('inRecurso').value || recursoActual;
+        const idEdicion = document.getElementById('inReservaId').value;
+        const miEmail = (usuarioActivo && usuarioActivo.email) ? usuarioActivo.email.toLowerCase().trim() : 'dev@colegio.edu';
+
+        const resConflicto = todasReservas.find(res => 
+          res.fecha === fecha && 
+          res.recurso !== recNombre && 
+          res.id !== idEdicion && 
+          res.estado !== 'Cancelada' && res.estado !== 'Rechazada' &&
+          res.profesor_email && res.profesor_email.toLowerCase().trim() === miEmail &&
+          (res.bloques ? res.bloques.split(',').map(x => parseInt(x.trim())) : []).includes(b)
+        );
+        if (resConflicto) {
+          Swal.fire({
+            icon: 'warning',
+            title: 'Bloque Ya Reservado',
+            text: `Ya tienes reservado el recurso "${resConflicto.recurso}" en el Bloque ${b} para esta fecha. No puedes solicitar más de un recurso al mismo tiempo.`,
+            confirmButtonText: 'Entendido'
+          });
+          return;
+        }
+
         const candidatos = Array.from(bloquesSeleccionados);
         candidatos.push(b);
         if (!esContiguo(candidatos)) {
@@ -1697,6 +1795,31 @@
         const restantes = Array.from(bloquesSeleccionados).sort((x,y)=>x-y);
         if (!esContiguo(restantes)) bloquesSeleccionados.clear();
       } else {
+        const fecha = document.getElementById('inFecha').value;
+        const recNombre = document.getElementById('inRecurso').value || recursoActual;
+        const idEdicion = document.getElementById('inReservaId').value;
+        const miEmail = (usuarioActivo && usuarioActivo.email) ? usuarioActivo.email.toLowerCase().trim() : 'dev@colegio.edu';
+
+        for (let subB of grp) {
+          const resConflicto = todasReservas.find(res => 
+            res.fecha === fecha && 
+            res.recurso !== recNombre && 
+            res.id !== idEdicion && 
+            res.estado !== 'Cancelada' && res.estado !== 'Rechazada' &&
+            res.profesor_email && res.profesor_email.toLowerCase().trim() === miEmail &&
+            (res.bloques ? res.bloques.split(',').map(x => parseInt(x.trim())) : []).includes(subB)
+          );
+          if (resConflicto) {
+            Swal.fire({
+              icon: 'warning',
+              title: 'Conflicto de Horario',
+              text: `No es posible seleccionar este grupo porque ya tienes reservado "${resConflicto.recurso}" en el Bloque ${subB} para esta fecha.`,
+              confirmButtonText: 'Entendido'
+            });
+            return;
+          }
+        }
+
         const candidatos = new Set(bloquesSeleccionados);
         grp.forEach(b => candidatos.add(b));
         const arrCand = Array.from(candidatos);
@@ -1720,6 +1843,10 @@
       const resumen = document.getElementById('resumenBloquesSel');
       const alerta = document.getElementById('alertaPeticionEspecial');
       const textoAlerta = document.getElementById('textoAlertaEspecial');
+      const alertaConflicto = document.getElementById('alertaConflictoRecurso');
+      const textoConflicto = document.getElementById('textoAlertaConflicto');
+
+      if (alertaConflicto) alertaConflicto.style.display = 'none';
 
       const seleccionados = Array.from(bloquesSeleccionados).sort((a,b)=>a-b);
       if (seleccionados.length === 0) {
@@ -1733,6 +1860,28 @@
       const recNombre = document.getElementById('inRecurso').value || recursoActual;
       const fecha = document.getElementById('inFecha').value;
       const idEdicion = document.getElementById('inReservaId').value;
+      const miEmail = (usuarioActivo && usuarioActivo.email) ? usuarioActivo.email.toLowerCase().trim() : 'dev@colegio.edu';
+
+      if (fecha && recNombre) {
+        for (let b of seleccionados) {
+          const resConf = todasReservas.find(res => 
+            res.fecha === fecha && 
+            res.recurso !== recNombre && 
+            res.id !== idEdicion && 
+            res.estado !== 'Cancelada' && res.estado !== 'Rechazada' &&
+            res.profesor_email && res.profesor_email.toLowerCase().trim() === miEmail &&
+            (res.bloques ? res.bloques.split(',').map(x => parseInt(x.trim())) : []).includes(b)
+          );
+          if (resConf) {
+            if (textoConflicto && alertaConflicto) {
+              textoConflicto.innerHTML = `Ya tienes reservado el recurso <b>"${resConf.recurso}"</b> en el <b>Bloque ${b}</b> para el día ${fecha}. No es posible reservar múltiples recursos simultáneamente.`;
+              alertaConflicto.style.display = 'block';
+            }
+            break;
+          }
+        }
+      }
+
       const r = recursosCache.find(x => x.nombre === recNombre);
 
       if (!r || !fecha) {
@@ -1926,6 +2075,31 @@
       if (!esContiguo(seleccionados)) {
         Swal.fire("Atención", "Los bloques seleccionados deben ser contiguos en una misma reserva (sin espacios intermedios).", "warning");
         return;
+      }
+
+      const fechaVal = document.getElementById('inFecha').value;
+      const recVal = document.getElementById('inRecurso').value || recursoActual;
+      const idEdicion = document.getElementById('inReservaId').value;
+      const miEmail = (usuarioActivo && usuarioActivo.email) ? usuarioActivo.email.toLowerCase().trim() : 'dev@colegio.edu';
+
+      for (let b of seleccionados) {
+        const resConf = todasReservas.find(res => 
+          res.fecha === fechaVal && 
+          res.recurso !== recVal && 
+          res.id !== idEdicion && 
+          res.estado !== 'Cancelada' && res.estado !== 'Rechazada' &&
+          res.profesor_email && res.profesor_email.toLowerCase().trim() === miEmail &&
+          (res.bloques ? res.bloques.split(',').map(x => parseInt(x.trim())) : []).includes(b)
+        );
+        if (resConf) {
+          Swal.fire({
+            icon: 'warning',
+            title: 'Conflicto de Horario',
+            text: `Ya tienes reservado el recurso "${resConf.recurso}" en el bloque ${b} para esta fecha. No puedes solicitar múltiples recursos en el mismo bloque horario.`,
+            confirmButtonText: 'Entendido'
+          });
+          return;
+        }
       }
       
       const procesarGuardado = () => {

@@ -790,6 +790,29 @@ async function validarReglasReserva(fecha, recursoNombre, bloques, profesor_emai
         }
     }
 
+    // E. Conflicto de horario entre recursos distintos para el mismo profesor
+    // Un profesor no puede solicitar más de un recurso en el mismo bloque horario y fecha
+    if (profesor_email) {
+        const resDocente = await new Promise((res, rej) => {
+            let sql = "SELECT id, recurso, bloques FROM reservas WHERE fecha = ? AND LOWER(profesor_email) = LOWER(?) AND estado != 'Cancelada' AND estado != 'Rechazada'";
+            const params = [fecha, profesor_email];
+            if (idExcluir) { sql += " AND id != ?"; params.push(idExcluir); }
+            db.all(sql, params, (err, rows) => { if (err) rej(err); else res(rows || []); });
+        });
+
+        const bksNuevos = bloques.map(b => b.toString().trim());
+        for (const rDoc of resDocente) {
+            if (rDoc.recurso === recursoNombre) continue;
+            const bksExistentes = (rDoc.bloques || '').split(',').map(b => b.trim());
+            const solapados = bksNuevos.filter(b => bksExistentes.includes(b));
+            if (solapados.length > 0) {
+                return {
+                    error: `Ya tienes reservado el recurso "${rDoc.recurso}" en el bloque ${solapados.join(', ')} para esta fecha. No es posible solicitar más de un recurso en el mismo bloque horario.`
+                };
+            }
+        }
+    }
+
     return { valido: true, esPeticionEspecial, motivoExcepcion, recurso };
 }
 
@@ -892,9 +915,9 @@ app.post('/api/reservas', async (req, res) => {
         let { bloques } = req.body;
         if (typeof bloques === 'string') bloques = bloques.split(',');
         if (!Array.isArray(bloques)) bloques = [bloques];
-        const profesor_email = req.isAuthenticated() ? req.user.email : 'dev@colegio.edu';
         const userRole = (req.user && req.user.rol) ? req.user.rol.toLowerCase() : '';
         const esAdmin = userRole.includes('admin') || userRole.includes('directiv');
+        const profesor_email = (esAdmin && req.body.profesor_email) ? req.body.profesor_email : (req.isAuthenticated() ? req.user.email : 'dev@colegio.edu');
 
         // 1. Validar Reglas de Agendamiento
         const validacion = await validarReglasReserva(fecha, recurso, bloques, profesor_email, null, esAdmin);
@@ -907,9 +930,9 @@ app.post('/api/reservas', async (req, res) => {
             if (err) return res.status(500).json({error: err.message});
             
             for (let row of rows) {
-                const dbBloques = row.bloques.split(',');
+                const dbBloques = row.bloques.split(',').map(b => b.trim());
                 for (let b of bloques) {
-                    if (dbBloques.includes(b.toString())) {
+                    if (dbBloques.includes(b.toString().trim())) {
                         return res.status(400).json({error: `El bloque ${b} ya está reservado por ${row.profesor_email}.`});
                     }
                 }
@@ -1002,9 +1025,9 @@ app.put('/api/reservas/:id', async (req, res) => {
                 if (err) return res.status(500).json({ error: err.message });
                 
                 for (let row of rows) {
-                    const dbBloques = row.bloques.split(',');
+                    const dbBloques = row.bloques.split(',').map(b => b.trim());
                     for (let b of bloques) {
-                        if (dbBloques.includes(b.toString())) {
+                        if (dbBloques.includes(b.toString().trim())) {
                             return res.status(400).json({ error: `El bloque ${b} ya está reservado por ${row.profesor_email}.` });
                         }
                     }
