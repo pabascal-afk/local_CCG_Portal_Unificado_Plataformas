@@ -1096,7 +1096,12 @@
               <span class="small fw-bold text-secondary text-uppercase">
                 <i class="bi bi-layers me-1 text-primary"></i>1. Unidad Activa a Calendarizar (haz clic para elegir unidad):
               </span>
-              <div id="alertaSolapamientoUnidadesCal" class="d-none"></div>
+              <div class="d-flex align-items-center gap-2">
+                <button type="button" class="btn btn-xs btn-success fw-semibold py-1 px-2 shadow-xs" onclick="autoCalendarizarAnioEscolarCal()" title="Distribuye automáticamente las unidades en 1° y 2° semestre de Marzo a Noviembre respetando vacaciones de invierno">
+                  <i class="bi bi-magic me-1"></i>⚡ Auto-Calendarizar Año (Mar–Nov)
+                </button>
+                <div id="alertaSolapamientoUnidadesCal" class="d-none"></div>
+              </div>
             </div>
             <div class="row g-2" id="contenedorTarjetasUnidadesCal">
               <!-- Render dinámico de tarjetas de unidades -->
@@ -3732,6 +3737,9 @@
                         <span class="small text-muted">Arrastra los OAs para reordenar la secuencia pedagógica.</span>
                       </div>
                       <div class="d-flex gap-2 flex-wrap">
+                        <button class="btn btn-sm btn-success fw-semibold shadow-xs" onclick="completarBaseUnidadUnClic(${idx})" title="Completa en 1 clic: OAs oficiales + Habilidades + Actitudes + Indicadores + Instrumentos">
+                          <i class="bi bi-lightning-charge-fill me-1"></i>Completar Base Unidad (1 Clic)
+                        </button>
                         <button class="btn btn-sm btn-outline-success" onclick="precargarOAsOficialesUnidad(${idx})" title="Asignar automáticamente el título oficial y todos los OAs oficiales de la Unidad ${u.numero_unidad || (idx + 1)}">
                           <i class="bi bi-magic me-1"></i> Precargar OAs Oficiales U${u.numero_unidad || (idx + 1)}
                         </button>
@@ -3903,12 +3911,21 @@
                         <h6 class="fw-bold text-dark mb-0"><i class="bi bi-calendar-week text-primary me-2"></i>Desglose Semanal de Clases, DUA & Metodologías</h6>
                         <span class="small text-muted">Arrastra las filas desde el icono <i class="bi bi-grip-vertical"></i> para reordenar semanas.</span>
                       </div>
-                      <div class="d-flex gap-2">
+                      <div class="d-flex gap-1 flex-wrap">
+                        <button type="button" class="btn btn-sm btn-success fw-semibold shadow-xs" onclick="autoDistribuirOAsEnSemanas(${idx})" title="Distribuye equitativamente los OAs de la unidad entre sus semanas y sugiere temas">
+                          <i class="bi bi-distribute-vertical me-1"></i>Auto-Distribuir OAs
+                        </button>
+                        <button type="button" class="btn btn-sm btn-outline-primary" onclick="toggleDividirClasesTodasSemanas(${idx})" title="Activar o desactivar 'Por Clases' en todas las semanas de la unidad de una vez">
+                          <i class="bi bi-columns-gap me-1"></i>Por Clases (Todas)
+                        </button>
+                        <button type="button" class="btn btn-sm btn-outline-secondary" onclick="aplicarRecursosDUABaseUnidad(${idx})" title="Aplicar recursos y DUA base a las semanas de la unidad">
+                          <i class="bi bi-magic me-1"></i>Recursos/DUA Base
+                        </button>
                         <button type="button" class="btn btn-sm btn-outline-info" onclick="abrirModalIncorporarHito(null, ${idx})" title="Vincular lineamiento institucional de UTP a esta unidad">
                           <i class="bi bi-bookmark-star me-1"></i> Vincular Lineamiento UTP
                         </button>
                         <button type="button" class="btn btn-sm btn-outline-primary" onclick="generarSemanasAutomaticas(${idx})" title="Genera de lunes a viernes todas las semanas comprendidas entre la Fecha de Inicio y Término de la unidad">
-                          <i class="bi bi-magic me-1"></i> Generar Semanas Automáticas
+                          <i class="bi bi-calendar-week me-1"></i> Generar Semanas
                         </button>
                         <button type="button" class="btn btn-sm btn-outline-secondary" onclick="agregarSemanaAUnidad(${idx})">
                           <i class="bi bi-plus-lg me-1"></i> Agregar Semana
@@ -3927,7 +3944,7 @@
                             <th><i class="bi bi-bullseye text-primary me-1"></i>OAs a desarrollar</th>
                             <th style="width: 150px;">Recursos</th>
                             <th style="width: 210px;">DUA & Metodologías</th>
-                            <th style="width: 35px;" class="text-center"></th>
+                            <th style="width: 80px;" class="text-center">Acciones</th>
                           </tr>
                         </thead>
                         <tbody id="tablaSemanasBody_${idx}">
@@ -4086,7 +4103,17 @@
                                 <textarea class="form-control form-control-sm" rows="${s.dividir_clases ? 1 : 2}" placeholder="Estrategias DUA..." onchange="actualizarCampoSemana(${idx}, ${sIdx}, 'dua_adecuaciones', this.value)">${s.dua_adecuaciones || ''}</textarea>
                               </td>
                               <td class="text-center">
-                                <button class="btn btn-sm text-danger p-0" onclick="eliminarSemana(${idx}, ${sIdx})"><i class="bi bi-trash"></i></button>
+                                <div class="d-flex align-items-center justify-content-center gap-1">
+                                  <button type="button" class="btn btn-xs btn-outline-primary p-1 py-0" onclick="copiarSemanaASiguiente(${idx}, ${sIdx})" title="Copiar OAs, recursos, DUA y sesiones a la semana siguiente">
+                                    <i class="bi bi-arrow-down-square" style="font-size: 0.78rem;"></i>
+                                  </button>
+                                  <button type="button" class="btn btn-xs btn-outline-secondary p-1 py-0" onclick="duplicarSemana(${idx}, ${sIdx})" title="Duplicar e insertar nueva semana debajo">
+                                    <i class="bi bi-copy" style="font-size: 0.74rem;"></i>
+                                  </button>
+                                  <button type="button" class="btn btn-xs btn-outline-danger p-1 py-0" onclick="eliminarSemana(${idx}, ${sIdx})" title="Eliminar semana">
+                                    <i class="bi bi-trash" style="font-size: 0.78rem;"></i>
+                                  </button>
+                                </div>
                               </td>
                             </tr>
                             ${tieneClases ? `
@@ -5694,6 +5721,462 @@
           : 'Fechas de unidades actualizadas desde el calendario',
         showConfirmButton: false,
         timer: 2500
+      });
+    }
+
+    // =========================================================================
+    // ACELERADORES DE PLANIFICACIÓN: AUTO-CALENDARIZAR, COMPLETAR BASE & SEMANAS
+    // =========================================================================
+    function autoCalendarizarAnioEscolarCal() {
+      const lista = estadoCalUnidades.unidadesTemp || [];
+      if (lista.length === 0) return;
+
+      const anio = estadoCalUnidades.anio || 2026;
+
+      // 1. Calcular inicio y fin del 1° Semestre (Marzo a fines de Junio)
+      let dIniS1 = new Date(`${anio}-03-01T00:00:00`);
+      while (dIniS1.getDay() !== 1) { // 1 = Lunes
+        dIniS1.setDate(dIniS1.getDate() + 1);
+      }
+      let dFinS1 = new Date(`${anio}-06-26T00:00:00`);
+      while (dFinS1.getDay() !== 5) { // 5 = Viernes
+        dFinS1.setDate(dFinS1.getDate() - 1);
+      }
+
+      // 2. Calcular inicio y fin del 2° Semestre (vuelta de vacaciones de invierno: aprox 20 de julio a fines de noviembre)
+      let dIniS2 = new Date(`${anio}-07-20T00:00:00`);
+      while (dIniS2.getDay() !== 1) {
+        dIniS2.setDate(dIniS2.getDate() + 1);
+      }
+      let dFinS2 = new Date(`${anio}-11-30T00:00:00`);
+      while (dFinS2.getDay() !== 5) {
+        dFinS2.setDate(dFinS2.getDate() - 1);
+      }
+
+      // 3. Separar unidades en 1° y 2° semestre
+      const sem1 = [];
+      const sem2 = [];
+      const mitad = Math.ceil(lista.length / 2);
+
+      lista.forEach((u, i) => {
+        const s = Number(u.semestre) || (i < mitad ? 1 : 2);
+        if (s === 1) sem1.push(u);
+        else sem2.push(u);
+      });
+
+      function calendarizarGrupo(unidadesGrupo, dInicio, dTermino) {
+        if (unidadesGrupo.length === 0) return;
+        const totalSemanas = Math.max(unidadesGrupo.length, Math.round((dTermino - dInicio) / (7 * 24 * 3600 * 1000)) + 1);
+        const semanasPorUnidadBase = Math.floor(totalSemanas / unidadesGrupo.length);
+        let semanasRestantes = totalSemanas % unidadesGrupo.length;
+
+        let curIni = new Date(dInicio);
+
+        unidadesGrupo.forEach(u => {
+          const semanasEsta = semanasPorUnidadBase + (semanasRestantes > 0 ? 1 : 0);
+          if (semanasRestantes > 0) semanasRestantes--;
+
+          const curFin = new Date(curIni);
+          curFin.setDate(curFin.getDate() + (semanasEsta - 1) * 7 + 4);
+
+          u.fecha_inicio = curIni.toISOString().slice(0, 10);
+          u.fecha_fin = curFin.toISOString().slice(0, 10);
+
+          curIni = new Date(curIni);
+          curIni.setDate(curIni.getDate() + semanasEsta * 7);
+        });
+      }
+
+      calendarizarGrupo(sem1, dIniS1, dFinS1);
+      calendarizarGrupo(sem2, dIniS2, dFinS2);
+
+      estadoCalUnidades.mesBase = 2; // Marzo
+      estadoCalUnidades.esperandoSegundoClic = false;
+      estadoCalUnidades.fechaHover = '';
+
+      const chkAuto = document.getElementById('chkAutogenerarSemanasModalCal');
+      if (chkAuto) chkAuto.checked = true;
+
+      renderizarModalCalendarioCompleto();
+
+      Swal.fire({
+        icon: 'success',
+        title: '¡Año Escolar Auto-Calendarizado!',
+        html: `<div class="small text-start">
+          Se distribuyeron las <strong>${lista.length} unidades</strong> entre el 1° semestre (Marzo a Junio) y 2° semestre (Julio a Noviembre) respetando vacaciones de invierno.<br><br>
+          Haz clic en <strong>"Aplicar Fechas a las Unidades"</strong> para sincronizar automáticamente el desglose semanal.
+        </div>`,
+        confirmButtonText: 'Entendido'
+      });
+    }
+
+    async function completarBaseUnidadUnClic(uIdx) {
+      if (!planActivo || !planActivo.unidades || !planActivo.unidades[uIdx]) return;
+      const u = planActivo.unidades[uIdx];
+      const numU = u.numero_unidad || (uIdx + 1);
+
+      // 1. Título oficial y OAs sugeridos de la unidad
+      const uOficial = (planActivo.unidades_oficiales || []).find(uo => Number(uo.numero) === Number(numU));
+      if (uOficial && uOficial.nombre && (u.nombre_unidad === `Unidad ${numU}` || u.nombre_unidad.includes('Introducción y Fundamentos') || !u.nombre_unidad)) {
+        u.nombre_unidad = uOficial.nombre;
+      }
+
+      const oasUnidadOficial = (planActivo.oas_disponibles || []).filter(o => o.unidad_sugerida === `Unidad ${numU}`);
+      if ((!Array.isArray(u.oas_seleccionados) || u.oas_seleccionados.length === 0) && oasUnidadOficial.length > 0) {
+        u.oas_seleccionados = oasUnidadOficial.map(o => ({
+          id: o.id,
+          codigo: o.codigo,
+          categoria: o.categoria || 'Basal',
+          descripcion: o.descripcion,
+          unidad_sugerida: o.unidad_sugerida,
+          eje: o.eje_unidad
+        }));
+      }
+
+      // 2. Habilidades MINEDUC
+      if (!u.habilidades || !u.habilidades.trim()) {
+        let habs = [];
+        if (planActivo.plan_curricular && Array.isArray(planActivo.plan_curricular.habilidades_sugeridas)) {
+          habs = planActivo.plan_curricular.habilidades_sugeridas;
+        }
+        if (habs.length > 0) {
+          u.habilidades = habs.map(h => `• ${h.nombre}: ${h.descripcion}`).join('\n\n');
+        }
+      }
+
+      // 3. Actitudes MINEDUC
+      if (!u.actitudes || !u.actitudes.trim()) {
+        let acts = [];
+        if (planActivo.plan_curricular && Array.isArray(planActivo.plan_curricular.actitudes_sugeridas)) {
+          acts = planActivo.plan_curricular.actitudes_sugeridas;
+        }
+        if (acts.length > 0) {
+          u.actitudes = acts.map(a => `• ${a.nombre || a.codigo || 'Actitud'}: ${a.descripcion}`).join('\n\n');
+        }
+      }
+
+      // 4. Indicadores de Evaluación de los OAs asignados
+      if (!u.indicadores_evaluacion || !u.indicadores_evaluacion.trim()) {
+        const inds = [];
+        (u.oas_seleccionados || []).forEach(o => {
+          const cod = (typeof o === 'object') ? o.codigo : o;
+          const oaFull = (planActivo.oas_disponibles || []).find(x => x.codigo === cod) || o;
+          if (Array.isArray(oaFull.indicadores_sugeridos)) {
+            oaFull.indicadores_sugeridos.forEach(ind => inds.push(`• [${cod}] ${ind}`));
+          }
+        });
+        if (inds.length > 0) {
+          u.indicadores_evaluacion = inds.join('\n');
+        }
+      }
+
+      // 5. Instrumentos de Evaluación
+      if (!u.instrumentos_evaluacion || !u.instrumentos_evaluacion.trim()) {
+        u.instrumentos_evaluacion = 'Evaluación formativa de proceso (tickets de salida, observación directa, guías de trabajo y listas de cotejo); evaluación sumativa de unidad mediante rúbrica analítica y prueba escrita o de desempeño.';
+      }
+
+      renderizarUnidadesAcordeon();
+      guardarBorradorActual(false);
+
+      Swal.fire({
+        toast: true,
+        position: 'top-end',
+        icon: 'success',
+        title: `Unidad ${numU} completada con OAs, Habilidades, Actitudes e Indicadores`,
+        showConfirmButton: false,
+        timer: 2500
+      });
+    }
+
+    function autoDistribuirOAsEnSemanas(uIdx) {
+      if (!planActivo || !planActivo.unidades || !planActivo.unidades[uIdx]) return;
+      const u = planActivo.unidades[uIdx];
+
+      const oasUnidad = obtenerOAsDeUnidad(uIdx);
+      if (oasUnidad.length === 0) {
+        return Swal.fire({
+          icon: 'warning',
+          title: 'Sin OAs en la Unidad',
+          text: 'Primero asigna o precarga los Objetivos de Aprendizaje (OAs) de esta unidad antes de distribuirlos en las semanas.'
+        });
+      }
+
+      // Si no hay semanas y tiene fechas, generarlas primero
+      if (!Array.isArray(u.desglose_semanal) || u.desglose_semanal.length === 0) {
+        if (u.fecha_inicio && u.fecha_fin) {
+          sincronizarSemanasUnidadConRango(u);
+        } else {
+          return Swal.fire({
+            icon: 'warning',
+            title: 'Fechas o Semanas Requeridas',
+            text: 'Por favor asigna las fechas de inicio y término o agrega al menos una semana a la unidad para distribuir los OAs.'
+          });
+        }
+      }
+
+      const semanas = u.desglose_semanal;
+      const numSemanas = semanas.length;
+      const numOAs = oasUnidad.length;
+
+      if (numSemanas === 0) return;
+
+      semanas.forEach((s, sIdx) => {
+        const oaIdx = Math.min(Math.floor((sIdx * numOAs) / numSemanas), numOAs - 1);
+        const oaAsignado = oasUnidad[oaIdx];
+
+        if (!Array.isArray(s.oas_semana)) s.oas_semana = [];
+        if (!s.oas_semana.includes(oaAsignado.codigo)) {
+          s.oas_semana = [oaAsignado.codigo];
+        }
+        s.actividades_formativas = s.oas_semana.join(', ');
+
+        if (!s.tema || !s.tema.trim()) {
+          if (oaAsignado.descripcion) {
+            const descCorta = oaAsignado.descripcion.length > 55 ? oaAsignado.descripcion.slice(0, 52) + '...' : oaAsignado.descripcion;
+            s.tema = `${oaAsignado.codigo}: ${descCorta}`;
+          } else {
+            s.tema = `Desarrollo de ${oaAsignado.codigo}`;
+          }
+        }
+      });
+
+      renderizarUnidadesAcordeon();
+      guardarBorradorActual(false);
+
+      Swal.fire({
+        toast: true,
+        position: 'top-end',
+        icon: 'success',
+        title: `Se distribuyeron los ${numOAs} OAs a lo largo de las ${numSemanas} semanas`,
+        showConfirmButton: false,
+        timer: 2500
+      });
+    }
+
+    async function toggleDividirClasesTodasSemanas(uIdx) {
+      if (!planActivo || !planActivo.unidades || !planActivo.unidades[uIdx]) return;
+      const u = planActivo.unidades[uIdx];
+      const semanas = u.desglose_semanal || [];
+
+      if (semanas.length === 0) {
+        return Swal.fire('Sin semanas', 'Esta unidad aún no tiene semanas en el desglose.', 'info');
+      }
+
+      const todasDivididas = semanas.every(s => s.dividir_clases);
+      const nuevoEstado = !todasDivididas;
+
+      const plantillas = (sesionesSemanaActual && sesionesSemanaActual.length > 0)
+        ? sesionesSemanaActual
+        : [
+            { numero: 1, dia: 'Lunes', duracion_minutos: 90, label: 'Clase 1 (90 min)' },
+            { numero: 2, dia: 'Miércoles', duracion_minutos: 90, label: 'Clase 2 (90 min)' }
+          ];
+
+      const poolHabilidades = obtenerPoolHabilidadesUnidad(uIdx);
+
+      semanas.forEach((s, sIdx) => {
+        s.dividir_clases = nuevoEstado;
+        if (nuevoEstado && (!s.clases || s.clases.length === 0)) {
+          const poolIndicadores = obtenerPoolIndicadoresSemana(uIdx, sIdx);
+          s.clases = plantillas.map((ses, i) => {
+            const habTags = (poolHabilidades.length > 0)
+              ? [{ label: poolHabilidades[i % poolHabilidades.length].label, fullText: poolHabilidades[i % poolHabilidades.length].fullText }]
+              : [];
+            const indTags = (poolIndicadores.items && poolIndicadores.items.length > 0)
+              ? [poolIndicadores.items[i % poolIndicadores.items.length].texto]
+              : [];
+
+            return {
+              numero: ses.numero || (i + 1),
+              dia: ses.dia || '',
+              duracion: ses.duracion_minutos || 90,
+              label: ses.label || `Clase ${i + 1} (${ses.duracion_minutos || 90} min)`,
+              habilidades_tags: habTags,
+              indicadores_tags: indTags,
+              actividades: '',
+              recursos: '',
+              dua: ''
+            };
+          });
+        }
+      });
+
+      renderizarUnidadesAcordeon();
+      guardarBorradorActual(false);
+
+      Swal.fire({
+        toast: true,
+        position: 'top-end',
+        icon: 'success',
+        title: nuevoEstado ? 'Desglose por sesiones activado en todas las semanas' : 'Desglose simplificado semanal activado',
+        showConfirmButton: false,
+        timer: 2000
+      });
+    }
+
+    async function aplicarRecursosDUABaseUnidad(uIdx) {
+      if (!planActivo || !planActivo.unidades || !planActivo.unidades[uIdx]) return;
+      const u = planActivo.unidades[uIdx];
+      const semanas = u.desglose_semanal || [];
+
+      if (semanas.length === 0) {
+        return Swal.fire('Sin semanas', 'Esta unidad aún no tiene semanas en el desglose.', 'info');
+      }
+
+      const { value: formValues } = await Swal.fire({
+        title: 'Aplicar Recursos y DUA Base a la Unidad',
+        html: `
+          <div class="text-start small">
+            <label class="form-label fw-bold mb-1">Recursos didácticos sugeridos:</label>
+            <div class="d-flex flex-wrap gap-1 mb-2">
+              <button type="button" class="btn btn-xs btn-outline-secondary py-0 px-2" onclick="document.getElementById('swalInpRecursos').value += (document.getElementById('swalInpRecursos').value ? ', ' : '') + 'Texto del Estudiante MINEDUC'">+ Texto Escolar</button>
+              <button type="button" class="btn btn-xs btn-outline-secondary py-0 px-2" onclick="document.getElementById('swalInpRecursos').value += (document.getElementById('swalInpRecursos').value ? ', ' : '') + 'Guía de aprendizaje'">+ Guía de trabajo</button>
+              <button type="button" class="btn btn-xs btn-outline-secondary py-0 px-2" onclick="document.getElementById('swalInpRecursos').value += (document.getElementById('swalInpRecursos').value ? ', ' : '') + 'Presentación interactiva / Proyector'">+ PPT/Proyector</button>
+              <button type="button" class="btn btn-xs btn-outline-secondary py-0 px-2" onclick="document.getElementById('swalInpRecursos').value += (document.getElementById('swalInpRecursos').value ? ', ' : '') + 'Material concreto / manipulativo'">+ Material concreto</button>
+              <button type="button" class="btn btn-xs btn-outline-secondary py-0 px-2" onclick="document.getElementById('swalInpRecursos').value += (document.getElementById('swalInpRecursos').value ? ', ' : '') + 'Plataforma digital / Google Classroom'">+ Plataforma digital</button>
+            </div>
+            <input id="swalInpRecursos" class="form-control form-control-sm mb-3" placeholder="Ej: Texto escolar, guía de aprendizaje, PPT..." value="Texto del Estudiante, Guía de aprendizaje, Material audiovisual interactivo">
+
+            <label class="form-label fw-bold mb-1">Estrategias DUA y adecuaciones base:</label>
+            <div class="d-flex flex-wrap gap-1 mb-2">
+              <button type="button" class="btn btn-xs btn-outline-secondary py-0 px-2" onclick="document.getElementById('swalInpDUA').value += (document.getElementById('swalInpDUA').value ? '. ' : '') + 'Presentación de información en múltiples formatos (visual, auditivo)'">+ DUA I: Múltiples formatos</button>
+              <button type="button" class="btn btn-xs btn-outline-secondary py-0 px-2" onclick="document.getElementById('swalInpDUA').value += (document.getElementById('swalInpDUA').value ? '. ' : '') + 'Opciones graduadas de expresión y andamiaje'">+ DUA II: Andamiaje</button>
+              <button type="button" class="btn btn-xs btn-outline-secondary py-0 px-2" onclick="document.getElementById('swalInpDUA').value += (document.getElementById('swalInpDUA').value ? '. ' : '') + 'Trabajo colaborativo y tutoría entre pares'">+ DUA III: Colaborativo</button>
+            </div>
+            <textarea id="swalInpDUA" class="form-control form-control-sm mb-3" rows="2" placeholder="Ej: Diversificación de medios de representación, andamiaje gradual...">Presentación de contenidos en formato visual y auditivo; opciones graduadas de expresión y trabajo colaborativo.</textarea>
+
+            <div class="form-check">
+              <input class="form-check-input" type="checkbox" id="swalChkSoloVacias" checked>
+              <label class="form-check-label text-muted" for="swalChkSoloVacias">Aplicar solo a semanas que tengan estos campos vacíos (no sobrescribir lo ya redactado)</label>
+            </div>
+          </div>
+        `,
+        showCancelButton: true,
+        confirmButtonText: '<i class="bi bi-check2-circle me-1"></i>Aplicar a Semanas',
+        cancelButtonText: 'Cancelar',
+        preConfirm: () => {
+          return {
+            recursos: document.getElementById('swalInpRecursos').value.trim(),
+            dua: document.getElementById('swalInpDUA').value.trim(),
+            soloVacias: document.getElementById('swalChkSoloVacias').checked
+          };
+        }
+      });
+
+      if (!formValues) return;
+
+      let aplicadas = 0;
+      semanas.forEach(s => {
+        let mod = false;
+        if (formValues.recursos) {
+          if (!formValues.soloVacias || !s.recursos || !s.recursos.trim()) {
+            s.recursos = formValues.recursos;
+            mod = true;
+          }
+        }
+        if (formValues.dua) {
+          if (!formValues.soloVacias || !s.dua_adecuaciones || !s.dua_adecuaciones.trim()) {
+            s.dua_adecuaciones = formValues.dua;
+            mod = true;
+          }
+        }
+        if (mod) aplicadas++;
+      });
+
+      renderizarUnidadesAcordeon();
+      guardarBorradorActual(false);
+
+      Swal.fire({
+        toast: true,
+        position: 'top-end',
+        icon: 'success',
+        title: `Recursos y DUA aplicados a ${aplicadas} semana(s)`,
+        showConfirmButton: false,
+        timer: 2000
+      });
+    }
+
+    function copiarSemanaASiguiente(uIdx, sIdx) {
+      if (!planActivo || !planActivo.unidades || !planActivo.unidades[uIdx]) return;
+      const u = planActivo.unidades[uIdx];
+      const sOrig = u.desglose_semanal[sIdx];
+      if (!sOrig) return;
+
+      // Si no hay semana siguiente, crear una
+      if (sIdx + 1 >= u.desglose_semanal.length) {
+        agregarSemanaAUnidad(uIdx);
+      }
+
+      const sDest = u.desglose_semanal[sIdx + 1];
+      if (!sDest) return;
+
+      sDest.oas_semana = JSON.parse(JSON.stringify(sOrig.oas_semana || []));
+      sDest.actividades_formativas = sOrig.actividades_formativas || '';
+      sDest.recursos = sOrig.recursos || '';
+      sDest.dua_adecuaciones = sOrig.dua_adecuaciones || '';
+      sDest.tags = JSON.parse(JSON.stringify(sOrig.tags || []));
+
+      if (!sDest.tema || !sDest.tema.trim()) {
+        sDest.tema = sOrig.tema || '';
+      }
+
+      sDest.dividir_clases = sOrig.dividir_clases || false;
+      if (Array.isArray(sOrig.clases) && sOrig.clases.length > 0) {
+        sDest.clases = JSON.parse(JSON.stringify(sOrig.clases));
+      }
+
+      renderizarUnidadesAcordeon();
+      guardarBorradorActual(false);
+
+      Swal.fire({
+        toast: true,
+        position: 'top-end',
+        icon: 'success',
+        title: `Contenido copiado a la Semana ${sDest.semana || (sIdx + 2)}`,
+        showConfirmButton: false,
+        timer: 2000
+      });
+    }
+
+    function duplicarSemana(uIdx, sIdx) {
+      if (!planActivo || !planActivo.unidades || !planActivo.unidades[uIdx]) return;
+      const u = planActivo.unidades[uIdx];
+      const sOrig = u.desglose_semanal[sIdx];
+      if (!sOrig) return;
+
+      const clon = JSON.parse(JSON.stringify(sOrig));
+
+      let nIni = '';
+      let nFin = '';
+      if (sOrig.fecha_inicio) {
+        try {
+          const d = new Date(sOrig.fecha_inicio + 'T00:00:00');
+          d.setDate(d.getDate() + 7);
+          nIni = d.toISOString().slice(0, 10);
+          const dFin = new Date(d);
+          dFin.setDate(dFin.getDate() + 4);
+          nFin = dFin.toISOString().slice(0, 10);
+        } catch(e) {}
+      }
+
+      clon.fecha_inicio = nIni;
+      clon.fecha_fin = nFin;
+
+      u.desglose_semanal.splice(sIdx + 1, 0, clon);
+      u.desglose_semanal.forEach((s, idx) => {
+        s.semana = idx + 1;
+      });
+
+      renderizarUnidadesAcordeon();
+      guardarBorradorActual(false);
+
+      Swal.fire({
+        toast: true,
+        position: 'top-end',
+        icon: 'success',
+        title: `Semana duplicada e insertada como Semana ${sIdx + 2}`,
+        showConfirmButton: false,
+        timer: 2000
       });
     }
 
