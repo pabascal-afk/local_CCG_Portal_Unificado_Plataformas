@@ -623,6 +623,7 @@ async function obtenerPlanificacionDetalle(id) {
         try { u.oas_seleccionados = JSON.parse(u.oas_seleccionados || '[]'); } catch (e) { u.oas_seleccionados = []; }
         try { u.oats_seleccionados = JSON.parse(u.oats_seleccionados || '[]'); } catch (e) { u.oats_seleccionados = []; }
         try { u.tags = JSON.parse(u.tags || '[]'); } catch (e) { u.tags = []; }
+        try { u.hitos_asociados = JSON.parse(u.hitos_asociados || '[]'); } catch (e) { u.hitos_asociados = []; }
         try { u.desglose_semanal = JSON.parse(u.desglose_semanal || '[]'); } catch (e) { u.desglose_semanal = []; }
     });
     plan.unidades = unidades;
@@ -1210,6 +1211,7 @@ async function guardarPlanificacion(id, payload, usuario) {
             const insts = u.instrumentos_evaluacion || '';
             const desglose = JSON.stringify(u.desglose_semanal || []);
             const tags = JSON.stringify(u.tags || []);
+            const hitosAsociados = JSON.stringify(u.hitos_asociados || []);
             const orden = parseInt(u.orden) || (i + 1);
 
             if (u.id) {
@@ -1229,15 +1231,16 @@ async function guardarPlanificacion(id, payload, usuario) {
                         instrumentos_evaluacion = ?,
                         desglose_semanal = ?,
                         tags = ?,
+                        hitos_asociados = ?,
                         orden = ?
                     WHERE id = ? AND planificacion_id = ?
-                `, [numUnidad, nombre, semestre, fInicio, fFin, horas, oas, oats, habs, acts, indics, insts, desglose, tags, orden, u.id, id]);
+                `, [numUnidad, nombre, semestre, fInicio, fFin, horas, oas, oats, habs, acts, indics, insts, desglose, tags, hitosAsociados, orden, u.id, id]);
             } else {
                 await queryRun(`
                     INSERT INTO planificaciones_unidades
-                    (planificacion_id, numero_unidad, nombre_unidad, semestre, fecha_inicio, fecha_fin, horas_estimadas, oas_seleccionados, oats_seleccionados, habilidades, actitudes, indicadores_evaluacion, instrumentos_evaluacion, desglose_semanal, tags, orden)
-                    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
-                `, [id, numUnidad, nombre, semestre, fInicio, fFin, horas, oas, oats, habs, acts, indics, insts, desglose, tags, orden]);
+                    (planificacion_id, numero_unidad, nombre_unidad, semestre, fecha_inicio, fecha_fin, horas_estimadas, oas_seleccionados, oats_seleccionados, habilidades, actitudes, indicadores_evaluacion, instrumentos_evaluacion, desglose_semanal, tags, hitos_asociados, orden)
+                    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+                `, [id, numUnidad, nombre, semestre, fInicio, fFin, horas, oas, oats, habs, acts, indics, insts, desglose, tags, hitosAsociados, orden]);
             }
         }
     }
@@ -1298,8 +1301,8 @@ async function clonarPlanificacion(planId, cursoDestino, usuario) {
     for (const u of unidades) {
         await queryRun(`
             INSERT INTO planificaciones_unidades
-            (planificacion_id, numero_unidad, nombre_unidad, semestre, fecha_inicio, fecha_fin, horas_estimadas, oas_seleccionados, oats_seleccionados, habilidades, actitudes, indicadores_evaluacion, instrumentos_evaluacion, desglose_semanal, tags, orden)
-            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+            (planificacion_id, numero_unidad, nombre_unidad, semestre, fecha_inicio, fecha_fin, horas_estimadas, oas_seleccionados, oats_seleccionados, habilidades, actitudes, indicadores_evaluacion, instrumentos_evaluacion, desglose_semanal, tags, hitos_asociados, orden)
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
         `, [
             nuevoPlanId,
             u.numero_unidad,
@@ -1316,6 +1319,7 @@ async function clonarPlanificacion(planId, cursoDestino, usuario) {
             u.instrumentos_evaluacion,
             u.desglose_semanal,
             u.tags || '[]',
+            u.hitos_asociados || '[]',
             u.orden
         ]);
     }
@@ -1578,8 +1582,8 @@ async function restaurarVersion(planificacionId, versionId, usuario) {
         for (const un of unidades) {
             await queryRun(`
                 INSERT INTO planificaciones_unidades
-                (planificacion_id, numero_unidad, nombre_unidad, semestre, fecha_inicio, fecha_fin, horas_estimadas, oas_seleccionados, oats_seleccionados, habilidades, actitudes, indicadores_evaluacion, instrumentos_evaluacion, desglose_semanal, tags, orden)
-                VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+                (planificacion_id, numero_unidad, nombre_unidad, semestre, fecha_inicio, fecha_fin, horas_estimadas, oas_seleccionados, oats_seleccionados, habilidades, actitudes, indicadores_evaluacion, instrumentos_evaluacion, desglose_semanal, tags, hitos_asociados, orden)
+                VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
             `, [
                 planificacionId,
                 un.numero_unidad,
@@ -1596,6 +1600,7 @@ async function restaurarVersion(planificacionId, versionId, usuario) {
                 un.instrumentos_evaluacion,
                 un.desglose_semanal,
                 un.tags || '[]',
+                un.hitos_asociados || '[]',
                 un.orden
             ]);
         }

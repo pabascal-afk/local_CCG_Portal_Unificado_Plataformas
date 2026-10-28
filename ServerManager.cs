@@ -1385,6 +1385,11 @@ namespace CCGServerManager
                     this.BeginInvoke((Action)UpdateAllStatuses);
 
                     string targetBranch = srv.Id == "PRUEBAS" ? "pruebas-ccg" : "main";
+                    string gitBin = ResolveGitExecutable();
+                    if (gitBin != "git")
+                    {
+                        AppendLog(generalLogBox, string.Format("   [MOTOR GIT DETECTADO]: {0}", gitBin));
+                    }
 
                     if (!Directory.Exists(srv.FolderPath) || !Directory.Exists(Path.Combine(srv.FolderPath, ".git")))
                     {
@@ -1392,9 +1397,9 @@ namespace CCGServerManager
                         {
                             AppendLog(generalLogBox, string.Format("[2/4] Carpeta no inicializada con Git. Clonando repositorio (rama {0})...", targetBranch));
                             Directory.CreateDirectory(srv.FolderPath);
-                            RunCommandWithLogs("git", "config --global http.sslVerify false", srv.FolderPath, generalLogBox);
+                            RunCommandWithLogs(gitBin, "config --global http.sslVerify false", srv.FolderPath, generalLogBox);
                             string cloneArgs = string.Format("clone -b {0} {1} \"{2}\"", targetBranch, srv.RepoUrl, srv.FolderPath);
-                            RunCommandWithLogs("git", cloneArgs, Path.GetDirectoryName(srv.FolderPath), generalLogBox);
+                            RunCommandWithLogs(gitBin, cloneArgs, Path.GetDirectoryName(srv.FolderPath), generalLogBox);
                         }
                         else
                         {
@@ -1405,14 +1410,14 @@ namespace CCGServerManager
                     {
                         AppendLog(generalLogBox, string.Format("[2/4] Descargando últimos cambios desde GitHub (origin/{0})...", targetBranch));
                         UnlockManagerExeBeforeGit(srv.FolderPath);
-                        RunCommandWithLogs("git", "config http.sslVerify false", srv.FolderPath, generalLogBox);
-                        RunCommandWithLogs("git", "fetch origin " + targetBranch, srv.FolderPath, generalLogBox);
-                        RunCommandWithLogs("git", "checkout -B " + targetBranch + " origin/" + targetBranch, srv.FolderPath, generalLogBox);
-                        int resetCode = RunCommandWithLogs("git", "reset --hard origin/" + targetBranch, srv.FolderPath, generalLogBox);
+                        RunCommandWithLogs(gitBin, "config http.sslVerify false", srv.FolderPath, generalLogBox);
+                        RunCommandWithLogs(gitBin, "fetch origin " + targetBranch, srv.FolderPath, generalLogBox);
+                        RunCommandWithLogs(gitBin, "checkout -B " + targetBranch + " origin/" + targetBranch, srv.FolderPath, generalLogBox);
+                        int resetCode = RunCommandWithLogs(gitBin, "reset --hard origin/" + targetBranch, srv.FolderPath, generalLogBox);
                         if (resetCode != 0)
                         {
                             UnlockManagerExeBeforeGit(srv.FolderPath);
-                            RunCommandWithLogs("git", "checkout -f origin/" + targetBranch, srv.FolderPath, generalLogBox);
+                            RunCommandWithLogs(gitBin, "checkout -f origin/" + targetBranch, srv.FolderPath, generalLogBox);
                         }
                     }
 
@@ -1498,6 +1503,13 @@ namespace CCGServerManager
                         {
                             AppendLog(generalLogBox, "[4/4] Inicializando/verificando esquema de base de datos...");
                             RunCommandWithLogs("node", "\"" + initDb + "\"", srv.FolderPath, generalLogBox);
+                        }
+
+                        string genCurriculo = Path.Combine(srv.FolderPath, "scripts", "generate_curriculo_rich.js");
+                        if (File.Exists(genCurriculo))
+                        {
+                            AppendLog(generalLogBox, "      Sincronizando catálogo oficial MINEDUC (118 planes y unidades temáticas)...");
+                            RunCommandWithLogs("node", "\"" + genCurriculo + "\"", srv.FolderPath, generalLogBox);
                         }
                     }
                 }
@@ -1664,6 +1676,88 @@ namespace CCGServerManager
             }
         }
 
+        private static string cachedGitBinary = null;
+
+        public static string ResolveGitExecutable()
+        {
+            if (cachedGitBinary != null) return cachedGitBinary;
+
+            // 1. Probar "git" directamente en PATH del sistema
+            try
+            {
+                ProcessStartInfo psi = new ProcessStartInfo
+                {
+                    FileName = "git",
+                    Arguments = "--version",
+                    UseShellExecute = false,
+                    CreateNoWindow = true,
+                    RedirectStandardOutput = true
+                };
+                using (Process p = Process.Start(psi))
+                {
+                    p.WaitForExit(1500);
+                    if (p.ExitCode == 0)
+                    {
+                        cachedGitBinary = "git";
+                        return cachedGitBinary;
+                    }
+                }
+            }
+            catch { }
+
+            // 2. Buscar en GitHub Desktop (%LOCALAPPDATA%\GitHubDesktop\app-*\resources\app\git\cmd\git.exe)
+            try
+            {
+                string localAppData = Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData);
+                string ghBase = Path.Combine(localAppData, "GitHubDesktop");
+                if (Directory.Exists(ghBase))
+                {
+                    string[] appDirs = Directory.GetDirectories(ghBase, "app-*");
+                    Array.Sort(appDirs, StringComparer.OrdinalIgnoreCase);
+                    Array.Reverse(appDirs);
+                    foreach (string appDir in appDirs)
+                    {
+                        string candidate = Path.Combine(appDir, "resources", "app", "git", "cmd", "git.exe");
+                        if (File.Exists(candidate))
+                        {
+                            cachedGitBinary = candidate;
+                            return cachedGitBinary;
+                        }
+                    }
+                }
+            }
+            catch { }
+
+            // 3. Buscar en rutas estándar de instalación de Git for Windows
+            try
+            {
+                string progFiles = Environment.GetFolderPath(Environment.SpecialFolder.ProgramFiles);
+                string progFilesX86 = Environment.GetFolderPath(Environment.SpecialFolder.ProgramFilesX86);
+                string localApp = Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData);
+                string[] standard = new string[]
+                {
+                    Path.Combine(progFiles, "Git", "cmd", "git.exe"),
+                    Path.Combine(progFiles, "Git", "bin", "git.exe"),
+                    Path.Combine(progFilesX86, "Git", "cmd", "git.exe"),
+                    Path.Combine(progFilesX86, "Git", "bin", "git.exe"),
+                    Path.Combine(localApp, "Programs", "Git", "cmd", "git.exe"),
+                    Path.Combine(localApp, "Programs", "Git", "bin", "git.exe")
+                };
+                foreach (string s in standard)
+                {
+                    if (File.Exists(s))
+                    {
+                        cachedGitBinary = s;
+                        return cachedGitBinary;
+                    }
+                }
+            }
+            catch { }
+
+            cachedGitBinary = "git";
+            return cachedGitBinary;
+        }
+
         private void RefreshGitCommit(ManagedService srv)
         {
             Task.Run(() =>
@@ -1676,9 +1770,10 @@ namespace CCGServerManager
                     {
                         try
                         {
+                            string gitBin = ResolveGitExecutable();
                             ProcessStartInfo psi = new ProcessStartInfo
                             {
-                                FileName = "git",
+                                FileName = gitBin,
                                 Arguments = "log -1 --format=\"%h • %cr (%s)\"",
                                 WorkingDirectory = srv.FolderPath,
                                 UseShellExecute = false,

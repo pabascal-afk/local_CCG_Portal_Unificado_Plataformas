@@ -371,6 +371,7 @@ db.serialize(() => {
     db.run("ALTER TABLE planificaciones ADD COLUMN solicitud_eliminacion_por TEXT", () => {});
     db.run("ALTER TABLE planificaciones ADD COLUMN solicitud_eliminacion_fecha DATETIME", () => {});
     db.run("ALTER TABLE planificaciones_unidades ADD COLUMN tags TEXT DEFAULT '[]'", () => {});
+    db.run("ALTER TABLE planificaciones_unidades ADD COLUMN hitos_asociados TEXT DEFAULT '[]'", () => {});
     db.run("ALTER TABLE horarios ADD COLUMN anno INTEGER DEFAULT 2026", () => {});
     db.run("ALTER TABLE usuarios ADD COLUMN activo INTEGER DEFAULT 1", () => {});
     db.run("INSERT OR IGNORE INTO config_global (clave, valor) VALUES ('emails_activados', 'true')", () => {});

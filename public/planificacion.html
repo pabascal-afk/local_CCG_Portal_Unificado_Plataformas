@@ -1654,8 +1654,142 @@
         <div class="modal-footer py-2 d-flex justify-content-between align-items-center">
           <div id="footerGuiaHitoEstado"></div>
           <div class="d-flex gap-2">
+            <button type="button" class="btn btn-sm btn-warning text-dark fw-bold shadow-sm" onclick="abrirModalIncorporarHitoDesdeGuia()">
+              <i class="bi bi-calendar-plus me-1"></i>Incorporar a mi Planificación
+            </button>
             <button type="button" class="btn btn-sm btn-secondary" data-bs-dismiss="modal">Cerrar</button>
           </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ============================================================== -->
+  <!-- MODAL INCORPORAR LINEAMIENTO / HITO UTP A LA PLANIFICACIÓN     -->
+  <!-- ============================================================== -->
+  <div class="modal fade" id="modalIncorporarHito" tabindex="-1">
+    <div class="modal-dialog modal-lg">
+      <div class="modal-content border-0 shadow-lg">
+        <div class="modal-header py-3 px-4 text-white" id="headerModalIncHito" style="background: linear-gradient(135deg, #1e40af, #3b82f6);">
+          <div class="d-flex align-items-center gap-3">
+            <span class="fs-2" id="lblIncHitoIcono">🎯</span>
+            <div>
+              <h5 class="modal-title fw-bold mb-0" id="lblIncHitoTitulo">Incorporar Lineamiento UTP</h5>
+              <div class="small opacity-75" id="lblIncHitoFechas">Período de aplicación</div>
+            </div>
+          </div>
+          <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+        </div>
+        <div class="modal-body p-4">
+          <!-- Selector si se abrió sin hito preseleccionado -->
+          <div id="seccionSeleccionarHitoModalInc" class="mb-3 d-none">
+            <label class="form-label small fw-bold text-dark">Selecciona el Lineamiento Institucional UTP:</label>
+            <select id="selectHitoParaInc" class="form-select" onchange="seleccionarHitoEnModalInc(this.value)">
+              <option value="">-- Elige un hito institucional --</option>
+            </select>
+          </div>
+
+          <!-- Resumen de Orientaciones UTP -->
+          <div class="p-3 bg-light rounded border mb-3">
+            <div class="d-flex justify-content-between align-items-center mb-1">
+              <span class="badge bg-primary text-white" id="lblIncHitoTipo">Hito Pedagógico</span>
+              <span class="small text-muted" id="lblIncHitoRango"><i class="bi bi-calendar3 me-1"></i>Fecha oficial</span>
+            </div>
+            <div class="small text-dark mt-2" id="lblIncHitoLineamientos" style="line-height: 1.45;"></div>
+            <div id="lblIncHitoTagsCont" class="mt-2 d-flex flex-wrap gap-1"></div>
+          </div>
+
+          <!-- Decisión de Ubicación: Automática por fecha vs Manual por unidad -->
+          <div class="card border mb-3">
+            <div class="card-header bg-white py-2 px-3 fw-bold small text-dark d-flex align-items-center gap-2">
+              <i class="bi bi-compass text-primary fs-5"></i>
+              <span>¿Cómo deseas incorporar este lineamiento a tu planificación?</span>
+            </div>
+            <div class="card-body p-3">
+              <!-- Opción 1: Aceptar fecha de UTP (Automático) -->
+              <div class="form-check p-3 rounded border mb-3" style="background-color: #f0fdf4; border-color: #86efac !important;">
+                <input class="form-check-input ms-0 me-2" type="radio" name="radioModoIncHito" id="radioModoIncHitoAuto" value="auto" checked onchange="cambiarModoIncorporarHito('auto')">
+                <label class="form-check-label fw-bold text-success cursor-pointer w-100" for="radioModoIncHitoAuto">
+                  <div class="d-flex align-items-center gap-2">
+                    <i class="bi bi-magic fs-5 text-success"></i>
+                    <span>Aceptar fecha oficial de UTP (Asignación Automática)</span>
+                  </div>
+                  <div class="small fw-normal text-muted mt-1 ps-4" id="txtDetalleModoAutoInc">
+                    Ubica automáticamente el lineamiento en la unidad y semana/mes que corresponde según el calendario de UTP.
+                  </div>
+                </label>
+              </div>
+
+              <!-- Opción 2: Incluir manualmente en tal o cual unidad -->
+              <div class="form-check p-3 rounded border" style="background-color: #eff6ff; border-color: #bfdbfe !important;">
+                <input class="form-check-input ms-0 me-2" type="radio" name="radioModoIncHito" id="radioModoIncHitoManual" value="manual" onchange="cambiarModoIncorporarHito('manual')">
+                <label class="form-check-label fw-bold text-primary cursor-pointer w-100" for="radioModoIncHitoManual">
+                  <div class="d-flex align-items-center gap-2">
+                    <i class="bi bi-hand-index-thumb fs-5 text-primary"></i>
+                    <span>Incluir manualmente en tal o cual unidad</span>
+                  </div>
+                  <div class="small fw-normal text-muted mt-1 ps-4">
+                    Tú decides exactamente en qué unidad y en qué semana deseas trabajar este hito.
+                  </div>
+                </label>
+
+                <!-- Panel de selección manual de Unidad y Semana -->
+                <div id="panelSeleccionManualIncHito" class="mt-3 ps-4 d-none">
+                  <div class="row g-2">
+                    <div class="col-md-6">
+                      <label class="form-label small fw-semibold text-dark">Unidad de Destino:</label>
+                      <select id="selectIncHitoUnidad" class="form-select form-select-sm" onchange="actualizarSemanasDisponiblesModalIncHito()">
+                        <!-- Se llena dinámicamente con las unidades del plan -->
+                      </select>
+                    </div>
+                    <div class="col-md-6">
+                      <label class="form-label small fw-semibold text-dark">Semana / Ubicación en la Unidad:</label>
+                      <select id="selectIncHitoSemana" class="form-select form-select-sm">
+                        <!-- Se llena dinámicamente -->
+                      </select>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <!-- Opciones Adicionales de Adopción Curricular -->
+          <div class="card p-3 border mb-2 bg-light-subtle">
+            <h6 class="fw-bold text-dark mb-2 small"><i class="bi bi-check2-square text-primary me-1"></i>Opciones curriculares a aplicar:</h6>
+            <div class="d-flex flex-column gap-2 small">
+              <div class="form-check">
+                <input class="form-check-input" type="checkbox" id="chkIncHitoTema" checked>
+                <label class="form-check-label text-dark" for="chkIncHitoTema">
+                  <strong>Asignar como tema de la semana:</strong> <span class="text-muted" id="lblIncHitoTemaPreview"></span>
+                </label>
+              </div>
+              <div class="form-check" id="chkIncHitoOAsCont">
+                <input class="form-check-input" type="checkbox" id="chkIncHitoOAs" checked>
+                <label class="form-check-label text-dark" for="chkIncHitoOAs">
+                  <strong>Adoptar Objetivos de Aprendizaje (OAs) sugeridos por UTP:</strong> <span class="text-muted" id="lblIncHitoOAsPreview"></span>
+                </label>
+              </div>
+              <div class="form-check" id="chkIncHitoDUACont">
+                <input class="form-check-input" type="checkbox" id="chkIncHitoDUA" checked>
+                <label class="form-check-label text-dark" for="chkIncHitoDUA">
+                  <strong>Aplicar metodologías y estrategias DUA sugeridas:</strong> <span class="text-muted" id="lblIncHitoDUAPreview"></span>
+                </label>
+              </div>
+              <div class="form-check">
+                <input class="form-check-input" type="checkbox" id="chkIncHitoCompletar" checked>
+                <label class="form-check-label text-dark" for="chkIncHitoCompletar">
+                  <strong>Marcar lineamiento UTP como planificado:</strong> retira el recordatorio pendiente y lo archiva como cumplido.
+                </label>
+              </div>
+            </div>
+          </div>
+        </div>
+        <div class="modal-footer py-2 d-flex justify-content-between align-items-center">
+          <button type="button" class="btn btn-sm btn-secondary" data-bs-dismiss="modal">Cancelar</button>
+          <button type="button" class="btn btn-sm btn-success px-3 fw-bold shadow-sm" onclick="ejecutarIncorporarHitoSubmit()">
+            <i class="bi bi-calendar-check me-1"></i> Confirmar e Incorporar a la Planificación
+          </button>
         </div>
       </div>
     </div>
@@ -1726,6 +1860,9 @@
     let modalGestionEliminacionAdminObj = null;
     let modalEditorHitoObj = null;
     let modalGuiaHitoObj = null;
+    let modalIncorporarHitoObj = null;
+    let hitoParaIncorporar = null;
+    let uIdxPreseleccionadoInc = null;
     let modalImportadorExcelObj = null;
     let planIdGestionEliminacion = null;
     let hitosColegioCache = [];
@@ -1806,6 +1943,7 @@
       modalGestionEliminacionAdminObj = new bootstrap.Modal(document.getElementById('modalGestionEliminacionAdmin'));
       modalEditorHitoObj = new bootstrap.Modal(document.getElementById('modalEditorHito'));
       modalGuiaHitoObj = new bootstrap.Modal(document.getElementById('modalGuiaHito'));
+      modalIncorporarHitoObj = new bootstrap.Modal(document.getElementById('modalIncorporarHito'));
       modalImportadorExcelObj = new bootstrap.Modal(document.getElementById('modalImportadorExcel'));
 
       document.addEventListener('click', (e) => {
@@ -3181,8 +3319,11 @@
                       </div>
                     </div>
                     <div class="d-flex flex-column flex-sm-row gap-2 text-nowrap">
+                      <button type="button" class="btn btn-sm btn-warning text-dark fw-bold shadow-sm" onclick="abrirModalIncorporarHito(${h.id})">
+                        <i class="bi bi-calendar-plus me-1"></i>Incorporar a mi Plan
+                      </button>
                       <button type="button" class="btn btn-sm btn-light text-primary fw-bold shadow-sm" onclick="abrirModalGuiaHito(${h.id}, 0)">
-                        <i class="bi bi-compass me-1"></i>Ver Guía & Adoptar
+                        <i class="bi bi-compass me-1"></i>Ver Guía
                       </button>
                       <button type="button" class="btn btn-sm btn-success fw-bold shadow-sm" onclick="confirmarCompletarHito(${h.id})" title="Marcar este lineamiento como planificado y sacar el recordatorio">
                         <i class="bi bi-check2-circle me-1"></i>Marcar como Completo
@@ -3275,6 +3416,27 @@
                     ${uTags.slice(0, 3).map(t => `<span class="badge ${obtenerClaseTag(t)} tag-chip py-1">${t}</span>`).join('')}
                     ${uTags.length > 3 ? `<span class="badge bg-secondary-subtle text-secondary tag-chip">+${uTags.length - 3}</span>` : ''}
                   </div>
+
+                  <!-- Hitos UTP en Cabecera de Acordeón -->
+                  ${(() => {
+                    const hitosU = (planActivo && Array.isArray(planActivo.hitosVigentes)) ? planActivo.hitosVigentes.filter(h => {
+                      if (Array.isArray(u.hitos_asociados) && u.hitos_asociados.includes(h.id)) return true;
+                      if (!h.fecha_inicio || !h.fecha_fin) return false;
+                      if (u.fecha_inicio && u.fecha_fin && !(h.fecha_fin < u.fecha_inicio || h.fecha_inicio > u.fecha_fin)) return true;
+                      return false;
+                    }) : [];
+                    if (hitosU.length === 0) return '';
+                    return `
+                      <div class="d-none d-lg-flex gap-1 me-2 flex-wrap">
+                        ${hitosU.map(hu => `
+                          <span class="badge py-1 px-2 d-inline-flex align-items-center gap-1 shadow-xs" style="background-color: ${hu.color || '#2563eb'}; font-size: 0.68rem;" title="Lineamiento UTP: ${escapeHtml(hu.titulo)}">
+                            <span>${hu.icono || '🎭'}</span>
+                            <span class="text-truncate" style="max-width: 120px;">${escapeHtml(hu.titulo)}</span>
+                          </span>
+                        `).join('')}
+                      </div>
+                    `;
+                  })()}
 
                   <span class="badge bg-info-subtle text-info border border-info-subtle me-3">${(u.oas_seleccionados || []).length} OAs asignados</span>
                 </button>
@@ -3405,12 +3567,14 @@
 
                   ${(() => {
                     const hitosEnUnidad = (planActivo.hitosVigentes || []).filter(h => {
+                      if (Array.isArray(u.hitos_asociados) && u.hitos_asociados.includes(h.id)) return true;
                       if (!h.fecha_inicio || !h.fecha_fin) return false;
                       if (u.fecha_inicio && u.fecha_fin) {
                         if (!(h.fecha_fin < u.fecha_inicio || h.fecha_inicio > u.fecha_fin)) return true;
                       }
                       if (Array.isArray(u.desglose_semanal)) {
                         return u.desglose_semanal.some(s => {
+                          if (Array.isArray(s.hitos_asociados) && s.hitos_asociados.includes(h.id)) return true;
                           if (!s.fecha_inicio || !s.fecha_fin) return false;
                           return !(h.fecha_fin < s.fecha_inicio || h.fecha_inicio > s.fecha_fin);
                         });
@@ -3441,6 +3605,7 @@
                                 </div>
                                 <div class="d-flex gap-1 ms-md-2 mt-2 mt-md-0 text-nowrap">
                                   <button type="button" class="btn btn-xs btn-outline-primary" onclick="abrirModalGuiaHito(${hu.id}, ${idx})"><i class="bi bi-compass me-1"></i>Ver Guía</button>
+                                  <button type="button" class="btn btn-xs btn-outline-danger" onclick="desvincularHitoDeUnidad(${hu.id}, ${idx})" title="Desvincular lineamiento de esta unidad"><i class="bi bi-x-circle me-1"></i>Desvincular</button>
                                   <button type="button" class="btn btn-xs btn-outline-secondary" onclick="confirmarReactivarHito(${hu.id})" title="Reactivar recordatorio activo"><i class="bi bi-arrow-counterclockwise me-1"></i>Reactivar</button>
                                 </div>
                               </div>
@@ -3479,6 +3644,9 @@
                                 <button type="button" class="btn btn-sm btn-primary shadow-sm" onclick="abrirModalGuiaHito(${hu.id}, ${idx})">
                                   <i class="bi bi-compass me-1"></i>Ver Guía & Adoptar
                                 </button>
+                                <button type="button" class="btn btn-sm btn-outline-danger" onclick="desvincularHitoDeUnidad(${hu.id}, ${idx})" title="Desvincular lineamiento de esta unidad">
+                                  <i class="bi bi-x-circle me-1"></i>Desvincular
+                                </button>
                                 <button type="button" class="btn btn-sm btn-success fw-bold shadow-sm" onclick="confirmarCompletarHito(${hu.id})" title="Marcar como planificado y sacar el recordatorio">
                                   <i class="bi bi-check2-circle me-1"></i>Marcar Completo
                                 </button>
@@ -3498,6 +3666,9 @@
                         <span class="small text-muted">Arrastra las filas desde el icono <i class="bi bi-grip-vertical"></i> para reordenar semanas.</span>
                       </div>
                       <div class="d-flex gap-2">
+                        <button type="button" class="btn btn-sm btn-outline-info" onclick="abrirModalIncorporarHito(null, ${idx})" title="Vincular lineamiento institucional de UTP a esta unidad">
+                          <i class="bi bi-bookmark-star me-1"></i> Vincular Lineamiento UTP
+                        </button>
                         <button type="button" class="btn btn-sm btn-outline-primary" onclick="generarSemanasAutomaticas(${idx})" title="Genera de lunes a viernes todas las semanas comprendidas entre la Fecha de Inicio y Término de la unidad">
                           <i class="bi bi-magic me-1"></i> Generar Semanas Automáticas
                         </button>
@@ -3532,6 +3703,7 @@
                             const poolIndicadoresInfo = obtenerPoolIndicadoresSemana(idx, sIdx);
 
                             const hitosEnSemana = (planActivo.hitosVigentes || []).filter(h => {
+                              if (Array.isArray(s.hitos_asociados) && s.hitos_asociados.includes(h.id)) return true;
                               if (!h.fecha_inicio || !h.fecha_fin || !s.fecha_inicio || !s.fecha_fin) return false;
                               return !(h.fecha_fin < s.fecha_inicio || h.fecha_inicio > s.fecha_fin);
                             });
@@ -3547,9 +3719,12 @@
                                       <span class="fs-6">${h.icono || '🎭'}</span>
                                       <span class="fw-bold text-truncate" style="max-width: 95px;">${escapeHtml(h.titulo)}</span>
                                     </div>
-                                    <span class="badge ${esCompSem ? 'bg-success text-white border border-light border-opacity-50' : 'bg-light text-dark'} ms-1 py-0 px-1" style="font-size: 0.65rem;">
-                                      ${esCompSem ? '<i class="bi bi-check-all"></i> Listo' : '<i class="bi bi-compass"></i> Guía'}
-                                    </span>
+                                    <div class="d-flex align-items-center gap-1">
+                                      <span class="badge ${esCompSem ? 'bg-success text-white border border-light border-opacity-50' : 'bg-light text-dark'} ms-1 py-0 px-1" style="font-size: 0.65rem;">
+                                        ${esCompSem ? '<i class="bi bi-check-all"></i> Listo' : '<i class="bi bi-compass"></i> Guía'}
+                                      </span>
+                                      <i class="bi bi-x-circle text-white-50 cursor-pointer ms-1" onclick="event.stopPropagation(); desvincularHitoDeUnidad(${h.id}, ${idx}, ${sIdx})" title="Desvincular lineamiento de esta semana"></i>
+                                    </div>
                                   </div>
                                 </div>
                               `;
@@ -7169,6 +7344,414 @@
     function toggleHitosCompletadosColapsable() {
       const el = document.getElementById('seccionHitosCompletadosColapsable');
       if (el) el.classList.toggle('d-none');
+    }
+
+    // -------------------------------------------------------------
+    // INCORPORAR LINEAMIENTOS Y HITOS UTP A LA PLANIFICACIÓN (AUTO / MANUAL)
+    // -------------------------------------------------------------
+    function determinarUnidadPorFecha(plan, fechaInicio, fechaFin) {
+      if (!plan || !Array.isArray(plan.unidades) || plan.unidades.length === 0) return 0;
+
+      // 1. Coincidencia con fechas de unidad existentes
+      if (fechaInicio && fechaFin) {
+        for (let i = 0; i < plan.unidades.length; i++) {
+          const u = plan.unidades[i];
+          if (u.fecha_inicio && u.fecha_fin) {
+            if (!(fechaFin < u.fecha_inicio || fechaInicio > u.fecha_fin)) {
+              return i;
+            }
+          }
+        }
+      }
+
+      // 2. Coincidencia con fechas de semanas existentes
+      if (fechaInicio && fechaFin) {
+        for (let i = 0; i < plan.unidades.length; i++) {
+          const u = plan.unidades[i];
+          if (Array.isArray(u.desglose_semanal)) {
+            for (const s of u.desglose_semanal) {
+              if (s.fecha_inicio && s.fecha_fin) {
+                if (!(fechaFin < s.fecha_inicio || fechaInicio > s.fecha_fin)) {
+                  return i;
+                }
+              }
+            }
+          }
+        }
+      }
+
+      // 3. Fallback calendario escolar oficial (Marzo-Diciembre)
+      if (fechaInicio) {
+        const parts = fechaInicio.split('-');
+        if (parts.length >= 2) {
+          const mes = parseInt(parts[1], 10);
+          if (mes <= 4) return 0; // Marzo - Abril -> Unidad 1
+          if (mes <= 7) return Math.min(1, plan.unidades.length - 1); // Mayo - Julio -> Unidad 2
+          if (mes <= 9) return Math.min(2, plan.unidades.length - 1); // Agosto - Septiembre -> Unidad 3
+          return Math.min(3, plan.unidades.length - 1); // Octubre - Diciembre -> Unidad 4
+        }
+      }
+
+      return 0;
+    }
+
+    function abrirModalIncorporarHito(hitoId, uIdxPreseleccionado) {
+      if (!planActivo || !Array.isArray(planActivo.unidades) || planActivo.unidades.length === 0) {
+        Swal.fire('Planificación no cargada', 'Carga una planificación primero para incorporar lineamientos.', 'warning');
+        return;
+      }
+
+      uIdxPreseleccionadoInc = (uIdxPreseleccionado !== undefined && uIdxPreseleccionado !== null) ? uIdxPreseleccionado : null;
+
+      const todosHitos = (planActivo && Array.isArray(planActivo.hitosVigentes)) ? planActivo.hitosVigentes : (hitosColegioCache || []);
+
+      if (todosHitos.length === 0) {
+        Swal.fire('Sin lineamientos UTP', 'No hay hitos ni orientaciones UTP vigentes para este curso y asignatura.', 'info');
+        return;
+      }
+
+      if (!modalIncorporarHitoObj) {
+        const el = document.getElementById('modalIncorporarHito');
+        if (el) modalIncorporarHitoObj = new bootstrap.Modal(el);
+      }
+
+      const secSelect = document.getElementById('seccionSeleccionarHitoModalInc');
+      const selectHito = document.getElementById('selectHitoParaInc');
+
+      if (!hitoId) {
+        secSelect.classList.remove('d-none');
+        selectHito.innerHTML = '<option value="">-- Selecciona un Hito / Lineamiento UTP --</option>' + todosHitos.map(h => `
+          <option value="${h.id}">${h.icono || '🎭'} ${escapeHtml(h.titulo)} (${h.fecha_inicio} al ${h.fecha_fin})</option>
+        `).join('');
+
+        hitoParaIncorporar = todosHitos[0];
+        selectHito.value = hitoParaIncorporar ? hitoParaIncorporar.id : '';
+      } else {
+        secSelect.classList.add('d-none');
+        hitoParaIncorporar = todosHitos.find(x => x.id === parseInt(hitoId)) || todosHitos[0];
+      }
+
+      actualizarVistaModalIncHito();
+      if (modalIncorporarHitoObj) modalIncorporarHitoObj.show();
+    }
+
+    function abrirModalIncorporarHitoDesdeGuia() {
+      if (!guiaHitoActivo || !guiaHitoActivo.hito) return;
+      if (modalGuiaHitoObj) modalGuiaHitoObj.hide();
+      abrirModalIncorporarHito(guiaHitoActivo.hito.id, guiaHitoActivo.uIdx);
+    }
+
+    function seleccionarHitoEnModalInc(hitoId) {
+      if (!hitoId) return;
+      const todosHitos = (planActivo && Array.isArray(planActivo.hitosVigentes)) ? planActivo.hitosVigentes : (hitosColegioCache || []);
+      hitoParaIncorporar = todosHitos.find(x => x.id === parseInt(hitoId));
+      actualizarVistaModalIncHito();
+    }
+
+    function actualizarVistaModalIncHito() {
+      if (!hitoParaIncorporar) return;
+      const h = hitoParaIncorporar;
+
+      const header = document.getElementById('headerModalIncHito');
+      if (header) header.style.backgroundColor = h.color || '#1e40af';
+
+      document.getElementById('lblIncHitoIcono').innerText = h.icono || '🎯';
+      document.getElementById('lblIncHitoTitulo').innerText = `Incorporar: ${h.titulo}`;
+      document.getElementById('lblIncHitoFechas').innerText = `Período oficial UTP: ${h.fecha_inicio} al ${h.fecha_fin}`;
+      document.getElementById('lblIncHitoTipo').innerText = h.tipo || 'Hito Pedagógico';
+      document.getElementById('lblIncHitoRango').innerHTML = `<i class="bi bi-calendar3 me-1"></i>${h.fecha_inicio} al ${h.fecha_fin}`;
+      document.getElementById('lblIncHitoLineamientos').innerText = h.lineamientos || 'Sin lineamientos registrados por UTP.';
+
+      const oas = Array.isArray(h.oas_sugeridos) ? h.oas_sugeridos : [];
+      const tags = Array.isArray(h.metodologias_sugeridas) ? h.metodologias_sugeridas : [];
+      const tagsCont = document.getElementById('lblIncHitoTagsCont');
+      let tagsHtml = '';
+      if (oas.length > 0) {
+        const oasTxt = oas.map(o => (typeof o === 'object' ? o.codigo : o)).join(', ');
+        tagsHtml += `<span class="badge bg-primary text-white"><i class="bi bi-bullseye me-1"></i>${oas.length} OAs: ${escapeHtml(oasTxt)}</span>`;
+      }
+      if (tags.length > 0) {
+        tagsHtml += tags.map(t => `<span class="badge ${obtenerClaseTag(t)} tag-chip">${escapeHtml(t)}</span>`).join('');
+      }
+      tagsCont.innerHTML = tagsHtml;
+
+      const uIdxAuto = determinarUnidadPorFecha(planActivo, h.fecha_inicio, h.fecha_fin);
+      const uAuto = planActivo.unidades[uIdxAuto] || planActivo.unidades[0];
+
+      let esExtendido = false;
+      try {
+        const d1 = new Date(h.fecha_inicio + 'T00:00:00');
+        const d2 = new Date(h.fecha_fin + 'T00:00:00');
+        const diffDays = Math.round((d2 - d1) / (1000 * 60 * 60 * 24));
+        if (diffDays >= 14) esExtendido = true;
+      } catch (e) {}
+
+      const txtAuto = document.getElementById('txtDetalleModoAutoInc');
+      txtAuto.innerHTML = `
+        <div class="mt-1 p-2 rounded bg-white border border-success border-opacity-50">
+          <div class="text-success fw-bold"><i class="bi bi-check-circle-fill me-1"></i>Unidad Sugerida Automática:</div>
+          <div><strong>Unidad ${uAuto.numero_unidad}:</strong> ${escapeHtml(uAuto.nombre_unidad)}</div>
+          <div class="small text-muted mt-1">
+            <i class="bi bi-calendar-event me-1"></i>${esExtendido ? 'Lineamiento de mes completo / rango extendido' : 'Semana temática'}: <strong>${h.fecha_inicio} al ${h.fecha_fin}</strong>.
+            Se creará o asignará la semana dentro de esta unidad con las directrices y fechas oficiales de UTP.
+          </div>
+        </div>
+      `;
+
+      document.getElementById('lblIncHitoTemaPreview').innerText = `${h.icono || '🎯'} ${h.titulo}`;
+      if (oas.length > 0) {
+        document.getElementById('chkIncHitoOAsCont').classList.remove('d-none');
+        document.getElementById('lblIncHitoOAsPreview').innerText = `(${oas.length} objetivos sugeridos)`;
+      } else {
+        document.getElementById('chkIncHitoOAsCont').classList.add('d-none');
+      }
+      if (tags.length > 0) {
+        document.getElementById('chkIncHitoDUACont').classList.remove('d-none');
+        document.getElementById('lblIncHitoDUAPreview').innerText = `(${tags.join(', ')})`;
+      } else {
+        document.getElementById('chkIncHitoDUACont').classList.add('d-none');
+      }
+
+      const selU = document.getElementById('selectIncHitoUnidad');
+      selU.innerHTML = planActivo.unidades.map((u, i) => `
+        <option value="${i}">Unidad ${u.numero_unidad}: ${escapeHtml(u.nombre_unidad)}</option>
+      `).join('');
+
+      if (uIdxPreseleccionadoInc !== null && uIdxPreseleccionadoInc < planActivo.unidades.length) {
+        selU.value = uIdxPreseleccionadoInc;
+        document.getElementById('radioModoIncHitoManual').checked = true;
+        cambiarModoIncorporarHito('manual');
+      } else {
+        selU.value = uIdxAuto;
+        document.getElementById('radioModoIncHitoAuto').checked = true;
+        cambiarModoIncorporarHito('auto');
+      }
+
+      actualizarSemanasDisponiblesModalIncHito();
+    }
+
+    function cambiarModoIncorporarHito(modo) {
+      const panelManual = document.getElementById('panelSeleccionManualIncHito');
+      if (modo === 'manual') {
+        panelManual.classList.remove('d-none');
+      } else {
+        panelManual.classList.add('d-none');
+      }
+    }
+
+    function actualizarSemanasDisponiblesModalIncHito() {
+      const selU = document.getElementById('selectIncHitoUnidad');
+      const selS = document.getElementById('selectIncHitoSemana');
+      if (!selU || !selS || !planActivo) return;
+
+      const uIdx = parseInt(selU.value, 10);
+      const u = planActivo.unidades[uIdx];
+      if (!u) return;
+
+      const h = hitoParaIncorporar;
+      const fTxt = h ? `${h.fecha_inicio} al ${h.fecha_fin}` : 'fechas de UTP';
+
+      let html = `
+        <option value="auto_nueva" selected>⭐ [Nueva Semana] Crear semana con fechas de UTP (${fTxt})</option>
+        <option value="general">📌 [Nivel Unidad] Asociar a nivel de Unidad (sin semana específica)</option>
+      `;
+
+      if (Array.isArray(u.desglose_semanal) && u.desglose_semanal.length > 0) {
+        html += '<optgroup label="Semanas existentes en esta unidad:">';
+        u.desglose_semanal.forEach((s, sIdx) => {
+          const t = s.tema ? ` - ${escapeHtml(s.tema)}` : '';
+          const f = s.fecha_inicio ? ` (${s.fecha_inicio})` : '';
+          html += `<option value="${sIdx}">Semana ${s.semana || (sIdx + 1)}${f}${t}</option>`;
+        });
+        html += '</optgroup>';
+      }
+
+      selS.innerHTML = html;
+    }
+
+    async function ejecutarIncorporarHitoSubmit() {
+      if (!hitoParaIncorporar || !planActivo || !Array.isArray(planActivo.unidades)) return;
+
+      const h = hitoParaIncorporar;
+      const modo = document.querySelector('input[name="radioModoIncHito"]:checked')?.value || 'auto';
+      const chkTema = document.getElementById('chkIncHitoTema')?.checked;
+      const chkOAs = document.getElementById('chkIncHitoOAs')?.checked;
+      const chkDUA = document.getElementById('chkIncHitoDUA')?.checked;
+      const chkCompletar = document.getElementById('chkIncHitoCompletar')?.checked;
+
+      let targetUIdx = 0;
+      let targetSValue = 'auto_nueva';
+
+      if (modo === 'auto') {
+        targetUIdx = determinarUnidadPorFecha(planActivo, h.fecha_inicio, h.fecha_fin);
+        const uAuto = planActivo.unidades[targetUIdx];
+        if (uAuto && Array.isArray(uAuto.desglose_semanal)) {
+          const matchIdx = uAuto.desglose_semanal.findIndex(s => s.fecha_inicio === h.fecha_inicio || (s.fecha_inicio && s.fecha_fin && !(h.fecha_fin < s.fecha_inicio || h.fecha_inicio > s.fecha_fin)));
+          if (matchIdx !== -1) {
+            targetSValue = matchIdx;
+          } else {
+            targetSValue = 'auto_nueva';
+          }
+        }
+      } else {
+        targetUIdx = parseInt(document.getElementById('selectIncHitoUnidad').value, 10);
+        targetSValue = document.getElementById('selectIncHitoSemana').value;
+      }
+
+      const u = planActivo.unidades[targetUIdx];
+      if (!u) {
+        Swal.fire('Error', 'La unidad de destino no es válida.', 'error');
+        return;
+      }
+
+      // 1. Vincular hito a nivel de unidad
+      u.hitos_asociados = Array.isArray(u.hitos_asociados) ? u.hitos_asociados : [];
+      if (!u.hitos_asociados.includes(h.id)) {
+        u.hitos_asociados.push(h.id);
+      }
+
+      if (!u.fecha_inicio && h.fecha_inicio) u.fecha_inicio = h.fecha_inicio;
+      if (!u.fecha_fin && h.fecha_fin) u.fecha_fin = h.fecha_fin;
+
+      // 2. Adoptar OAs sugeridos en la Unidad si se seleccionó
+      const oasHito = Array.isArray(h.oas_sugeridos) ? h.oas_sugeridos : [];
+      let oasAdoptadosCount = 0;
+      if (chkOAs && oasHito.length > 0) {
+        u.oas_seleccionados = Array.isArray(u.oas_seleccionados) ? u.oas_seleccionados : [];
+        oasHito.forEach(item => {
+          const cod = typeof item === 'object' ? item.codigo : item;
+          const yaExiste = u.oas_seleccionados.some(o => (typeof o === 'object' ? o.codigo : o) === cod);
+          if (!yaExiste) {
+            let matchOa = null;
+            if (Array.isArray(planActivo.oas_disponibles)) {
+              matchOa = planActivo.oas_disponibles.find(x => x.codigo === cod);
+            }
+            if (matchOa) {
+              u.oas_seleccionados.push({ ...matchOa });
+            } else if (typeof item === 'object') {
+              u.oas_seleccionados.push({ ...item });
+            } else {
+              u.oas_seleccionados.push({ codigo: cod, categoria: 'Basal', descripcion: `Objetivo sugerido por UTP (${h.titulo})` });
+            }
+            oasAdoptadosCount++;
+          }
+        });
+      }
+
+      // 3. Vincular en la Semana correspondiente
+      u.desglose_semanal = Array.isArray(u.desglose_semanal) ? u.desglose_semanal : [];
+      const tagsHito = Array.isArray(h.metodologias_sugeridas) ? h.metodologias_sugeridas : [];
+
+      if (targetSValue === 'auto_nueva') {
+        const numSemana = u.desglose_semanal.length + 1;
+        const codigosOAsHito = oasHito.map(o => (typeof o === 'object' ? o.codigo : o));
+        const nuevaSem = {
+          semana: numSemana,
+          fecha_inicio: h.fecha_inicio || '',
+          fecha_fin: h.fecha_fin || '',
+          tema: chkTema ? `${h.icono || '🎯'} ${h.titulo}` : '',
+          oas_semana: chkOAs ? codigosOAsHito : [],
+          tags: chkDUA ? [...tagsHito] : [],
+          hitos_asociados: [h.id],
+          actividades_formativas: h.lineamientos ? `[Orientación UTP]: ${h.lineamientos}` : '',
+          recursos: Array.isArray(h.recursos_enlaces) ? h.recursos_enlaces.join('\n') : '',
+          dua_adecuaciones: '',
+          dividir_clases: false,
+          clases: []
+        };
+        u.desglose_semanal.push(nuevaSem);
+      } else if (targetSValue !== 'general') {
+        const sIdx = parseInt(targetSValue, 10);
+        if (u.desglose_semanal[sIdx]) {
+          const s = u.desglose_semanal[sIdx];
+          s.hitos_asociados = Array.isArray(s.hitos_asociados) ? s.hitos_asociados : [];
+          if (!s.hitos_asociados.includes(h.id)) s.hitos_asociados.push(h.id);
+
+          if (chkTema) {
+            s.tema = s.tema ? `${s.tema} • ${h.icono || '🎯'} ${h.titulo}` : `${h.icono || '🎯'} ${h.titulo}`;
+          }
+          if (chkDUA && tagsHito.length > 0) {
+            s.tags = Array.isArray(s.tags) ? s.tags : [];
+            tagsHito.forEach(t => { if (!s.tags.includes(t)) s.tags.push(t); });
+          }
+          if (chkOAs && oasHito.length > 0) {
+            s.oas_semana = Array.isArray(s.oas_semana) ? s.oas_semana : [];
+            oasHito.forEach(item => {
+              const cod = typeof item === 'object' ? item.codigo : item;
+              if (!s.oas_semana.includes(cod)) s.oas_semana.push(cod);
+            });
+          }
+          if (!s.fecha_inicio && h.fecha_inicio) s.fecha_inicio = h.fecha_inicio;
+          if (!s.fecha_fin && h.fecha_fin) s.fecha_fin = h.fecha_fin;
+        }
+      }
+
+      // 4. Marcar hito como planificado si el checkbox fue marcado
+      if (chkCompletar) {
+        await ejecutarCompletarHito(h.id, true);
+      }
+
+      if (modalIncorporarHitoObj) modalIncorporarHitoObj.hide();
+      if (modalGuiaHitoObj) modalGuiaHitoObj.hide();
+
+      renderizarBannerHitosPlan();
+      renderizarUnidadesAcordeon(targetUIdx);
+
+      Swal.fire({
+        icon: 'success',
+        title: '¡Lineamiento UTP Incorporado!',
+        html: `Se incorporó <strong>"${escapeHtml(h.titulo)}"</strong> en la <strong>Unidad ${u.numero_unidad}</strong> (${escapeHtml(u.nombre_unidad)}).<br>` +
+              (oasAdoptadosCount > 0 ? `<div class="mt-2 small text-muted"><i class="bi bi-check-all text-success me-1"></i>${oasAdoptadosCount} OAs sugeridos por UTP integrados a la unidad.</div>` : ''),
+        confirmButtonColor: '#2563eb'
+      });
+    }
+
+    async function desvincularHitoDeUnidad(hitoId, uIdx, sIdx) {
+      if (!planActivo || !planActivo.unidades || !planActivo.unidades[uIdx]) return;
+      const u = planActivo.unidades[uIdx];
+      const hId = parseInt(hitoId, 10);
+
+      const confirm = await Swal.fire({
+        title: '¿Desvincular Lineamiento?',
+        text: '¿Deseas quitar este lineamiento de UTP de esta unidad/semana? No se borrarán los contenidos escritos manualmente.',
+        icon: 'warning',
+        showCancelButton: true,
+        confirmButtonColor: '#d33',
+        cancelButtonColor: '#64748b',
+        confirmButtonText: 'Sí, desvincular',
+        cancelButtonText: 'Cancelar'
+      });
+      if (!confirm.isConfirmed) return;
+
+      if (sIdx !== undefined && sIdx !== null && u.desglose_semanal && u.desglose_semanal[sIdx]) {
+        const s = u.desglose_semanal[sIdx];
+        if (Array.isArray(s.hitos_asociados)) {
+          s.hitos_asociados = s.hitos_asociados.filter(id => id !== hId);
+        }
+      } else {
+        if (Array.isArray(u.hitos_asociados)) {
+          u.hitos_asociados = u.hitos_asociados.filter(id => id !== hId);
+        }
+        if (Array.isArray(u.desglose_semanal)) {
+          u.desglose_semanal.forEach(s => {
+            if (Array.isArray(s.hitos_asociados)) {
+              s.hitos_asociados = s.hitos_asociados.filter(id => id !== hId);
+            }
+          });
+        }
+      }
+
+      renderizarBannerHitosPlan();
+      renderizarUnidadesAcordeon(uIdx);
+
+      Swal.fire({
+        toast: true,
+        position: 'top-end',
+        icon: 'info',
+        title: 'Lineamiento desvinculado',
+        showConfirmButton: false,
+        timer: 2000
+      });
     }
 
     // -------------------------------------------------------------
