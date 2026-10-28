@@ -240,6 +240,97 @@
       border-color: #94a3b8;
     }
 
+    /* Estilos del Modal de Calendario Interactivo de Unidades */
+    .cal-unidad-card {
+      cursor: pointer;
+      transition: all 0.18s ease;
+      border: 2px solid #e2e8f0;
+      border-radius: 10px;
+      background: #ffffff;
+    }
+    .cal-unidad-card:hover {
+      transform: translateY(-2px);
+      box-shadow: 0 4px 10px rgba(0, 0, 0, 0.06);
+    }
+    .cal-unidad-card.active {
+      box-shadow: 0 4px 14px rgba(37, 99, 235, 0.16);
+    }
+    .cal-mes-grid {
+      display: grid;
+      grid-template-columns: repeat(7, 1fr);
+      gap: 3px;
+    }
+    .cal-dia-header {
+      text-align: center;
+      font-size: 0.72rem;
+      font-weight: 700;
+      color: #64748b;
+      padding: 4px 0;
+      text-transform: uppercase;
+    }
+    .cal-dia-cell {
+      min-height: 54px;
+      border: 1px solid #e2e8f0;
+      border-radius: 6px;
+      padding: 3px 5px;
+      font-size: 0.76rem;
+      cursor: pointer;
+      position: relative;
+      background: #ffffff;
+      transition: all 0.12s ease;
+      display: flex;
+      flex-direction: column;
+      justify-content: space-between;
+      user-select: none;
+    }
+    .cal-dia-cell:hover {
+      border-color: #2563eb;
+      box-shadow: 0 0 0 2px rgba(37, 99, 235, 0.18);
+      z-index: 2;
+    }
+    .cal-dia-cell.cal-dia-vacio {
+      background: transparent;
+      border-color: transparent;
+      cursor: default;
+      pointer-events: none;
+    }
+    .cal-dia-cell.cal-dia-finde {
+      background: #f8fafc;
+      color: #94a3b8;
+    }
+    .cal-dia-cell.cal-dia-preview {
+      border: 1.5px dashed #2563eb !important;
+      background: rgba(37, 99, 235, 0.09) !important;
+    }
+    .cal-badge-extremo {
+      font-size: 0.62rem;
+      padding: 1px 4px;
+      border-radius: 4px;
+      font-weight: 700;
+      color: #ffffff;
+      line-height: 1.1;
+      display: inline-block;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      max-width: 100%;
+    }
+    .cal-mes-pill {
+      font-size: 0.75rem;
+      padding: 3px 10px;
+      border-radius: 999px;
+      border: 1px solid #cbd5e1;
+      background: #ffffff;
+      color: #334155;
+      cursor: pointer;
+      transition: all 0.15s;
+    }
+    .cal-mes-pill:hover, .cal-mes-pill.active {
+      background: #2563eb;
+      color: #ffffff;
+      border-color: #2563eb;
+    }
+
     /* Estilos de Impresión Oficial */
     @media print {
       body {
@@ -862,6 +953,9 @@
                   <p class="text-muted small mb-0">Organiza las unidades, OAs MINEDUC, metodologías DUA y el desglose de clases por semana.</p>
                 </div>
                 <div class="d-flex gap-2 flex-wrap">
+                  <button class="btn btn-sm btn-outline-primary fw-semibold" onclick="abrirModalCalendarioUnidades(0)" title="Abrir calendario escolar interactivo para seleccionar y ajustar las fechas de las unidades">
+                    <i class="bi bi-calendar-range me-1"></i> Cronograma en Calendario
+                  </button>
                   <button class="btn btn-sm btn-outline-dark" onclick="cargarUnidadesOficialesPlanActual()" title="Cargar o actualizar las 4 Unidades Oficiales del Programa de Estudio y sus OAs asignados">
                     <i class="bi bi-magic me-1 text-primary"></i> Cargar Unidades y OAs Oficiales MINEDUC
                   </button>
@@ -973,6 +1067,140 @@
             <button type="button" class="btn btn-sm btn-secondary" data-bs-dismiss="modal">Cancelar</button>
             <button type="button" class="btn btn-sm btn-primary" onclick="confirmarSeleccionOAs()">
               <i class="bi bi-check-lg me-1"></i> Asignar OAs a la Unidad
+            </button>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ============================================================== -->
+  <!-- MODAL: CALENDARIO INTERACTIVO DE FECHAS DE UNIDADES            -->
+  <!-- ============================================================== -->
+  <div class="modal fade" id="modalCalendarioUnidades" tabindex="-1">
+    <div class="modal-dialog modal-xl modal-dialog-scrollable">
+      <div class="modal-content">
+        <div class="modal-header bg-primary text-white py-2">
+          <div>
+            <h6 class="modal-title fw-bold mb-0">
+              <i class="bi bi-calendar-range me-2"></i>Selector y Ajuste de Fechas en Calendario Escolar
+            </h6>
+            <small class="text-white-50" id="subtituloModalCalendarioUnidades">Selecciona una unidad arriba y marca su inicio y término directamente en el calendario.</small>
+          </div>
+          <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+        </div>
+        <div class="modal-body p-3 bg-light">
+          <!-- 1. TARJETAS DE UNIDADES (SELECTOR DE UNIDAD ACTIVA) -->
+          <div class="mb-3">
+            <div class="d-flex justify-content-between align-items-center mb-2 flex-wrap gap-2">
+              <span class="small fw-bold text-secondary text-uppercase">
+                <i class="bi bi-layers me-1 text-primary"></i>1. Unidad Activa a Calendarizar (haz clic para elegir unidad):
+              </span>
+              <div id="alertaSolapamientoUnidadesCal" class="d-none"></div>
+            </div>
+            <div class="row g-2" id="contenedorTarjetasUnidadesCal">
+              <!-- Render dinámico de tarjetas de unidades -->
+            </div>
+          </div>
+
+          <!-- 2. BARRA DE CONTROLES Y AJUSTE RÁPIDO DE LA UNIDAD ACTIVA -->
+          <div class="bg-white p-2 px-3 rounded border shadow-xs mb-3">
+            <div class="row g-2 align-items-center">
+              <div class="col-lg-4">
+                <div class="d-flex align-items-center gap-2">
+                  <span id="badgeUnidadActivaCal" class="badge bg-primary px-2 py-1">U1</span>
+                  <span id="nombreUnidadActivaCal" class="fw-bold small text-dark text-truncate">Unidad 1</span>
+                </div>
+                <div class="text-muted" style="font-size: 0.72rem;" id="estadoSeleccionRangoCal">
+                  Haz clic en un día del calendario para fijar el inicio y luego en otro para el término.
+                </div>
+              </div>
+
+              <!-- Inputs directos sincronizados y modo de clic -->
+              <div class="col-lg-4">
+                <div class="d-flex align-items-center gap-2 justify-content-lg-center flex-wrap">
+                  <div>
+                    <label class="form-label mb-0 text-muted" style="font-size: 0.66rem;">Inicio</label>
+                    <input type="date" id="inputCalFechaInicio" class="form-control form-control-sm py-0 px-2" style="font-size: 0.76rem; width: 128px;" onchange="actualizarFechaManualModalCal('inicio', this.value)">
+                  </div>
+                  <i class="bi bi-arrow-right text-muted mt-3"></i>
+                  <div>
+                    <label class="form-label mb-0 text-muted" style="font-size: 0.66rem;">Término</label>
+                    <input type="date" id="inputCalFechaFin" class="form-control form-control-sm py-0 px-2" style="font-size: 0.76rem; width: 128px;" onchange="actualizarFechaManualModalCal('fin', this.value)">
+                  </div>
+                  <div class="mt-3">
+                    <div class="btn-group btn-group-sm" role="group" title="Modo de clic en el calendario">
+                      <button type="button" id="btnModoCal_rango" class="btn btn-xs btn-primary py-0 px-2" style="font-size: 0.7rem;" onclick="cambiarModoSeleccionCalendario('rango')">Rango (2 clics)</button>
+                      <button type="button" id="btnModoCal_inicio" class="btn btn-xs btn-outline-primary py-0 px-2" style="font-size: 0.7rem;" onclick="cambiarModoSeleccionCalendario('inicio')">Solo Inicio</button>
+                      <button type="button" id="btnModoCal_fin" class="btn btn-xs btn-outline-primary py-0 px-2" style="font-size: 0.7rem;" onclick="cambiarModoSeleccionCalendario('fin')">Solo Fin</button>
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              <!-- Atajos de ajuste rápido -->
+              <div class="col-lg-4">
+                <div class="d-flex gap-1 justify-content-lg-end flex-wrap">
+                  <button type="button" class="btn btn-xs btn-outline-secondary py-1 px-2" style="font-size: 0.7rem;" onclick="ajustarRangoLunesViernesCal()" title="Ajustar inicio al Lunes y término al Viernes de sus semanas">
+                    <i class="bi bi-calendar-check me-1 text-primary"></i>Ajustar Lun–Vie
+                  </button>
+                  <button type="button" class="btn btn-xs btn-outline-secondary py-1 px-2" style="font-size: 0.7rem;" onclick="encadenarDespuesUnidadAnteriorCal()" title="Iniciar el lunes inmediatamente posterior al término de la unidad anterior">
+                    <i class="bi bi-link-45deg me-1 text-success"></i>Continuar tras U. anterior
+                  </button>
+                  <button type="button" class="btn btn-xs btn-outline-secondary py-1 px-2" style="font-size: 0.7rem;" onclick="desplazarOExtenderUnidadCal('extender', -1)" title="Acortar término en 1 semana">
+                    -1 Sem
+                  </button>
+                  <button type="button" class="btn btn-xs btn-outline-secondary py-1 px-2" style="font-size: 0.7rem;" onclick="desplazarOExtenderUnidadCal('extender', 1)" title="Extender término en 1 semana">
+                    +1 Sem
+                  </button>
+                  <button type="button" class="btn btn-xs btn-outline-danger py-1 px-2" style="font-size: 0.7rem;" onclick="limpiarFechasUnidadActivaCal()" title="Limpiar fechas de esta unidad">
+                    <i class="bi bi-eraser"></i>
+                  </button>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <!-- 3. BARRA DE NAVEGACIÓN DE MESES -->
+          <div class="d-flex justify-content-between align-items-center mb-2 flex-wrap gap-2">
+            <button type="button" class="btn btn-sm btn-outline-secondary py-0 px-2" onclick="navegarMesCalendario(-1)">
+              <i class="bi bi-chevron-left me-1"></i>Mes Anterior
+            </button>
+            <div class="d-flex gap-1 flex-wrap justify-content-center" id="barraPillsMesesCal">
+              <!-- Render dinámico de botones Mar - Dic -->
+            </div>
+            <button type="button" class="btn btn-sm btn-outline-secondary py-0 px-2" onclick="navegarMesCalendario(1)">
+              Mes Siguiente<i class="bi bi-chevron-right ms-1"></i>
+            </button>
+          </div>
+
+          <!-- 4. GRILLA DE CALENDARIO BIMESTRAL (2 MESES EN PARALELO) -->
+          <div class="row g-3" id="contenedorGrillaMesesCal">
+            <!-- Render dinámico de los 2 meses visibles -->
+          </div>
+
+          <!-- Leyenda inferior -->
+          <div class="d-flex flex-wrap gap-3 align-items-center justify-content-between mt-3 pt-2 border-top small text-muted" style="font-size: 0.74rem;">
+            <div class="d-flex flex-wrap gap-3 align-items-center" id="leyendaUnidadesCal">
+              <!-- Leyenda de colores por unidad -->
+            </div>
+            <div class="d-flex gap-3 align-items-center">
+              <span><span class="badge bg-danger-subtle text-danger border border-danger-subtle me-1">🚩</span>Feriado Oficial</span>
+              <span><span class="badge bg-primary-subtle text-primary border border-primary-subtle me-1">🎭</span>Hito / Lineamiento UTP</span>
+            </div>
+          </div>
+        </div>
+        <div class="modal-footer d-flex justify-content-between align-items-center py-2">
+          <div class="form-check form-switch mb-0">
+            <input class="form-check-input" type="checkbox" id="chkAutogenerarSemanasModalCal">
+            <label class="form-check-label small" for="chkAutogenerarSemanasModalCal">
+              Generar / ajustar automáticamente las semanas (Lun–Vie) de las unidades cuyas fechas cambiaron
+            </label>
+          </div>
+          <div class="d-flex gap-2">
+            <button type="button" class="btn btn-sm btn-secondary" data-bs-dismiss="modal">Cancelar</button>
+            <button type="button" class="btn btn-sm btn-primary fw-bold" onclick="aplicarFechasCalendarioUnidades()">
+              <i class="bi bi-check2-circle me-1"></i> Aplicar Fechas a las Unidades
             </button>
           </div>
         </div>
@@ -1864,6 +2092,7 @@
     let hitoParaIncorporar = null;
     let uIdxPreseleccionadoInc = null;
     let modalImportadorExcelObj = null;
+    let modalCalendarioUnidadesObj = null;
     let planIdGestionEliminacion = null;
     let hitosColegioCache = [];
     let guiaHitoActivo = null;
@@ -1945,6 +2174,7 @@
       modalGuiaHitoObj = new bootstrap.Modal(document.getElementById('modalGuiaHito'));
       modalIncorporarHitoObj = new bootstrap.Modal(document.getElementById('modalIncorporarHito'));
       modalImportadorExcelObj = new bootstrap.Modal(document.getElementById('modalImportadorExcel'));
+      modalCalendarioUnidadesObj = new bootstrap.Modal(document.getElementById('modalCalendarioUnidades'));
 
       document.addEventListener('click', (e) => {
         if (!e.target.closest('#dropdownResultadosOAHito') && !e.target.closest('#inputBuscarOAHito')) {
@@ -3443,8 +3673,8 @@
               </h2>
               <div id="collapseUnidad${idx}" class="accordion-collapse collapse ${idx === openIdx ? 'show' : ''}" data-bs-parent="#acordeonUnidades">
                 <div class="accordion-body bg-light p-4">
-                  <div class="row g-3 mb-4 bg-white p-3 rounded border">
-                    <div class="col-md-6">
+                  <div class="row g-3 mb-4 bg-white p-3 rounded border align-items-end">
+                    <div class="col-md-5">
                       <label class="form-label small fw-semibold">Nombre de la Unidad</label>
                       <input type="text" class="form-control form-control-sm" value="${u.nombre_unidad}" onchange="actualizarCampoUnidad(${idx}, 'nombre_unidad', this.value)">
                     </div>
@@ -3455,13 +3685,21 @@
                         <option value="2" ${u.semestre == 2 ? 'selected' : ''}>2° Semestre</option>
                       </select>
                     </div>
-                    <div class="col-md-2">
-                      <label class="form-label small fw-semibold">Fecha Inicio</label>
-                      <input type="date" class="form-control form-control-sm" value="${u.fecha_inicio || ''}" onchange="actualizarCampoUnidad(${idx}, 'fecha_inicio', this.value)">
-                    </div>
-                    <div class="col-md-2">
-                      <label class="form-label small fw-semibold">Fecha Término</label>
-                      <input type="date" class="form-control form-control-sm" value="${u.fecha_fin || ''}" onchange="actualizarCampoUnidad(${idx}, 'fecha_fin', this.value)">
+                    <div class="col-md-5">
+                      <div class="d-flex justify-content-between align-items-center mb-1">
+                        <label class="form-label small fw-semibold mb-0">Fechas (Inicio — Término)</label>
+                        <button type="button" class="btn btn-xs btn-outline-primary py-0 px-2 fw-semibold" style="font-size: 0.72rem;" onclick="abrirModalCalendarioUnidades(${idx})" title="Seleccionar y ajustar fechas desde el calendario escolar interactivo">
+                          <i class="bi bi-calendar-range me-1"></i>Seleccionar en Calendario
+                        </button>
+                      </div>
+                      <div class="input-group input-group-sm">
+                        <input type="date" class="form-control form-control-sm" value="${u.fecha_inicio || ''}" onchange="actualizarCampoUnidad(${idx}, 'fecha_inicio', this.value)" title="Fecha de Inicio">
+                        <span class="input-group-text bg-light text-muted px-2"><i class="bi bi-arrow-right"></i></span>
+                        <input type="date" class="form-control form-control-sm" value="${u.fecha_fin || ''}" onchange="actualizarCampoUnidad(${idx}, 'fecha_fin', this.value)" title="Fecha de Término">
+                        <button type="button" class="btn btn-outline-primary" onclick="abrirModalCalendarioUnidades(${idx})" title="Abrir Calendario Interactivo">
+                          <i class="bi bi-calendar3"></i>
+                        </button>
+                      </div>
                     </div>
                   </div>
 
@@ -4576,6 +4814,886 @@
         text: `Se generaron exitosamente ${nuevasSemanas.length} semanas de clases de lunes a viernes.`,
         timer: 2500,
         showConfirmButton: false
+      });
+    }
+
+    // =========================================================================
+    // MODAL DE CALENDARIO INTERACTIVO PARA SELECCIÓN Y AJUSTE DE UNIDADES
+    // =========================================================================
+    const COLORES_UNIDADES_CAL = [
+      { hex: '#2563eb', bg: '#dbeafe', bgStrong: '#2563eb', border: '#60a5fa', text: '#1e40af', label: 'Azul' },
+      { hex: '#059669', bg: '#d1fae5', bgStrong: '#059669', border: '#34d399', text: '#065f46', label: 'Esmeralda' },
+      { hex: '#d97706', bg: '#fef3c7', bgStrong: '#d97706', border: '#fbbf24', text: '#92400e', label: 'Ámbar' },
+      { hex: '#7c3aed', bg: '#ede9fe', bgStrong: '#7c3aed', border: '#a78bfa', text: '#5b21b6', label: 'Violeta' },
+      { hex: '#e11d48', bg: '#ffe4e6', bgStrong: '#e11d48', border: '#fb7185', text: '#9f1239', label: 'Rosa' },
+      { hex: '#0891b2', bg: '#cffafe', bgStrong: '#0891b2', border: '#22d3ee', text: '#155e75', label: 'Cian' }
+    ];
+
+    const NOMBRES_MESES_CAL = [
+      'Enero', 'Febrero', 'Marzo', 'Abril', 'Mayo', 'Junio',
+      'Julio', 'Agosto', 'Septiembre', 'Octubre', 'Noviembre', 'Diciembre'
+    ];
+    const NOMBRES_MESES_CORTOS_CAL = [
+      'Ene', 'Feb', 'Mar', 'Abr', 'May', 'Jun',
+      'Jul', 'Ago', 'Sep', 'Oct', 'Nov', 'Dic'
+    ];
+
+    const FERIADOS_FIJOS_CHILE_CAL = {
+      '01-01': 'Año Nuevo',
+      '05-01': 'Día del Trabajo',
+      '05-21': 'Día de las Glorias Navales',
+      '06-20': 'Día Nacional de los Pueblos Indígenas',
+      '06-29': 'San Pedro y San Pablo',
+      '07-16': 'Día de la Virgen del Carmen',
+      '08-15': 'Asunción de la Virgen',
+      '09-18': 'Independencia Nacional',
+      '09-19': 'Día de las Glorias del Ejército',
+      '10-12': 'Encuentro de Dos Mundos',
+      '10-31': 'Día de las Iglesias Evangélicas',
+      '11-01': 'Día de Todos los Santos',
+      '12-08': 'Inmaculada Concepción',
+      '12-25': 'Navidad'
+    };
+
+    const FERIADOS_MOVILES_CHILE_CAL = {
+      '2025-04-18': 'Viernes Santo',
+      '2025-04-19': 'Sábado Santo',
+      '2026-04-03': 'Viernes Santo',
+      '2026-04-04': 'Sábado Santo',
+      '2027-03-26': 'Viernes Santo',
+      '2027-03-27': 'Sábado Santo'
+    };
+
+    let estadoCalUnidades = {
+      anio: 2026,
+      uIdxActiva: 0,
+      unidadesTemp: [],
+      mesBase: 2, // 2 = Marzo
+      modoClic: 'rango', // 'rango' | 'inicio' | 'fin'
+      esperandoSegundoClic: false,
+      fechaHover: ''
+    };
+
+    function obtenerColorUnidadCal(idx) {
+      return COLORES_UNIDADES_CAL[idx % COLORES_UNIDADES_CAL.length];
+    }
+
+    function obtenerFeriadoDiaCal(fechaStr) {
+      if (!fechaStr) return null;
+      if (FERIADOS_MOVILES_CHILE_CAL[fechaStr]) return FERIADOS_MOVILES_CHILE_CAL[fechaStr];
+      const mmdd = fechaStr.slice(5);
+      return FERIADOS_FIJOS_CHILE_CAL[mmdd] || null;
+    }
+
+    function obtenerHitosDiaCal(fechaStr) {
+      if (!planActivo || !Array.isArray(planActivo.hitosVigentes) || !fechaStr) return [];
+      return planActivo.hitosVigentes.filter(h => {
+        const ini = h.fecha_inicio || '';
+        const fin = h.fecha_fin || ini;
+        return ini && fechaStr >= ini && fechaStr <= fin;
+      });
+    }
+
+    function formatearFechaCortaCal(fechaStr) {
+      if (!fechaStr || !/^\d{4}-\d{2}-\d{2}$/.test(fechaStr)) return 'Sin definir';
+      const partes = fechaStr.split('-');
+      const mIdx = parseInt(partes[1], 10) - 1;
+      return `${partes[2]} ${NOMBRES_MESES_CORTOS_CAL[mIdx] || ''}`;
+    }
+
+    function calcularSemanasEscolaresRango(fIniStr, fFinStr) {
+      if (!fIniStr || !fFinStr || fFinStr < fIniStr) return 0;
+      try {
+        const fIni = new Date(fIniStr + 'T00:00:00');
+        const fFin = new Date(fFinStr + 'T00:00:00');
+        let cur = new Date(fIni);
+        const day = cur.getDay();
+        if (day === 0) cur.setDate(cur.getDate() + 1);
+        else if (day > 1) cur.setDate(cur.getDate() - (day - 1));
+        let count = 0;
+        while (cur <= fFin && count < 60) {
+          count++;
+          cur.setDate(cur.getDate() + 7);
+        }
+        return count;
+      } catch (e) {
+        return 0;
+      }
+    }
+
+    function abrirModalCalendarioUnidades(uIdxInicial = 0) {
+      if (!planActivo) return;
+      if (!Array.isArray(planActivo.unidades) || planActivo.unidades.length === 0) {
+        agregarNuevaUnidad();
+      }
+
+      const anioPlan = Number(planActivo.anio || anioActivo || new Date().getFullYear());
+      const idxSeguro = Math.min(Math.max(0, Number(uIdxInicial) || 0), planActivo.unidades.length - 1);
+
+      estadoCalUnidades = {
+        anio: anioPlan,
+        uIdxActiva: idxSeguro,
+        unidadesTemp: planActivo.unidades.map((u, idx) => ({
+          idx,
+          numero_unidad: u.numero_unidad || (idx + 1),
+          nombre_unidad: u.nombre_unidad || `Unidad ${idx + 1}`,
+          semestre: u.semestre || (idx < 2 ? 1 : 2),
+          fecha_inicio: u.fecha_inicio || '',
+          fecha_fin: u.fecha_fin || '',
+          fecha_inicio_orig: u.fecha_inicio || '',
+          fecha_fin_orig: u.fecha_fin || '',
+          semanas_actuales: Array.isArray(u.desglose_semanal) ? u.desglose_semanal.length : 0
+        })),
+        mesBase: 2, // Marzo por defecto
+        modoClic: 'rango',
+        esperandoSegundoClic: false,
+        fechaHover: ''
+      };
+
+      // Posicionar el mes visible en el mes de inicio de la unidad activa (o de la unidad previa)
+      const uAct = estadoCalUnidades.unidadesTemp[idxSeguro];
+      let fechaRef = uAct ? uAct.fecha_inicio : '';
+      if (!fechaRef && idxSeguro > 0) {
+        for (let i = idxSeguro - 1; i >= 0; i--) {
+          if (estadoCalUnidades.unidadesTemp[i].fecha_fin) {
+            fechaRef = estadoCalUnidades.unidadesTemp[i].fecha_fin;
+            break;
+          }
+        }
+      }
+      if (fechaRef && /^\d{4}-\d{2}-\d{2}$/.test(fechaRef)) {
+        const m = parseInt(fechaRef.split('-')[1], 10) - 1;
+        if (!isNaN(m) && m >= 0 && m <= 11) {
+          estadoCalUnidades.mesBase = Math.min(m, 10); // Mostrar m y m+1
+        }
+      } else {
+        estadoCalUnidades.mesBase = idxSeguro >= 2 ? 6 : 2; // 2° semestre abre en Julio/Agosto, 1° en Marzo/Abril
+      }
+
+      const chkAuto = document.getElementById('chkAutogenerarSemanasModalCal');
+      if (chkAuto) {
+        chkAuto.checked = true;
+      }
+
+      cambiarModoSeleccionCalendario('rango', false);
+      renderizarModalCalendarioCompleto();
+      if (modalCalendarioUnidadesObj) {
+        modalCalendarioUnidadesObj.show();
+      }
+    }
+
+    function seleccionarUnidadActivaCalendario(uIdx) {
+      if (!estadoCalUnidades.unidadesTemp[uIdx]) return;
+      estadoCalUnidades.uIdxActiva = uIdx;
+      estadoCalUnidades.esperandoSegundoClic = false;
+      estadoCalUnidades.fechaHover = '';
+
+      const u = estadoCalUnidades.unidadesTemp[uIdx];
+      if (u.fecha_inicio && /^\d{4}-\d{2}-\d{2}$/.test(u.fecha_inicio)) {
+        const m = parseInt(u.fecha_inicio.split('-')[1], 10) - 1;
+        if (!isNaN(m) && (m < estadoCalUnidades.mesBase || m > estadoCalUnidades.mesBase + 1)) {
+          estadoCalUnidades.mesBase = Math.min(Math.max(0, m), 10);
+        }
+      }
+
+      renderizarModalCalendarioCompleto();
+    }
+
+    function cambiarModoSeleccionCalendario(modo, reRender = true) {
+      estadoCalUnidades.modoClic = modo;
+      estadoCalUnidades.esperandoSegundoClic = false;
+      estadoCalUnidades.fechaHover = '';
+
+      ['rango', 'inicio', 'fin'].forEach(m => {
+        const btn = document.getElementById(`btnModoCal_${m}`);
+        if (btn) {
+          btn.className = (m === modo)
+            ? 'btn btn-xs btn-primary py-0 px-2'
+            : 'btn btn-xs btn-outline-primary py-0 px-2';
+        }
+      });
+
+      if (reRender) {
+        actualizarBarraEstadoUnidadActivaCal();
+        limpiarPreviewHoverCalendarioDOM();
+      }
+    }
+
+    function navegarMesCalendario(delta) {
+      const nuevo = estadoCalUnidades.mesBase + delta;
+      estadoCalUnidades.mesBase = Math.min(Math.max(0, nuevo), 10);
+      renderizarModalCalendarioCompleto();
+    }
+
+    function irAMesCalendario(mesIdx) {
+      estadoCalUnidades.mesBase = Math.min(Math.max(0, Number(mesIdx) || 0), 10);
+      renderizarModalCalendarioCompleto();
+    }
+
+    function clickDiaCalendarioUnidad(fechaStr) {
+      const u = estadoCalUnidades.unidadesTemp[estadoCalUnidades.uIdxActiva];
+      if (!u || !fechaStr) return;
+
+      const modo = estadoCalUnidades.modoClic;
+
+      if (modo === 'inicio') {
+        u.fecha_inicio = fechaStr;
+        if (u.fecha_fin && u.fecha_fin < fechaStr) {
+          u.fecha_fin = fechaStr;
+        }
+        estadoCalUnidades.esperandoSegundoClic = false;
+      } else if (modo === 'fin') {
+        u.fecha_fin = fechaStr;
+        if (!u.fecha_inicio || u.fecha_inicio > fechaStr) {
+          u.fecha_inicio = fechaStr;
+        }
+        estadoCalUnidades.esperandoSegundoClic = false;
+      } else {
+        // Modo 'rango' (2 clics: 1° clic fija inicio, 2° clic fija término)
+        if (!estadoCalUnidades.esperandoSegundoClic) {
+          u.fecha_inicio = fechaStr;
+          u.fecha_fin = fechaStr;
+          estadoCalUnidades.esperandoSegundoClic = true;
+          estadoCalUnidades.fechaHover = fechaStr;
+        } else {
+          if (fechaStr < u.fecha_inicio) {
+            u.fecha_fin = u.fecha_inicio;
+            u.fecha_inicio = fechaStr;
+          } else {
+            u.fecha_fin = fechaStr;
+          }
+          estadoCalUnidades.esperandoSegundoClic = false;
+          estadoCalUnidades.fechaHover = '';
+        }
+      }
+
+      renderizarModalCalendarioCompleto();
+    }
+
+    function hoverDiaCalendarioUnidad(fechaStr) {
+      if (!estadoCalUnidades.esperandoSegundoClic || estadoCalUnidades.modoClic !== 'rango') return;
+      const u = estadoCalUnidades.unidadesTemp[estadoCalUnidades.uIdxActiva];
+      if (!u || !u.fecha_inicio || !fechaStr) return;
+
+      estadoCalUnidades.fechaHover = fechaStr;
+      const minF = fechaStr < u.fecha_inicio ? fechaStr : u.fecha_inicio;
+      const maxF = fechaStr < u.fecha_inicio ? u.fecha_inicio : fechaStr;
+
+      // Actualizar clases CSS en las celdas sin destruir el DOM
+      const celdas = document.querySelectorAll('#contenedorGrillaMesesCal .cal-dia-cell[data-fecha]');
+      celdas.forEach(el => {
+        const f = el.getAttribute('data-fecha');
+        if (f >= minF && f <= maxF) {
+          el.classList.add('cal-dia-preview');
+        } else {
+          el.classList.remove('cal-dia-preview');
+        }
+      });
+
+      const nSemanas = calcularSemanasEscolaresRango(minF, maxF);
+      const lblEstado = document.getElementById('estadoSeleccionRangoCal');
+      if (lblEstado) {
+        lblEstado.innerHTML = `<span class="text-primary fw-semibold"><i class="bi bi-cursor-fill me-1"></i>Haz clic para confirmar término: <strong>${formatearFechaCortaCal(minF)} → ${formatearFechaCortaCal(maxF)}</strong> (${nSemanas} sem. escolares)</span>`;
+      }
+    }
+
+    function limpiarPreviewHoverCalendarioDOM() {
+      const celdas = document.querySelectorAll('#contenedorGrillaMesesCal .cal-dia-cell.cal-dia-preview');
+      celdas.forEach(el => el.classList.remove('cal-dia-preview'));
+    }
+
+    function actualizarFechaManualModalCal(tipo, valor) {
+      const u = estadoCalUnidades.unidadesTemp[estadoCalUnidades.uIdxActiva];
+      if (!u) return;
+      estadoCalUnidades.esperandoSegundoClic = false;
+
+      if (tipo === 'inicio') {
+        u.fecha_inicio = valor || '';
+        if (u.fecha_inicio && u.fecha_fin && u.fecha_fin < u.fecha_inicio) {
+          u.fecha_fin = u.fecha_inicio;
+        }
+      } else {
+        u.fecha_fin = valor || '';
+        if (u.fecha_fin && u.fecha_inicio && u.fecha_inicio > u.fecha_fin) {
+          u.fecha_inicio = u.fecha_fin;
+        }
+      }
+
+      if (valor && /^\d{4}-\d{2}-\d{2}$/.test(valor)) {
+        const m = parseInt(valor.split('-')[1], 10) - 1;
+        if (!isNaN(m) && (m < estadoCalUnidades.mesBase || m > estadoCalUnidades.mesBase + 1)) {
+          estadoCalUnidades.mesBase = Math.min(Math.max(0, m), 10);
+        }
+      }
+
+      renderizarModalCalendarioCompleto();
+    }
+
+    function ajustarRangoLunesViernesCal() {
+      const u = estadoCalUnidades.unidadesTemp[estadoCalUnidades.uIdxActiva];
+      if (!u || (!u.fecha_inicio && !u.fecha_fin)) {
+        return Swal.fire({
+          toast: true,
+          position: 'top-end',
+          icon: 'info',
+          title: 'Selecciona primero al menos una fecha en el calendario',
+          showConfirmButton: false,
+          timer: 2000
+        });
+      }
+
+      if (!u.fecha_inicio && u.fecha_fin) u.fecha_inicio = u.fecha_fin;
+      if (!u.fecha_fin && u.fecha_inicio) u.fecha_fin = u.fecha_inicio;
+
+      try {
+        // Ajustar fecha_inicio al lunes de esa semana
+        const dIni = new Date(u.fecha_inicio + 'T00:00:00');
+        const dayIni = dIni.getDay(); // 0=Dom, 1=Lun...6=Sab
+        if (dayIni === 0) dIni.setDate(dIni.getDate() + 1);
+        else if (dayIni === 6) dIni.setDate(dIni.getDate() + 2);
+        else if (dayIni > 1) dIni.setDate(dIni.getDate() - (dayIni - 1));
+        u.fecha_inicio = dIni.toISOString().slice(0, 10);
+
+        // Ajustar fecha_fin al viernes de su semana
+        const dFin = new Date(u.fecha_fin + 'T00:00:00');
+        const dayFin = dFin.getDay();
+        if (dayFin === 0) dFin.setDate(dFin.getDate() - 2);
+        else if (dayFin === 6) dFin.setDate(dFin.getDate() - 1);
+        else if (dayFin >= 1 && dayFin < 5) dFin.setDate(dFin.getDate() + (5 - dayFin));
+        u.fecha_fin = dFin.toISOString().slice(0, 10);
+
+        if (u.fecha_fin < u.fecha_inicio) {
+          const dFri = new Date(dIni);
+          dFri.setDate(dFri.getDate() + 4);
+          u.fecha_fin = dFri.toISOString().slice(0, 10);
+        }
+
+        estadoCalUnidades.esperandoSegundoClic = false;
+        renderizarModalCalendarioCompleto();
+      } catch (e) {}
+    }
+
+    function encadenarDespuesUnidadAnteriorCal() {
+      const idx = estadoCalUnidades.uIdxActiva;
+      const u = estadoCalUnidades.unidadesTemp[idx];
+      if (!u) return;
+
+      if (idx === 0) {
+        // Si es la Unidad 1, iniciar el primer lunes de marzo del año escolar
+        const dMar = new Date(`${estadoCalUnidades.anio}-03-01T00:00:00`);
+        const day = dMar.getDay();
+        if (day === 0) dMar.setDate(dMar.getDate() + 1);
+        else if (day > 1) dMar.setDate(dMar.getDate() + (8 - day));
+        const nuevoIni = dMar.toISOString().slice(0, 10);
+        const semActuales = calcularSemanasEscolaresRango(u.fecha_inicio, u.fecha_fin) || 8;
+        const dFin = new Date(dMar);
+        dFin.setDate(dFin.getDate() + (semActuales - 1) * 7 + 4);
+        u.fecha_inicio = nuevoIni;
+        u.fecha_fin = dFin.toISOString().slice(0, 10);
+        estadoCalUnidades.mesBase = 2;
+        estadoCalUnidades.esperandoSegundoClic = false;
+        renderizarModalCalendarioCompleto();
+        return;
+      }
+
+      const uAnt = estadoCalUnidades.unidadesTemp[idx - 1];
+      if (!uAnt || !uAnt.fecha_fin) {
+        return Swal.fire({
+          toast: true,
+          position: 'top-end',
+          icon: 'warning',
+          title: `Define primero la fecha de término de la Unidad ${uAnt ? uAnt.numero_unidad : idx}`,
+          showConfirmButton: false,
+          timer: 2500
+        });
+      }
+
+      try {
+        const dAntFin = new Date(uAnt.fecha_fin + 'T00:00:00');
+        // Avanzar al lunes siguiente
+        dAntFin.setDate(dAntFin.getDate() + 1);
+        while (dAntFin.getDay() !== 1) {
+          dAntFin.setDate(dAntFin.getDate() + 1);
+        }
+        const nuevoIni = dAntFin.toISOString().slice(0, 10);
+        const semanasDuracion = calcularSemanasEscolaresRango(u.fecha_inicio, u.fecha_fin) || 8;
+        const dNuevoFin = new Date(dAntFin);
+        dNuevoFin.setDate(dNuevoFin.getDate() + (semanasDuracion - 1) * 7 + 4);
+
+        u.fecha_inicio = nuevoIni;
+        u.fecha_fin = dNuevoFin.toISOString().slice(0, 10);
+        estadoCalUnidades.esperandoSegundoClic = false;
+
+        const m = dAntFin.getMonth();
+        estadoCalUnidades.mesBase = Math.min(Math.max(0, m), 10);
+        renderizarModalCalendarioCompleto();
+      } catch (e) {}
+    }
+
+    function desplazarOExtenderUnidadCal(modo, semanasDelta) {
+      const u = estadoCalUnidades.unidadesTemp[estadoCalUnidades.uIdxActiva];
+      if (!u || !u.fecha_inicio) {
+        return Swal.fire({
+          toast: true,
+          position: 'top-end',
+          icon: 'info',
+          title: 'Selecciona primero una fecha de inicio para la unidad',
+          showConfirmButton: false,
+          timer: 2000
+        });
+      }
+
+      if (!u.fecha_fin) u.fecha_fin = u.fecha_inicio;
+
+      try {
+        const dIni = new Date(u.fecha_inicio + 'T00:00:00');
+        const dFin = new Date(u.fecha_fin + 'T00:00:00');
+
+        if (modo === 'desplazar') {
+          dIni.setDate(dIni.getDate() + semanasDelta * 7);
+          dFin.setDate(dFin.getDate() + semanasDelta * 7);
+          u.fecha_inicio = dIni.toISOString().slice(0, 10);
+          u.fecha_fin = dFin.toISOString().slice(0, 10);
+        } else {
+          // 'extender': modifica la fecha de término en N semanas
+          dFin.setDate(dFin.getDate() + semanasDelta * 7);
+          if (dFin < dIni) {
+            const dFri = new Date(dIni);
+            const day = dFri.getDay();
+            if (day >= 1 && day <= 5) dFri.setDate(dFri.getDate() + (5 - day));
+            u.fecha_fin = dFri.toISOString().slice(0, 10);
+          } else {
+            u.fecha_fin = dFin.toISOString().slice(0, 10);
+          }
+        }
+
+        estadoCalUnidades.esperandoSegundoClic = false;
+        renderizarModalCalendarioCompleto();
+      } catch (e) {}
+    }
+
+    function limpiarFechasUnidadActivaCal() {
+      const u = estadoCalUnidades.unidadesTemp[estadoCalUnidades.uIdxActiva];
+      if (!u) return;
+      u.fecha_inicio = '';
+      u.fecha_fin = '';
+      estadoCalUnidades.esperandoSegundoClic = false;
+      estadoCalUnidades.fechaHover = '';
+      renderizarModalCalendarioCompleto();
+    }
+
+    function detectarSolapamientosUnidadesCal() {
+      const conflictos = [];
+      const lista = estadoCalUnidades.unidadesTemp;
+      for (let i = 0; i < lista.length; i++) {
+        const a = lista[i];
+        if (!a.fecha_inicio || !a.fecha_fin) continue;
+        for (let j = i + 1; j < lista.length; j++) {
+          const b = lista[j];
+          if (!b.fecha_inicio || !b.fecha_fin) continue;
+          if (!(a.fecha_fin < b.fecha_inicio || a.fecha_inicio > b.fecha_fin)) {
+            conflictos.push(`U${a.numero_unidad} y U${b.numero_unidad}`);
+          }
+        }
+      }
+      return conflictos;
+    }
+
+    function actualizarBarraEstadoUnidadActivaCal() {
+      const u = estadoCalUnidades.unidadesTemp[estadoCalUnidades.uIdxActiva];
+      if (!u) return;
+      const col = obtenerColorUnidadCal(estadoCalUnidades.uIdxActiva);
+
+      const badge = document.getElementById('badgeUnidadActivaCal');
+      if (badge) {
+        badge.style.backgroundColor = col.bgStrong;
+        badge.textContent = `U${u.numero_unidad}`;
+      }
+
+      const nom = document.getElementById('nombreUnidadActivaCal');
+      if (nom) {
+        nom.textContent = u.nombre_unidad || `Unidad ${u.numero_unidad}`;
+      }
+
+      const inpIni = document.getElementById('inputCalFechaInicio');
+      if (inpIni) inpIni.value = u.fecha_inicio || '';
+
+      const inpFin = document.getElementById('inputCalFechaFin');
+      if (inpFin) inpFin.value = u.fecha_fin || '';
+
+      const lblEstado = document.getElementById('estadoSeleccionRangoCal');
+      if (lblEstado) {
+        if (estadoCalUnidades.esperandoSegundoClic) {
+          lblEstado.innerHTML = `<span class="text-primary fw-bold"><i class="bi bi-geo-alt-fill me-1"></i>Inicio fijado el ${formatearFechaCortaCal(u.fecha_inicio)}. Ahora haz clic en el día de término en el calendario.</span>`;
+        } else if (u.fecha_inicio && u.fecha_fin) {
+          const nSem = calcularSemanasEscolaresRango(u.fecha_inicio, u.fecha_fin);
+          lblEstado.innerHTML = `<span class="text-success fw-semibold"><i class="bi bi-check2-all me-1"></i>Del <strong>${formatearFechaCortaCal(u.fecha_inicio)}</strong> al <strong>${formatearFechaCortaCal(u.fecha_fin)}</strong> (${nSem} semana${nSem === 1 ? '' : 's'} escolar${nSem === 1 ? '' : 'es'})</span>`;
+        } else {
+          lblEstado.innerHTML = `Haz clic en un día del calendario para fijar el inicio y luego en otro para el término.`;
+        }
+      }
+    }
+
+    function renderizarModalCalendarioCompleto() {
+      const lista = estadoCalUnidades.unidadesTemp || [];
+      const uIdxAct = estadoCalUnidades.uIdxActiva;
+
+      // 1. Renderizar Tarjetas Superiores de Unidades
+      const contTarjetas = document.getElementById('contenedorTarjetasUnidadesCal');
+      if (contTarjetas) {
+        const colClass = lista.length <= 4 ? 'col-md-3 col-sm-6' : 'col-md-2 col-sm-4';
+        contTarjetas.innerHTML = lista.map((u, idx) => {
+          const col = obtenerColorUnidadCal(idx);
+          const esActiva = idx === uIdxAct;
+          const nSem = calcularSemanasEscolaresRango(u.fecha_inicio, u.fecha_fin);
+          const tieneFechas = Boolean(u.fecha_inicio && u.fecha_fin);
+          const cambioRespectoOriginal = (u.fecha_inicio !== u.fecha_inicio_orig || u.fecha_fin !== u.fecha_fin_orig);
+
+          return `
+            <div class="${colClass}">
+              <div class="cal-unidad-card p-2 bg-white h-100 ${esActiva ? 'active' : ''}"
+                   style="border-color: ${esActiva ? col.bgStrong : '#e2e8f0'}; background: ${esActiva ? col.bg + '55' : '#ffffff'};"
+                   onclick="seleccionarUnidadActivaCalendario(${idx})">
+                <div class="d-flex justify-content-between align-items-center mb-1">
+                  <span class="badge px-2 py-1" style="background-color: ${col.bgStrong}; font-size: 0.7rem;">
+                    U${u.numero_unidad} • ${u.semestre}° Sem
+                  </span>
+                  <div class="d-flex align-items-center gap-1">
+                    ${cambioRespectoOriginal ? `<span class="badge bg-warning-subtle text-warning-emphasis border border-warning-subtle" style="font-size: 0.62rem;" title="Fechas modificadas pendientes de aplicar">Modificado</span>` : ''}
+                    ${tieneFechas ? `<span class="badge bg-light text-dark border" style="font-size: 0.68rem;">${nSem} sem.</span>` : `<span class="badge bg-secondary-subtle text-secondary" style="font-size: 0.65rem;">Sin fechas</span>`}
+                  </div>
+                </div>
+                <div class="fw-bold text-dark text-truncate mb-1" style="font-size: 0.78rem;" title="${escapeHtml(u.nombre_unidad)}">
+                  ${escapeHtml(u.nombre_unidad)}
+                </div>
+                <div class="small ${tieneFechas ? 'text-dark fw-semibold' : 'text-muted fst-italic'}" style="font-size: 0.72rem;">
+                  <i class="bi bi-calendar3 me-1" style="color: ${col.bgStrong};"></i>
+                  ${tieneFechas ? `${formatearFechaCortaCal(u.fecha_inicio)} → ${formatearFechaCortaCal(u.fecha_fin)}` : 'Clic para asignar fechas'}
+                </div>
+              </div>
+            </div>
+          `;
+        }).join('');
+      }
+
+      // 2. Alerta de Solapamientos
+      const divSolap = document.getElementById('alertaSolapamientoUnidadesCal');
+      if (divSolap) {
+        const solapamientos = detectarSolapamientosUnidadesCal();
+        if (solapamientos.length > 0) {
+          divSolap.className = 'badge bg-warning-subtle text-warning-emphasis border border-warning px-2 py-1';
+          divSolap.innerHTML = `<i class="bi bi-exclamation-triangle-fill me-1"></i>Solapamiento de fechas detectado entre: ${solapamientos.join(', ')}`;
+        } else {
+          divSolap.className = 'd-none';
+          divSolap.innerHTML = '';
+        }
+      }
+
+      // 3. Actualizar Barra de Controles de Unidad Activa
+      actualizarBarraEstadoUnidadActivaCal();
+
+      // 4. Renderizar Barra de Navegación de Meses (Ene - Dic, destacando Mar - Dic)
+      const contPills = document.getElementById('barraPillsMesesCal');
+      if (contPills) {
+        const mBase = estadoCalUnidades.mesBase;
+        contPills.innerHTML = NOMBRES_MESES_CORTOS_CAL.map((nomCorto, mIdx) => {
+          if (mIdx < 1) return ''; // Mostrar Feb a Dic
+          const activo = (mIdx === mBase || mIdx === mBase + 1);
+          // Indicador de qué unidades tocan este mes
+          const prefijoMes = `${estadoCalUnidades.anio}-${String(mIdx + 1).padStart(2, '0')}`;
+          const iniMes = `${prefijoMes}-01`;
+          const finMes = `${prefijoMes}-31`;
+          const puntosUnidades = lista.map((u, idx) => {
+            if (!u.fecha_inicio || !u.fecha_fin) return '';
+            if (u.fecha_fin < iniMes || u.fecha_inicio > finMes) return '';
+            const c = obtenerColorUnidadCal(idx);
+            return `<span style="display:inline-block;width:6px;height:6px;border-radius:50%;background:${activo ? '#fff' : c.bgStrong};margin-left:2px;"></span>`;
+          }).join('');
+
+          return `
+            <button type="button" class="cal-mes-pill ${activo ? 'active fw-bold' : ''}" onclick="irAMesCalendario(${Math.min(mIdx, 10)})">
+              ${nomCorto}${puntosUnidades}
+            </button>
+          `;
+        }).join('');
+      }
+
+      // 5. Renderizar Grilla de 2 Meses en Paralelo
+      const contGrilla = document.getElementById('contenedorGrillaMesesCal');
+      if (contGrilla) {
+        const m1 = estadoCalUnidades.mesBase;
+        const m2 = Math.min(11, m1 + 1);
+        contGrilla.innerHTML = `
+          <div class="col-lg-6">
+            ${generarHtmlMesCalendario(estadoCalUnidades.anio, m1)}
+          </div>
+          <div class="col-lg-6">
+            ${generarHtmlMesCalendario(estadoCalUnidades.anio, m2)}
+          </div>
+        `;
+      }
+
+      // 6. Renderizar Leyenda Inferior de Colores
+      const contLeyenda = document.getElementById('leyendaUnidadesCal');
+      if (contLeyenda) {
+        contLeyenda.innerHTML = lista.map((u, idx) => {
+          const c = obtenerColorUnidadCal(idx);
+          return `
+            <span class="d-inline-flex align-items-center gap-1 cursor-pointer" onclick="seleccionarUnidadActivaCalendario(${idx})">
+              <span style="width: 12px; height: 12px; border-radius: 3px; background: ${c.bg}; border: 2px solid ${c.bgStrong}; display: inline-block;"></span>
+              <strong class="text-dark">U${u.numero_unidad}:</strong>
+              <span>${escapeHtml(u.nombre_unidad)}</span>
+            </span>
+          `;
+        }).join('');
+      }
+    }
+
+    function generarHtmlMesCalendario(anio, mesIdx) {
+      const nombreMes = NOMBRES_MESES_CAL[mesIdx];
+      const primerDia = new Date(anio, mesIdx, 1);
+      const ultimoDia = new Date(anio, mesIdx + 1, 0);
+      const totalDias = ultimoDia.getDate();
+
+      // Convertir día de la semana (0=Dom..6=Sab) a índice Lunes=0..Domingo=6
+      let offsetLunes = primerDia.getDay() - 1;
+      if (offsetLunes < 0) offsetLunes = 6;
+
+      const diasSemanaHeader = ['Lun', 'Mar', 'Mié', 'Jue', 'Vie', 'Sáb', 'Dom']
+        .map(d => `<div class="cal-dia-header">${d}</div>`)
+        .join('');
+
+      const celdas = [];
+      for (let i = 0; i < offsetLunes; i++) {
+        celdas.push(`<div class="cal-dia-cell cal-dia-vacio"></div>`);
+      }
+
+      const listaUnidades = estadoCalUnidades.unidadesTemp || [];
+      const uActivaIdx = estadoCalUnidades.uIdxActiva;
+
+      for (let dia = 1; dia <= totalDias; dia++) {
+        const fechaStr = `${anio}-${String(mesIdx + 1).padStart(2, '0')}-${String(dia).padStart(2, '0')}`;
+        const colSemana = (offsetLunes + dia - 1) % 7; // 0=Lun .. 4=Vie, 5=Sab, 6=Dom
+        const esFinde = colSemana >= 5;
+
+        const feriado = obtenerFeriadoDiaCal(fechaStr);
+        const hitos = obtenerHitosDiaCal(fechaStr);
+
+        // Verificar qué unidades cubren este día
+        const unidadesEnDia = [];
+        listaUnidades.forEach((u, idx) => {
+          if (u.fecha_inicio && u.fecha_fin && fechaStr >= u.fecha_inicio && fechaStr <= u.fecha_fin) {
+            unidadesEnDia.push({ u, idx });
+          }
+        });
+
+        // Determinar color de fondo predominante (priorizando la unidad activa si está en este día)
+        let styleCell = '';
+        let badgesExtremosHtml = '';
+
+        const matchActiva = unidadesEnDia.find(item => item.idx === uActivaIdx);
+        const itemPrincipal = matchActiva || unidadesEnDia[0] || null;
+
+        if (itemPrincipal) {
+          const c = obtenerColorUnidadCal(itemPrincipal.idx);
+          const esExtremoActiva = (itemPrincipal.u.fecha_inicio === fechaStr || itemPrincipal.u.fecha_fin === fechaStr);
+          styleCell = `background-color: ${ c.bg }; border-color: ${ esExtremoActiva ? c.bgStrong : c.border }; ${ esExtremoActiva ? 'border-width: 2px;' : '' }`;
+        }
+
+        // Etiquetas de inicio / fin de cada unidad en este día
+        const badgesArr = [];
+        unidadesEnDia.forEach(({ u, idx }) => {
+          const c = obtenerColorUnidadCal(idx);
+          if (u.fecha_inicio === fechaStr && u.fecha_fin === fechaStr) {
+            badgesArr.push(`<span class="cal-badge-extremo" style="background:${c.bgStrong};">U${u.numero_unidad} INI/FIN</span>`);
+          } else if (u.fecha_inicio === fechaStr) {
+            badgesArr.push(`<span class="cal-badge-extremo" style="background:${c.bgStrong};">▶ INI U${u.numero_unidad}</span>`);
+          } else if (u.fecha_fin === fechaStr) {
+            badgesArr.push(`<span class="cal-badge-extremo" style="background:${c.bgStrong};">■ FIN U${u.numero_unidad}</span>`);
+          }
+        });
+
+        // Si hay más de una unidad el mismo día (solapamiento), mostrar indicador
+        if (unidadesEnDia.length > 1 && badgesArr.length === 0) {
+          badgesArr.push(`<span class="cal-badge-extremo bg-warning text-dark">⚡ ${unidadesEnDia.map(x => 'U' + x.u.numero_unidad).join('+')}</span>`);
+        } else if (unidadesEnDia.length === 1 && badgesArr.length === 0 && colSemana === 0) {
+          // Mostrar sutilmente qué unidad cursa los días lunes
+          const uUnica = unidadesEnDia[0];
+          const cUnica = obtenerColorUnidadCal(uUnica.idx);
+          badgesArr.push(`<span style="font-size: 0.62rem; color: ${cUnica.text}; font-weight: 700;">U${uUnica.u.numero_unidad}</span>`);
+        }
+
+        badgesExtremosHtml = badgesArr.join('');
+
+        // Íconos superiores (Feriado / Hito UTP)
+        const iconosTop = [];
+        const tooltipsDia = [];
+        if (feriado) {
+          iconosTop.push(`<span title="Feriado: ${escapeHtml(feriado)}" style="font-size: 0.68rem;">🚩</span>`);
+          tooltipsDia.push(`Feriado: ${feriado}`);
+        }
+        if (hitos.length > 0) {
+          const nombresHitos = hitos.map(h => `${h.icono || '🎭'} ${h.titulo}`).join(' | ');
+          iconosTop.push(`<span title="Hito UTP: ${escapeHtml(nombresHitos)}" style="font-size: 0.68rem;">${hitos[0].icono || '🎭'}</span>`);
+          tooltipsDia.push(`Hito UTP: ${nombresHitos}`);
+        }
+
+        celdas.push(`
+          <div class="cal-dia-cell ${esFinde ? 'cal-dia-finde' : ''}"
+               data-fecha="${fechaStr}"
+               style="${styleCell}"
+               title="${escapeHtml(tooltipsDia.join(' • ') || fechaStr)}"
+               onclick="clickDiaCalendarioUnidad('${fechaStr}')"
+               onmouseenter="hoverDiaCalendarioUnidad('${fechaStr}')">
+            <div class="d-flex justify-content-between align-items-start">
+              <span class="fw-bold ${feriado ? 'text-danger' : ''}" style="font-size: 0.75rem; line-height: 1.1;">${dia}</span>
+              <span class="d-flex gap-1">${iconosTop.join('')}</span>
+            </div>
+            <div class="mt-1 d-flex flex-column gap-1">
+              ${badgesExtremosHtml}
+            </div>
+          </div>
+        `);
+      }
+
+      return `
+        <div class="card border shadow-xs h-100">
+          <div class="card-header bg-white py-2 px-3 border-bottom d-flex justify-content-between align-items-center">
+            <span class="fw-bold text-dark small">
+              <i class="bi bi-calendar-month text-primary me-1"></i>${nombreMes} ${anio}
+            </span>
+            <span class="text-muted" style="font-size: 0.7rem;">Lun – Dom</span>
+          </div>
+          <div class="card-body p-2">
+            <div class="cal-mes-grid">
+              ${diasSemanaHeader}
+              ${celdas.join('')}
+            </div>
+          </div>
+        </div>
+      `;
+    }
+
+    function sincronizarSemanasUnidadConRango(u) {
+      if (!u || !u.fecha_inicio || !u.fecha_fin || u.fecha_fin < u.fecha_inicio) return 0;
+
+      const fIni = new Date(u.fecha_inicio + 'T00:00:00');
+      const fFin = new Date(u.fecha_fin + 'T00:00:00');
+
+      let cur = new Date(fIni);
+      const day = cur.getDay();
+      if (day === 0) cur.setDate(cur.getDate() + 1);
+      else if (day > 1) cur.setDate(cur.getDate() - (day - 1));
+
+      const rangosLunesViernes = [];
+      while (cur <= fFin && rangosLunesViernes.length < 52) {
+        const iniStr = cur.toISOString().slice(0, 10);
+        const dFri = new Date(cur);
+        dFri.setDate(dFri.getDate() + 4);
+        const finStr = dFri.toISOString().slice(0, 10);
+        rangosLunesViernes.push({ fecha_inicio: iniStr, fecha_fin: finStr });
+        cur.setDate(cur.getDate() + 7);
+      }
+
+      const semanasPrevias = Array.isArray(u.desglose_semanal) ? u.desglose_semanal : [];
+      const nuevasSemanas = rangosLunesViernes.map((rango, idx) => {
+        const existente = semanasPrevias[idx];
+        if (existente) {
+          return {
+            ...existente,
+            semana: idx + 1,
+            fecha_inicio: rango.fecha_inicio,
+            fecha_fin: rango.fecha_fin
+          };
+        }
+        return {
+          semana: idx + 1,
+          fecha_inicio: rango.fecha_inicio,
+          fecha_fin: rango.fecha_fin,
+          tema: '',
+          oas_semana: [],
+          actividades_formativas: '',
+          recursos: '',
+          dua_adecuaciones: '',
+          tags: [],
+          dividir_clases: false,
+          clases: []
+        };
+      });
+
+      // Conservar semanas excedentes solo si ya tenían contenido pedagógico escrito
+      if (semanasPrevias.length > rangosLunesViernes.length) {
+        for (let k = rangosLunesViernes.length; k < semanasPrevias.length; k++) {
+          const sExtra = semanasPrevias[k];
+          const tieneContenido = Boolean(
+            (sExtra.tema && sExtra.tema.trim()) ||
+            (sExtra.actividades_formativas && sExtra.actividades_formativas.trim()) ||
+            (Array.isArray(sExtra.oas_semana) && sExtra.oas_semana.length > 0) ||
+            (Array.isArray(sExtra.clases) && sExtra.clases.some(c => (c.actividades && c.actividades.trim())))
+          );
+          if (tieneContenido) {
+            nuevasSemanas.push({
+              ...sExtra,
+              semana: nuevasSemanas.length + 1
+            });
+          }
+        }
+      }
+
+      u.desglose_semanal = nuevasSemanas;
+      return nuevasSemanas.length;
+    }
+
+    function aplicarFechasCalendarioUnidades() {
+      if (!planActivo || !Array.isArray(planActivo.unidades)) return;
+
+      const chkAutoSemanas = document.getElementById('chkAutogenerarSemanasModalCal');
+      const autogenerar = chkAutoSemanas ? chkAutoSemanas.checked : false;
+
+      let unidadesModificadas = 0;
+      let totalSemanasSincronizadas = 0;
+
+      estadoCalUnidades.unidadesTemp.forEach((uTemp, idx) => {
+        const uReal = planActivo.unidades[idx];
+        if (!uReal) return;
+
+        const cambioFechas = (
+          (uReal.fecha_inicio || '') !== (uTemp.fecha_inicio || '') ||
+          (uReal.fecha_fin || '') !== (uTemp.fecha_fin || '')
+        );
+
+        uReal.fecha_inicio = uTemp.fecha_inicio || '';
+        uReal.fecha_fin = uTemp.fecha_fin || '';
+
+        if (cambioFechas) {
+          unidadesModificadas++;
+        }
+
+        const sinSemanasConfiguradas = !Array.isArray(uReal.desglose_semanal) ||
+          uReal.desglose_semanal.length === 0 ||
+          (uReal.desglose_semanal.length === 1 && !uReal.desglose_semanal[0].fecha_inicio && !uReal.desglose_semanal[0].tema);
+
+        if (autogenerar && uReal.fecha_inicio && uReal.fecha_fin && (cambioFechas || sinSemanasConfiguradas)) {
+          totalSemanasSincronizadas += sincronizarSemanasUnidadConRango(uReal);
+        }
+      });
+
+      renderizarUnidadesAcordeon();
+      guardarBorradorActual(false);
+
+      if (modalCalendarioUnidadesObj) {
+        modalCalendarioUnidadesObj.hide();
+      }
+
+      Swal.fire({
+        toast: true,
+        position: 'top-end',
+        icon: 'success',
+        title: autogenerar && totalSemanasSincronizadas > 0
+          ? `Fechas aplicadas y ${totalSemanasSincronizadas} semanas sincronizadas`
+          : 'Fechas de unidades actualizadas desde el calendario',
+        showConfirmButton: false,
+        timer: 2500
       });
     }
 
