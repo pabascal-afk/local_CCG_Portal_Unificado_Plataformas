@@ -2426,13 +2426,16 @@ async function generarPlantillaUnidadesExcel(planId) {
     if (plan && plan.unidades && plan.unidades.length > 0) {
         plan.unidades.forEach(u => {
             (u.desglose_semanal || []).forEach(s => {
+                const oasSemStr = Array.isArray(s.oas_semana) && s.oas_semana.length > 0
+                    ? s.oas_semana.map(x => typeof x === 'object' ? x.codigo : String(x)).join(', ')
+                    : (s.actividades_formativas || '');
                 semanasDatos.push({
                     numero_unidad: u.numero_unidad,
                     semana: s.semana || 1,
                     fecha_inicio: s.fecha_inicio || '',
                     fecha_fin: s.fecha_fin || '',
                     tema: s.tema || '',
-                    actividades: s.actividades_formativas || '',
+                    oas_a_desarrollar: oasSemStr,
                     recursos: s.recursos || '',
                     tags_metodologias: (s.tags || []).join(', ')
                 });
@@ -2447,7 +2450,7 @@ async function generarPlantillaUnidadesExcel(planId) {
                 fecha_inicio: '2026-03-02',
                 fecha_fin: '2026-03-06',
                 tema: 'Diagnóstico y activación de conocimientos previos',
-                actividades: 'Lectura guiada de texto breve y preguntas exploratorias.',
+                oas_a_desarrollar: 'OA 01, OA 03',
                 recursos: 'Texto del estudiante, guía diagnóstica',
                 tags_metodologias: 'Formativa, Ticket de Salida'
             },
@@ -2457,7 +2460,7 @@ async function generarPlantillaUnidadesExcel(planId) {
                 fecha_inicio: '2026-03-09',
                 fecha_fin: '2026-03-13',
                 tema: 'Estrategias de comprensión: ideas principales',
-                actividades: 'Subrayado activo y discusión grupal de párrafos clave.',
+                oas_a_desarrollar: 'OA 03, OA 06',
                 recursos: 'Cuentos breves, pizarra interactiva',
                 tags_metodologias: 'DUA I: Representación, Aprendizaje Colaborativo'
             }
@@ -2505,12 +2508,17 @@ async function importarUnidadesSemanasExcel(planId, buffer, usuario = {}) {
         const tagsRaw = (sr['tags_metodologias'] || sr['tags'] || sr['DUA'] || '').toString().trim();
         const tagsArr = tagsRaw ? tagsRaw.split(',').map(t => t.trim()).filter(Boolean) : [];
 
+        const oasSemRaw = (sr['oas_a_desarrollar'] || sr['OAs a desarrollar'] || sr['oas_semana'] || sr['OAs'] || '').toString().trim();
+        const oasSemArr = oasSemRaw ? oasSemRaw.split(',').map(o => o.trim()).filter(Boolean) : [];
+        const actLegacy = (sr['actividades'] || sr['Actividades'] || oasSemRaw || '').toString().trim();
+
         mapaSemanasPorUnidad[uNum].push({
             semana: parseInt(sr['semana'] || sr['Semana']) || (mapaSemanasPorUnidad[uNum].length + 1),
             fecha_inicio: (sr['fecha_inicio'] || sr['Fecha Inicio'] || '').toString().trim(),
             fecha_fin: (sr['fecha_fin'] || sr['Fecha Fin'] || '').toString().trim(),
             tema: (sr['tema'] || sr['Tema'] || sr['Contenido'] || '').toString().trim(),
-            actividades_formativas: (sr['actividades'] || sr['Actividades'] || '').toString().trim(),
+            oas_semana: oasSemArr,
+            actividades_formativas: actLegacy,
             recursos: (sr['recursos'] || sr['Recursos'] || '').toString().trim(),
             tags: tagsArr,
             dividir_clases: false,

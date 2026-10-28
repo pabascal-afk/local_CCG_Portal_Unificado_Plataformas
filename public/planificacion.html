@@ -2819,6 +2819,21 @@
       const unidades = planActivo.unidades || [];
       const completados = (planActivo && Array.isArray(planActivo.hitos_completados)) ? planActivo.hitos_completados : [];
 
+      // Detectar qué unidad estaba desplegada antes de re-renderizar (por defecto 0)
+      let openIdx = 0;
+      if (cont) {
+        const openCollapse = cont.querySelector('.accordion-collapse.show');
+        if (openCollapse && openCollapse.id && openCollapse.id.startsWith('collapseUnidad')) {
+          const parsed = parseInt(openCollapse.id.replace('collapseUnidad', ''), 10);
+          if (!isNaN(parsed)) openIdx = parsed;
+        }
+        // Limpiar tooltips activos antes de reemplazar el DOM
+        cont.querySelectorAll('[data-bs-toggle="tooltip"]').forEach(el => {
+          const inst = bootstrap.Tooltip.getInstance(el);
+          if (inst) inst.dispose();
+        });
+      }
+
       if (unidades.length === 0) {
         cont.innerHTML = `
           <div class="text-center py-4 bg-white rounded border">
@@ -2837,7 +2852,7 @@
             return `
             <div class="accordion-item mb-3 border rounded shadow-sm" data-unidad-idx="${idx}">
               <h2 class="accordion-header d-flex align-items-center">
-                <button class="accordion-button ${idx === 0 ? '' : 'collapsed'}" type="button" data-bs-toggle="collapse" data-bs-target="#collapseUnidad${idx}">
+                <button class="accordion-button ${idx === openIdx ? '' : 'collapsed'}" type="button" data-bs-toggle="collapse" data-bs-target="#collapseUnidad${idx}">
                   <span class="drag-handle-unidad me-2" title="Arrastrar para reordenar unidad"><i class="bi bi-grip-vertical fs-5 text-secondary"></i></span>
                   <span class="badge bg-primary me-2">U${u.numero_unidad}</span>
                   <span class="fw-bold me-3">${u.nombre_unidad}</span>
@@ -2853,7 +2868,7 @@
                   <span class="badge bg-info-subtle text-info border border-info-subtle me-3">${(u.oas_seleccionados || []).length} OAs asignados</span>
                 </button>
               </h2>
-              <div id="collapseUnidad${idx}" class="accordion-collapse collapse ${idx === 0 ? 'show' : ''}" data-bs-parent="#acordeonUnidades">
+              <div id="collapseUnidad${idx}" class="accordion-collapse collapse ${idx === openIdx ? 'show' : ''}" data-bs-parent="#acordeonUnidades">
                 <div class="accordion-body bg-light p-4">
                   <div class="row g-3 mb-4 bg-white p-3 rounded border">
                     <div class="col-md-6">
@@ -3084,7 +3099,7 @@
                             <th style="width: 80px;" class="text-center">Semana</th>
                             <th style="width: 140px;">Fechas</th>
                             <th style="width: 170px;">Tema / Contenido</th>
-                            <th>Actividades de Aprendizaje</th>
+                            <th><i class="bi bi-bullseye text-primary me-1"></i>OAs a desarrollar</th>
                             <th style="width: 150px;">Recursos</th>
                             <th style="width: 210px;">DUA & Metodologías</th>
                             <th style="width: 35px;" class="text-center"></th>
@@ -3094,6 +3109,12 @@
                           ${(u.desglose_semanal || []).map((s, sIdx) => {
                             const semTags = s.tags || [];
                             const tieneClases = s.dividir_clases && Array.isArray(s.clases) && s.clases.length > 0;
+                            const oasUnidad = obtenerOAsDeUnidad(idx);
+                            const codigosOAsSemana = obtenerCodigosOAsSemana(idx, sIdx);
+                            const oasPoolDisponibles = oasUnidad.filter(ou => !codigosOAsSemana.includes(ou.codigo));
+                            const poolHabilidades = obtenerPoolHabilidadesUnidad(idx);
+                            const poolIndicadoresInfo = obtenerPoolIndicadoresSemana(idx, sIdx);
+
                             const hitosEnSemana = (planActivo.hitosVigentes || []).filter(h => {
                               if (!h.fecha_inicio || !h.fecha_fin || !s.fecha_inicio || !s.fecha_fin) return false;
                               return !(h.fecha_fin < s.fecha_inicio || h.fecha_inicio > s.fecha_fin);
@@ -3142,7 +3163,81 @@
                                 <input type="text" class="form-control form-control-sm" value="${s.tema || ''}" placeholder="Contenido..." onchange="actualizarCampoSemana(${idx}, ${sIdx}, 'tema', this.value)">
                               </td>
                               <td>
-                                <textarea class="form-control form-control-sm" rows="${s.dividir_clases ? 1 : 2}" placeholder="Actividades y experiencias de aprendizaje..." onchange="actualizarCampoSemana(${idx}, ${sIdx}, 'actividades_formativas', this.value)">${s.actividades_formativas || ''}</textarea>
+                                <!-- OAs Seleccionados en la Semana -->
+                                ${codigosOAsSemana.length > 0 ? `
+                                  <div class="d-flex flex-wrap gap-1 mb-2">
+                                    ${codigosOAsSemana.map(cod => {
+                                      const oaInfo = oasUnidad.find(x => x.codigo === cod) || { codigo: cod, categoria: 'Basal', descripcion: '' };
+                                      const cat = oaInfo.categoria || 'Basal';
+                                      const tip = escapeHtml(`[${cod} • ${cat}]: ${oaInfo.descripcion || 'Objetivo de Aprendizaje'}`);
+                                      return `
+                                        <span class="badge ${cat === 'Basal' ? 'badge-oa-basal' : 'badge-oa-comp'} d-inline-flex align-items-center gap-1 py-1 px-2 shadow-xs"
+                                              style="font-size: 0.73rem;"
+                                              data-bs-toggle="tooltip"
+                                              data-bs-placement="top"
+                                              title="${tip}">
+                                          <i class="bi bi-bullseye"></i>
+                                          <span>${escapeHtml(cod)}</span>
+                                          <i class="bi bi-x-circle-fill cursor-pointer ms-1 text-danger" onclick="quitarOASemana(${idx}, ${sIdx}, '${escapeHtml(cod)}')" title="Quitar OA de la semana"></i>
+                                        </span>
+                                      `;
+                                    }).join('')}
+                                  </div>
+                                ` : ''}
+
+                                <!-- Pool de Tags de OAs de la Unidad -->
+                                ${oasUnidad.length === 0 ? `
+                                  <div class="p-2 rounded bg-light border border-dashed text-center">
+                                    <div class="text-muted mb-1" style="font-size: 0.71rem;">No hay OAs seleccionados en la unidad.</div>
+                                    <button type="button" class="btn btn-xs btn-outline-primary py-0 px-2" style="font-size: 0.7rem;" onclick="abrirModalSelectorOAs(${idx})">
+                                      <i class="bi bi-plus-circle me-1"></i>Seleccionar OAs de la Unidad
+                                    </button>
+                                  </div>
+                                ` : `
+                                  <div class="p-1 px-2 rounded border" style="background-color: #f8fafc;">
+                                    <div class="d-flex justify-content-between align-items-center mb-1">
+                                      <span class="text-secondary fw-semibold" style="font-size: 0.67rem;">
+                                        <i class="bi bi-collection me-1 text-primary"></i>Pool de OAs de la Unidad:
+                                      </span>
+                                      ${oasPoolDisponibles.length > 1 ? `
+                                        <button type="button" class="btn btn-link p-0 text-decoration-none fw-semibold" style="font-size: 0.66rem;" onclick="agregarTodosOAsSemana(${idx}, ${sIdx})">
+                                          + Todos
+                                        </button>
+                                      ` : ''}
+                                    </div>
+                                    ${oasPoolDisponibles.length > 0 ? `
+                                      <div class="d-flex flex-wrap gap-1">
+                                        ${oasPoolDisponibles.map(ou => {
+                                          const tip = escapeHtml(`[${ou.codigo} • ${ou.categoria || 'Basal'}]: ${ou.descripcion || ''}`);
+                                          return `
+                                            <button type="button"
+                                                    class="btn btn-xs btn-outline-primary bg-white py-0 px-2 d-inline-flex align-items-center gap-1"
+                                                    style="font-size: 0.7rem; border-style: dashed;"
+                                                    onclick="agregarOASemana(${idx}, ${sIdx}, '${escapeHtml(ou.codigo)}')"
+                                                    data-bs-toggle="tooltip"
+                                                    data-bs-placement="top"
+                                                    title="${tip}">
+                                              <i class="bi bi-plus-lg"></i>
+                                              <span class="fw-semibold">${escapeHtml(ou.codigo)}</span>
+                                            </button>
+                                          `;
+                                        }).join('')}
+                                      </div>
+                                    ` : `
+                                      <div class="text-success" style="font-size: 0.68rem;">
+                                        <i class="bi bi-check2-all me-1"></i>Todos los OAs de la unidad están asignados a esta semana.
+                                      </div>
+                                    `}
+                                  </div>
+                                `}
+
+                                ${codigosOAsSemana.length > 0 && !s.dividir_clases ? `
+                                  <div class="mt-1 text-end">
+                                    <button type="button" class="btn btn-link p-0 text-decoration-none fw-semibold" style="font-size: 0.68rem;" onclick="toggleDividirClasesSemana(${idx}, ${sIdx}, true)">
+                                      <i class="bi bi-columns-gap me-1"></i>Abrir Desglose por Sesiones (Habilidades e Indicadores)
+                                    </button>
+                                  </div>
+                                ` : ''}
                               </td>
                               <td>
                                 <textarea class="form-control form-control-sm" rows="${s.dividir_clases ? 1 : 2}" placeholder="Guías, texto, recursos..." onchange="actualizarCampoSemana(${idx}, ${sIdx}, 'recursos', this.value)">${s.recursos || ''}</textarea>
@@ -3169,37 +3264,196 @@
                             <tr class="bg-light-subtle">
                               <td colspan="8" class="p-2 border-start border-primary border-3 bg-light">
                                 <div class="bg-white rounded p-3 border shadow-sm">
-                                  <div class="d-flex justify-content-between align-items-center mb-2 pb-2 border-bottom">
-                                    <span class="small fw-bold text-primary">
-                                      <i class="bi bi-columns-gap me-1"></i> Desglose por Sesiones de la Semana ${s.semana || (sIdx + 1)} (${planActivo.asignatura})
-                                    </span>
-                                    <span class="badge bg-primary-subtle text-primary border" style="font-size: 0.72rem;">
-                                      ${s.clases.length} clase(s) distribuidas por horario
-                                    </span>
+                                  <div class="d-flex justify-content-between align-items-center mb-2 pb-2 border-bottom flex-wrap gap-2">
+                                    <div class="d-flex align-items-center gap-2 flex-wrap">
+                                      <span class="small fw-bold text-primary">
+                                        <i class="bi bi-columns-gap me-1"></i> Desglose por Sesiones de la Semana ${s.semana || (sIdx + 1)} (${planActivo.asignatura})
+                                      </span>
+                                      ${codigosOAsSemana.length > 0 ? `
+                                        <span class="badge bg-primary-subtle text-primary border" style="font-size: 0.7rem;">
+                                          <i class="bi bi-bullseye me-1"></i>OAs de la semana: ${codigosOAsSemana.join(', ')}
+                                        </span>
+                                      ` : `
+                                        <span class="badge bg-warning-subtle text-dark border border-warning" style="font-size: 0.7rem;">
+                                          <i class="bi bi-exclamation-triangle me-1"></i>Sin OAs seleccionados en la semana
+                                        </span>
+                                      `}
+                                    </div>
+                                    <div class="d-flex align-items-center gap-2">
+                                      <span class="badge bg-light text-secondary border" style="font-size: 0.71rem;">
+                                        ${s.clases.length} clase(s)
+                                      </span>
+                                      <button type="button" class="btn btn-xs btn-outline-primary py-0 px-2" style="font-size: 0.7rem;" onclick="agregarSesionASemana(${idx}, ${sIdx})">
+                                        <i class="bi bi-plus-lg me-1"></i>Agregar Sesión
+                                      </button>
+                                    </div>
                                   </div>
-                                  <div class="row g-2">
-                                    ${s.clases.map((clase, cIdx) => `
-                                      <div class="col-md-6 col-xl-${s.clases.length === 1 ? '12' : (s.clases.length === 2 ? '6' : '4')}">
-                                        <div class="border rounded p-2 bg-light-subtle h-100">
-                                          <div class="d-flex justify-content-between align-items-center mb-1">
-                                            <span class="fw-bold small text-dark"><i class="bi bi-clock me-1 text-primary"></i>${clase.label || ('Clase ' + (cIdx + 1))}</span>
-                                            <span class="badge bg-secondary-subtle text-secondary" style="font-size: 0.7rem;">${clase.duracion || 90} min</span>
+                                  <div class="row g-3">
+                                    ${s.clases.map((clase, cIdx) => {
+                                      const habSeleccionadas = Array.isArray(clase.habilidades_tags) ? clase.habilidades_tags : [];
+                                      const habDisponiblesPool = poolHabilidades.filter(hItem => !habSeleccionadas.some(hs => (typeof hs === 'object' ? hs.label : String(hs)) === hItem.label));
+                                      const indSeleccionados = Array.isArray(clase.indicadores_tags) ? clase.indicadores_tags : [];
+                                      const indDisponiblesPool = (poolIndicadoresInfo.items || []).filter(it => !indSeleccionados.includes(it.texto));
+
+                                      return `
+                                      <div class="col-md-6 col-xl-${s.clases.length === 1 ? '12' : '6'}">
+                                        <div class="border rounded p-2 px-3 bg-light-subtle h-100">
+                                          <div class="d-flex justify-content-between align-items-center mb-2 pb-1 border-bottom">
+                                            <span class="fw-bold small text-dark"><i class="bi bi-clock me-1 text-primary"></i>${escapeHtml(clase.label || ('Clase ' + (cIdx + 1)))}</span>
+                                            <div class="d-flex align-items-center gap-2">
+                                              <span class="badge bg-secondary-subtle text-secondary" style="font-size: 0.7rem;">${clase.duracion || 90} min</span>
+                                              ${s.clases.length > 1 ? `
+                                                <button type="button" class="btn btn-xs text-danger p-0" onclick="eliminarSesionDeSemana(${idx}, ${sIdx}, ${cIdx})" title="Eliminar esta sesión">
+                                                  <i class="bi bi-x-lg" style="font-size: 0.72rem;"></i>
+                                                </button>
+                                              ` : ''}
+                                            </div>
                                           </div>
+
+                                          <!-- 1. HABILIDADES EN LA SESIÓN (Pool de Tags) -->
+                                          <div class="mb-2 p-2 rounded bg-white border">
+                                            <div class="d-flex justify-content-between align-items-center mb-1">
+                                              <label class="form-label fw-bold text-dark mb-0" style="font-size: 0.72rem;">
+                                                <i class="bi bi-lightbulb-fill text-warning me-1"></i>Habilidades
+                                              </label>
+                                              ${habDisponiblesPool.length > 1 ? `
+                                                <button type="button" class="btn btn-link p-0 text-decoration-none fw-semibold" style="font-size: 0.66rem;" onclick="agregarTodasHabilidadesClase(${idx}, ${sIdx}, ${cIdx})">
+                                                  + Todas
+                                                </button>
+                                              ` : ''}
+                                            </div>
+
+                                            ${habSeleccionadas.length > 0 ? `
+                                              <div class="d-flex flex-wrap gap-1 mb-2">
+                                                ${habSeleccionadas.map((hSel, hIdx) => {
+                                                  const hLabel = typeof hSel === 'object' ? hSel.label : String(hSel);
+                                                  const hFull = typeof hSel === 'object' ? (hSel.fullText || hSel.label) : String(hSel);
+                                                  return `
+                                                    <span class="badge bg-info-subtle text-dark border border-info d-inline-flex align-items-center gap-1 py-1 px-2"
+                                                          style="font-size: 0.71rem;"
+                                                          data-bs-toggle="tooltip"
+                                                          data-bs-placement="top"
+                                                          title="${escapeHtml(hFull)}">
+                                                      <i class="bi bi-stars text-primary"></i>
+                                                      <span>${escapeHtml(hLabel)}</span>
+                                                      <i class="bi bi-x-circle-fill text-danger cursor-pointer ms-1" onclick="quitarHabilidadClase(${idx}, ${sIdx}, ${cIdx}, ${hIdx})" title="Quitar habilidad"></i>
+                                                    </span>
+                                                  `;
+                                                }).join('')}
+                                              </div>
+                                            ` : ''}
+
+                                            ${poolHabilidades.length === 0 ? `
+                                              <div class="text-muted fst-italic" style="font-size: 0.69rem;">
+                                                Sin habilidades en la unidad. Haz clic en "+ Precargar Habilidades MINEDUC" arriba en la unidad.
+                                              </div>
+                                            ` : (habDisponiblesPool.length > 0 ? `
+                                              <div class="p-1 px-2 rounded bg-light border border-dashed">
+                                                <div class="text-secondary mb-1" style="font-size: 0.65rem;"><i class="bi bi-collection me-1"></i>Pool de Habilidades (clic para agregar):</div>
+                                                <div class="d-flex flex-wrap gap-1">
+                                                  ${poolHabilidades.map((hItem, hPoolIdx) => {
+                                                    const yaEsta = habSeleccionadas.some(hs => (typeof hs === 'object' ? hs.label : String(hs)) === hItem.label);
+                                                    if (yaEsta) return '';
+                                                    return `
+                                                      <button type="button"
+                                                              class="btn btn-xs btn-outline-secondary bg-white text-dark py-0 px-2 d-inline-flex align-items-center gap-1"
+                                                              style="font-size: 0.69rem; border-style: dashed;"
+                                                              onclick="agregarHabilidadClase(${idx}, ${sIdx}, ${cIdx}, ${hPoolIdx})"
+                                                              data-bs-toggle="tooltip"
+                                                              data-bs-placement="top"
+                                                              title="${escapeHtml(hItem.fullText)}">
+                                                        <i class="bi bi-plus-lg text-primary"></i>
+                                                        <span>${escapeHtml(hItem.label)}</span>
+                                                      </button>
+                                                    `;
+                                                  }).join('')}
+                                                </div>
+                                              </div>
+                                            ` : `
+                                              <div class="text-success" style="font-size: 0.68rem;">
+                                                <i class="bi bi-check2-all me-1"></i>Todas las habilidades agregadas.
+                                              </div>
+                                            `)}
+                                          </div>
+
+                                          <!-- 2. INDICADORES EN LA SESIÓN (Pool según OAs de la semana) -->
+                                          <div class="mb-2 p-2 rounded bg-white border">
+                                            <div class="d-flex justify-content-between align-items-center mb-1">
+                                              <label class="form-label fw-bold text-dark mb-0" style="font-size: 0.72rem;">
+                                                <i class="bi bi-check2-circle text-success me-1"></i>Indicadores de Evaluación
+                                              </label>
+                                              ${indDisponiblesPool.length > 1 ? `
+                                                <button type="button" class="btn btn-link p-0 text-decoration-none fw-semibold text-success" style="font-size: 0.66rem;" onclick="agregarTodosIndicadoresClase(${idx}, ${sIdx}, ${cIdx})">
+                                                  + Todos
+                                                </button>
+                                              ` : ''}
+                                            </div>
+
+                                            ${indSeleccionados.length > 0 ? `
+                                              <div class="d-flex flex-column gap-1 mb-2">
+                                                ${indSeleccionados.map((indTxt, iIdx) => `
+                                                  <div class="badge bg-success-subtle text-dark border border-success-subtle text-wrap text-start d-flex align-items-start justify-content-between gap-2 py-1 px-2" style="font-size: 0.7rem; font-weight: 500; line-height: 1.3;">
+                                                    <span><i class="bi bi-check-lg text-success me-1"></i>${escapeHtml(indTxt)}</span>
+                                                    <i class="bi bi-x-circle-fill text-danger cursor-pointer flex-shrink-0 mt-1" onclick="quitarIndicadorClase(${idx}, ${sIdx}, ${cIdx}, ${iIdx})" title="Quitar indicador"></i>
+                                                  </div>
+                                                `).join('')}
+                                              </div>
+                                            ` : ''}
+
+                                            ${poolIndicadoresInfo.sinOAsSemana ? `
+                                              <div class="p-1 px-2 rounded bg-warning-subtle text-dark border border-warning-subtle" style="font-size: 0.69rem;">
+                                                <i class="bi bi-info-circle me-1 text-warning-emphasis"></i>Selecciona primero uno o más <strong>OAs a desarrollar</strong> en esta semana para cargar el pool de indicadores asociados.
+                                              </div>
+                                            ` : (poolIndicadoresInfo.items.length === 0 ? `
+                                              <div class="text-muted fst-italic" style="font-size: 0.69rem;">
+                                                No se encontraron indicadores para los OAs seleccionados en la semana.
+                                              </div>
+                                            ` : (indDisponiblesPool.length > 0 ? `
+                                              <div class="p-1 px-2 rounded bg-light border border-dashed">
+                                                <div class="text-secondary mb-1" style="font-size: 0.65rem;">
+                                                  <i class="bi bi-collection me-1 text-success"></i>Pool de Indicadores (${codigosOAsSemana.join(', ')}) — clic para agregar:
+                                                </div>
+                                                <div class="d-flex flex-column gap-1" style="max-height: 125px; overflow-y: auto;">
+                                                  ${poolIndicadoresInfo.items.map((indItem, iPoolIdx) => {
+                                                    if (indSeleccionados.includes(indItem.texto)) return '';
+                                                    return `
+                                                      <button type="button"
+                                                              class="btn btn-xs btn-outline-success bg-white text-dark text-start py-1 px-2 d-flex align-items-start gap-1"
+                                                              style="font-size: 0.69rem; border-style: dashed; line-height: 1.25;"
+                                                              onclick="agregarIndicadorClase(${idx}, ${sIdx}, ${cIdx}, ${iPoolIdx})">
+                                                        <i class="bi bi-plus-circle-fill text-success flex-shrink-0 mt-1"></i>
+                                                        <span>${escapeHtml(indItem.texto)}</span>
+                                                      </button>
+                                                    `;
+                                                  }).join('')}
+                                                </div>
+                                              </div>
+                                            ` : `
+                                              <div class="text-success" style="font-size: 0.68rem;">
+                                                <i class="bi bi-check2-all me-1"></i>Todos los indicadores de los OAs de la semana están asignados.
+                                              </div>
+                                            `))}
+                                          </div>
+
+                                          <!-- 3. ACTIVIDADES, RECURSOS Y DUA DE LA SESIÓN -->
                                           <div class="mb-1">
-                                            <label class="form-label text-muted mb-0" style="font-size: 0.7rem;">Actividades</label>
-                                            <textarea class="form-control form-control-sm" rows="2" placeholder="Experiencias de aprendizaje..." onchange="actualizarCampoClase(${idx}, ${sIdx}, ${cIdx}, 'actividades', this.value)">${clase.actividades || ''}</textarea>
+                                            <label class="form-label text-muted fw-semibold mb-0" style="font-size: 0.7rem;">Actividades de la Sesión</label>
+                                            <textarea class="form-control form-control-sm" rows="2" placeholder="Experiencias de aprendizaje de la sesión..." onchange="actualizarCampoClase(${idx}, ${sIdx}, ${cIdx}, 'actividades', this.value)">${clase.actividades || ''}</textarea>
                                           </div>
-                                          <div class="mb-1">
-                                            <label class="form-label text-muted mb-0" style="font-size: 0.7rem;">Recursos</label>
-                                            <input type="text" class="form-control form-control-sm" placeholder="Recursos y materiales..." value="${clase.recursos || ''}" onchange="actualizarCampoClase(${idx}, ${sIdx}, ${cIdx}, 'recursos', this.value)">
-                                          </div>
-                                          <div>
-                                            <label class="form-label text-muted mb-0" style="font-size: 0.7rem;">DUA & Adecuaciones</label>
-                                            <input type="text" class="form-control form-control-sm" placeholder="Estrategias DUA..." value="${clase.dua || ''}" onchange="actualizarCampoClase(${idx}, ${sIdx}, ${cIdx}, 'dua', this.value)">
+                                          <div class="row g-1">
+                                            <div class="col-6">
+                                              <label class="form-label text-muted fw-semibold mb-0" style="font-size: 0.7rem;">Recursos</label>
+                                              <input type="text" class="form-control form-control-sm" placeholder="Materiales..." value="${clase.recursos || ''}" onchange="actualizarCampoClase(${idx}, ${sIdx}, ${cIdx}, 'recursos', this.value)">
+                                            </div>
+                                            <div class="col-6">
+                                              <label class="form-label text-muted fw-semibold mb-0" style="font-size: 0.7rem;">DUA & Adecuaciones</label>
+                                              <input type="text" class="form-control form-control-sm" placeholder="Estrategias DUA..." value="${clase.dua || ''}" onchange="actualizarCampoClase(${idx}, ${sIdx}, ${cIdx}, 'dua', this.value)">
+                                            </div>
                                           </div>
                                         </div>
                                       </div>
-                                    `).join('')}
+                                      `;
+                                    }).join('')}
                                   </div>
                                 </div>
                               </td>
@@ -3455,7 +3709,7 @@
         indicadores_evaluacion: '',
         instrumentos_evaluacion: '',
         desglose_semanal: [
-          { semana: 1, tema: '', actividades_formativas: '', recursos: '', dua_adecuaciones: '', tags: [] }
+          { semana: 1, tema: '', oas_semana: [], actividades_formativas: '', recursos: '', dua_adecuaciones: '', tags: [], dividir_clases: false, clases: [] }
         ]
       });
       renderizarUnidadesAcordeon();
@@ -3479,7 +3733,11 @@
 
     function actualizarCampoUnidad(uIdx, campo, valor) {
       if (planActivo && planActivo.unidades && planActivo.unidades[uIdx]) {
-        planActivo.unidades[uIdx][campo] = valor;
+        const u = planActivo.unidades[uIdx];
+        u[campo] = valor;
+        if ((campo === 'habilidades' || campo === 'indicadores_evaluacion') && Array.isArray(u.desglose_semanal) && u.desglose_semanal.some(s => s.dividir_clases)) {
+          renderizarUnidadesAcordeon();
+        }
       }
     }
 
@@ -3516,6 +3774,7 @@
         fecha_inicio: nIni,
         fecha_fin: nFin,
         tema: '',
+        oas_semana: [],
         actividades_formativas: '',
         recursos: '',
         dua_adecuaciones: '',
@@ -3618,6 +3877,7 @@
           fecha_inicio: inicioSemStr,
           fecha_fin: finSemStr,
           tema: '',
+          oas_semana: [],
           actividades_formativas: '',
           recursos: '',
           dua_adecuaciones: '',
@@ -3659,11 +3919,43 @@
           dia: ses.dia || '',
           duracion: ses.duracion_minutos || 90,
           label: ses.label || `Clase ${i + 1} (${ses.duracion_minutos || 90} min)`,
+          habilidades_tags: [],
+          indicadores_tags: [],
           actividades: '',
           recursos: '',
           dua: ''
         }));
       }
+      renderizarUnidadesAcordeon();
+      guardarBorradorActual(false);
+    }
+
+    function agregarSesionASemana(uIdx, sIdx) {
+      if (!planActivo || !planActivo.unidades[uIdx]) return;
+      const s = planActivo.unidades[uIdx].desglose_semanal[sIdx];
+      if (!s) return;
+      if (!Array.isArray(s.clases)) s.clases = [];
+      const nuevoNum = s.clases.length + 1;
+      s.clases.push({
+        numero: nuevoNum,
+        dia: '',
+        duracion: 90,
+        label: `Clase ${nuevoNum} (90 min)`,
+        habilidades_tags: [],
+        indicadores_tags: [],
+        actividades: '',
+        recursos: '',
+        dua: ''
+      });
+      renderizarUnidadesAcordeon();
+      guardarBorradorActual(false);
+    }
+
+    function eliminarSesionDeSemana(uIdx, sIdx, cIdx) {
+      if (!planActivo || !planActivo.unidades[uIdx]) return;
+      const s = planActivo.unidades[uIdx].desglose_semanal[sIdx];
+      if (!s || !Array.isArray(s.clases)) return;
+      s.clases.splice(cIdx, 1);
       renderizarUnidadesAcordeon();
       guardarBorradorActual(false);
     }
@@ -3675,11 +3967,256 @@
       if (!s.clases) s.clases = [];
       if (!s.clases[cIdx]) s.clases[cIdx] = {};
       s.clases[cIdx][campo] = valor;
-      
-      // Sincronizar actividades generales de la semana si están vacías
-      if (campo === 'actividades' && !s.actividades_formativas) {
-        s.actividades_formativas = s.clases.map(c => `[${c.label || ('Clase ' + (cIdx+1))}]: ${c.actividades || ''}`).filter(Boolean).join('\n');
+    }
+
+    // -------------------------------------------------------------
+    // POOL DE TAGS: OAs EN SEMANA Y HABILIDADES / INDICADORES EN SESIONES
+    // -------------------------------------------------------------
+    function obtenerOAsDeUnidad(uIdx) {
+      if (!planActivo || !planActivo.unidades || !planActivo.unidades[uIdx]) return [];
+      const u = planActivo.unidades[uIdx];
+      const oasSel = Array.isArray(u.oas_seleccionados) ? u.oas_seleccionados : [];
+      const catalogo = Array.isArray(planActivo.oas_disponibles) ? planActivo.oas_disponibles : [];
+
+      return oasSel.map(o => {
+        const cod = (typeof o === 'object') ? o.codigo : String(o);
+        const id = (typeof o === 'object' && o.id) ? o.id : null;
+        const match = catalogo.find(x => (id && Number(x.id) === Number(id)) || x.codigo === cod);
+        return {
+          id: id || (match ? match.id : cod),
+          codigo: cod,
+          categoria: (typeof o === 'object' && o.categoria) ? o.categoria : (match && match.categoria ? match.categoria : 'Basal'),
+          descripcion: (typeof o === 'object' && o.descripcion) ? o.descripcion : (match && match.descripcion ? match.descripcion : ''),
+          indicadores_sugeridos: (match && Array.isArray(match.indicadores_sugeridos)) ? match.indicadores_sugeridos : ((typeof o === 'object' && Array.isArray(o.indicadores_sugeridos)) ? o.indicadores_sugeridos : [])
+        };
+      });
+    }
+
+    function obtenerCodigosOAsSemana(uIdx, sIdx) {
+      if (!planActivo || !planActivo.unidades || !planActivo.unidades[uIdx]) return [];
+      const u = planActivo.unidades[uIdx];
+      const s = (u.desglose_semanal || [])[sIdx];
+      if (!s) return [];
+      if (!Array.isArray(s.oas_semana)) {
+        s.oas_semana = [];
+        if (s.actividades_formativas && typeof s.actividades_formativas === 'string') {
+          const oasUnidad = obtenerOAsDeUnidad(uIdx);
+          oasUnidad.forEach(ou => {
+            if (s.actividades_formativas.includes(ou.codigo)) {
+              s.oas_semana.push(ou.codigo);
+            }
+          });
+        }
       }
+      return s.oas_semana.map(x => (typeof x === 'object' ? x.codigo : String(x))).filter(Boolean);
+    }
+
+    function agregarOASemana(uIdx, sIdx, codigoOA) {
+      if (!planActivo || !planActivo.unidades[uIdx] || !planActivo.unidades[uIdx].desglose_semanal[sIdx]) return;
+      const s = planActivo.unidades[uIdx].desglose_semanal[sIdx];
+      const actuales = obtenerCodigosOAsSemana(uIdx, sIdx);
+      if (!actuales.includes(codigoOA)) {
+        s.oas_semana.push(codigoOA);
+      }
+      s.actividades_formativas = s.oas_semana.map(x => typeof x === 'object' ? x.codigo : String(x)).join(', ');
+      renderizarUnidadesAcordeon();
+      guardarBorradorActual(false);
+    }
+
+    function quitarOASemana(uIdx, sIdx, codigoOA) {
+      if (!planActivo || !planActivo.unidades[uIdx] || !planActivo.unidades[uIdx].desglose_semanal[sIdx]) return;
+      const s = planActivo.unidades[uIdx].desglose_semanal[sIdx];
+      obtenerCodigosOAsSemana(uIdx, sIdx);
+      s.oas_semana = s.oas_semana.filter(x => (typeof x === 'object' ? x.codigo : String(x)) !== codigoOA);
+      s.actividades_formativas = s.oas_semana.map(x => typeof x === 'object' ? x.codigo : String(x)).join(', ');
+      renderizarUnidadesAcordeon();
+      guardarBorradorActual(false);
+    }
+
+    function agregarTodosOAsSemana(uIdx, sIdx) {
+      if (!planActivo || !planActivo.unidades[uIdx] || !planActivo.unidades[uIdx].desglose_semanal[sIdx]) return;
+      const s = planActivo.unidades[uIdx].desglose_semanal[sIdx];
+      const oasUnidad = obtenerOAsDeUnidad(uIdx);
+      s.oas_semana = oasUnidad.map(o => o.codigo);
+      s.actividades_formativas = s.oas_semana.join(', ');
+      renderizarUnidadesAcordeon();
+      guardarBorradorActual(false);
+    }
+
+    function obtenerPoolHabilidadesUnidad(uIdx) {
+      if (!planActivo || !planActivo.unidades || !planActivo.unidades[uIdx]) return [];
+      const u = planActivo.unidades[uIdx];
+      const resultado = [];
+      const vistos = new Set();
+
+      // 1. Habilidades escritas o precargadas en la unidad (u.habilidades)
+      if (u.habilidades && u.habilidades.trim()) {
+        const lineas = u.habilidades.split(/\r?\n/).map(l => l.replace(/^[•\-\*]\s*/, '').trim()).filter(Boolean);
+        lineas.forEach(linea => {
+          const idxDosPuntos = linea.indexOf(':');
+          let label = linea;
+          if (idxDosPuntos > 0 && idxDosPuntos < 60) {
+            label = linea.slice(0, idxDosPuntos).trim();
+          } else if (linea.length > 55) {
+            label = linea.slice(0, 52).trim() + '...';
+          }
+          const key = label.toLowerCase();
+          if (!vistos.has(key)) {
+            vistos.add(key);
+            resultado.push({ label, fullText: linea });
+          }
+        });
+      }
+
+      // 2. Complementar con habilidades oficiales sugeridas de la asignatura
+      if (planActivo.plan_curricular && Array.isArray(planActivo.plan_curricular.habilidades_sugeridas)) {
+        planActivo.plan_curricular.habilidades_sugeridas.forEach(h => {
+          if (!h || !h.nombre) return;
+          const label = h.nombre.trim();
+          const fullText = h.descripcion ? `${label}: ${h.descripcion.trim()}` : label;
+          const key = label.toLowerCase();
+          if (!vistos.has(key)) {
+            vistos.add(key);
+            resultado.push({ label, fullText });
+          }
+        });
+      }
+
+      return resultado;
+    }
+
+    function obtenerPoolIndicadoresSemana(uIdx, sIdx) {
+      if (!planActivo || !planActivo.unidades || !planActivo.unidades[uIdx]) return { sinOAsSemana: true, items: [] };
+      const u = planActivo.unidades[uIdx];
+      const codigosOAsSemana = obtenerCodigosOAsSemana(uIdx, sIdx);
+      if (codigosOAsSemana.length === 0) {
+        return { sinOAsSemana: true, items: [] };
+      }
+
+      const setCodigos = new Set(codigosOAsSemana.map(c => c.trim().toUpperCase()));
+      const items = [];
+      const vistos = new Set();
+
+      // 1. Buscar en u.indicadores_evaluacion los que correspondan a los OAs seleccionados en la semana
+      if (u.indicadores_evaluacion && u.indicadores_evaluacion.trim()) {
+        const lineas = u.indicadores_evaluacion.split(/\r?\n/).map(l => l.replace(/^[•\-\*]\s*/, '').trim()).filter(Boolean);
+        lineas.forEach(linea => {
+          const matchOA = linea.match(/^\[([^\]]+)\]\s*(.*)$/);
+          if (matchOA) {
+            const codOA = matchOA[1].trim().toUpperCase();
+            if (setCodigos.has(codOA)) {
+              const key = linea.toLowerCase();
+              if (!vistos.has(key)) {
+                vistos.add(key);
+                items.push({ oaCodigo: matchOA[1].trim(), texto: linea });
+              }
+            }
+          } else {
+            const key = linea.toLowerCase();
+            if (!vistos.has(key)) {
+              vistos.add(key);
+              items.push({ oaCodigo: 'Unidad', texto: linea });
+            }
+          }
+        });
+      }
+
+      // 2. Buscar en el catálogo de OAs de la unidad (indicadores_sugeridos) para los OAs seleccionados en la semana
+      const oasUnidad = obtenerOAsDeUnidad(uIdx);
+      oasUnidad.forEach(oa => {
+        if (setCodigos.has(oa.codigo.trim().toUpperCase()) && Array.isArray(oa.indicadores_sugeridos)) {
+          oa.indicadores_sugeridos.forEach(ind => {
+            const textoConPrefijo = `[${oa.codigo}] ${ind.trim()}`;
+            const key = textoConPrefijo.toLowerCase();
+            if (!vistos.has(key)) {
+              vistos.add(key);
+              items.push({ oaCodigo: oa.codigo, texto: textoConPrefijo });
+            }
+          });
+        }
+      });
+
+      return { sinOAsSemana: false, items };
+    }
+
+    function agregarHabilidadClase(uIdx, sIdx, cIdx, hPoolIdx) {
+      if (!planActivo || !planActivo.unidades[uIdx]) return;
+      const s = planActivo.unidades[uIdx].desglose_semanal[sIdx];
+      if (!s || !s.clases || !s.clases[cIdx]) return;
+      const clase = s.clases[cIdx];
+      if (!Array.isArray(clase.habilidades_tags)) clase.habilidades_tags = [];
+
+      const pool = obtenerPoolHabilidadesUnidad(uIdx);
+      const item = pool[hPoolIdx];
+      if (!item) return;
+
+      if (!clase.habilidades_tags.some(h => (typeof h === 'object' ? h.label : String(h)) === item.label)) {
+        clase.habilidades_tags.push({ label: item.label, fullText: item.fullText });
+      }
+      renderizarUnidadesAcordeon();
+      guardarBorradorActual(false);
+    }
+
+    function quitarHabilidadClase(uIdx, sIdx, cIdx, hIdx) {
+      if (!planActivo || !planActivo.unidades[uIdx]) return;
+      const s = planActivo.unidades[uIdx].desglose_semanal[sIdx];
+      if (!s || !s.clases || !s.clases[cIdx]) return;
+      const clase = s.clases[cIdx];
+      if (!Array.isArray(clase.habilidades_tags)) return;
+      clase.habilidades_tags.splice(hIdx, 1);
+      renderizarUnidadesAcordeon();
+      guardarBorradorActual(false);
+    }
+
+    function agregarTodasHabilidadesClase(uIdx, sIdx, cIdx) {
+      if (!planActivo || !planActivo.unidades[uIdx]) return;
+      const s = planActivo.unidades[uIdx].desglose_semanal[sIdx];
+      if (!s || !s.clases || !s.clases[cIdx]) return;
+      const clase = s.clases[cIdx];
+      const pool = obtenerPoolHabilidadesUnidad(uIdx);
+      clase.habilidades_tags = pool.map(item => ({ label: item.label, fullText: item.fullText }));
+      renderizarUnidadesAcordeon();
+      guardarBorradorActual(false);
+    }
+
+    function agregarIndicadorClase(uIdx, sIdx, cIdx, iPoolIdx) {
+      if (!planActivo || !planActivo.unidades[uIdx]) return;
+      const s = planActivo.unidades[uIdx].desglose_semanal[sIdx];
+      if (!s || !s.clases || !s.clases[cIdx]) return;
+      const clase = s.clases[cIdx];
+      if (!Array.isArray(clase.indicadores_tags)) clase.indicadores_tags = [];
+
+      const { items } = obtenerPoolIndicadoresSemana(uIdx, sIdx);
+      const item = items[iPoolIdx];
+      if (!item) return;
+
+      if (!clase.indicadores_tags.includes(item.texto)) {
+        clase.indicadores_tags.push(item.texto);
+      }
+      renderizarUnidadesAcordeon();
+      guardarBorradorActual(false);
+    }
+
+    function quitarIndicadorClase(uIdx, sIdx, cIdx, iIdx) {
+      if (!planActivo || !planActivo.unidades[uIdx]) return;
+      const s = planActivo.unidades[uIdx].desglose_semanal[sIdx];
+      if (!s || !s.clases || !s.clases[cIdx]) return;
+      const clase = s.clases[cIdx];
+      if (!Array.isArray(clase.indicadores_tags)) return;
+      clase.indicadores_tags.splice(iIdx, 1);
+      renderizarUnidadesAcordeon();
+      guardarBorradorActual(false);
+    }
+
+    function agregarTodosIndicadoresClase(uIdx, sIdx, cIdx) {
+      if (!planActivo || !planActivo.unidades[uIdx]) return;
+      const s = planActivo.unidades[uIdx].desglose_semanal[sIdx];
+      if (!s || !s.clases || !s.clases[cIdx]) return;
+      const clase = s.clases[cIdx];
+      const { items } = obtenerPoolIndicadoresSemana(uIdx, sIdx);
+      clase.indicadores_tags = items.map(it => it.texto);
+      renderizarUnidadesAcordeon();
+      guardarBorradorActual(false);
     }
 
     function aplicarHorasSugeridas() {
@@ -3963,6 +4500,9 @@
       u.habilidades = textoHabs;
       const el = document.getElementById(`unidad_hab_${uIdx}`);
       if (el) el.value = textoHabs;
+      if (Array.isArray(u.desglose_semanal) && u.desglose_semanal.some(s => s.dividir_clases)) {
+        renderizarUnidadesAcordeon();
+      }
       Swal.fire({
         toast: true,
         position: 'top-end',
@@ -4026,6 +4566,9 @@
       u.indicadores_evaluacion = texto;
       const el = document.getElementById(`unidad_ind_${uIdx}`);
       if (el) el.value = texto;
+      if (Array.isArray(u.desglose_semanal) && u.desglose_semanal.some(s => s.dividir_clases)) {
+        renderizarUnidadesAcordeon();
+      }
       Swal.fire({
         toast: true,
         position: 'top-end',
@@ -4038,14 +4581,32 @@
 
     function quitarOAUnidad(uIdx, idOCodigo) {
       const u = planActivo.unidades[uIdx];
+      let codigoRemovido = null;
       u.oas_seleccionados = (u.oas_seleccionados || []).filter(o => {
         if (typeof o === 'object') {
-          if (o.id && (String(o.id) === String(idOCodigo))) return false;
-          if (o.codigo === String(idOCodigo)) return false;
+          if (o.id && (String(o.id) === String(idOCodigo))) {
+            codigoRemovido = o.codigo;
+            return false;
+          }
+          if (o.codigo === String(idOCodigo)) {
+            codigoRemovido = o.codigo;
+            return false;
+          }
           return true;
         }
-        return String(o) !== String(idOCodigo);
+        if (String(o) === String(idOCodigo)) {
+          codigoRemovido = String(o);
+          return false;
+        }
+        return true;
       });
+      if (codigoRemovido && Array.isArray(u.desglose_semanal)) {
+        u.desglose_semanal.forEach(s => {
+          if (Array.isArray(s.oas_semana)) {
+            s.oas_semana = s.oas_semana.filter(x => (typeof x === 'object' ? x.codigo : String(x)) !== codigoRemovido);
+          }
+        });
+      }
       renderizarUnidadesAcordeon();
       guardarBorradorActual(false);
     }
@@ -5837,22 +6398,19 @@
       const u = planActivo.unidades[uIdx];
       u.oas_seleccionados = u.oas_seleccionados || [];
       const yaExiste = u.oas_seleccionados.some(o => (typeof o === 'object' ? o.codigo : o) === cod);
-      if (yaExiste) {
-        return Swal.fire({
-          toast: true,
-          position: 'top-end',
-          icon: 'info',
-          title: `El objetivo ${cod} ya está en la Unidad ${u.numero_unidad}`,
-          showConfirmButton: false,
-          timer: 2500
-        });
+      if (!yaExiste) {
+        let matchOa = null;
+        if (Array.isArray(planActivo.oas_disponibles)) {
+          matchOa = planActivo.oas_disponibles.find(x => x.codigo === cod);
+        }
+        u.oas_seleccionados.push(matchOa ? { ...matchOa } : { codigo: cod, categoria: 'Basal', descripcion: `Objetivo sugerido por UTP (${guiaHitoActivo?.hito?.titulo || 'Hito'})` });
       }
 
-      let matchOa = null;
-      if (Array.isArray(planActivo.oas_disponibles)) {
-        matchOa = planActivo.oas_disponibles.find(x => x.codigo === cod);
+      if (guiaHitoActivo && guiaHitoActivo.sIdx !== undefined && guiaHitoActivo.sIdx !== null && u.desglose_semanal && u.desglose_semanal[guiaHitoActivo.sIdx]) {
+        const s = u.desglose_semanal[guiaHitoActivo.sIdx];
+        if (!Array.isArray(s.oas_semana)) s.oas_semana = [];
+        if (!s.oas_semana.includes(cod)) s.oas_semana.push(cod);
       }
-      u.oas_seleccionados.push(matchOa ? { ...matchOa } : { codigo: cod, categoria: 'Basal', descripcion: `Objetivo sugerido por UTP (${guiaHitoActivo?.hito?.titulo || 'Hito'})` });
 
       renderizarUnidadesAcordeon();
       Swal.fire({
@@ -5867,7 +6425,7 @@
 
     function adoptarOAsGuiaHitoSubmit() {
       if (!guiaHitoActivo || !planActivo) return;
-      const { hito, uIdx } = guiaHitoActivo;
+      const { hito, uIdx, sIdx } = guiaHitoActivo;
       const targetU = (uIdx !== undefined && planActivo.unidades && planActivo.unidades[uIdx]) ? uIdx : 0;
       if (!planActivo.unidades || !planActivo.unidades[targetU]) return;
 
@@ -5892,6 +6450,11 @@
             u.oas_seleccionados.push({ codigo: cod, categoria: 'Basal', descripcion: `Objetivo sugerido por UTP (${hito.titulo})` });
           }
           agregados++;
+        }
+        if (sIdx !== undefined && sIdx !== null && u.desglose_semanal && u.desglose_semanal[sIdx]) {
+          const s = u.desglose_semanal[sIdx];
+          if (!Array.isArray(s.oas_semana)) s.oas_semana = [];
+          if (!s.oas_semana.includes(cod)) s.oas_semana.push(cod);
         }
       });
 
