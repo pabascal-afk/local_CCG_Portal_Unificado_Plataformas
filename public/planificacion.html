@@ -595,14 +595,20 @@
           <h6 class="fw-bold text-dark mb-0"><i class="bi bi-collection text-primary me-1"></i> Catálogo de Planes y Programas Vigentes</h6>
           <p class="small text-muted mb-0">Consulta los Objetivos de Aprendizaje oficiales y gestiona planes propios del establecimiento con suplantación de OAs.</p>
         </div>
-        <div class="d-flex gap-2" id="adminCurriculoBtns">
+        <div class="d-flex gap-2 flex-wrap" id="adminCurriculoBtns">
+          <button class="btn btn-sm btn-primary" onclick="abrirModalGestionUnidadesOficiales()" title="Renombrar las Unidades 1 a 4 y reasignar qué OAs pertenecen a cada unidad">
+            <i class="bi bi-sliders me-1"></i> Configurar Unidades y OAs por Nivel
+          </button>
+          <button class="btn btn-sm btn-outline-primary" onclick="abrirModalCrearOACurriculo()">
+            <i class="bi bi-plus-lg me-1"></i> Agregar OA
+          </button>
           <a href="/api/planificacion/curriculo/plantilla" class="btn btn-sm btn-outline-secondary" title="Descargar formato Excel de ejemplo para planes propios y currículo">
             <i class="bi bi-file-earmark-excel me-1"></i> Formato XLS
           </a>
           <button class="btn btn-sm btn-outline-success" onclick="abrirModalImportarCurriculo()">
             <i class="bi bi-file-earmark-spreadsheet me-1"></i> Actualizar Curriculo (Excel)
           </button>
-          <button class="btn btn-sm btn-outline-primary" onclick="abrirModalPlanPropio()">
+          <button class="btn btn-sm btn-outline-dark" onclick="abrirModalPlanPropio()">
             <i class="bi bi-plus-circle me-1"></i> Crear Plan Propio
           </button>
         </div>
@@ -639,17 +645,19 @@
               <option value="LENGUA Y LITERATURA">Lengua y Literatura</option>
               <option value="MATEMATICA">Matemática</option>
               <option value="CIENCIAS NATURALES">Ciencias Naturales</option>
-              <option value="HISTORIA, GEOGRAFIA Y CIENCIAS SOCIALES">Historia y Geografía</option>
+              <option value="HISTORIA, GEOGRAFIA Y CIENCIAS SOCIALES">Historia, Geografía y Cs. Sociales</option>
               <option value="INGLES">Inglés</option>
               <option value="BIOLOGIA">Biología</option>
               <option value="QUIMICA">Química</option>
               <option value="FISICA">Física</option>
+              <option value="CIENCIAS PARA LA CIUDADANIA">Ciencias para la Ciudadanía</option>
               <option value="EDUCACION CIUDADANA">Educación Ciudadana</option>
               <option value="FILOSOFIA">Filosofía</option>
               <option value="ARTES VISUALES">Artes Visuales</option>
               <option value="MUSICA">Música</option>
-              <option value="EDUCACION FISICA Y SALUD">Educación Física</option>
+              <option value="EDUCACION FISICA Y SALUD">Educación Física y Salud</option>
               <option value="TECNOLOGIA">Tecnología</option>
+              <option value="ORIENTACION">Orientación</option>
             </select>
           </div>
           <div class="col-md-2">
@@ -682,14 +690,15 @@
           <table class="table table-hover align-middle mb-0" style="font-size: 0.88rem;">
             <thead class="table-light text-secondary" style="font-size: 0.78rem; text-transform: uppercase;">
               <tr>
-                <th style="width: 100px;">Nivel</th>
-                <th style="width: 150px;">Asignatura</th>
-                <th style="width: 130px;">Programa / Tipo</th>
-                <th style="width: 95px;">Unidad</th>
-                <th style="width: 120px;">Eje</th>
-                <th style="width: 85px;">Código</th>
-                <th style="width: 105px;">Priorización</th>
+                <th style="width: 95px;">Nivel</th>
+                <th style="width: 145px;">Asignatura</th>
+                <th style="width: 115px;">Programa / Tipo</th>
+                <th style="width: 170px;">Unidad Oficial</th>
+                <th style="width: 115px;">Eje</th>
+                <th style="width: 80px;">Código</th>
+                <th style="width: 100px;">Priorización</th>
                 <th>Descripción Oficial e Indicadores Sugeridos</th>
+                <th style="width: 90px;" class="text-end">Acciones</th>
               </tr>
             </thead>
             <tbody id="tablaCurriculoBody">
@@ -852,7 +861,10 @@
                   <h6 class="fw-bold text-dark mb-0"><i class="bi bi-stack text-primary me-2"></i>Unidades Pedagógicas y Desglose Semanal</h6>
                   <p class="text-muted small mb-0">Organiza las unidades, OAs MINEDUC, metodologías DUA y el desglose de clases por semana.</p>
                 </div>
-                <div class="d-flex gap-2">
+                <div class="d-flex gap-2 flex-wrap">
+                  <button class="btn btn-sm btn-outline-dark" onclick="cargarUnidadesOficialesPlanActual()" title="Cargar o actualizar las 4 Unidades Oficiales del Programa de Estudio y sus OAs asignados">
+                    <i class="bi bi-magic me-1 text-primary"></i> Cargar Unidades y OAs Oficiales MINEDUC
+                  </button>
                   <button class="btn btn-sm btn-outline-success" onclick="descargarPlantillaUnidadesActual()" title="Descargar formato Excel con las unidades y semanas de este curso">
                     <i class="bi bi-file-earmark-excel me-1"></i> Formato XLS
                   </button>
@@ -2395,6 +2407,8 @@
       });
     }
 
+    let catalogoOAsCache = [];
+
     async function cargarObjetivosCurriculo() {
       const nivel = document.getElementById('filtroNivelCurriculo').value;
       const asignatura = document.getElementById('filtroAsigCurriculo').value;
@@ -2408,44 +2422,65 @@
         const res = await fetch(`/api/planificacion/curriculo/objetivos?anio=${anioActivo}&nivel=${encodeURIComponent(nivel)}&asignatura=${encodeURIComponent(asignatura)}&unidad=${encodeURIComponent(unidad)}&tipo_plan=${encodeURIComponent(tipoPlan)}&q=${encodeURIComponent(q)}`);
         if (!res.ok) return;
         const oas = await res.json();
+        catalogoOAsCache = oas;
         const tbody = document.getElementById('tablaCurriculoBody');
 
         if (oas.length === 0) {
-          tbody.innerHTML = '<tr><td colspan="8" class="text-center text-muted py-4">No se encontraron Objetivos de Aprendizaje con los filtros aplicados.</td></tr>';
+          tbody.innerHTML = '<tr><td colspan="9" class="text-center text-muted py-4">No se encontraron Objetivos de Aprendizaje con los filtros aplicados.</td></tr>';
           return;
         }
+
+        const rol = (usuarioActual.rol || '').toLowerCase();
+        const puedeEditar = rol.includes('admin') || rol.includes('directiv') || rol.includes('coordinaci');
 
         tbody.innerHTML = oas.map(o => {
           const indics = Array.isArray(o.indicadores_sugeridos) ? o.indicadores_sugeridos : [];
           const esPropio = o.tipo_plan === 'PROPIO';
+          const nomUnidad = o.nombre_unidad_oficial && o.nombre_unidad_oficial !== o.unidad_sugerida
+            ? o.nombre_unidad_oficial
+            : '';
           return `
             <tr>
-              <td><span class="badge bg-light text-dark border">${o.nivel}</span></td>
-              <td class="small fw-semibold">${o.asignatura}</td>
+              <td><span class="badge bg-light text-dark border">${escapeHtml(o.nivel)}</span></td>
+              <td class="small fw-semibold">${escapeHtml(o.asignatura)}</td>
               <td>
                 <span class="badge ${esPropio ? 'text-white' : 'bg-primary'}" style="${esPropio ? 'background:#7c3aed;' : ''}">${esPropio ? 'Plan Propio' : 'MINEDUC'}</span>
+                ${o.editado_manual ? `<span class="badge bg-warning-subtle text-dark border border-warning-subtle d-block mt-1" style="font-size:0.65rem;" title="Personalizado manualmente por el colegio"><i class="bi bi-pencil-square"></i> Editado</span>` : ''}
                 ${esPropio && o.excluir_oas_mineduc ? `
                   <span class="badge bg-success-subtle text-success border border-success-subtle d-block mt-1" style="font-size:0.68rem;" title="Este plan propio suplanta los OAs oficiales del MINEDUC">
                     <i class="bi bi-shield-check"></i> Suplanta MINEDUC
                   </span>
                 ` : ''}
               </td>
-              <td><span class="badge bg-secondary-subtle text-secondary border">${o.unidad_sugerida || 'Unidad 1'}</span></td>
-              <td class="small text-muted">${o.eje_unidad || 'General'}</td>
-              <td class="fw-bold font-monospace text-primary">${o.codigo}</td>
-              <td><span class="badge ${o.categoria === 'Basal' ? 'badge-oa-basal' : 'badge-oa-comp'}">${o.categoria}</span></td>
+              <td>
+                <span class="badge bg-secondary-subtle text-secondary border">${escapeHtml(o.unidad_sugerida || 'Unidad 1')}</span>
+                ${nomUnidad ? `<div class="text-muted mt-1" style="font-size: 0.72rem; line-height: 1.2;">${escapeHtml(nomUnidad)}</div>` : ''}
+              </td>
+              <td class="small text-muted">${escapeHtml(o.eje_unidad || 'General')}</td>
+              <td class="fw-bold font-monospace text-primary">${escapeHtml(o.codigo)}</td>
+              <td><span class="badge ${o.categoria === 'Basal' ? 'badge-oa-basal' : 'badge-oa-comp'}">${escapeHtml(o.categoria)}</span></td>
               <td class="small">
-                <div class="fw-semibold text-dark mb-1">${o.descripcion}</div>
+                <div class="fw-semibold text-dark mb-1">${escapeHtml(o.descripcion)}</div>
                 ${indics.length > 0 ? `
                   <div class="mt-1">
                     <span class="badge bg-success-subtle text-success border border-success-subtle cursor-pointer" onclick="this.nextElementSibling.classList.toggle('d-none')">
                       <i class="bi bi-list-check me-1"></i>${indics.length} indicadores sugeridos (clic para ver)
                     </span>
                     <ul class="text-muted mt-2 ps-3 d-none mb-0" style="font-size: 0.78rem;">
-                      ${indics.map(i => `<li>${i}</li>`).join('')}
+                      ${indics.map(i => `<li>${escapeHtml(i)}</li>`).join('')}
                     </ul>
                   </div>
                 ` : ''}
+              </td>
+              <td class="text-end text-nowrap">
+                ${puedeEditar ? `
+                  <button class="btn btn-xs btn-outline-primary me-1" title="Editar OA / Cambiar Unidad" onclick="abrirModalEditarOACurriculo(${o.id})">
+                    <i class="bi bi-pencil"></i>
+                  </button>
+                  <button class="btn btn-xs btn-outline-danger" title="Eliminar OA" onclick="eliminarOACurriculo(${o.id}, '${escapeHtml(o.codigo)}')">
+                    <i class="bi bi-trash"></i>
+                  </button>
+                ` : '<span class="text-muted small">-</span>'}
               </td>
             </tr>
           `;
@@ -2453,6 +2488,382 @@
 
       } catch (e) {
         console.error('Error cargando catálogo:', e);
+      }
+    }
+
+    function abrirModalEditarOACurriculo(oaId) {
+      const oa = catalogoOAsCache.find(x => Number(x.id) === Number(oaId));
+      if (!oa) return;
+      const indTexto = Array.isArray(oa.indicadores_sugeridos) ? oa.indicadores_sugeridos.join('\n') : '';
+
+      Swal.fire({
+        title: `<i class="bi bi-pencil-square text-primary me-2"></i>Editar ${escapeHtml(oa.codigo)} (${escapeHtml(oa.nivel)})`,
+        width: '680px',
+        html: `
+          <div class="text-start small">
+            <div class="p-2 mb-3 rounded bg-light border d-flex justify-content-between align-items-center">
+              <span><strong>Nivel:</strong> ${escapeHtml(oa.nivel)}</span>
+              <span><strong>Asignatura:</strong> ${escapeHtml(oa.asignatura)}</span>
+              <span class="badge bg-primary">${escapeHtml(oa.tipo_plan || 'MINEDUC')}</span>
+            </div>
+            <div class="row g-2 mb-2">
+              <div class="col-md-4">
+                <label class="fw-semibold mb-1">Código OA</label>
+                <input type="text" id="swalEditOACodigo" class="form-control form-control-sm" value="${escapeHtml(oa.codigo)}">
+              </div>
+              <div class="col-md-4">
+                <label class="fw-semibold mb-1">Unidad Asignada</label>
+                <select id="swalEditOAUnidad" class="form-select form-select-sm">
+                  <option value="Unidad 1" ${(oa.unidad_sugerida || '').includes('1') ? 'selected' : ''}>Unidad 1</option>
+                  <option value="Unidad 2" ${(oa.unidad_sugerida || '').includes('2') ? 'selected' : ''}>Unidad 2</option>
+                  <option value="Unidad 3" ${(oa.unidad_sugerida || '').includes('3') ? 'selected' : ''}>Unidad 3</option>
+                  <option value="Unidad 4" ${(oa.unidad_sugerida || '').includes('4') ? 'selected' : ''}>Unidad 4</option>
+                </select>
+              </div>
+              <div class="col-md-4">
+                <label class="fw-semibold mb-1">Categoría</label>
+                <select id="swalEditOACat" class="form-select form-select-sm">
+                  <option value="Basal" ${oa.categoria === 'Basal' ? 'selected' : ''}>Basal</option>
+                  <option value="Complementario" ${oa.categoria === 'Complementario' ? 'selected' : ''}>Complementario</option>
+                </select>
+              </div>
+            </div>
+            <div class="row g-2 mb-2">
+              <div class="col-md-5">
+                <label class="fw-semibold mb-1">Eje Temático</label>
+                <input type="text" id="swalEditOAEje" class="form-control form-control-sm" value="${escapeHtml(oa.eje_unidad || 'General')}">
+              </div>
+              <div class="col-md-7">
+                <label class="fw-semibold mb-1">Nombre Oficial de la Unidad</label>
+                <input type="text" id="swalEditOANombreUnidad" class="form-control form-control-sm" value="${escapeHtml(oa.nombre_unidad_oficial || oa.unidad_sugerida || 'Unidad 1')}" placeholder="Ej: Unidad 1: Constitución y organización política de Chile">
+              </div>
+            </div>
+            <div class="mb-2">
+              <label class="fw-semibold mb-1">Descripción Oficial del OA</label>
+              <textarea id="swalEditOADesc" class="form-control form-control-sm" rows="3">${escapeHtml(oa.descripcion)}</textarea>
+            </div>
+            <div class="mb-1">
+              <label class="fw-semibold mb-1">Indicadores de Evaluación Sugeridos (uno por línea)</label>
+              <textarea id="swalEditOAInd" class="form-control form-control-sm" rows="4" placeholder="Un indicador por línea...">${escapeHtml(indTexto)}</textarea>
+            </div>
+          </div>
+        `,
+        showCancelButton: true,
+        confirmButtonText: 'Guardar Cambios',
+        cancelButtonText: 'Cancelar',
+        preConfirm: () => {
+          const codigo = document.getElementById('swalEditOACodigo').value.trim();
+          const unidad_sugerida = document.getElementById('swalEditOAUnidad').value;
+          const categoria = document.getElementById('swalEditOACat').value;
+          const eje_unidad = document.getElementById('swalEditOAEje').value.trim() || 'General';
+          const nombre_unidad_oficial = document.getElementById('swalEditOANombreUnidad').value.trim();
+          const descripcion = document.getElementById('swalEditOADesc').value.trim();
+          const indicadores_sugeridos = document.getElementById('swalEditOAInd').value
+            .split(/\r?\n/)
+            .map(s => s.trim())
+            .filter(Boolean);
+          if (!codigo || !descripcion) {
+            Swal.showValidationMessage('Código y Descripción son obligatorios.');
+            return false;
+          }
+          return { codigo, unidad_sugerida, categoria, eje_unidad, nombre_unidad_oficial, descripcion, indicadores_sugeridos };
+        }
+      }).then(async r => {
+        if (r.isConfirmed && r.value) {
+          try {
+            const res = await fetch(`/api/planificacion/curriculo/objetivos/${oaId}`, {
+              method: 'PUT',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify(r.value)
+            });
+            const data = await res.json();
+            if (!res.ok) throw new Error(data.error || 'Error al actualizar OA');
+            Swal.fire({ icon: 'success', title: 'Actualizado', text: data.mensaje, timer: 1600, showConfirmButton: false });
+            cargarObjetivosCurriculo();
+          } catch (e) {
+            Swal.fire('Error', e.message, 'error');
+          }
+        }
+      });
+    }
+
+    function abrirModalCrearOACurriculo() {
+      const nivFiltro = document.getElementById('filtroNivelCurriculo').value || '6° Básico';
+      const asigFiltro = document.getElementById('filtroAsigCurriculo').value || 'HISTORIA, GEOGRAFIA Y CIENCIAS SOCIALES';
+      const uFiltro = document.getElementById('filtroUnidadCurriculo').value || 'Unidad 1';
+
+      Swal.fire({
+        title: '<i class="bi bi-plus-circle text-primary me-2"></i>Agregar Objetivo de Aprendizaje (OA)',
+        width: '680px',
+        html: `
+          <div class="text-start small">
+            <div class="row g-2 mb-2">
+              <div class="col-md-4">
+                <label class="fw-semibold mb-1">Nivel</label>
+                <select id="swalNewOANivel" class="form-select form-select-sm">
+                  ${['1° Básico','2° Básico','3° Básico','4° Básico','5° Básico','6° Básico','7° Básico','8° Básico','I° Medio','II° Medio','III° Medio','IV° Medio']
+                    .map(n => `<option value="${n}" ${n === nivFiltro ? 'selected' : ''}>${n}</option>`).join('')}
+                </select>
+              </div>
+              <div class="col-md-5">
+                <label class="fw-semibold mb-1">Asignatura</label>
+                <select id="swalNewOAAsig" class="form-select form-select-sm">
+                  ${[
+                    ['LENGUAJE Y COMUNICACION', 'Lenguaje y Comunicación'],
+                    ['LENGUA Y LITERATURA', 'Lengua y Literatura'],
+                    ['MATEMATICA', 'Matemática'],
+                    ['CIENCIAS NATURALES', 'Ciencias Naturales'],
+                    ['HISTORIA, GEOGRAFIA Y CIENCIAS SOCIALES', 'Historia, Geografía y Cs. Sociales'],
+                    ['INGLES', 'Inglés'],
+                    ['BIOLOGIA', 'Biología'],
+                    ['QUIMICA', 'Química'],
+                    ['FISICA', 'Física'],
+                    ['CIENCIAS PARA LA CIUDADANIA', 'Ciencias para la Ciudadanía'],
+                    ['EDUCACION CIUDADANA', 'Educación Ciudadana'],
+                    ['FILOSOFIA', 'Filosofía'],
+                    ['ARTES VISUALES', 'Artes Visuales'],
+                    ['MUSICA', 'Música'],
+                    ['EDUCACION FISICA Y SALUD', 'Educación Física y Salud'],
+                    ['TECNOLOGIA', 'Tecnología'],
+                    ['ORIENTACION', 'Orientación']
+                  ].map(([val, lbl]) => `<option value="${val}" ${val === asigFiltro ? 'selected' : ''}>${lbl}</option>`).join('')}
+                </select>
+              </div>
+              <div class="col-md-3">
+                <label class="fw-semibold mb-1">Tipo Programa</label>
+                <select id="swalNewOATipo" class="form-select form-select-sm">
+                  <option value="MINEDUC">MINEDUC</option>
+                  <option value="PROPIO">Plan Propio</option>
+                </select>
+              </div>
+            </div>
+            <div class="row g-2 mb-2">
+              <div class="col-md-4">
+                <label class="fw-semibold mb-1">Código OA</label>
+                <input type="text" id="swalNewOACodigo" class="form-control form-control-sm" placeholder="Ej: OA 15">
+              </div>
+              <div class="col-md-4">
+                <label class="fw-semibold mb-1">Unidad Asignada</label>
+                <select id="swalNewOAUnidad" class="form-select form-select-sm">
+                  <option value="Unidad 1" ${uFiltro === 'Unidad 1' ? 'selected' : ''}>Unidad 1</option>
+                  <option value="Unidad 2" ${uFiltro === 'Unidad 2' ? 'selected' : ''}>Unidad 2</option>
+                  <option value="Unidad 3" ${uFiltro === 'Unidad 3' ? 'selected' : ''}>Unidad 3</option>
+                  <option value="Unidad 4" ${uFiltro === 'Unidad 4' ? 'selected' : ''}>Unidad 4</option>
+                </select>
+              </div>
+              <div class="col-md-4">
+                <label class="fw-semibold mb-1">Categoría</label>
+                <select id="swalNewOACat" class="form-select form-select-sm">
+                  <option value="Basal">Basal</option>
+                  <option value="Complementario">Complementario</option>
+                </select>
+              </div>
+            </div>
+            <div class="row g-2 mb-2">
+              <div class="col-md-5">
+                <label class="fw-semibold mb-1">Eje Temático</label>
+                <input type="text" id="swalNewOAEje" class="form-control form-control-sm" placeholder="Ej: Formación Ciudadana">
+              </div>
+              <div class="col-md-7">
+                <label class="fw-semibold mb-1">Nombre Oficial de la Unidad</label>
+                <input type="text" id="swalNewOANombreUnidad" class="form-control form-control-sm" placeholder="Ej: Unidad 1: Constitución y organización política de Chile">
+              </div>
+            </div>
+            <div class="mb-2">
+              <label class="fw-semibold mb-1">Descripción Oficial del OA</label>
+              <textarea id="swalNewOADesc" class="form-control form-control-sm" rows="3" placeholder="Texto completo del Objetivo de Aprendizaje..."></textarea>
+            </div>
+            <div class="mb-1">
+              <label class="fw-semibold mb-1">Indicadores Sugeridos (uno por línea)</label>
+              <textarea id="swalNewOAInd" class="form-control form-control-sm" rows="3" placeholder="Un indicador por línea..."></textarea>
+            </div>
+          </div>
+        `,
+        showCancelButton: true,
+        confirmButtonText: 'Crear OA',
+        cancelButtonText: 'Cancelar',
+        preConfirm: () => {
+          const nivel = document.getElementById('swalNewOANivel').value;
+          const asignatura = document.getElementById('swalNewOAAsig').value;
+          const tipo = document.getElementById('swalNewOATipo').value;
+          const codigo = document.getElementById('swalNewOACodigo').value.trim();
+          const unidad_sugerida = document.getElementById('swalNewOAUnidad').value;
+          const categoria = document.getElementById('swalNewOACat').value;
+          const eje_unidad = document.getElementById('swalNewOAEje').value.trim() || 'General';
+          const nombre_unidad_oficial = document.getElementById('swalNewOANombreUnidad').value.trim();
+          const descripcion = document.getElementById('swalNewOADesc').value.trim();
+          const indicadores_sugeridos = document.getElementById('swalNewOAInd').value
+            .split(/\r?\n/)
+            .map(s => s.trim())
+            .filter(Boolean);
+          if (!codigo || !descripcion) {
+            Swal.showValidationMessage('Código y Descripción son obligatorios.');
+            return false;
+          }
+          return { anio: anioActivo, nivel, asignatura, tipo, codigo, unidad_sugerida, categoria, eje_unidad, nombre_unidad_oficial, descripcion, indicadores_sugeridos };
+        }
+      }).then(async r => {
+        if (r.isConfirmed && r.value) {
+          try {
+            const res = await fetch('/api/planificacion/curriculo/objetivos', {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify(r.value)
+            });
+            const data = await res.json();
+            if (!res.ok) throw new Error(data.error || 'Error al crear OA');
+            Swal.fire({ icon: 'success', title: 'OA Creado', text: data.mensaje, timer: 1600, showConfirmButton: false });
+            cargarObjetivosCurriculo();
+          } catch (e) {
+            Swal.fire('Error', e.message, 'error');
+          }
+        }
+      });
+    }
+
+    function eliminarOACurriculo(oaId, codigo) {
+      Swal.fire({
+        title: `¿Eliminar ${codigo}?`,
+        text: 'Este Objetivo de Aprendizaje se eliminará del catálogo curricular de este nivel y asignatura.',
+        icon: 'warning',
+        showCancelButton: true,
+        confirmButtonColor: '#dc2626',
+        confirmButtonText: 'Sí, eliminar',
+        cancelButtonText: 'Cancelar'
+      }).then(async r => {
+        if (r.isConfirmed) {
+          try {
+            const res = await fetch(`/api/planificacion/curriculo/objetivos/${oaId}`, { method: 'DELETE' });
+            const data = await res.json();
+            if (!res.ok) throw new Error(data.error || 'Error al eliminar OA');
+            Swal.fire({ icon: 'success', title: 'Eliminado', text: data.mensaje, timer: 1400, showConfirmButton: false });
+            cargarObjetivosCurriculo();
+          } catch (e) {
+            Swal.fire('Error', e.message, 'error');
+          }
+        }
+      });
+    }
+
+    async function abrirModalGestionUnidadesOficiales() {
+      const nivInicial = document.getElementById('filtroNivelCurriculo').value || '6° Básico';
+      const asigInicial = document.getElementById('filtroAsigCurriculo').value || 'HISTORIA, GEOGRAFIA Y CIENCIAS SOCIALES';
+
+      try {
+        Swal.showLoading();
+        const res = await fetch(`/api/planificacion/curriculo/unidades-oficiales?anio=${anioActivo}&nivel=${encodeURIComponent(nivInicial)}&asignatura=${encodeURIComponent(asigInicial)}&tipo=TODOS`);
+        const data = await res.json();
+        Swal.close();
+
+        if (!data.plan) {
+          return Swal.fire('Selecciona Nivel y Asignatura', 'Por favor selecciona un Nivel y una Asignatura válidos en los filtros del catálogo para configurar sus Unidades y OAs.', 'info');
+        }
+
+        const unidades = data.unidades || [
+          { numero: 1, nombre: 'Unidad 1' },
+          { numero: 2, nombre: 'Unidad 2' },
+          { numero: 3, nombre: 'Unidad 3' },
+          { numero: 4, nombre: 'Unidad 4' }
+        ];
+        const objetivos = data.objetivos || [];
+
+        await Swal.fire({
+          title: `<i class="bi bi-sliders text-primary me-2"></i>Unidades y OAs Oficiales: ${escapeHtml(data.plan.nivel)} • ${escapeHtml(data.plan.asignatura)}`,
+          width: '860px',
+          html: `
+            <div class="text-start small">
+              <div class="alert alert-info py-2 px-3 mb-3">
+                <i class="bi bi-info-circle-fill me-1"></i>
+                Aquí puedes personalizar el <strong>nombre oficial de cada Unidad (1 a 4)</strong> y cambiar a qué unidad pertenece cada <strong>OA</strong> o si es <strong>Basal / Complementario</strong>. Los cambios quedarán guardados permanentemente.
+              </div>
+              <h6 class="fw-bold text-dark mb-2">1. Nombres Oficiales de las Unidades</h6>
+              <div class="row g-2 mb-3">
+                ${[1, 2, 3, 4].map(n => {
+                  const uObj = unidades.find(u => Number(u.numero) === n) || { numero: n, nombre: `Unidad ${n}` };
+                  return `
+                    <div class="col-md-6">
+                      <div class="input-group input-group-sm">
+                        <span class="input-group-text fw-bold bg-primary text-white">U${n}</span>
+                        <input type="text" class="form-control input-unidad-oficial-nombre" data-numero="${n}" value="${escapeHtml(uObj.nombre)}">
+                      </div>
+                    </div>
+                  `;
+                }).join('')}
+              </div>
+
+              <h6 class="fw-bold text-dark mb-2">2. Asignación de Objetivos de Aprendizaje (${objetivos.length} OAs)</h6>
+              <div class="table-responsive border rounded" style="max-height: 340px; overflow-y: auto;">
+                <table class="table table-sm table-hover align-middle mb-0" style="font-size: 0.8rem;">
+                  <thead class="table-light sticky-top">
+                    <tr>
+                      <th style="width: 85px;">Código</th>
+                      <th>Descripción del OA</th>
+                      <th style="width: 130px;">Unidad Asignada</th>
+                      <th style="width: 135px;">Priorización</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    ${objetivos.map(o => {
+                      const m = String(o.unidad_sugerida || 'Unidad 1').match(/(\d+)/);
+                      const numU = m ? parseInt(m[1], 10) : 1;
+                      return `
+                        <tr class="fila-asignacion-oa" data-oa-id="${o.id}">
+                          <td class="fw-bold font-monospace text-primary">${escapeHtml(o.codigo)}</td>
+                          <td class="text-truncate" style="max-width: 380px;" title="${escapeHtml(o.descripcion)}">${escapeHtml(o.descripcion)}</td>
+                          <td>
+                            <select class="form-select form-select-sm py-0 sel-oa-unidad">
+                              <option value="1" ${numU === 1 ? 'selected' : ''}>Unidad 1</option>
+                              <option value="2" ${numU === 2 ? 'selected' : ''}>Unidad 2</option>
+                              <option value="3" ${numU === 3 ? 'selected' : ''}>Unidad 3</option>
+                              <option value="4" ${numU === 4 ? 'selected' : ''}>Unidad 4</option>
+                            </select>
+                          </td>
+                          <td>
+                            <select class="form-select form-select-sm py-0 sel-oa-cat">
+                              <option value="Basal" ${o.categoria === 'Basal' ? 'selected' : ''}>Basal</option>
+                              <option value="Complementario" ${o.categoria === 'Complementario' ? 'selected' : ''}>Complementario</option>
+                            </select>
+                          </td>
+                        </tr>
+                      `;
+                    }).join('')}
+                  </tbody>
+                </table>
+              </div>
+            </div>
+          `,
+          showCancelButton: true,
+          confirmButtonText: '<i class="bi bi-check2-circle me-1"></i>Guardar Unidades y Asignación de OAs',
+          cancelButtonText: 'Cancelar',
+          preConfirm: () => {
+            const nuevasUnidades = Array.from(document.querySelectorAll('.input-unidad-oficial-nombre')).map(inp => ({
+              numero: parseInt(inp.getAttribute('data-numero'), 10),
+              nombre: inp.value.trim() || `Unidad ${inp.getAttribute('data-numero')}`
+            }));
+            const asignaciones = Array.from(document.querySelectorAll('.fila-asignacion-oa')).map(tr => ({
+              id: parseInt(tr.getAttribute('data-oa-id'), 10),
+              unidad_numero: parseInt(tr.querySelector('.sel-oa-unidad').value, 10),
+              categoria: tr.querySelector('.sel-oa-cat').value
+            }));
+            return { plan_id: data.plan.id, unidades: nuevasUnidades, asignaciones };
+          }
+        }).then(async r => {
+          if (r.isConfirmed && r.value) {
+            const resPut = await fetch('/api/planificacion/curriculo/unidades-oficiales', {
+              method: 'PUT',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify(r.value)
+            });
+            const resData = await resPut.json();
+            if (!resPut.ok) throw new Error(resData.error || 'Error guardando configuración');
+            Swal.fire('Actualizado', resData.mensaje, 'success');
+            document.getElementById('filtroNivelCurriculo').value = nivInicial;
+            document.getElementById('filtroAsigCurriculo').value = asigInicial;
+            cargarObjetivosCurriculo();
+          }
+        });
+      } catch (e) {
+        Swal.fire('Error', e.message, 'error');
       }
     }
 
@@ -2915,14 +3326,19 @@
 
                   <!-- OBJETIVOS DE APRENDIZAJE SELECCIONADOS -->
                   <div class="bg-white p-3 rounded border mb-4">
-                    <div class="d-flex justify-content-between align-items-center mb-3">
+                    <div class="d-flex justify-content-between align-items-center mb-3 flex-wrap gap-2">
                       <div>
                         <h6 class="fw-bold text-dark mb-0"><i class="bi bi-bullseye text-primary me-2"></i>Objetivos de Aprendizaje (OAs) Asignados</h6>
                         <span class="small text-muted">Arrastra los OAs para reordenar la secuencia pedagógica.</span>
                       </div>
-                      <button class="btn btn-sm btn-outline-primary" onclick="abrirModalSelectorOAs(${idx})">
-                        <i class="bi bi-plus-circle me-1"></i> Seleccionar OAs MINEDUC
-                      </button>
+                      <div class="d-flex gap-2 flex-wrap">
+                        <button class="btn btn-sm btn-outline-success" onclick="precargarOAsOficialesUnidad(${idx})" title="Asignar automáticamente el título oficial y todos los OAs oficiales de la Unidad ${u.numero_unidad || (idx + 1)}">
+                          <i class="bi bi-magic me-1"></i> Precargar OAs Oficiales U${u.numero_unidad || (idx + 1)}
+                        </button>
+                        <button class="btn btn-sm btn-outline-primary" onclick="abrirModalSelectorOAs(${idx})">
+                          <i class="bi bi-plus-circle me-1"></i> Seleccionar OAs MINEDUC
+                        </button>
+                      </div>
                     </div>
                     <div class="d-flex flex-wrap gap-2" id="chipsOAsUnidad${idx}">
                       ${(u.oas_seleccionados || []).length > 0 ? (u.oas_seleccionados || []).map((o, oIdx) => {
@@ -3696,12 +4112,22 @@
     function agregarNuevaUnidad() {
       const unidades = planActivo.unidades || [];
       const num = unidades.length + 1;
+      const uOficial = (planActivo.unidades_oficiales || []).find(u => Number(u.numero) === num);
+      const oasUnidadOficial = (planActivo.oas_disponibles || [])
+        .filter(o => o.unidad_sugerida === `Unidad ${num}`)
+        .map(o => ({
+          id: o.id,
+          codigo: o.codigo,
+          categoria: o.categoria || 'Basal',
+          descripcion: o.descripcion,
+          unidad_sugerida: o.unidad_sugerida
+        }));
       unidades.push({
         numero_unidad: num,
-        nombre_unidad: `Unidad ${num}`,
+        nombre_unidad: uOficial ? uOficial.nombre : `Unidad ${num}`,
         semestre: num <= 2 ? 1 : 2,
         horas_estimadas: 38,
-        oas_seleccionados: [],
+        oas_seleccionados: oasUnidadOficial,
         oats_seleccionados: [],
         tags: [],
         habilidades: '',
@@ -3713,6 +4139,82 @@
         ]
       });
       renderizarUnidadesAcordeon();
+    }
+
+    async function cargarUnidadesOficialesPlanActual() {
+      if (!planActivo || !planActivo.id) return;
+      const conf = await Swal.fire({
+        title: '¿Cargar las 4 Unidades y OAs Oficiales MINEDUC?',
+        html: `<div class="small text-start">Se crearán o actualizarán las <strong>4 Unidades Oficiales</strong> del Programa de Estudio para <strong>${escapeHtml(planActivo.curso)} • ${escapeHtml(planActivo.asignatura)}</strong> con sus títulos oficiales y todos sus Objetivos de Aprendizaje asignados (conservando cualquier semana que ya hayas planificado).</div>`,
+        icon: 'question',
+        showCancelButton: true,
+        confirmButtonText: '<i class="bi bi-magic me-1"></i>Sí, cargar Unidades y OAs Oficiales',
+        cancelButtonText: 'Cancelar'
+      });
+      if (!conf.isConfirmed) return;
+
+      try {
+        Swal.showLoading();
+        const res = await fetch(`/api/planificacion/${planActivo.id}/cargar-unidades-oficiales`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({})
+        });
+        const data = await res.json();
+        if (!res.ok) throw new Error(data.error || 'No se pudieron cargar las unidades oficiales');
+        planActivo = data.plan;
+        renderizarUnidadesAcordeon();
+        Swal.fire({ icon: 'success', title: 'Unidades Oficiales Cargadas', text: data.mensaje, timer: 2000, showConfirmButton: false });
+      } catch (e) {
+        Swal.fire('Error', e.message, 'error');
+      }
+    }
+
+    function precargarOAsOficialesUnidad(uIdx) {
+      if (!planActivo || !planActivo.unidades || !planActivo.unidades[uIdx]) return;
+      const u = planActivo.unidades[uIdx];
+      const numU = u.numero_unidad || (uIdx + 1);
+      const uOficial = (planActivo.unidades_oficiales || []).find(uo => Number(uo.numero) === Number(numU));
+      const oasUnidad = (planActivo.oas_disponibles || []).filter(o => o.unidad_sugerida === `Unidad ${numU}`);
+
+      if (oasUnidad.length === 0) {
+        return Swal.fire('Sin OAs específicos', `No hay OAs asignados específicamente a la Unidad ${numU} en el catálogo actual. Puedes seleccionarlos manualmente.`, 'info');
+      }
+
+      if (uOficial && uOficial.nombre && (u.nombre_unidad === `Unidad ${numU}` || u.nombre_unidad.includes('Introducción y Fundamentos') || !u.nombre_unidad)) {
+        u.nombre_unidad = uOficial.nombre;
+      }
+
+      u.oas_seleccionados = oasUnidad.map(o => ({
+        id: o.id,
+        codigo: o.codigo,
+        categoria: o.categoria || 'Basal',
+        descripcion: o.descripcion,
+        unidad_sugerida: o.unidad_sugerida,
+        eje: o.eje_unidad
+      }));
+
+      // También precargar indicadores si están vacíos
+      if (!u.indicadores_evaluacion || !u.indicadores_evaluacion.trim()) {
+        const inds = [];
+        oasUnidad.forEach(o => {
+          if (Array.isArray(o.indicadores_sugeridos)) {
+            o.indicadores_sugeridos.forEach(ind => inds.push(`• [${o.codigo}] ${ind}`));
+          }
+        });
+        if (inds.length > 0) u.indicadores_evaluacion = inds.join('\n');
+      }
+
+      renderizarUnidadesAcordeon();
+      guardarBorradorActual(false);
+      Swal.fire({
+        toast: true,
+        position: 'top-end',
+        icon: 'success',
+        title: `Se cargaron ${oasUnidad.length} OAs oficiales en Unidad ${numU}`,
+        showConfirmButton: false,
+        timer: 2000
+      });
     }
 
     function eliminarUnidad(index) {
@@ -4396,7 +4898,25 @@
         return;
       }
 
-      cont.innerHTML = filtrados.map(o => {
+      let bannerUnidadOficial = '';
+      if (unidadFiltro !== 'todas') {
+        const oaConNombre = filtrados.find(o => o.nombre_unidad_oficial);
+        const tituloUnidadOficial = oaConNombre ? oaConNombre.nombre_unidad_oficial : unidadFiltro;
+        bannerUnidadOficial = `
+          <div class="alert alert-primary py-2 px-3 mb-2 d-flex justify-content-between align-items-center flex-wrap gap-2">
+            <div class="small">
+              <i class="bi bi-bookmark-star-fill me-1"></i>
+              <strong>${escapeHtml(tituloUnidadOficial)}</strong>
+              <span class="text-muted ms-1">(${filtrados.length} OAs asignados en el Programa Oficial)</span>
+            </div>
+            <button type="button" class="btn btn-xs btn-primary py-0 px-2" onclick="seleccionarTodosOAsFiltradosModal()">
+              <i class="bi bi-check2-all me-1"></i>Seleccionar los ${filtrados.length} OAs de esta Unidad
+            </button>
+          </div>
+        `;
+      }
+
+      cont.innerHTML = bannerUnidadOficial + filtrados.map(o => {
         const oId = Number(o.id);
         const isChecked = oasSeleccionadosTemp.has(oId);
         const indics = Array.isArray(o.indicadores_sugeridos) ? o.indicadores_sugeridos : [];
@@ -4410,7 +4930,7 @@
                     <span class="fw-bold font-monospace text-primary fs-6">${o.codigo}</span>
                     <div class="d-flex gap-1 align-items-center">
                       <span class="badge ${o.categoria === 'Basal' ? 'badge-oa-basal' : 'badge-oa-comp'}">${o.categoria}</span>
-                      <span class="badge bg-secondary-subtle text-secondary border">${o.unidad_sugerida || 'Unidad 1'}</span>
+                      <span class="badge bg-secondary-subtle text-secondary border" title="${escapeHtml(o.nombre_unidad_oficial || o.unidad_sugerida || 'Unidad 1')}">${o.unidad_sugerida || 'Unidad 1'}</span>
                       <span class="badge bg-light text-dark border">${o.eje_unidad || 'General'}</span>
                     </div>
                   </div>
@@ -4432,6 +4952,21 @@
           </div>
         `;
       }).join('');
+    }
+
+    function seleccionarTodosOAsFiltradosModal() {
+      const unidadFiltro = document.getElementById('filtroUnidadModalOA') ? document.getElementById('filtroUnidadModalOA').value : 'todas';
+      const ejeFiltro = document.getElementById('filtroEjeModalOA').value;
+      const q = (document.getElementById('filtroTextoModalOA').value || '').toLowerCase();
+      oasDisponiblesModal.forEach(o => {
+        const matchesUnidad = (unidadFiltro === 'todas') || (o.unidad_sugerida && (o.unidad_sugerida.includes(unidadFiltro) || o.unidad_sugerida.includes('Transversal') || o.unidad_sugerida.includes('Todas')));
+        const matchesEje = (ejeFiltro === 'todos') || (o.eje_unidad === ejeFiltro);
+        const matchesQ = !q || (o.codigo || '').toLowerCase().includes(q) || (o.descripcion || '').toLowerCase().includes(q);
+        if (matchesUnidad && matchesEje && matchesQ) {
+          oasSeleccionadosTemp.add(Number(o.id));
+        }
+      });
+      renderizarModalOAs();
     }
 
     function toggleOASeleccion(oaId, checked) {

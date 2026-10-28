@@ -1,19 +1,28 @@
 /**
  * Servicio de Semilla y Gestión de Planes y Programas MINEDUC
- * Bases Curriculares y Priorización Curricular Oficial
- * Incluye distribución por Unidades (1 a 4), Habilidades e Indicadores de Evaluación precargados.
+ * Bases Curriculares y Programas de Estudio Oficiales MINEDUC
+ * Incluye distribución por Unidades Oficiales (1 a 4 con nombre oficial),
+ * todos los OAs (Basales y Complementarios), Habilidades e Indicadores de Evaluación.
  */
 
 const path = require('path');
 const xlsx = require('xlsx');
 
+const CURRICULO_SEED_VERSION = '2026.2-MINEDUC-OFICIAL';
+
+function extraerArregloCurriculo(mod, propName) {
+  if (Array.isArray(mod)) return mod;
+  if (mod && Array.isArray(mod[propName])) return mod[propName];
+  return [];
+}
+
 // Importación de catálogos curriculares oficiales por área
-const { LENGUAJE_CURRICULO } = require('./curriculo_data/lenguaje');
-const { MATEMATICA_CURRICULO } = require('./curriculo_data/matematica');
-const { CIENCIAS_CURRICULO } = require('./curriculo_data/ciencias');
-const { HISTORIA_CURRICULO } = require('./curriculo_data/historia');
-const { INGLES_CURRICULO } = require('./curriculo_data/ingles');
-const { ESPECIALIDADES_CURRICULO } = require('./curriculo_data/especialidades');
+const LENGUAJE_CURRICULO = extraerArregloCurriculo(require('./curriculo_data/lenguaje'), 'LENGUAJE_CURRICULO');
+const MATEMATICA_CURRICULO = extraerArregloCurriculo(require('./curriculo_data/matematica'), 'MATEMATICA_CURRICULO');
+const CIENCIAS_CURRICULO = extraerArregloCurriculo(require('./curriculo_data/ciencias'), 'CIENCIAS_CURRICULO');
+const HISTORIA_CURRICULO = extraerArregloCurriculo(require('./curriculo_data/historia'), 'HISTORIA_CURRICULO');
+const INGLES_CURRICULO = extraerArregloCurriculo(require('./curriculo_data/ingles'), 'INGLES_CURRICULO');
+const ESPECIALIDADES_CURRICULO = extraerArregloCurriculo(require('./curriculo_data/especialidades'), 'ESPECIALIDADES_CURRICULO');
 
 // -------------------------------------------------------------
 // HABILIDADES OFICIALES MINEDUC POR ASIGNATURA
@@ -122,9 +131,25 @@ const ACTITUDES_GENERALES_MINEDUC = [
   "Reconocer y valorar la diversidad humana, cultural y social como fuente de enriquecimiento personal y colectivo."
 ];
 
-// -------------------------------------------------------------
-// CATÁLOGO OFICIAL COMPLETO MINEDUC
-// -------------------------------------------------------------
+function obtenerCatalogoMineducCompleto() {
+  delete require.cache[require.resolve('./curriculo_data/lenguaje')];
+  delete require.cache[require.resolve('./curriculo_data/matematica')];
+  delete require.cache[require.resolve('./curriculo_data/ciencias')];
+  delete require.cache[require.resolve('./curriculo_data/historia')];
+  delete require.cache[require.resolve('./curriculo_data/ingles')];
+  delete require.cache[require.resolve('./curriculo_data/especialidades')];
+
+  const L = extraerArregloCurriculo(require('./curriculo_data/lenguaje'), 'LENGUAJE_CURRICULO');
+  const M = extraerArregloCurriculo(require('./curriculo_data/matematica'), 'MATEMATICA_CURRICULO');
+  const C = extraerArregloCurriculo(require('./curriculo_data/ciencias'), 'CIENCIAS_CURRICULO');
+  const H = extraerArregloCurriculo(require('./curriculo_data/historia'), 'HISTORIA_CURRICULO');
+  const I = extraerArregloCurriculo(require('./curriculo_data/ingles'), 'INGLES_CURRICULO');
+  const E = extraerArregloCurriculo(require('./curriculo_data/especialidades'), 'ESPECIALIDADES_CURRICULO');
+
+  return [...L, ...M, ...C, ...H, ...I, ...E];
+}
+
+// Catálogo inicial exportado
 const CATALOGO_MINEDUC_COMPLETO = [
   ...LENGUAJE_CURRICULO,
   ...MATEMATICA_CURRICULO,
@@ -133,6 +158,21 @@ const CATALOGO_MINEDUC_COMPLETO = [
   ...INGLES_CURRICULO,
   ...ESPECIALIDADES_CURRICULO
 ];
+
+/**
+ * Normaliza niveles educativos al formato canónico de la plataforma (ej: '6° BASICO' -> '6° Básico', 'I° MEDIO' -> 'I° Medio')
+ */
+function normalizarNivel(nivel) {
+  if (!nivel) return '';
+  const clean = String(nivel).trim().toUpperCase()
+    .normalize("NFD").replace(/[\u0300-\u036f]/g, "")
+    .replace(/\s+/g, ' ');
+  const mBas = clean.match(/^([1-8])\s*°?\s*BASICO$/);
+  if (mBas) return `${mBas[1]}° Básico`;
+  const mMed = clean.match(/^(I|II|III|IV)\s*°?\s*MEDIO$/);
+  if (mMed) return `${mMed[1]}° Medio`;
+  return String(nivel).trim();
+}
 
 /**
  * Normaliza nombres de asignaturas
@@ -150,122 +190,227 @@ function normalizarNombreAsignatura(asig) {
 }
 
 /**
- * Inicializa las tablas del currículo y siembra el catálogo oficial MINEDUC enriquecido
- * con OAs por Unidad (1 a 4), Habilidades e Indicadores de Evaluación precargados.
+ * Construye el arreglo de unidades oficiales de un plan a partir de sus objetivos
  */
-function inicializarCurriculo(db, callback, { forzarActualizacion = true } = {}) {
+function construirUnidadesOficialesPlan(objetivos) {
+  const mapUnidades = new Map();
+  for (const obj of (objetivos || [])) {
+    const rawU = obj.unidad !== undefined && obj.unidad !== null ? String(obj.unidad).trim() : 'Unidad 1';
+    const matchNum = rawU.match(/(\d+)/);
+    const num = matchNum ? parseInt(matchNum[1], 10) : (mapUnidades.size + 1);
+    const uKey = `Unidad ${num}`;
+    const nombreOficial = String(obj.nombre_unidad || obj.nombre_unidad_oficial || uKey).trim();
+    const nombreFinal = (nombreOficial.startsWith('Unidad') || nombreOficial.startsWith('Unit'))
+      ? nombreOficial
+      : `${uKey}: ${nombreOficial}`;
+    if (!mapUnidades.has(num)) {
+      mapUnidades.set(num, {
+        numero: num,
+        unidad: uKey,
+        nombre: nombreFinal,
+        nombre_unidad: nombreFinal,
+        semestre: num <= 2 ? 1 : 2,
+        horas_sugeridas: 38
+      });
+    } else if (nombreOficial && nombreOficial !== uKey && mapUnidades.get(num).nombre === uKey) {
+      mapUnidades.get(num).nombre = nombreFinal;
+      mapUnidades.get(num).nombre_unidad = nombreFinal;
+    }
+  }
+  return Array.from(mapUnidades.values()).sort((a, b) => a.numero - b.numero);
+}
+
+/**
+ * Inicializa las tablas del currículo y siembra el catálogo oficial MINEDUC enriquecido
+ * con Unidades Oficiales (nombres y OAs reales Basales y Complementarios), Habilidades e Indicadores.
+ * Preserva los IDs de planes y las ediciones manuales en reinicios normales del servidor.
+ */
+function inicializarCurriculo(db, callback, { forzarActualizacion = false, ignorarEdicionesManuales = false } = {}) {
   const anioActual = 2026;
+  const catalogoActual = obtenerCatalogoMineducCompleto();
 
   db.serialize(() => {
     // 1. Asegurar columnas en las tablas
     db.run("ALTER TABLE curriculo_planes ADD COLUMN habilidades_sugeridas TEXT DEFAULT '[]'", () => {});
+    db.run("ALTER TABLE curriculo_planes ADD COLUMN unidades_oficiales TEXT DEFAULT '[]'", () => {});
     db.run("ALTER TABLE curriculo_objetivos ADD COLUMN unidad_sugerida TEXT DEFAULT 'Unidad 1'", () => {});
+    db.run("ALTER TABLE curriculo_objetivos ADD COLUMN nombre_unidad_oficial TEXT DEFAULT ''", () => {});
+    db.run("ALTER TABLE curriculo_objetivos ADD COLUMN editado_manual INTEGER DEFAULT 0", () => {});
+    db.run("DELETE FROM curriculo_objetivos WHERE plan_id NOT IN (SELECT id FROM curriculo_planes)", () => {});
 
-    // 2. Verificar estado de la base de datos
-    db.get("SELECT COUNT(*) as total, SUM(CASE WHEN indicadores_sugeridos IS NOT NULL AND indicadores_sugeridos != '[]' THEN 1 ELSE 0 END) as con_indicadores FROM curriculo_objetivos", [], (err, row) => {
-      if (err) {
-        console.error("[CURRICULO] Error verificando estado:", err);
-        if (callback) callback(err);
-        return;
-      }
+    // 2. Verificar versión de semilla y estado de la base de datos
+    db.get("SELECT valor FROM config_global WHERE clave = 'curriculo_seed_version'", [], (errVer, verRow) => {
+      const versionGuardada = verRow ? verRow.valor : '';
 
-      const totalOAs = (row && row.total) || 0;
-      const conIndicadores = (row && row.con_indicadores) || 0;
-
-      // Si ya está completamente poblado con todo el catálogo oficial y no se fuerza recarga, salir
-      if (!forzarActualizacion && totalOAs >= CATALOGO_MINEDUC_COMPLETO.length && conIndicadores >= CATALOGO_MINEDUC_COMPLETO.length) {
-        console.log(`[CURRICULO] Catálogo ya actualizado con ${totalOAs} OAs e indicadores para el año ${anioActual}.`);
-        if (callback) callback(null);
-        return;
-      }
-
-      console.log(`[CURRICULO] Sembrando catálogo enriquecido MINEDUC 2026 (${CATALOGO_MINEDUC_COMPLETO.length} OAs)...`);
-
-      // Limpiar registros antiguos de tipo MINEDUC para garantizar coherencia íntegra
-      db.run("DELETE FROM curriculo_objetivos WHERE plan_id IN (SELECT id FROM curriculo_planes WHERE tipo = 'MINEDUC')");
-      db.run("DELETE FROM curriculo_planes WHERE tipo = 'MINEDUC'");
-
-      // Agrupar catálogo por (nivel, asignatura)
-      const planesAgrupados = {};
-      for (const item of CATALOGO_MINEDUC_COMPLETO) {
-        const key = `${item.nivel}___${item.asignatura}`;
-        if (!planesAgrupados[key]) {
-          const asigNorm = normalizarNombreAsignatura(item.asignatura);
-          const habs = HABILIDADES_POR_ASIGNATURA[asigNorm] || HABILIDADES_POR_ASIGNATURA[item.asignatura] || [];
-
-          planesAgrupados[key] = {
-            nivel: item.nivel,
-            asignatura: item.asignatura,
-            tipo: 'MINEDUC',
-            habilidades: habs,
-            objetivos: []
-          };
+      db.get("SELECT COUNT(*) as total, SUM(CASE WHEN nombre_unidad_oficial IS NOT NULL AND nombre_unidad_oficial != '' THEN 1 ELSE 0 END) as con_nombre_unidad FROM curriculo_objetivos", [], (err, row) => {
+        if (err) {
+          console.error("[CURRICULO] Error verificando estado:", err);
+          if (callback) callback(err);
+          return;
         }
-        planesAgrupados[key].objetivos.push(item);
-      }
 
-      const keys = Object.keys(planesAgrupados);
+        const totalOAs = (row && row.total) || 0;
+        const conNombreUnidad = (row && row.con_nombre_unidad) || 0;
 
-      // Sentencias preparadas
-      const stmtInsertPlan = db.prepare(`INSERT INTO curriculo_planes (anio, tipo, nivel, asignatura, descripcion, habilidades_sugeridas, activo) VALUES (?, 'MINEDUC', ?, ?, ?, ?, 1)`);
-      const stmtInsertObj = db.prepare(`INSERT INTO curriculo_objetivos (plan_id, tipo_objetivo, eje_unidad, unidad_sugerida, codigo, descripcion, categoria, indicadores_sugeridos, orden, activo) VALUES (?, 'OA', ?, ?, ?, ?, ?, ?, ?, 1)`);
-
-      let planesProcesados = 0;
-      let oasProcesados = 0;
-
-      function procesarSiguientePlan(idx) {
-        if (idx >= keys.length) {
-          stmtInsertPlan.finalize();
-          stmtInsertObj.finalize();
-
-          console.log(`[CURRICULO] Precarga completada exitosamente: ${planesProcesados} planes y ${oasProcesados} OAs enriquecidos con Unidades, Habilidades e Indicadores.`);
+        // Si ya está en la versión vigente con nombres de unidades oficiales y no se fuerza actualización, conservar intacto
+        if (!forzarActualizacion && versionGuardada === CURRICULO_SEED_VERSION && totalOAs >= catalogoActual.length && conNombreUnidad > 0) {
+          console.log(`[CURRICULO] Catálogo oficial MINEDUC v${CURRICULO_SEED_VERSION} activo (${totalOAs} OAs). Ediciones manuales preservadas.`);
           if (callback) callback(null);
           return;
         }
 
-        const planData = planesAgrupados[keys[idx]];
-        const habsJson = JSON.stringify(planData.habilidades || []);
-        const desc = `Programa Oficial MINEDUC ${planData.asignatura} - ${planData.nivel}`;
+        console.log(`[CURRICULO] Actualizando catálogo oficial MINEDUC ${anioActual} (v${CURRICULO_SEED_VERSION}, ${catalogoActual.length} OAs)...`);
 
-        stmtInsertPlan.run([anioActual, planData.nivel, planData.asignatura, desc, habsJson], function (errIns) {
-          if (errIns) {
-            console.error("[CURRICULO] Error insertando plan:", errIns);
-            procesarSiguientePlan(idx + 1);
-            return;
+        // Agrupar catálogo por (nivel, asignatura) normalizados
+        const planesAgrupados = {};
+        for (const item of catalogoActual) {
+          const nivNorm = normalizarNivel(item.nivel);
+          const asigNorm = normalizarNombreAsignatura(item.asignatura);
+          const key = `${nivNorm}___${asigNorm}`;
+          if (!planesAgrupados[key]) {
+            const habs = HABILIDADES_POR_ASIGNATURA[asigNorm] || HABILIDADES_POR_ASIGNATURA[item.asignatura] || [];
+
+            planesAgrupados[key] = {
+              nivel: nivNorm,
+              asignatura: asigNorm,
+              tipo: 'MINEDUC',
+              habilidades: habs,
+              objetivos: []
+            };
           }
-          const planId = this.lastID;
-          planesProcesados++;
-          insertarObjetivosPlan(planId, planData.objetivos, () => procesarSiguientePlan(idx + 1));
-        });
-      }
-
-      function insertarObjetivosPlan(planId, objetivos, onDone) {
-        let count = 0;
-        if (!objetivos || objetivos.length === 0) {
-          onDone();
-          return;
+          planesAgrupados[key].objetivos.push(item);
         }
 
-        objetivos.forEach((obj, orderIdx) => {
-          const indicsJson = JSON.stringify(obj.indicadores || []);
-          stmtInsertObj.run([
-            planId,
-            obj.eje || 'General',
-            obj.unidad || 'Unidad 1',
-            obj.codigo,
-            obj.descripcion,
-            obj.categoria || 'Basal',
-            indicsJson,
-            orderIdx + 1
-          ], (errObj) => {
-            if (!errObj) oasProcesados++;
-            count++;
-            if (count === objetivos.length) onDone();
-          });
-        });
-      }
+        const keys = Object.keys(planesAgrupados);
+        let planesProcesados = 0;
+        let oasProcesados = 0;
 
-      procesarSiguientePlan(0);
+        function procesarSiguientePlan(idx) {
+          if (idx >= keys.length) {
+            db.run("INSERT OR REPLACE INTO config_global (clave, valor) VALUES ('curriculo_seed_version', ?)", [CURRICULO_SEED_VERSION], () => {
+              console.log(`[CURRICULO] Sincronización completada: ${planesProcesados} planes y ${oasProcesados} OAs oficiales con nombres de Unidad, Habilidades e Indicadores.`);
+              if (callback) callback(null);
+            });
+            return;
+          }
+
+          const planData = planesAgrupados[keys[idx]];
+          const habsJson = JSON.stringify(planData.habilidades || []);
+          const unidadesOficialesArr = construirUnidadesOficialesPlan(planData.objetivos);
+          const unidadesJson = JSON.stringify(unidadesOficialesArr);
+          const desc = `Programa de Estudio Oficial MINEDUC ${planData.asignatura} - ${planData.nivel}`;
+
+          // Buscar si el plan ya existe (incluyendo variantes sin tilde) para preservar su ID
+          const nivSinTilde = planData.nivel.toUpperCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "");
+          db.all(
+            `SELECT id, nivel FROM curriculo_planes WHERE anio = ? AND tipo = 'MINEDUC' AND (nivel = ? OR nivel = ?) AND asignatura = ? ORDER BY id ASC`,
+            [anioActual, planData.nivel, nivSinTilde, planData.asignatura],
+            (errFind, existingPlans) => {
+              if (errFind) {
+                console.error("[CURRICULO] Error buscando plan:", errFind);
+                procesarSiguientePlan(idx + 1);
+                return;
+              }
+
+              if (existingPlans && existingPlans.length > 0) {
+                const planId = existingPlans[0].id;
+                // Si había planes duplicados por tilde, limpiar los sobrantes no editados
+                if (existingPlans.length > 1) {
+                  const extraIds = existingPlans.slice(1).map(p => p.id);
+                  extraIds.forEach(eid => {
+                    db.run(`DELETE FROM curriculo_objetivos WHERE plan_id = ? AND (editado_manual IS NULL OR editado_manual = 0)`, [eid]);
+                    db.run(`DELETE FROM curriculo_planes WHERE id = ?`, [eid]);
+                  });
+                }
+                db.run(
+                  `UPDATE curriculo_planes SET nivel = ?, asignatura = ?, descripcion = ?, habilidades_sugeridas = ?, unidades_oficiales = ?, activo = 1, actualizado_en = CURRENT_TIMESTAMP WHERE id = ?`,
+                  [planData.nivel, planData.asignatura, desc, habsJson, unidadesJson, planId],
+                  () => {
+                    planesProcesados++;
+                    sincronizarObjetivosPlan(planId, planData.objetivos, () => procesarSiguientePlan(idx + 1));
+                  }
+                );
+              } else {
+                db.run(
+                  `INSERT INTO curriculo_planes (anio, tipo, nivel, asignatura, descripcion, habilidades_sugeridas, unidades_oficiales, activo) VALUES (?, 'MINEDUC', ?, ?, ?, ?, ?, 1)`,
+                  [anioActual, planData.nivel, planData.asignatura, desc, habsJson, unidadesJson],
+                  function (errIns) {
+                    if (errIns) {
+                      console.error("[CURRICULO] Error insertando plan:", errIns);
+                      procesarSiguientePlan(idx + 1);
+                      return;
+                    }
+                    planesProcesados++;
+                    sincronizarObjetivosPlan(this.lastID, planData.objetivos, () => procesarSiguientePlan(idx + 1));
+                  }
+                );
+              }
+            }
+          );
+        }
+
+        function sincronizarObjetivosPlan(planId, objetivos, onDone) {
+          if (!objetivos || objetivos.length === 0) {
+            onDone();
+            return;
+          }
+
+          // Eliminar OAs no editados manualmente de este plan antes de reinsertar el catálogo oficial limpio
+          const sqlDelete = ignorarEdicionesManuales
+            ? `DELETE FROM curriculo_objetivos WHERE plan_id = ?`
+            : `DELETE FROM curriculo_objetivos WHERE plan_id = ? AND (editado_manual IS NULL OR editado_manual = 0)`;
+
+          db.run(sqlDelete, [planId], () => {
+            db.all(`SELECT codigo, unidad_sugerida FROM curriculo_objetivos WHERE plan_id = ? AND editado_manual = 1`, [planId], (errMan, manualRows) => {
+              const manualSet = new Set((manualRows || []).map(r => `${r.codigo}___${r.unidad_sugerida}`));
+              let count = 0;
+
+              objetivos.forEach((obj, orderIdx) => {
+                const rawU = obj.unidad !== undefined && obj.unidad !== null ? String(obj.unidad).trim() : '1';
+                const mNum = rawU.match(/(\d+)/);
+                const numU = mNum ? parseInt(mNum[1], 10) : 1;
+                const uSug = `Unidad ${numU}`;
+                const mKey = `${obj.codigo}___${uSug}`;
+                if (!ignorarEdicionesManuales && manualSet.has(mKey)) {
+                  count++;
+                  if (count === objetivos.length) onDone();
+                  return;
+                }
+
+                const indicsJson = JSON.stringify(obj.indicadores || []);
+                const nomUniOficial = String(obj.nombre_unidad || obj.nombre_unidad_oficial || uSug).trim();
+                const nomFinal = (nomUniOficial.startsWith('Unidad') || nomUniOficial.startsWith('Unit'))
+                  ? nomUniOficial
+                  : `${uSug}: ${nomUniOficial}`;
+                const catNormalizada = (obj.categoria === 'Complementario') ? 'Complementario' : 'Basal';
+
+                db.run(
+                  `INSERT INTO curriculo_objetivos (plan_id, tipo_objetivo, eje_unidad, unidad_sugerida, nombre_unidad_oficial, codigo, descripcion, categoria, indicadores_sugeridos, orden, editado_manual, activo)
+                   VALUES (?, 'OA', ?, ?, ?, ?, ?, ?, ?, ?, 0, 1)`,
+                  [
+                    planId,
+                    obj.eje || 'General',
+                    uSug,
+                    nomFinal,
+                    obj.codigo,
+                    obj.descripcion,
+                    catNormalizada,
+                    indicsJson,
+                    orderIdx + 1
+                  ],
+                  (errObj) => {
+                    if (!errObj) oasProcesados++;
+                    count++;
+                    if (count === objetivos.length) onDone();
+                  }
+                );
+              });
+            });
+          });
+        }
+
+        procesarSiguientePlan(0);
+      });
     });
   });
 }
@@ -293,11 +438,13 @@ function importarCurriculoExcel(db, buffer, anio, tipo = 'MINEDUC', opciones = {
       for (const r of rows) {
         const nivel = (r['Nivel'] || r['nivel'] || r['Curso'] || r['curso'] || '').toString().trim();
         const asignatura = (r['Asignatura'] || r['asignatura'] || r['Materia'] || '').toString().trim().toUpperCase();
-        const codigo = (r['Codigo'] || r['codigo'] || r['OA'] || r['oa'] || '').toString().trim();
-        const descripcion = (r['Descripcion'] || r['descripcion'] || r['Objetivo'] || '').toString().trim();
+        const codigo = (r['Codigo'] || r['codigo'] || r['Codigo_OA'] || r['codigo_oa'] || r['OA'] || r['oa'] || '').toString().trim();
+        const descripcion = (r['Descripcion'] || r['descripcion'] || r['Descripcion_OA'] || r['descripcion_oa'] || r['Objetivo'] || '').toString().trim();
         const eje = (r['Eje'] || r['eje'] || 'General').toString().trim();
         const unidad = (r['Unidad'] || r['unidad'] || 'Unidad 1').toString().trim();
-        const categoria = (r['Categoria'] || r['categoria'] || r['Priorizacion'] || 'Basal').toString().trim();
+        const nombreUnidad = (r['Nombre_Unidad'] || r['nombre_unidad'] || r['Titulo_Unidad'] || unidad).toString().trim();
+        const categoriaRaw = (r['Categoria'] || r['categoria'] || r['Basal_Complementario'] || r['Priorizacion'] || 'Basal').toString().trim();
+        const categoria = categoriaRaw.toLowerCase().includes('comp') ? 'Complementario' : 'Basal';
         const indicadoresRaw = (r['Indicadores'] || r['indicadores'] || '').toString().trim();
         const suplantarRaw = (r['Suplantar_MINEDUC'] || r['suplantar_mineduc'] || r['Excluir_MINEDUC'] || r['excluir_mineduc'] || '').toString().trim().toUpperCase();
         const suplantarColumna = (suplantarRaw === 'SI' || suplantarRaw === 'S' || suplantarRaw === '1' || suplantarRaw === 'TRUE');
@@ -324,12 +471,20 @@ function importarCurriculoExcel(db, buffer, anio, tipo = 'MINEDUC', opciones = {
         } else if (suplantarColumna) {
           planesMap[key].excluir_oas_mineduc = 1;
         }
-        planesMap[key].objetivos.push({ codigo, descripcion, eje, unidad, categoria, indicadores: indicadoresArr });
+        planesMap[key].objetivos.push({
+          codigo,
+          descripcion,
+          eje,
+          unidad,
+          nombre_unidad: nombreUnidad.startsWith('Unidad') ? nombreUnidad : `${unidad}: ${nombreUnidad}`,
+          categoria,
+          indicadores: indicadoresArr
+        });
       }
 
       const keys = Object.keys(planesMap);
       if (keys.length === 0) {
-        return reject(new Error("No se encontraron registros válidos con las columnas requeridas (Nivel, Asignatura, Codigo, Descripcion)."));
+        return reject(new Error("No se encontraron registros válidos con las columnas requeridas (Nivel, Asignatura, Codigo/Codigo_OA, Descripcion/Descripcion_OA)."));
       }
 
       db.serialize(() => {
@@ -350,6 +505,7 @@ function importarCurriculoExcel(db, buffer, anio, tipo = 'MINEDUC', opciones = {
 
           const item = planesMap[keys[index]];
           const habsJson = JSON.stringify(item.habilidades || []);
+          const unidadesJson = JSON.stringify(construirUnidadesOficialesPlan(item.objetivos));
           const excluyeVal = item.excluir_oas_mineduc ? 1 : 0;
           db.get(`SELECT id FROM curriculo_planes WHERE anio = ? AND nivel = ? AND asignatura = ? AND tipo = ?`,
             [anioNum, item.nivel, item.asignatura, tipo], (errFind, planRow) => {
@@ -360,12 +516,13 @@ function importarCurriculoExcel(db, buffer, anio, tipo = 'MINEDUC', opciones = {
 
               if (planRow) {
                 const planId = planRow.id;
-                db.run(`UPDATE curriculo_planes SET habilidades_sugeridas = ?, excluir_oas_mineduc = ?, activo = 1 WHERE id = ?`, [habsJson, excluyeVal, planId]);
-                insertarOAs(planId, item.objetivos, () => procesarPlan(index + 1));
+                db.run(`UPDATE curriculo_planes SET habilidades_sugeridas = ?, unidades_oficiales = ?, excluir_oas_mineduc = ?, activo = 1, actualizado_en = CURRENT_TIMESTAMP WHERE id = ?`,
+                  [habsJson, unidadesJson, excluyeVal, planId]);
+                upsertOAs(planId, item.objetivos, () => procesarPlan(index + 1));
               } else {
-                db.run(`INSERT INTO curriculo_planes (anio, tipo, nivel, asignatura, descripcion, habilidades_sugeridas, excluir_oas_mineduc, activo)
-                        VALUES (?, ?, ?, ?, ?, ?, ?, 1)`,
-                  [anioNum, tipo, item.nivel, item.asignatura, `Plan ${tipo} ${item.asignatura} - ${item.nivel}`, habsJson, excluyeVal],
+                db.run(`INSERT INTO curriculo_planes (anio, tipo, nivel, asignatura, descripcion, habilidades_sugeridas, unidades_oficiales, excluir_oas_mineduc, activo)
+                        VALUES (?, ?, ?, ?, ?, ?, ?, ?, 1)`,
+                  [anioNum, tipo, item.nivel, item.asignatura, `Plan ${tipo} ${item.asignatura} - ${item.nivel}`, habsJson, unidadesJson, excluyeVal],
                   function (errIns) {
                     if (errIns) {
                       db.run("ROLLBACK");
@@ -373,24 +530,44 @@ function importarCurriculoExcel(db, buffer, anio, tipo = 'MINEDUC', opciones = {
                     }
                     planesCreados++;
                     const planId = this.lastID;
-                    insertarOAs(planId, item.objetivos, () => procesarPlan(index + 1));
+                    upsertOAs(planId, item.objetivos, () => procesarPlan(index + 1));
                   });
               }
             });
         }
 
-        function insertarOAs(planId, objs, onDone) {
+        function upsertOAs(planId, objs, onDone) {
           let count = 0;
-          for (const obj of objs) {
-            db.run(`INSERT INTO curriculo_objetivos (plan_id, tipo_objetivo, eje_unidad, unidad_sugerida, codigo, descripcion, categoria, indicadores_sugeridos, activo)
-                    VALUES (?, 'OA', ?, ?, ?, ?, ?, ?, 1)`,
-              [planId, obj.eje, obj.unidad, obj.codigo, obj.descripcion, obj.categoria, JSON.stringify(obj.indicadores || [])],
-              (errObj) => {
-                if (!errObj) objetivosCreados++;
-                count++;
-                if (count === objs.length) onDone();
-              });
-          }
+          objs.forEach((obj, idx) => {
+            db.get(
+              `SELECT id FROM curriculo_objetivos WHERE plan_id = ? AND UPPER(TRIM(codigo)) = UPPER(TRIM(?)) AND UPPER(TRIM(unidad_sugerida)) = UPPER(TRIM(?))`,
+              [planId, obj.codigo, obj.unidad],
+              (errExist, existingOa) => {
+                if (existingOa) {
+                  db.run(
+                    `UPDATE curriculo_objetivos SET eje_unidad = ?, nombre_unidad_oficial = ?, descripcion = ?, categoria = ?, indicadores_sugeridos = ?, editado_manual = 1, activo = 1 WHERE id = ?`,
+                    [obj.eje, obj.nombre_unidad, obj.descripcion, obj.categoria, JSON.stringify(obj.indicadores || []), existingOa.id],
+                    (errUpd) => {
+                      if (!errUpd) objetivosCreados++;
+                      count++;
+                      if (count === objs.length) onDone();
+                    }
+                  );
+                } else {
+                  db.run(
+                    `INSERT INTO curriculo_objetivos (plan_id, tipo_objetivo, eje_unidad, unidad_sugerida, nombre_unidad_oficial, codigo, descripcion, categoria, indicadores_sugeridos, orden, editado_manual, activo)
+                     VALUES (?, 'OA', ?, ?, ?, ?, ?, ?, ?, ?, 1, 1)`,
+                    [planId, obj.eje, obj.unidad, obj.nombre_unidad, obj.codigo, obj.descripcion, obj.categoria, JSON.stringify(obj.indicadores || []), idx + 1],
+                    (errObj) => {
+                      if (!errObj) objetivosCreados++;
+                      count++;
+                      if (count === objs.length) onDone();
+                    }
+                  );
+                }
+              }
+            );
+          });
         }
 
         procesarPlan(0);
@@ -402,10 +579,14 @@ function importarCurriculoExcel(db, buffer, anio, tipo = 'MINEDUC', opciones = {
 }
 
 module.exports = {
+  CURRICULO_SEED_VERSION,
   CATALOGO_MINEDUC_COMPLETO,
   HABILIDADES_POR_ASIGNATURA,
   ACTITUDES_GENERALES_MINEDUC,
+  obtenerCatalogoMineducCompleto,
+  construirUnidadesOficialesPlan,
   inicializarCurriculo,
   importarCurriculoExcel,
+  normalizarNivel,
   normalizarNombreAsignatura
 };

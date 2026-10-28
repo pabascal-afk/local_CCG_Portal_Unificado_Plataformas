@@ -127,7 +127,7 @@ router.get('/curriculo/planes', (req, res) => {
 router.get('/curriculo/objetivos', (req, res) => {
     const { plan_id, nivel, asignatura, anio = 2026, q = '', unidad, tipo_plan, solo_mineduc } = req.query;
     let sql = `
-        SELECT o.*, cp.nivel, cp.asignatura, cp.tipo as tipo_plan, cp.excluir_oas_mineduc
+        SELECT o.*, cp.nivel, cp.asignatura, cp.tipo as tipo_plan, cp.excluir_oas_mineduc, cp.unidades_oficiales
         FROM curriculo_objetivos o
         JOIN curriculo_planes cp ON cp.id = o.plan_id
         WHERE (cp.anio = ? OR cp.anio = 2026) AND o.activo = 1
@@ -143,21 +143,23 @@ router.get('/curriculo/objetivos', (req, res) => {
         params.push(tipo_plan);
     }
     if (nivel) {
-        sql += ` AND (cp.nivel = ? OR cp.nivel LIKE ? OR ? LIKE '%' || cp.nivel || '%')`;
-        params.push(nivel, `%${nivel}%`, nivel);
+        const nivNorm = curriculoSeed.normalizarNivel(nivel);
+        sql += ` AND (cp.nivel = ? OR cp.nivel = ? OR cp.nivel LIKE ? OR cp.nivel LIKE ?)`;
+        params.push(nivel, nivNorm, `%${nivel}%`, `%${nivNorm}%`);
     }
     if (asignatura) {
-        sql += ` AND (cp.asignatura = ? OR LOWER(cp.asignatura) LIKE '%' || LOWER(?) || '%' OR LOWER(?) LIKE '%' || LOWER(cp.asignatura) || '%')`;
-        params.push(asignatura, asignatura, asignatura);
+        const asigNorm = curriculoSeed.normalizarNombreAsignatura(asignatura);
+        sql += ` AND (cp.asignatura = ? OR cp.asignatura = ? OR LOWER(cp.asignatura) LIKE '%' || LOWER(?) || '%' OR LOWER(cp.asignatura) LIKE '%' || LOWER(?) || '%')`;
+        params.push(asignatura, asigNorm, asignatura, asigNorm);
     }
     if (unidad && unidad !== 'todas') {
         sql += ` AND (o.unidad_sugerida = ? OR o.unidad_sugerida LIKE ?)`;
         params.push(unidad, `%${unidad}%`);
     }
     if (q && q.trim()) {
-        sql += ` AND (LOWER(o.codigo) LIKE ? OR LOWER(o.descripcion) LIKE ? OR LOWER(o.eje_unidad) LIKE ?)`;
+        sql += ` AND (LOWER(o.codigo) LIKE ? OR LOWER(o.descripcion) LIKE ? OR LOWER(o.eje_unidad) LIKE ? OR LOWER(COALESCE(o.nombre_unidad_oficial, '')) LIKE ?)`;
         const qParam = `%${q.trim().toLowerCase()}%`;
-        params.push(qParam, qParam, qParam);
+        params.push(qParam, qParam, qParam, qParam);
     }
 
     // Si NO se pide explícitamente ver solo MINEDUC ni se filtró por un plan_id específico,
@@ -374,6 +376,262 @@ router.delete('/curriculo/objetivos/:id', (req, res) => {
         if (err) return res.status(500).json({ error: err.message });
         res.json({ success: true, mensaje: 'Objetivo de aprendizaje eliminado.' });
     });
+});
+
+// 7f. Editar un OA existente (código, descripción, eje, unidad asignada, nombre de unidad, categoría, indicadores)
+router.put('/curriculo/objetivos/:id', (req, res) => {
+    if (!req.esAdminOCoordinacion) {
+        return res.status(403).json({ error: 'Acceso denegado: Solo Coordinación o Administración pueden editar OAs.' });
+    }
+    const oaId = req.params.id;
+    const {
+        codigo,
+        descripcion,
+        eje_unidad,
+        unidad_sugerida,
+        nombre_unidad_oficial,
+        categoria,
+        indicadores_sugeridos
+    } = req.body;
+
+    if (!codigo || !descripcion) {
+        return res.status(400).json({ error: 'Código y Descripción son obligatorios.' });
+    }
+
+    const codNorm = codigo.toString().trim().toUpperCase();
+    const descNorm = descripcion.toString().trim();
+    const ejeNorm = (eje_unidad || 'General').toString().trim();
+    const mNum = String(unidad_sugerida || 'Unidad 1').match(/(\d+)/);
+    const numUnidad = mNum ? parseInt(mNum[1], 10) : 1;
+    const uNorm = `Unidad ${numUnidad}`;
+    const nomUnidad = (nombre_unidad_oficial || '').toString().trim();
+    const catNorm = (categoria === 'Complementario') ? 'Complementario' : 'Basal';
+    const indArr = Array.isArray(indicadores_sugeridos)
+        ? indicadores_sugeridos.map(x => String(x).trim()).filter(Boolean)
+        : (typeof indicadores_sugeridos === 'string'
+            ? indicadores_sugeridos.split(/\r?\n|;|\|/).map(x => x.trim()).filter(Boolean)
+            : []);
+
+    db.get(`SELECT * FROM curriculo_objetivos WHERE id = ?`, [oaId], (errGet, row) => {
+        if (errGet) return res.status(500).json({ error: errGet.message });
+        if (!row) return res.status(404).json({ error: 'Objetivo de aprendizaje no encontrado.' });
+
+        db.run(`
+            UPDATE curriculo_objetivos
+            SET codigo = ?, descripcion = ?, eje_unidad = ?, unidad_sugerida = ?, nombre_unidad_oficial = ?, categoria = ?, indicadores_sugeridos = ?, editado_manual = 1
+            WHERE id = ?
+        `, [codNorm, descNorm, ejeNorm, uNorm, nomUnidad || row.nombre_unidad_oficial || uNorm, catNorm, JSON.stringify(indArr), oaId], function(errUpd) {
+            if (errUpd) return res.status(500).json({ error: errUpd.message });
+
+            if (nomUnidad) {
+                db.run(`UPDATE curriculo_objetivos SET nombre_unidad_oficial = ? WHERE plan_id = ? AND unidad_sugerida = ?`, [nomUnidad, row.plan_id, uNorm]);
+                db.get(`SELECT unidades_oficiales FROM curriculo_planes WHERE id = ?`, [row.plan_id], (eP, planRow) => {
+                    if (!eP && planRow) {
+                        let uCat = [];
+                        try { uCat = JSON.parse(planRow.unidades_oficiales || '[]'); } catch (e) { uCat = []; }
+                        const idx = uCat.findIndex(u => Number(u.numero) === numUnidad);
+                        if (idx >= 0) uCat[idx].nombre = nomUnidad;
+                        else uCat.push({ numero: numUnidad, nombre: nomUnidad });
+                        uCat.sort((a, b) => a.numero - b.numero);
+                        db.run(`UPDATE curriculo_planes SET unidades_oficiales = ?, actualizado_en = CURRENT_TIMESTAMP WHERE id = ?`, [JSON.stringify(uCat), row.plan_id]);
+                    }
+                });
+            }
+
+            res.json({ success: true, id: oaId, mensaje: 'Objetivo de aprendizaje actualizado correctamente.' });
+        });
+    });
+});
+
+// 7g. Crear un nuevo OA directamente en cualquier nivel y asignatura (MINEDUC o PROPIO)
+router.post('/curriculo/objetivos', (req, res) => {
+    if (!req.esAdminOCoordinacion) {
+        return res.status(403).json({ error: 'Acceso denegado: Solo Coordinación o Administración pueden agregar OAs.' });
+    }
+    const {
+        plan_id,
+        anio = 2026,
+        tipo = 'MINEDUC',
+        nivel,
+        asignatura,
+        codigo,
+        descripcion,
+        eje_unidad = 'General',
+        unidad_sugerida = 'Unidad 1',
+        nombre_unidad_oficial = '',
+        categoria = 'Basal',
+        indicadores_sugeridos = []
+    } = req.body;
+
+    if (!codigo || !descripcion) {
+        return res.status(400).json({ error: 'Código y Descripción son obligatorios.' });
+    }
+
+    const codNorm = codigo.toString().trim().toUpperCase();
+    const descNorm = descripcion.toString().trim();
+    const ejeNorm = (eje_unidad || 'General').toString().trim();
+    const mNum = String(unidad_sugerida || 'Unidad 1').match(/(\d+)/);
+    const numUnidad = mNum ? parseInt(mNum[1], 10) : 1;
+    const uNorm = `Unidad ${numUnidad}`;
+    const nomUnidad = (nombre_unidad_oficial || uNorm).toString().trim();
+    const catNorm = (categoria === 'Complementario') ? 'Complementario' : 'Basal';
+    const indArr = Array.isArray(indicadores_sugeridos)
+        ? indicadores_sugeridos.map(x => String(x).trim()).filter(Boolean)
+        : (typeof indicadores_sugeridos === 'string'
+            ? indicadores_sugeridos.split(/\r?\n|;|\|/).map(x => x.trim()).filter(Boolean)
+            : []);
+
+    const insertarEnPlan = (targetPlanId) => {
+        db.run(`
+            INSERT INTO curriculo_objetivos
+            (plan_id, tipo_objetivo, eje_unidad, unidad_sugerida, nombre_unidad_oficial, codigo, descripcion, categoria, indicadores_sugeridos, orden, activo, editado_manual)
+            VALUES (?, 'OA', ?, ?, ?, ?, ?, ?, ?, ?, 1, 1)
+        `, [targetPlanId, ejeNorm, uNorm, nomUnidad, codNorm, descNorm, catNorm, JSON.stringify(indArr), numUnidad * 100], function(errIns) {
+            if (errIns) return res.status(500).json({ error: errIns.message });
+            res.json({ success: true, id: this.lastID, plan_id: targetPlanId, mensaje: 'Objetivo de aprendizaje creado exitosamente.' });
+        });
+    };
+
+    if (plan_id) {
+        return insertarEnPlan(plan_id);
+    }
+
+    if (!nivel || !asignatura) {
+        return res.status(400).json({ error: 'Debe indicar plan_id o bien Nivel y Asignatura.' });
+    }
+
+    const nivNorm = curriculoSeed.normalizarNivel(nivel);
+    const asigNorm = curriculoSeed.normalizarNombreAsignatura(asignatura);
+    const anioNum = parseInt(anio, 10) || 2026;
+    const tipoNorm = (tipo === 'PROPIO') ? 'PROPIO' : 'MINEDUC';
+
+    db.get(`SELECT id FROM curriculo_planes WHERE anio = ? AND tipo = ? AND (nivel = ? OR nivel = ?) AND (asignatura = ? OR asignatura = ?)`,
+        [anioNum, tipoNorm, nivNorm, nivel, asigNorm, asignatura], (errP, planRow) => {
+            if (errP) return res.status(500).json({ error: errP.message });
+            if (planRow) {
+                return insertarEnPlan(planRow.id);
+            }
+            const descPlan = `Programa ${tipoNorm} ${asigNorm} - ${nivNorm}`;
+            db.run(`INSERT INTO curriculo_planes (anio, tipo, nivel, asignatura, descripcion, activo) VALUES (?, ?, ?, ?, ?, 1)`,
+                [anioNum, tipoNorm, nivNorm, asigNorm, descPlan], function(errNew) {
+                    if (errNew) return res.status(500).json({ error: errNew.message });
+                    insertarEnPlan(this.lastID);
+                });
+        });
+});
+
+// 7h. Obtener y actualizar Unidades Oficiales y asignación de OAs por unidad para un Nivel y Asignatura
+router.get('/curriculo/unidades-oficiales', (req, res) => {
+    const { nivel, asignatura, anio = 2026, tipo = 'MINEDUC' } = req.query;
+    if (!nivel || !asignatura) {
+        return res.status(400).json({ error: 'Nivel y Asignatura son obligatorios.' });
+    }
+    const nivNorm = curriculoSeed.normalizarNivel(nivel);
+    const asigNorm = curriculoSeed.normalizarNombreAsignatura(asignatura);
+    const anioNum = parseInt(anio, 10) || 2026;
+
+    db.get(`
+        SELECT * FROM curriculo_planes
+        WHERE (anio = ? OR anio = 2026)
+          AND (nivel = ? OR nivel = ?)
+          AND (asignatura = ? OR asignatura = ? OR LOWER(asignatura) LIKE '%' || LOWER(?) || '%')
+          AND (tipo = ? OR ? = 'TODOS')
+          AND activo = 1
+        ORDER BY (CASE WHEN tipo = 'PROPIO' THEN 0 ELSE 1 END) ASC, id ASC
+        LIMIT 1
+    `, [anioNum, nivNorm, nivel, asigNorm, asignatura, asigNorm, tipo, tipo], (err, planRow) => {
+        if (err) return res.status(500).json({ error: err.message });
+        if (!planRow) return res.json({ plan: null, unidades: [], objetivos: [] });
+
+        db.all(`SELECT * FROM curriculo_objetivos WHERE plan_id = ? AND activo = 1 ORDER BY orden ASC, codigo ASC`, [planRow.id], (errO, objs) => {
+            if (errO) return res.status(500).json({ error: errO.message });
+            let unidadesCat = [];
+            try { unidadesCat = JSON.parse(planRow.unidades_oficiales || '[]'); } catch (e) { unidadesCat = []; }
+            const mapaUnidades = new Map();
+            [1, 2, 3, 4].forEach(n => mapaUnidades.set(n, `Unidad ${n}`));
+            unidadesCat.forEach(u => { if (u && u.numero) mapaUnidades.set(Number(u.numero), u.nombre); });
+            (objs || []).forEach(o => {
+                const m = String(o.unidad_sugerida || '').match(/(\d+)/);
+                const n = m ? parseInt(m[1], 10) : 1;
+                if (o.nombre_unidad_oficial) mapaUnidades.set(n, o.nombre_unidad_oficial);
+            });
+            const unidades = Array.from(mapaUnidades.entries()).sort((a, b) => a[0] - b[0]).map(([numero, nombre]) => ({ numero, nombre }));
+            res.json({ plan: planRow, unidades, objetivos: objs || [] });
+        });
+    });
+});
+
+router.put('/curriculo/unidades-oficiales', async (req, res) => {
+    if (!req.esAdminOCoordinacion) {
+        return res.status(403).json({ error: 'Acceso denegado: Solo Coordinación o Administración pueden modificar las unidades oficiales.' });
+    }
+    const { plan_id, unidades = [], asignaciones = [] } = req.body;
+    if (!plan_id) {
+        return res.status(400).json({ error: 'plan_id es obligatorio.' });
+    }
+
+    try {
+        const unidadesNormalizadas = (unidades || []).map(u => ({
+            numero: parseInt(u.numero, 10) || 1,
+            nombre: (u.nombre || `Unidad ${u.numero}`).toString().trim()
+        })).sort((a, b) => a.numero - b.numero);
+
+        await new Promise((resolve, reject) => {
+            db.run(`UPDATE curriculo_planes SET unidades_oficiales = ?, actualizado_en = CURRENT_TIMESTAMP WHERE id = ?`,
+                [JSON.stringify(unidadesNormalizadas), plan_id], err => err ? reject(err) : resolve());
+        });
+
+        const mapaNombres = new Map();
+        unidadesNormalizadas.forEach(u => mapaNombres.set(u.numero, u.nombre));
+
+        // Actualizar nombre_unidad_oficial en todos los OAs de cada unidad
+        for (const [num, nom] of mapaNombres.entries()) {
+            await new Promise((resolve, reject) => {
+                db.run(`UPDATE curriculo_objetivos SET nombre_unidad_oficial = ? WHERE plan_id = ? AND unidad_sugerida = ?`,
+                    [nom, plan_id, `Unidad ${num}`], err => err ? reject(err) : resolve());
+            });
+        }
+
+        // Si vienen reasignaciones de OAs a unidades ({ id, unidad_numero, categoria })
+        if (Array.isArray(asignaciones) && asignaciones.length > 0) {
+            for (const asig of asignaciones) {
+                if (!asig.id) continue;
+                const numU = parseInt(asig.unidad_numero, 10) || 1;
+                const uStr = `Unidad ${numU}`;
+                const nomU = mapaNombres.get(numU) || `Unidad ${numU}`;
+                const cat = asig.categoria === 'Complementario' ? 'Complementario' : (asig.categoria === 'Basal' ? 'Basal' : null);
+                await new Promise((resolve, reject) => {
+                    if (cat) {
+                        db.run(`UPDATE curriculo_objetivos SET unidad_sugerida = ?, nombre_unidad_oficial = ?, categoria = ?, editado_manual = 1 WHERE id = ? AND plan_id = ?`,
+                            [uStr, nomU, cat, asig.id, plan_id], err => err ? reject(err) : resolve());
+                    } else {
+                        db.run(`UPDATE curriculo_objetivos SET unidad_sugerida = ?, nombre_unidad_oficial = ?, editado_manual = 1 WHERE id = ? AND plan_id = ?`,
+                            [uStr, nomU, asig.id, plan_id], err => err ? reject(err) : resolve());
+                    }
+                });
+            }
+        }
+
+        res.json({ success: true, mensaje: 'Unidades oficiales y asignación de OAs actualizadas correctamente.' });
+    } catch (e) {
+        res.status(500).json({ error: e.message });
+    }
+});
+
+// 7i. Cargar / Precargar Unidades y OAs Oficiales MINEDUC en una planificación existente
+router.post('/:id/cargar-unidades-oficiales', async (req, res) => {
+    try {
+        const actualizado = await planificacion.cargarUnidadesOficialesEnPlan(req.params.id, req.body || {}, req.user);
+        res.json({
+            success: true,
+            plan: actualizado,
+            mensaje: req.body && req.body.numero_unidad
+                ? `Unidad ${req.body.numero_unidad} actualizada con su título y OAs oficiales.`
+                : 'Se cargaron las 4 Unidades y OAs oficiales del programa curricular.'
+        });
+    } catch (e) {
+        res.status(400).json({ error: e.message });
+    }
 });
 
 // -------------------------------------------------------------

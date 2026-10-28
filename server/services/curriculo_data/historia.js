@@ -1,1256 +1,397 @@
-// Catálogo Oficial Curricular MINEDUC - Historia, Geografía y Ciencias Sociales / Educación Ciudadana
-// Enriquecido con Unidades (1 a 4), Habilidades e Indicadores de Evaluación oficiales
+/**
+ * Catálogo Oficial Curricular MINEDUC - Historia, Geografía y Ciencias Sociales (1° Básico a II° Medio)
+ * y Educación Ciudadana (III° y IV° Medio).
+ * Incluye Unidades Oficiales (1 a 4 con nombre oficial), todos los OAs (Basales y Complementarios) e Indicadores.
+ */
 
-const HISTORIA_CURRICULO = [
-  {
-    "nivel": "1° Básico",
-    "asignatura": "HISTORIA, GEOGRAFIA Y CIENCIAS SOCIALES",
-    "eje": "Historia",
-    "unidad": "Unidad 1",
-    "codigo": "OA 01",
-    "categoria": "Basal",
-    "descripcion": "Secuenciar y explicar procesos históricos de Chile y América utilizando fuentes históricas (1° Básico - Unidad 1).",
-    "indicadores": [
-      "Ordenan acontecimientos en líneas de tiempo cronológicas.",
-      "Identifican causas y consecuencias de transformaciones sociales."
-    ]
-  },
-  {
-    "nivel": "1° Básico",
-    "asignatura": "HISTORIA, GEOGRAFIA Y CIENCIAS SOCIALES",
-    "eje": "Geografía y Formación Ciudadana",
-    "unidad": "Unidad 1",
-    "codigo": "OA 02",
-    "categoria": "Basal",
-    "descripcion": "Analizar el espacio geográfico, recursos naturales e instituciones democráticas (1° Básico - Unidad 1).",
-    "indicadores": [
-      "Localizan regiones y recursos en mapas temáticos.",
-      "Reconocen derechos humanos y normas de convivencia democrática."
-    ]
-  },
-  {
-    "nivel": "1° Básico",
-    "asignatura": "HISTORIA, GEOGRAFIA Y CIENCIAS SOCIALES",
-    "eje": "Historia",
-    "unidad": "Unidad 2",
-    "codigo": "OA 03",
-    "categoria": "Basal",
-    "descripcion": "Secuenciar y explicar procesos históricos de Chile y América utilizando fuentes históricas (1° Básico - Unidad 2).",
-    "indicadores": [
-      "Ordenan acontecimientos en líneas de tiempo cronológicas.",
-      "Identifican causas y consecuencias de transformaciones sociales."
-    ]
-  },
-  {
-    "nivel": "1° Básico",
-    "asignatura": "HISTORIA, GEOGRAFIA Y CIENCIAS SOCIALES",
-    "eje": "Geografía y Formación Ciudadana",
-    "unidad": "Unidad 2",
-    "codigo": "OA 04",
-    "categoria": "Basal",
-    "descripcion": "Analizar el espacio geográfico, recursos naturales e instituciones democráticas (1° Básico - Unidad 2).",
-    "indicadores": [
-      "Localizan regiones y recursos en mapas temáticos.",
-      "Reconocen derechos humanos y normas de convivencia democrática."
-    ]
-  },
-  {
-    "nivel": "1° Básico",
-    "asignatura": "HISTORIA, GEOGRAFIA Y CIENCIAS SOCIALES",
-    "eje": "Historia",
-    "unidad": "Unidad 3",
-    "codigo": "OA 05",
-    "categoria": "Basal",
-    "descripcion": "Secuenciar y explicar procesos históricos de Chile y América utilizando fuentes históricas (1° Básico - Unidad 3).",
-    "indicadores": [
-      "Ordenan acontecimientos en líneas de tiempo cronológicas.",
-      "Identifican causas y consecuencias de transformaciones sociales."
-    ]
-  },
-  {
-    "nivel": "1° Básico",
-    "asignatura": "HISTORIA, GEOGRAFIA Y CIENCIAS SOCIALES",
-    "eje": "Geografía y Formación Ciudadana",
-    "unidad": "Unidad 3",
-    "codigo": "OA 06",
-    "categoria": "Basal",
-    "descripcion": "Analizar el espacio geográfico, recursos naturales e instituciones democráticas (1° Básico - Unidad 3).",
-    "indicadores": [
-      "Localizan regiones y recursos en mapas temáticos.",
-      "Reconocen derechos humanos y normas de convivencia democrática."
-    ]
-  },
-  {
-    "nivel": "1° Básico",
-    "asignatura": "HISTORIA, GEOGRAFIA Y CIENCIAS SOCIALES",
-    "eje": "Historia",
-    "unidad": "Unidad 4",
-    "codigo": "OA 07",
-    "categoria": "Basal",
-    "descripcion": "Secuenciar y explicar procesos históricos de Chile y América utilizando fuentes históricas (1° Básico - Unidad 4).",
-    "indicadores": [
-      "Ordenan acontecimientos en líneas de tiempo cronológicas.",
-      "Identifican causas y consecuencias de transformaciones sociales."
-    ]
-  },
-  {
-    "nivel": "1° Básico",
-    "asignatura": "HISTORIA, GEOGRAFIA Y CIENCIAS SOCIALES",
-    "eje": "Geografía y Formación Ciudadana",
-    "unidad": "Unidad 4",
-    "codigo": "OA 08",
-    "categoria": "Basal",
-    "descripcion": "Analizar el espacio geográfico, recursos naturales e instituciones democráticas (1° Básico - Unidad 4).",
-    "indicadores": [
-      "Localizan regiones y recursos en mapas temáticos.",
-      "Reconocen derechos humanos y normas de convivencia democrática."
-    ]
-  },
-  {
-    "nivel": "2° Básico",
-    "asignatura": "HISTORIA, GEOGRAFIA Y CIENCIAS SOCIALES",
-    "eje": "Historia",
-    "unidad": "Unidad 1",
-    "codigo": "OA 01",
-    "categoria": "Basal",
-    "descripcion": "Secuenciar y explicar procesos históricos de Chile y América utilizando fuentes históricas (2° Básico - Unidad 1).",
-    "indicadores": [
-      "Ordenan acontecimientos en líneas de tiempo cronológicas.",
-      "Identifican causas y consecuencias de transformaciones sociales."
-    ]
-  },
-  {
-    "nivel": "2° Básico",
-    "asignatura": "HISTORIA, GEOGRAFIA Y CIENCIAS SOCIALES",
-    "eje": "Geografía y Formación Ciudadana",
-    "unidad": "Unidad 1",
-    "codigo": "OA 02",
-    "categoria": "Basal",
-    "descripcion": "Analizar el espacio geográfico, recursos naturales e instituciones democráticas (2° Básico - Unidad 1).",
-    "indicadores": [
-      "Localizan regiones y recursos en mapas temáticos.",
-      "Reconocen derechos humanos y normas de convivencia democrática."
-    ]
-  },
-  {
-    "nivel": "2° Básico",
-    "asignatura": "HISTORIA, GEOGRAFIA Y CIENCIAS SOCIALES",
-    "eje": "Historia",
-    "unidad": "Unidad 2",
-    "codigo": "OA 03",
-    "categoria": "Basal",
-    "descripcion": "Secuenciar y explicar procesos históricos de Chile y América utilizando fuentes históricas (2° Básico - Unidad 2).",
-    "indicadores": [
-      "Ordenan acontecimientos en líneas de tiempo cronológicas.",
-      "Identifican causas y consecuencias de transformaciones sociales."
-    ]
-  },
-  {
-    "nivel": "2° Básico",
-    "asignatura": "HISTORIA, GEOGRAFIA Y CIENCIAS SOCIALES",
-    "eje": "Geografía y Formación Ciudadana",
-    "unidad": "Unidad 2",
-    "codigo": "OA 04",
-    "categoria": "Basal",
-    "descripcion": "Analizar el espacio geográfico, recursos naturales e instituciones democráticas (2° Básico - Unidad 2).",
-    "indicadores": [
-      "Localizan regiones y recursos en mapas temáticos.",
-      "Reconocen derechos humanos y normas de convivencia democrática."
-    ]
-  },
-  {
-    "nivel": "2° Básico",
-    "asignatura": "HISTORIA, GEOGRAFIA Y CIENCIAS SOCIALES",
-    "eje": "Historia",
-    "unidad": "Unidad 3",
-    "codigo": "OA 05",
-    "categoria": "Basal",
-    "descripcion": "Secuenciar y explicar procesos históricos de Chile y América utilizando fuentes históricas (2° Básico - Unidad 3).",
-    "indicadores": [
-      "Ordenan acontecimientos en líneas de tiempo cronológicas.",
-      "Identifican causas y consecuencias de transformaciones sociales."
-    ]
-  },
-  {
-    "nivel": "2° Básico",
-    "asignatura": "HISTORIA, GEOGRAFIA Y CIENCIAS SOCIALES",
-    "eje": "Geografía y Formación Ciudadana",
-    "unidad": "Unidad 3",
-    "codigo": "OA 06",
-    "categoria": "Basal",
-    "descripcion": "Analizar el espacio geográfico, recursos naturales e instituciones democráticas (2° Básico - Unidad 3).",
-    "indicadores": [
-      "Localizan regiones y recursos en mapas temáticos.",
-      "Reconocen derechos humanos y normas de convivencia democrática."
-    ]
-  },
-  {
-    "nivel": "2° Básico",
-    "asignatura": "HISTORIA, GEOGRAFIA Y CIENCIAS SOCIALES",
-    "eje": "Historia",
-    "unidad": "Unidad 4",
-    "codigo": "OA 07",
-    "categoria": "Basal",
-    "descripcion": "Secuenciar y explicar procesos históricos de Chile y América utilizando fuentes históricas (2° Básico - Unidad 4).",
-    "indicadores": [
-      "Ordenan acontecimientos en líneas de tiempo cronológicas.",
-      "Identifican causas y consecuencias de transformaciones sociales."
-    ]
-  },
-  {
-    "nivel": "2° Básico",
-    "asignatura": "HISTORIA, GEOGRAFIA Y CIENCIAS SOCIALES",
-    "eje": "Geografía y Formación Ciudadana",
-    "unidad": "Unidad 4",
-    "codigo": "OA 08",
-    "categoria": "Basal",
-    "descripcion": "Analizar el espacio geográfico, recursos naturales e instituciones democráticas (2° Básico - Unidad 4).",
-    "indicadores": [
-      "Localizan regiones y recursos en mapas temáticos.",
-      "Reconocen derechos humanos y normas de convivencia democrática."
-    ]
-  },
-  {
-    "nivel": "3° Básico",
-    "asignatura": "HISTORIA, GEOGRAFIA Y CIENCIAS SOCIALES",
-    "eje": "Historia",
-    "unidad": "Unidad 1",
-    "codigo": "OA 01",
-    "categoria": "Basal",
-    "descripcion": "Secuenciar y explicar procesos históricos de Chile y América utilizando fuentes históricas (3° Básico - Unidad 1).",
-    "indicadores": [
-      "Ordenan acontecimientos en líneas de tiempo cronológicas.",
-      "Identifican causas y consecuencias de transformaciones sociales."
-    ]
-  },
-  {
-    "nivel": "3° Básico",
-    "asignatura": "HISTORIA, GEOGRAFIA Y CIENCIAS SOCIALES",
-    "eje": "Geografía y Formación Ciudadana",
-    "unidad": "Unidad 1",
-    "codigo": "OA 02",
-    "categoria": "Basal",
-    "descripcion": "Analizar el espacio geográfico, recursos naturales e instituciones democráticas (3° Básico - Unidad 1).",
-    "indicadores": [
-      "Localizan regiones y recursos en mapas temáticos.",
-      "Reconocen derechos humanos y normas de convivencia democrática."
-    ]
-  },
-  {
-    "nivel": "3° Básico",
-    "asignatura": "HISTORIA, GEOGRAFIA Y CIENCIAS SOCIALES",
-    "eje": "Historia",
-    "unidad": "Unidad 2",
-    "codigo": "OA 03",
-    "categoria": "Basal",
-    "descripcion": "Secuenciar y explicar procesos históricos de Chile y América utilizando fuentes históricas (3° Básico - Unidad 2).",
-    "indicadores": [
-      "Ordenan acontecimientos en líneas de tiempo cronológicas.",
-      "Identifican causas y consecuencias de transformaciones sociales."
-    ]
-  },
-  {
-    "nivel": "3° Básico",
-    "asignatura": "HISTORIA, GEOGRAFIA Y CIENCIAS SOCIALES",
-    "eje": "Geografía y Formación Ciudadana",
-    "unidad": "Unidad 2",
-    "codigo": "OA 04",
-    "categoria": "Basal",
-    "descripcion": "Analizar el espacio geográfico, recursos naturales e instituciones democráticas (3° Básico - Unidad 2).",
-    "indicadores": [
-      "Localizan regiones y recursos en mapas temáticos.",
-      "Reconocen derechos humanos y normas de convivencia democrática."
-    ]
-  },
-  {
-    "nivel": "3° Básico",
-    "asignatura": "HISTORIA, GEOGRAFIA Y CIENCIAS SOCIALES",
-    "eje": "Historia",
-    "unidad": "Unidad 3",
-    "codigo": "OA 05",
-    "categoria": "Basal",
-    "descripcion": "Secuenciar y explicar procesos históricos de Chile y América utilizando fuentes históricas (3° Básico - Unidad 3).",
-    "indicadores": [
-      "Ordenan acontecimientos en líneas de tiempo cronológicas.",
-      "Identifican causas y consecuencias de transformaciones sociales."
-    ]
-  },
-  {
-    "nivel": "3° Básico",
-    "asignatura": "HISTORIA, GEOGRAFIA Y CIENCIAS SOCIALES",
-    "eje": "Geografía y Formación Ciudadana",
-    "unidad": "Unidad 3",
-    "codigo": "OA 06",
-    "categoria": "Basal",
-    "descripcion": "Analizar el espacio geográfico, recursos naturales e instituciones democráticas (3° Básico - Unidad 3).",
-    "indicadores": [
-      "Localizan regiones y recursos en mapas temáticos.",
-      "Reconocen derechos humanos y normas de convivencia democrática."
-    ]
-  },
-  {
-    "nivel": "3° Básico",
-    "asignatura": "HISTORIA, GEOGRAFIA Y CIENCIAS SOCIALES",
-    "eje": "Historia",
-    "unidad": "Unidad 4",
-    "codigo": "OA 07",
-    "categoria": "Basal",
-    "descripcion": "Secuenciar y explicar procesos históricos de Chile y América utilizando fuentes históricas (3° Básico - Unidad 4).",
-    "indicadores": [
-      "Ordenan acontecimientos en líneas de tiempo cronológicas.",
-      "Identifican causas y consecuencias de transformaciones sociales."
-    ]
-  },
-  {
-    "nivel": "3° Básico",
-    "asignatura": "HISTORIA, GEOGRAFIA Y CIENCIAS SOCIALES",
-    "eje": "Geografía y Formación Ciudadana",
-    "unidad": "Unidad 4",
-    "codigo": "OA 08",
-    "categoria": "Basal",
-    "descripcion": "Analizar el espacio geográfico, recursos naturales e instituciones democráticas (3° Básico - Unidad 4).",
-    "indicadores": [
-      "Localizan regiones y recursos en mapas temáticos.",
-      "Reconocen derechos humanos y normas de convivencia democrática."
-    ]
-  },
-  {
-    "nivel": "4° Básico",
-    "asignatura": "HISTORIA, GEOGRAFIA Y CIENCIAS SOCIALES",
-    "eje": "Historia",
-    "unidad": "Unidad 1",
-    "codigo": "OA 01",
-    "categoria": "Basal",
-    "descripcion": "Secuenciar y explicar procesos históricos de Chile y América utilizando fuentes históricas (4° Básico - Unidad 1).",
-    "indicadores": [
-      "Ordenan acontecimientos en líneas de tiempo cronológicas.",
-      "Identifican causas y consecuencias de transformaciones sociales."
-    ]
-  },
-  {
-    "nivel": "4° Básico",
-    "asignatura": "HISTORIA, GEOGRAFIA Y CIENCIAS SOCIALES",
-    "eje": "Geografía y Formación Ciudadana",
-    "unidad": "Unidad 1",
-    "codigo": "OA 02",
-    "categoria": "Basal",
-    "descripcion": "Analizar el espacio geográfico, recursos naturales e instituciones democráticas (4° Básico - Unidad 1).",
-    "indicadores": [
-      "Localizan regiones y recursos en mapas temáticos.",
-      "Reconocen derechos humanos y normas de convivencia democrática."
-    ]
-  },
-  {
-    "nivel": "4° Básico",
-    "asignatura": "HISTORIA, GEOGRAFIA Y CIENCIAS SOCIALES",
-    "eje": "Historia",
-    "unidad": "Unidad 2",
-    "codigo": "OA 03",
-    "categoria": "Basal",
-    "descripcion": "Secuenciar y explicar procesos históricos de Chile y América utilizando fuentes históricas (4° Básico - Unidad 2).",
-    "indicadores": [
-      "Ordenan acontecimientos en líneas de tiempo cronológicas.",
-      "Identifican causas y consecuencias de transformaciones sociales."
-    ]
-  },
-  {
-    "nivel": "4° Básico",
-    "asignatura": "HISTORIA, GEOGRAFIA Y CIENCIAS SOCIALES",
-    "eje": "Geografía y Formación Ciudadana",
-    "unidad": "Unidad 2",
-    "codigo": "OA 04",
-    "categoria": "Basal",
-    "descripcion": "Analizar el espacio geográfico, recursos naturales e instituciones democráticas (4° Básico - Unidad 2).",
-    "indicadores": [
-      "Localizan regiones y recursos en mapas temáticos.",
-      "Reconocen derechos humanos y normas de convivencia democrática."
-    ]
-  },
-  {
-    "nivel": "4° Básico",
-    "asignatura": "HISTORIA, GEOGRAFIA Y CIENCIAS SOCIALES",
-    "eje": "Historia",
-    "unidad": "Unidad 3",
-    "codigo": "OA 05",
-    "categoria": "Basal",
-    "descripcion": "Secuenciar y explicar procesos históricos de Chile y América utilizando fuentes históricas (4° Básico - Unidad 3).",
-    "indicadores": [
-      "Ordenan acontecimientos en líneas de tiempo cronológicas.",
-      "Identifican causas y consecuencias de transformaciones sociales."
-    ]
-  },
-  {
-    "nivel": "4° Básico",
-    "asignatura": "HISTORIA, GEOGRAFIA Y CIENCIAS SOCIALES",
-    "eje": "Geografía y Formación Ciudadana",
-    "unidad": "Unidad 3",
-    "codigo": "OA 06",
-    "categoria": "Basal",
-    "descripcion": "Analizar el espacio geográfico, recursos naturales e instituciones democráticas (4° Básico - Unidad 3).",
-    "indicadores": [
-      "Localizan regiones y recursos en mapas temáticos.",
-      "Reconocen derechos humanos y normas de convivencia democrática."
-    ]
-  },
-  {
-    "nivel": "4° Básico",
-    "asignatura": "HISTORIA, GEOGRAFIA Y CIENCIAS SOCIALES",
-    "eje": "Historia",
-    "unidad": "Unidad 4",
-    "codigo": "OA 07",
-    "categoria": "Basal",
-    "descripcion": "Secuenciar y explicar procesos históricos de Chile y América utilizando fuentes históricas (4° Básico - Unidad 4).",
-    "indicadores": [
-      "Ordenan acontecimientos en líneas de tiempo cronológicas.",
-      "Identifican causas y consecuencias de transformaciones sociales."
-    ]
-  },
-  {
-    "nivel": "4° Básico",
-    "asignatura": "HISTORIA, GEOGRAFIA Y CIENCIAS SOCIALES",
-    "eje": "Geografía y Formación Ciudadana",
-    "unidad": "Unidad 4",
-    "codigo": "OA 08",
-    "categoria": "Basal",
-    "descripcion": "Analizar el espacio geográfico, recursos naturales e instituciones democráticas (4° Básico - Unidad 4).",
-    "indicadores": [
-      "Localizan regiones y recursos en mapas temáticos.",
-      "Reconocen derechos humanos y normas de convivencia democrática."
-    ]
-  },
-  {
-    "nivel": "5° Básico",
-    "asignatura": "HISTORIA, GEOGRAFIA Y CIENCIAS SOCIALES",
-    "eje": "Historia",
-    "unidad": "Unidad 1",
-    "codigo": "OA 01",
-    "categoria": "Basal",
-    "descripcion": "Secuenciar y explicar procesos históricos de Chile y América utilizando fuentes históricas (5° Básico - Unidad 1).",
-    "indicadores": [
-      "Ordenan acontecimientos en líneas de tiempo cronológicas.",
-      "Identifican causas y consecuencias de transformaciones sociales."
-    ]
-  },
-  {
-    "nivel": "5° Básico",
-    "asignatura": "HISTORIA, GEOGRAFIA Y CIENCIAS SOCIALES",
-    "eje": "Geografía y Formación Ciudadana",
-    "unidad": "Unidad 1",
-    "codigo": "OA 02",
-    "categoria": "Basal",
-    "descripcion": "Analizar el espacio geográfico, recursos naturales e instituciones democráticas (5° Básico - Unidad 1).",
-    "indicadores": [
-      "Localizan regiones y recursos en mapas temáticos.",
-      "Reconocen derechos humanos y normas de convivencia democrática."
-    ]
-  },
-  {
-    "nivel": "5° Básico",
-    "asignatura": "HISTORIA, GEOGRAFIA Y CIENCIAS SOCIALES",
-    "eje": "Historia",
-    "unidad": "Unidad 2",
-    "codigo": "OA 03",
-    "categoria": "Basal",
-    "descripcion": "Secuenciar y explicar procesos históricos de Chile y América utilizando fuentes históricas (5° Básico - Unidad 2).",
-    "indicadores": [
-      "Ordenan acontecimientos en líneas de tiempo cronológicas.",
-      "Identifican causas y consecuencias de transformaciones sociales."
-    ]
-  },
-  {
-    "nivel": "5° Básico",
-    "asignatura": "HISTORIA, GEOGRAFIA Y CIENCIAS SOCIALES",
-    "eje": "Geografía y Formación Ciudadana",
-    "unidad": "Unidad 2",
-    "codigo": "OA 04",
-    "categoria": "Basal",
-    "descripcion": "Analizar el espacio geográfico, recursos naturales e instituciones democráticas (5° Básico - Unidad 2).",
-    "indicadores": [
-      "Localizan regiones y recursos en mapas temáticos.",
-      "Reconocen derechos humanos y normas de convivencia democrática."
-    ]
-  },
-  {
-    "nivel": "5° Básico",
-    "asignatura": "HISTORIA, GEOGRAFIA Y CIENCIAS SOCIALES",
-    "eje": "Historia",
-    "unidad": "Unidad 3",
-    "codigo": "OA 05",
-    "categoria": "Basal",
-    "descripcion": "Secuenciar y explicar procesos históricos de Chile y América utilizando fuentes históricas (5° Básico - Unidad 3).",
-    "indicadores": [
-      "Ordenan acontecimientos en líneas de tiempo cronológicas.",
-      "Identifican causas y consecuencias de transformaciones sociales."
-    ]
-  },
-  {
-    "nivel": "5° Básico",
-    "asignatura": "HISTORIA, GEOGRAFIA Y CIENCIAS SOCIALES",
-    "eje": "Geografía y Formación Ciudadana",
-    "unidad": "Unidad 3",
-    "codigo": "OA 06",
-    "categoria": "Basal",
-    "descripcion": "Analizar el espacio geográfico, recursos naturales e instituciones democráticas (5° Básico - Unidad 3).",
-    "indicadores": [
-      "Localizan regiones y recursos en mapas temáticos.",
-      "Reconocen derechos humanos y normas de convivencia democrática."
-    ]
-  },
-  {
-    "nivel": "5° Básico",
-    "asignatura": "HISTORIA, GEOGRAFIA Y CIENCIAS SOCIALES",
-    "eje": "Historia",
-    "unidad": "Unidad 4",
-    "codigo": "OA 07",
-    "categoria": "Basal",
-    "descripcion": "Secuenciar y explicar procesos históricos de Chile y América utilizando fuentes históricas (5° Básico - Unidad 4).",
-    "indicadores": [
-      "Ordenan acontecimientos en líneas de tiempo cronológicas.",
-      "Identifican causas y consecuencias de transformaciones sociales."
-    ]
-  },
-  {
-    "nivel": "5° Básico",
-    "asignatura": "HISTORIA, GEOGRAFIA Y CIENCIAS SOCIALES",
-    "eje": "Geografía y Formación Ciudadana",
-    "unidad": "Unidad 4",
-    "codigo": "OA 08",
-    "categoria": "Basal",
-    "descripcion": "Analizar el espacio geográfico, recursos naturales e instituciones democráticas (5° Básico - Unidad 4).",
-    "indicadores": [
-      "Localizan regiones y recursos en mapas temáticos.",
-      "Reconocen derechos humanos y normas de convivencia democrática."
-    ]
-  },
-  {
-    "nivel": "6° Básico",
-    "asignatura": "HISTORIA, GEOGRAFIA Y CIENCIAS SOCIALES",
-    "eje": "Historia",
-    "unidad": "Unidad 1",
-    "codigo": "OA 01",
-    "categoria": "Basal",
-    "descripcion": "Secuenciar y explicar procesos históricos de Chile y América utilizando fuentes históricas (6° Básico - Unidad 1).",
-    "indicadores": [
-      "Ordenan acontecimientos en líneas de tiempo cronológicas.",
-      "Identifican causas y consecuencias de transformaciones sociales."
-    ]
-  },
-  {
-    "nivel": "6° Básico",
-    "asignatura": "HISTORIA, GEOGRAFIA Y CIENCIAS SOCIALES",
-    "eje": "Geografía y Formación Ciudadana",
-    "unidad": "Unidad 1",
-    "codigo": "OA 02",
-    "categoria": "Basal",
-    "descripcion": "Analizar el espacio geográfico, recursos naturales e instituciones democráticas (6° Básico - Unidad 1).",
-    "indicadores": [
-      "Localizan regiones y recursos en mapas temáticos.",
-      "Reconocen derechos humanos y normas de convivencia democrática."
-    ]
-  },
-  {
-    "nivel": "6° Básico",
-    "asignatura": "HISTORIA, GEOGRAFIA Y CIENCIAS SOCIALES",
-    "eje": "Historia",
-    "unidad": "Unidad 2",
-    "codigo": "OA 03",
-    "categoria": "Basal",
-    "descripcion": "Secuenciar y explicar procesos históricos de Chile y América utilizando fuentes históricas (6° Básico - Unidad 2).",
-    "indicadores": [
-      "Ordenan acontecimientos en líneas de tiempo cronológicas.",
-      "Identifican causas y consecuencias de transformaciones sociales."
-    ]
-  },
-  {
-    "nivel": "6° Básico",
-    "asignatura": "HISTORIA, GEOGRAFIA Y CIENCIAS SOCIALES",
-    "eje": "Geografía y Formación Ciudadana",
-    "unidad": "Unidad 2",
-    "codigo": "OA 04",
-    "categoria": "Basal",
-    "descripcion": "Analizar el espacio geográfico, recursos naturales e instituciones democráticas (6° Básico - Unidad 2).",
-    "indicadores": [
-      "Localizan regiones y recursos en mapas temáticos.",
-      "Reconocen derechos humanos y normas de convivencia democrática."
-    ]
-  },
-  {
-    "nivel": "6° Básico",
-    "asignatura": "HISTORIA, GEOGRAFIA Y CIENCIAS SOCIALES",
-    "eje": "Historia",
-    "unidad": "Unidad 3",
-    "codigo": "OA 05",
-    "categoria": "Basal",
-    "descripcion": "Secuenciar y explicar procesos históricos de Chile y América utilizando fuentes históricas (6° Básico - Unidad 3).",
-    "indicadores": [
-      "Ordenan acontecimientos en líneas de tiempo cronológicas.",
-      "Identifican causas y consecuencias de transformaciones sociales."
-    ]
-  },
-  {
-    "nivel": "6° Básico",
-    "asignatura": "HISTORIA, GEOGRAFIA Y CIENCIAS SOCIALES",
-    "eje": "Geografía y Formación Ciudadana",
-    "unidad": "Unidad 3",
-    "codigo": "OA 06",
-    "categoria": "Basal",
-    "descripcion": "Analizar el espacio geográfico, recursos naturales e instituciones democráticas (6° Básico - Unidad 3).",
-    "indicadores": [
-      "Localizan regiones y recursos en mapas temáticos.",
-      "Reconocen derechos humanos y normas de convivencia democrática."
-    ]
-  },
-  {
-    "nivel": "6° Básico",
-    "asignatura": "HISTORIA, GEOGRAFIA Y CIENCIAS SOCIALES",
-    "eje": "Historia",
-    "unidad": "Unidad 4",
-    "codigo": "OA 07",
-    "categoria": "Basal",
-    "descripcion": "Secuenciar y explicar procesos históricos de Chile y América utilizando fuentes históricas (6° Básico - Unidad 4).",
-    "indicadores": [
-      "Ordenan acontecimientos en líneas de tiempo cronológicas.",
-      "Identifican causas y consecuencias de transformaciones sociales."
-    ]
-  },
-  {
-    "nivel": "6° Básico",
-    "asignatura": "HISTORIA, GEOGRAFIA Y CIENCIAS SOCIALES",
-    "eje": "Geografía y Formación Ciudadana",
-    "unidad": "Unidad 4",
-    "codigo": "OA 08",
-    "categoria": "Basal",
-    "descripcion": "Analizar el espacio geográfico, recursos naturales e instituciones democráticas (6° Básico - Unidad 4).",
-    "indicadores": [
-      "Localizan regiones y recursos en mapas temáticos.",
-      "Reconocen derechos humanos y normas de convivencia democrática."
-    ]
-  },
-  {
-    "nivel": "7° Básico",
-    "asignatura": "HISTORIA, GEOGRAFIA Y CIENCIAS SOCIALES",
-    "eje": "Pensamiento Histórico y Crítico",
-    "unidad": "Unidad 1",
-    "codigo": "OA 01",
-    "categoria": "Basal",
-    "descripcion": "Evaluar procesos históricos contemporáneos y debates ciudadanos analizando diversidad de fuentes (HISTORIA, GEOGRAFIA Y CIENCIAS SOCIALES - Unidad 1).",
-    "indicadores": [
-      "Contrastan perspectivas historiográficas divergentes.",
-      "Fundamentan opiniones con rigor documental sobre problemáticas públicas."
-    ]
-  },
-  {
-    "nivel": "7° Básico",
-    "asignatura": "HISTORIA, GEOGRAFIA Y CIENCIAS SOCIALES",
-    "eje": "Ciudadanía y Estado de Derecho",
-    "unidad": "Unidad 1",
-    "codigo": "OA 05",
-    "categoria": "Basal",
-    "descripcion": "Analizar el funcionamiento del Estado, los derechos fundamentales y la cohesión social (HISTORIA, GEOGRAFIA Y CIENCIAS SOCIALES - Unidad 1).",
-    "indicadores": [
-      "Evalúan mecanismos de participación ciudadana y transparencia institucional.",
-      "Proponen soluciones a dilemas éticos y sociales de la comunidad."
-    ]
-  },
-  {
-    "nivel": "7° Básico",
-    "asignatura": "HISTORIA, GEOGRAFIA Y CIENCIAS SOCIALES",
-    "eje": "Pensamiento Histórico y Crítico",
-    "unidad": "Unidad 2",
-    "codigo": "OA 02",
-    "categoria": "Basal",
-    "descripcion": "Evaluar procesos históricos contemporáneos y debates ciudadanos analizando diversidad de fuentes (HISTORIA, GEOGRAFIA Y CIENCIAS SOCIALES - Unidad 2).",
-    "indicadores": [
-      "Contrastan perspectivas historiográficas divergentes.",
-      "Fundamentan opiniones con rigor documental sobre problemáticas públicas."
-    ]
-  },
-  {
-    "nivel": "7° Básico",
-    "asignatura": "HISTORIA, GEOGRAFIA Y CIENCIAS SOCIALES",
-    "eje": "Ciudadanía y Estado de Derecho",
-    "unidad": "Unidad 2",
-    "codigo": "OA 06",
-    "categoria": "Basal",
-    "descripcion": "Analizar el funcionamiento del Estado, los derechos fundamentales y la cohesión social (HISTORIA, GEOGRAFIA Y CIENCIAS SOCIALES - Unidad 2).",
-    "indicadores": [
-      "Evalúan mecanismos de participación ciudadana y transparencia institucional.",
-      "Proponen soluciones a dilemas éticos y sociales de la comunidad."
-    ]
-  },
-  {
-    "nivel": "7° Básico",
-    "asignatura": "HISTORIA, GEOGRAFIA Y CIENCIAS SOCIALES",
-    "eje": "Pensamiento Histórico y Crítico",
-    "unidad": "Unidad 3",
-    "codigo": "OA 03",
-    "categoria": "Basal",
-    "descripcion": "Evaluar procesos históricos contemporáneos y debates ciudadanos analizando diversidad de fuentes (HISTORIA, GEOGRAFIA Y CIENCIAS SOCIALES - Unidad 3).",
-    "indicadores": [
-      "Contrastan perspectivas historiográficas divergentes.",
-      "Fundamentan opiniones con rigor documental sobre problemáticas públicas."
-    ]
-  },
-  {
-    "nivel": "7° Básico",
-    "asignatura": "HISTORIA, GEOGRAFIA Y CIENCIAS SOCIALES",
-    "eje": "Ciudadanía y Estado de Derecho",
-    "unidad": "Unidad 3",
-    "codigo": "OA 07",
-    "categoria": "Basal",
-    "descripcion": "Analizar el funcionamiento del Estado, los derechos fundamentales y la cohesión social (HISTORIA, GEOGRAFIA Y CIENCIAS SOCIALES - Unidad 3).",
-    "indicadores": [
-      "Evalúan mecanismos de participación ciudadana y transparencia institucional.",
-      "Proponen soluciones a dilemas éticos y sociales de la comunidad."
-    ]
-  },
-  {
-    "nivel": "7° Básico",
-    "asignatura": "HISTORIA, GEOGRAFIA Y CIENCIAS SOCIALES",
-    "eje": "Pensamiento Histórico y Crítico",
-    "unidad": "Unidad 4",
-    "codigo": "OA 04",
-    "categoria": "Basal",
-    "descripcion": "Evaluar procesos históricos contemporáneos y debates ciudadanos analizando diversidad de fuentes (HISTORIA, GEOGRAFIA Y CIENCIAS SOCIALES - Unidad 4).",
-    "indicadores": [
-      "Contrastan perspectivas historiográficas divergentes.",
-      "Fundamentan opiniones con rigor documental sobre problemáticas públicas."
-    ]
-  },
-  {
-    "nivel": "7° Básico",
-    "asignatura": "HISTORIA, GEOGRAFIA Y CIENCIAS SOCIALES",
-    "eje": "Ciudadanía y Estado de Derecho",
-    "unidad": "Unidad 4",
-    "codigo": "OA 08",
-    "categoria": "Basal",
-    "descripcion": "Analizar el funcionamiento del Estado, los derechos fundamentales y la cohesión social (HISTORIA, GEOGRAFIA Y CIENCIAS SOCIALES - Unidad 4).",
-    "indicadores": [
-      "Evalúan mecanismos de participación ciudadana y transparencia institucional.",
-      "Proponen soluciones a dilemas éticos y sociales de la comunidad."
-    ]
-  },
-  {
-    "nivel": "8° Básico",
-    "asignatura": "HISTORIA, GEOGRAFIA Y CIENCIAS SOCIALES",
-    "eje": "Pensamiento Histórico y Crítico",
-    "unidad": "Unidad 1",
-    "codigo": "OA 01",
-    "categoria": "Basal",
-    "descripcion": "Evaluar procesos históricos contemporáneos y debates ciudadanos analizando diversidad de fuentes (HISTORIA, GEOGRAFIA Y CIENCIAS SOCIALES - Unidad 1).",
-    "indicadores": [
-      "Contrastan perspectivas historiográficas divergentes.",
-      "Fundamentan opiniones con rigor documental sobre problemáticas públicas."
-    ]
-  },
-  {
-    "nivel": "8° Básico",
-    "asignatura": "HISTORIA, GEOGRAFIA Y CIENCIAS SOCIALES",
-    "eje": "Ciudadanía y Estado de Derecho",
-    "unidad": "Unidad 1",
-    "codigo": "OA 05",
-    "categoria": "Basal",
-    "descripcion": "Analizar el funcionamiento del Estado, los derechos fundamentales y la cohesión social (HISTORIA, GEOGRAFIA Y CIENCIAS SOCIALES - Unidad 1).",
-    "indicadores": [
-      "Evalúan mecanismos de participación ciudadana y transparencia institucional.",
-      "Proponen soluciones a dilemas éticos y sociales de la comunidad."
-    ]
-  },
-  {
-    "nivel": "8° Básico",
-    "asignatura": "HISTORIA, GEOGRAFIA Y CIENCIAS SOCIALES",
-    "eje": "Pensamiento Histórico y Crítico",
-    "unidad": "Unidad 2",
-    "codigo": "OA 02",
-    "categoria": "Basal",
-    "descripcion": "Evaluar procesos históricos contemporáneos y debates ciudadanos analizando diversidad de fuentes (HISTORIA, GEOGRAFIA Y CIENCIAS SOCIALES - Unidad 2).",
-    "indicadores": [
-      "Contrastan perspectivas historiográficas divergentes.",
-      "Fundamentan opiniones con rigor documental sobre problemáticas públicas."
-    ]
-  },
-  {
-    "nivel": "8° Básico",
-    "asignatura": "HISTORIA, GEOGRAFIA Y CIENCIAS SOCIALES",
-    "eje": "Ciudadanía y Estado de Derecho",
-    "unidad": "Unidad 2",
-    "codigo": "OA 06",
-    "categoria": "Basal",
-    "descripcion": "Analizar el funcionamiento del Estado, los derechos fundamentales y la cohesión social (HISTORIA, GEOGRAFIA Y CIENCIAS SOCIALES - Unidad 2).",
-    "indicadores": [
-      "Evalúan mecanismos de participación ciudadana y transparencia institucional.",
-      "Proponen soluciones a dilemas éticos y sociales de la comunidad."
-    ]
-  },
-  {
-    "nivel": "8° Básico",
-    "asignatura": "HISTORIA, GEOGRAFIA Y CIENCIAS SOCIALES",
-    "eje": "Pensamiento Histórico y Crítico",
-    "unidad": "Unidad 3",
-    "codigo": "OA 03",
-    "categoria": "Basal",
-    "descripcion": "Evaluar procesos históricos contemporáneos y debates ciudadanos analizando diversidad de fuentes (HISTORIA, GEOGRAFIA Y CIENCIAS SOCIALES - Unidad 3).",
-    "indicadores": [
-      "Contrastan perspectivas historiográficas divergentes.",
-      "Fundamentan opiniones con rigor documental sobre problemáticas públicas."
-    ]
-  },
-  {
-    "nivel": "8° Básico",
-    "asignatura": "HISTORIA, GEOGRAFIA Y CIENCIAS SOCIALES",
-    "eje": "Ciudadanía y Estado de Derecho",
-    "unidad": "Unidad 3",
-    "codigo": "OA 07",
-    "categoria": "Basal",
-    "descripcion": "Analizar el funcionamiento del Estado, los derechos fundamentales y la cohesión social (HISTORIA, GEOGRAFIA Y CIENCIAS SOCIALES - Unidad 3).",
-    "indicadores": [
-      "Evalúan mecanismos de participación ciudadana y transparencia institucional.",
-      "Proponen soluciones a dilemas éticos y sociales de la comunidad."
-    ]
-  },
-  {
-    "nivel": "8° Básico",
-    "asignatura": "HISTORIA, GEOGRAFIA Y CIENCIAS SOCIALES",
-    "eje": "Pensamiento Histórico y Crítico",
-    "unidad": "Unidad 4",
-    "codigo": "OA 04",
-    "categoria": "Basal",
-    "descripcion": "Evaluar procesos históricos contemporáneos y debates ciudadanos analizando diversidad de fuentes (HISTORIA, GEOGRAFIA Y CIENCIAS SOCIALES - Unidad 4).",
-    "indicadores": [
-      "Contrastan perspectivas historiográficas divergentes.",
-      "Fundamentan opiniones con rigor documental sobre problemáticas públicas."
-    ]
-  },
-  {
-    "nivel": "8° Básico",
-    "asignatura": "HISTORIA, GEOGRAFIA Y CIENCIAS SOCIALES",
-    "eje": "Ciudadanía y Estado de Derecho",
-    "unidad": "Unidad 4",
-    "codigo": "OA 08",
-    "categoria": "Basal",
-    "descripcion": "Analizar el funcionamiento del Estado, los derechos fundamentales y la cohesión social (HISTORIA, GEOGRAFIA Y CIENCIAS SOCIALES - Unidad 4).",
-    "indicadores": [
-      "Evalúan mecanismos de participación ciudadana y transparencia institucional.",
-      "Proponen soluciones a dilemas éticos y sociales de la comunidad."
-    ]
-  },
-  {
-    "nivel": "I° Medio",
-    "asignatura": "HISTORIA, GEOGRAFIA Y CIENCIAS SOCIALES",
-    "eje": "Pensamiento Histórico y Crítico",
-    "unidad": "Unidad 1",
-    "codigo": "OA 01",
-    "categoria": "Basal",
-    "descripcion": "Evaluar procesos históricos contemporáneos y debates ciudadanos analizando diversidad de fuentes (HISTORIA, GEOGRAFIA Y CIENCIAS SOCIALES - Unidad 1).",
-    "indicadores": [
-      "Contrastan perspectivas historiográficas divergentes.",
-      "Fundamentan opiniones con rigor documental sobre problemáticas públicas."
-    ]
-  },
-  {
-    "nivel": "I° Medio",
-    "asignatura": "HISTORIA, GEOGRAFIA Y CIENCIAS SOCIALES",
-    "eje": "Ciudadanía y Estado de Derecho",
-    "unidad": "Unidad 1",
-    "codigo": "OA 05",
-    "categoria": "Basal",
-    "descripcion": "Analizar el funcionamiento del Estado, los derechos fundamentales y la cohesión social (HISTORIA, GEOGRAFIA Y CIENCIAS SOCIALES - Unidad 1).",
-    "indicadores": [
-      "Evalúan mecanismos de participación ciudadana y transparencia institucional.",
-      "Proponen soluciones a dilemas éticos y sociales de la comunidad."
-    ]
-  },
-  {
-    "nivel": "I° Medio",
-    "asignatura": "HISTORIA, GEOGRAFIA Y CIENCIAS SOCIALES",
-    "eje": "Pensamiento Histórico y Crítico",
-    "unidad": "Unidad 2",
-    "codigo": "OA 02",
-    "categoria": "Basal",
-    "descripcion": "Evaluar procesos históricos contemporáneos y debates ciudadanos analizando diversidad de fuentes (HISTORIA, GEOGRAFIA Y CIENCIAS SOCIALES - Unidad 2).",
-    "indicadores": [
-      "Contrastan perspectivas historiográficas divergentes.",
-      "Fundamentan opiniones con rigor documental sobre problemáticas públicas."
-    ]
-  },
-  {
-    "nivel": "I° Medio",
-    "asignatura": "HISTORIA, GEOGRAFIA Y CIENCIAS SOCIALES",
-    "eje": "Ciudadanía y Estado de Derecho",
-    "unidad": "Unidad 2",
-    "codigo": "OA 06",
-    "categoria": "Basal",
-    "descripcion": "Analizar el funcionamiento del Estado, los derechos fundamentales y la cohesión social (HISTORIA, GEOGRAFIA Y CIENCIAS SOCIALES - Unidad 2).",
-    "indicadores": [
-      "Evalúan mecanismos de participación ciudadana y transparencia institucional.",
-      "Proponen soluciones a dilemas éticos y sociales de la comunidad."
-    ]
-  },
-  {
-    "nivel": "I° Medio",
-    "asignatura": "HISTORIA, GEOGRAFIA Y CIENCIAS SOCIALES",
-    "eje": "Pensamiento Histórico y Crítico",
-    "unidad": "Unidad 3",
-    "codigo": "OA 03",
-    "categoria": "Basal",
-    "descripcion": "Evaluar procesos históricos contemporáneos y debates ciudadanos analizando diversidad de fuentes (HISTORIA, GEOGRAFIA Y CIENCIAS SOCIALES - Unidad 3).",
-    "indicadores": [
-      "Contrastan perspectivas historiográficas divergentes.",
-      "Fundamentan opiniones con rigor documental sobre problemáticas públicas."
-    ]
-  },
-  {
-    "nivel": "I° Medio",
-    "asignatura": "HISTORIA, GEOGRAFIA Y CIENCIAS SOCIALES",
-    "eje": "Ciudadanía y Estado de Derecho",
-    "unidad": "Unidad 3",
-    "codigo": "OA 07",
-    "categoria": "Basal",
-    "descripcion": "Analizar el funcionamiento del Estado, los derechos fundamentales y la cohesión social (HISTORIA, GEOGRAFIA Y CIENCIAS SOCIALES - Unidad 3).",
-    "indicadores": [
-      "Evalúan mecanismos de participación ciudadana y transparencia institucional.",
-      "Proponen soluciones a dilemas éticos y sociales de la comunidad."
-    ]
-  },
-  {
-    "nivel": "I° Medio",
-    "asignatura": "HISTORIA, GEOGRAFIA Y CIENCIAS SOCIALES",
-    "eje": "Pensamiento Histórico y Crítico",
-    "unidad": "Unidad 4",
-    "codigo": "OA 04",
-    "categoria": "Basal",
-    "descripcion": "Evaluar procesos históricos contemporáneos y debates ciudadanos analizando diversidad de fuentes (HISTORIA, GEOGRAFIA Y CIENCIAS SOCIALES - Unidad 4).",
-    "indicadores": [
-      "Contrastan perspectivas historiográficas divergentes.",
-      "Fundamentan opiniones con rigor documental sobre problemáticas públicas."
-    ]
-  },
-  {
-    "nivel": "I° Medio",
-    "asignatura": "HISTORIA, GEOGRAFIA Y CIENCIAS SOCIALES",
-    "eje": "Ciudadanía y Estado de Derecho",
-    "unidad": "Unidad 4",
-    "codigo": "OA 08",
-    "categoria": "Basal",
-    "descripcion": "Analizar el funcionamiento del Estado, los derechos fundamentales y la cohesión social (HISTORIA, GEOGRAFIA Y CIENCIAS SOCIALES - Unidad 4).",
-    "indicadores": [
-      "Evalúan mecanismos de participación ciudadana y transparencia institucional.",
-      "Proponen soluciones a dilemas éticos y sociales de la comunidad."
-    ]
-  },
-  {
-    "nivel": "II° Medio",
-    "asignatura": "HISTORIA, GEOGRAFIA Y CIENCIAS SOCIALES",
-    "eje": "Pensamiento Histórico y Crítico",
-    "unidad": "Unidad 1",
-    "codigo": "OA 01",
-    "categoria": "Basal",
-    "descripcion": "Evaluar procesos históricos contemporáneos y debates ciudadanos analizando diversidad de fuentes (HISTORIA, GEOGRAFIA Y CIENCIAS SOCIALES - Unidad 1).",
-    "indicadores": [
-      "Contrastan perspectivas historiográficas divergentes.",
-      "Fundamentan opiniones con rigor documental sobre problemáticas públicas."
-    ]
-  },
-  {
-    "nivel": "II° Medio",
-    "asignatura": "HISTORIA, GEOGRAFIA Y CIENCIAS SOCIALES",
-    "eje": "Ciudadanía y Estado de Derecho",
-    "unidad": "Unidad 1",
-    "codigo": "OA 05",
-    "categoria": "Basal",
-    "descripcion": "Analizar el funcionamiento del Estado, los derechos fundamentales y la cohesión social (HISTORIA, GEOGRAFIA Y CIENCIAS SOCIALES - Unidad 1).",
-    "indicadores": [
-      "Evalúan mecanismos de participación ciudadana y transparencia institucional.",
-      "Proponen soluciones a dilemas éticos y sociales de la comunidad."
-    ]
-  },
-  {
-    "nivel": "II° Medio",
-    "asignatura": "HISTORIA, GEOGRAFIA Y CIENCIAS SOCIALES",
-    "eje": "Pensamiento Histórico y Crítico",
-    "unidad": "Unidad 2",
-    "codigo": "OA 02",
-    "categoria": "Basal",
-    "descripcion": "Evaluar procesos históricos contemporáneos y debates ciudadanos analizando diversidad de fuentes (HISTORIA, GEOGRAFIA Y CIENCIAS SOCIALES - Unidad 2).",
-    "indicadores": [
-      "Contrastan perspectivas historiográficas divergentes.",
-      "Fundamentan opiniones con rigor documental sobre problemáticas públicas."
-    ]
-  },
-  {
-    "nivel": "II° Medio",
-    "asignatura": "HISTORIA, GEOGRAFIA Y CIENCIAS SOCIALES",
-    "eje": "Ciudadanía y Estado de Derecho",
-    "unidad": "Unidad 2",
-    "codigo": "OA 06",
-    "categoria": "Basal",
-    "descripcion": "Analizar el funcionamiento del Estado, los derechos fundamentales y la cohesión social (HISTORIA, GEOGRAFIA Y CIENCIAS SOCIALES - Unidad 2).",
-    "indicadores": [
-      "Evalúan mecanismos de participación ciudadana y transparencia institucional.",
-      "Proponen soluciones a dilemas éticos y sociales de la comunidad."
-    ]
-  },
-  {
-    "nivel": "II° Medio",
-    "asignatura": "HISTORIA, GEOGRAFIA Y CIENCIAS SOCIALES",
-    "eje": "Pensamiento Histórico y Crítico",
-    "unidad": "Unidad 3",
-    "codigo": "OA 03",
-    "categoria": "Basal",
-    "descripcion": "Evaluar procesos históricos contemporáneos y debates ciudadanos analizando diversidad de fuentes (HISTORIA, GEOGRAFIA Y CIENCIAS SOCIALES - Unidad 3).",
-    "indicadores": [
-      "Contrastan perspectivas historiográficas divergentes.",
-      "Fundamentan opiniones con rigor documental sobre problemáticas públicas."
-    ]
-  },
-  {
-    "nivel": "II° Medio",
-    "asignatura": "HISTORIA, GEOGRAFIA Y CIENCIAS SOCIALES",
-    "eje": "Ciudadanía y Estado de Derecho",
-    "unidad": "Unidad 3",
-    "codigo": "OA 07",
-    "categoria": "Basal",
-    "descripcion": "Analizar el funcionamiento del Estado, los derechos fundamentales y la cohesión social (HISTORIA, GEOGRAFIA Y CIENCIAS SOCIALES - Unidad 3).",
-    "indicadores": [
-      "Evalúan mecanismos de participación ciudadana y transparencia institucional.",
-      "Proponen soluciones a dilemas éticos y sociales de la comunidad."
-    ]
-  },
-  {
-    "nivel": "II° Medio",
-    "asignatura": "HISTORIA, GEOGRAFIA Y CIENCIAS SOCIALES",
-    "eje": "Pensamiento Histórico y Crítico",
-    "unidad": "Unidad 4",
-    "codigo": "OA 04",
-    "categoria": "Basal",
-    "descripcion": "Evaluar procesos históricos contemporáneos y debates ciudadanos analizando diversidad de fuentes (HISTORIA, GEOGRAFIA Y CIENCIAS SOCIALES - Unidad 4).",
-    "indicadores": [
-      "Contrastan perspectivas historiográficas divergentes.",
-      "Fundamentan opiniones con rigor documental sobre problemáticas públicas."
-    ]
-  },
-  {
-    "nivel": "II° Medio",
-    "asignatura": "HISTORIA, GEOGRAFIA Y CIENCIAS SOCIALES",
-    "eje": "Ciudadanía y Estado de Derecho",
-    "unidad": "Unidad 4",
-    "codigo": "OA 08",
-    "categoria": "Basal",
-    "descripcion": "Analizar el funcionamiento del Estado, los derechos fundamentales y la cohesión social (HISTORIA, GEOGRAFIA Y CIENCIAS SOCIALES - Unidad 4).",
-    "indicadores": [
-      "Evalúan mecanismos de participación ciudadana y transparencia institucional.",
-      "Proponen soluciones a dilemas éticos y sociales de la comunidad."
-    ]
-  },
-  {
-    "nivel": "III° Medio",
-    "asignatura": "EDUCACION CIUDADANA",
-    "eje": "Pensamiento Histórico y Crítico",
-    "unidad": "Unidad 1",
-    "codigo": "OA 01",
-    "categoria": "Basal",
-    "descripcion": "Evaluar procesos históricos contemporáneos y debates ciudadanos analizando diversidad de fuentes (EDUCACION CIUDADANA - Unidad 1).",
-    "indicadores": [
-      "Contrastan perspectivas historiográficas divergentes.",
-      "Fundamentan opiniones con rigor documental sobre problemáticas públicas."
-    ]
-  },
-  {
-    "nivel": "III° Medio",
-    "asignatura": "EDUCACION CIUDADANA",
-    "eje": "Ciudadanía y Estado de Derecho",
-    "unidad": "Unidad 1",
-    "codigo": "OA 05",
-    "categoria": "Basal",
-    "descripcion": "Analizar el funcionamiento del Estado, los derechos fundamentales y la cohesión social (EDUCACION CIUDADANA - Unidad 1).",
-    "indicadores": [
-      "Evalúan mecanismos de participación ciudadana y transparencia institucional.",
-      "Proponen soluciones a dilemas éticos y sociales de la comunidad."
-    ]
-  },
-  {
-    "nivel": "III° Medio",
-    "asignatura": "EDUCACION CIUDADANA",
-    "eje": "Pensamiento Histórico y Crítico",
-    "unidad": "Unidad 2",
-    "codigo": "OA 02",
-    "categoria": "Basal",
-    "descripcion": "Evaluar procesos históricos contemporáneos y debates ciudadanos analizando diversidad de fuentes (EDUCACION CIUDADANA - Unidad 2).",
-    "indicadores": [
-      "Contrastan perspectivas historiográficas divergentes.",
-      "Fundamentan opiniones con rigor documental sobre problemáticas públicas."
-    ]
-  },
-  {
-    "nivel": "III° Medio",
-    "asignatura": "EDUCACION CIUDADANA",
-    "eje": "Ciudadanía y Estado de Derecho",
-    "unidad": "Unidad 2",
-    "codigo": "OA 06",
-    "categoria": "Basal",
-    "descripcion": "Analizar el funcionamiento del Estado, los derechos fundamentales y la cohesión social (EDUCACION CIUDADANA - Unidad 2).",
-    "indicadores": [
-      "Evalúan mecanismos de participación ciudadana y transparencia institucional.",
-      "Proponen soluciones a dilemas éticos y sociales de la comunidad."
-    ]
-  },
-  {
-    "nivel": "III° Medio",
-    "asignatura": "EDUCACION CIUDADANA",
-    "eje": "Pensamiento Histórico y Crítico",
-    "unidad": "Unidad 3",
-    "codigo": "OA 03",
-    "categoria": "Basal",
-    "descripcion": "Evaluar procesos históricos contemporáneos y debates ciudadanos analizando diversidad de fuentes (EDUCACION CIUDADANA - Unidad 3).",
-    "indicadores": [
-      "Contrastan perspectivas historiográficas divergentes.",
-      "Fundamentan opiniones con rigor documental sobre problemáticas públicas."
-    ]
-  },
-  {
-    "nivel": "III° Medio",
-    "asignatura": "EDUCACION CIUDADANA",
-    "eje": "Ciudadanía y Estado de Derecho",
-    "unidad": "Unidad 3",
-    "codigo": "OA 07",
-    "categoria": "Basal",
-    "descripcion": "Analizar el funcionamiento del Estado, los derechos fundamentales y la cohesión social (EDUCACION CIUDADANA - Unidad 3).",
-    "indicadores": [
-      "Evalúan mecanismos de participación ciudadana y transparencia institucional.",
-      "Proponen soluciones a dilemas éticos y sociales de la comunidad."
-    ]
-  },
-  {
-    "nivel": "III° Medio",
-    "asignatura": "EDUCACION CIUDADANA",
-    "eje": "Pensamiento Histórico y Crítico",
-    "unidad": "Unidad 4",
-    "codigo": "OA 04",
-    "categoria": "Basal",
-    "descripcion": "Evaluar procesos históricos contemporáneos y debates ciudadanos analizando diversidad de fuentes (EDUCACION CIUDADANA - Unidad 4).",
-    "indicadores": [
-      "Contrastan perspectivas historiográficas divergentes.",
-      "Fundamentan opiniones con rigor documental sobre problemáticas públicas."
-    ]
-  },
-  {
-    "nivel": "III° Medio",
-    "asignatura": "EDUCACION CIUDADANA",
-    "eje": "Ciudadanía y Estado de Derecho",
-    "unidad": "Unidad 4",
-    "codigo": "OA 08",
-    "categoria": "Basal",
-    "descripcion": "Analizar el funcionamiento del Estado, los derechos fundamentales y la cohesión social (EDUCACION CIUDADANA - Unidad 4).",
-    "indicadores": [
-      "Evalúan mecanismos de participación ciudadana y transparencia institucional.",
-      "Proponen soluciones a dilemas éticos y sociales de la comunidad."
-    ]
-  },
-  {
-    "nivel": "IV° Medio",
-    "asignatura": "EDUCACION CIUDADANA",
-    "eje": "Pensamiento Histórico y Crítico",
-    "unidad": "Unidad 1",
-    "codigo": "OA 01",
-    "categoria": "Basal",
-    "descripcion": "Evaluar procesos históricos contemporáneos y debates ciudadanos analizando diversidad de fuentes (EDUCACION CIUDADANA - Unidad 1).",
-    "indicadores": [
-      "Contrastan perspectivas historiográficas divergentes.",
-      "Fundamentan opiniones con rigor documental sobre problemáticas públicas."
-    ]
-  },
-  {
-    "nivel": "IV° Medio",
-    "asignatura": "EDUCACION CIUDADANA",
-    "eje": "Ciudadanía y Estado de Derecho",
-    "unidad": "Unidad 1",
-    "codigo": "OA 05",
-    "categoria": "Basal",
-    "descripcion": "Analizar el funcionamiento del Estado, los derechos fundamentales y la cohesión social (EDUCACION CIUDADANA - Unidad 1).",
-    "indicadores": [
-      "Evalúan mecanismos de participación ciudadana y transparencia institucional.",
-      "Proponen soluciones a dilemas éticos y sociales de la comunidad."
-    ]
-  },
-  {
-    "nivel": "IV° Medio",
-    "asignatura": "EDUCACION CIUDADANA",
-    "eje": "Pensamiento Histórico y Crítico",
-    "unidad": "Unidad 2",
-    "codigo": "OA 02",
-    "categoria": "Basal",
-    "descripcion": "Evaluar procesos históricos contemporáneos y debates ciudadanos analizando diversidad de fuentes (EDUCACION CIUDADANA - Unidad 2).",
-    "indicadores": [
-      "Contrastan perspectivas historiográficas divergentes.",
-      "Fundamentan opiniones con rigor documental sobre problemáticas públicas."
-    ]
-  },
-  {
-    "nivel": "IV° Medio",
-    "asignatura": "EDUCACION CIUDADANA",
-    "eje": "Ciudadanía y Estado de Derecho",
-    "unidad": "Unidad 2",
-    "codigo": "OA 06",
-    "categoria": "Basal",
-    "descripcion": "Analizar el funcionamiento del Estado, los derechos fundamentales y la cohesión social (EDUCACION CIUDADANA - Unidad 2).",
-    "indicadores": [
-      "Evalúan mecanismos de participación ciudadana y transparencia institucional.",
-      "Proponen soluciones a dilemas éticos y sociales de la comunidad."
-    ]
-  },
-  {
-    "nivel": "IV° Medio",
-    "asignatura": "EDUCACION CIUDADANA",
-    "eje": "Pensamiento Histórico y Crítico",
-    "unidad": "Unidad 3",
-    "codigo": "OA 03",
-    "categoria": "Basal",
-    "descripcion": "Evaluar procesos históricos contemporáneos y debates ciudadanos analizando diversidad de fuentes (EDUCACION CIUDADANA - Unidad 3).",
-    "indicadores": [
-      "Contrastan perspectivas historiográficas divergentes.",
-      "Fundamentan opiniones con rigor documental sobre problemáticas públicas."
-    ]
-  },
-  {
-    "nivel": "IV° Medio",
-    "asignatura": "EDUCACION CIUDADANA",
-    "eje": "Ciudadanía y Estado de Derecho",
-    "unidad": "Unidad 3",
-    "codigo": "OA 07",
-    "categoria": "Basal",
-    "descripcion": "Analizar el funcionamiento del Estado, los derechos fundamentales y la cohesión social (EDUCACION CIUDADANA - Unidad 3).",
-    "indicadores": [
-      "Evalúan mecanismos de participación ciudadana y transparencia institucional.",
-      "Proponen soluciones a dilemas éticos y sociales de la comunidad."
-    ]
-  },
-  {
-    "nivel": "IV° Medio",
-    "asignatura": "EDUCACION CIUDADANA",
-    "eje": "Pensamiento Histórico y Crítico",
-    "unidad": "Unidad 4",
-    "codigo": "OA 04",
-    "categoria": "Basal",
-    "descripcion": "Evaluar procesos históricos contemporáneos y debates ciudadanos analizando diversidad de fuentes (EDUCACION CIUDADANA - Unidad 4).",
-    "indicadores": [
-      "Contrastan perspectivas historiográficas divergentes.",
-      "Fundamentan opiniones con rigor documental sobre problemáticas públicas."
-    ]
-  },
-  {
-    "nivel": "IV° Medio",
-    "asignatura": "EDUCACION CIUDADANA",
-    "eje": "Ciudadanía y Estado de Derecho",
-    "unidad": "Unidad 4",
-    "codigo": "OA 08",
-    "categoria": "Basal",
-    "descripcion": "Analizar el funcionamiento del Estado, los derechos fundamentales y la cohesión social (EDUCACION CIUDADANA - Unidad 4).",
-    "indicadores": [
-      "Evalúan mecanismos de participación ciudadana y transparencia institucional.",
-      "Proponen soluciones a dilemas éticos y sociales de la comunidad."
-    ]
-  }
-];
+const HISTORIA_CURRICULO = [];
+
+function addUnidad(nivel, asignatura, unidad, nombreUnidad, lista) {
+  const tituloCompleto = nombreUnidad.startsWith('Unidad') ? nombreUnidad : `${unidad}: ${nombreUnidad}`;
+  lista.forEach(([codigo, eje, categoria, descripcion, indicadores]) => {
+    HISTORIA_CURRICULO.push({
+      nivel,
+      asignatura,
+      unidad,
+      nombre_unidad: tituloCompleto,
+      eje,
+      codigo,
+      categoria,
+      descripcion,
+      indicadores
+    });
+  });
+}
+
+const ASIG_HIST = 'HISTORIA, GEOGRAFIA Y CIENCIAS SOCIALES';
+const ASIG_CIUD = 'EDUCACION CIUDADANA';
+
+// ============================================================================
+// 1° BÁSICO - HISTORIA, GEOGRAFÍA Y CIENCIAS SOCIALES
+// ============================================================================
+addUnidad('1° Básico', ASIG_HIST, 'Unidad 1', 'El tiempo, nuestra identidad y normas de convivencia', [
+  ['OA 01', 'Historia', 'Complementario', 'Nombrar y secuenciar días de la semana y meses del año, utilizando calendarios, e identificar el año en curso.', ['Nombran los días de la semana y meses del año en orden.', 'Ubican fechas significativas en el calendario escolar.']],
+  ['OA 02', 'Historia', 'Basal', 'Secuenciar acontecimientos y actividades de la vida cotidiana, personal y familiar, utilizando categorías relativas de ubicación temporal, como antes, después; ayer, hoy, mañana; día, noche; este año, el año pasado, el año próximo.', ['Ordenan cronológicamente actividades de su rutina diaria.', 'Distinguen hechos ocurridos ayer, hoy y mañana.']],
+  ['OA 04', 'Historia', 'Complementario', 'Obtener y comunicar aspectos de la historia de su familia y sus características, como costumbres, tradiciones, ritos, fiestas, recuerdos y roles que desempeñan los distintos miembros de su grupo familiar, mediante la formulación de preguntas a adultos de su entorno cercano.', ['Describen costumbres y celebraciones propias de su familia.', 'Entrevistan a familiares sobre tradiciones del pasado.']],
+  ['OA 13', 'Formación Ciudadana', 'Complementario', 'Mostrar actitudes y realizar acciones concretas en su entorno cercano (familia, escuela y comunidad) que reflejen: el respeto al otro, la empatía y la responsabilidad.', ['Escuchan atentamente a sus compañeros respetando turnos.', 'Cuidan sus pertenencias y el mobiliario de la sala.']],
+  ['OA 14', 'Formación Ciudadana', 'Basal', 'Explicar y aplicar algunas normas para la buena convivencia y para la seguridad y el autocuidado en su familia, en la escuela y en la vía pública.', ['Reconocen y aplican normas de convivencia en el aula y recreo.', 'Explican medidas de seguridad vial y autocuidado escolar.']]
+]);
+
+addUnidad('1° Básico', ASIG_HIST, 'Unidad 2', 'Nuestra comunidad, trabajos e instituciones', [
+  ['OA 03', 'Historia', 'Complementario', 'Registrar y comunicar información sobre elementos que forman parte de su identidad personal (nombre, fecha de nacimiento, lugar de procedencia, ascendencias, gustos, intereses, amigos y otros) para reconocer sus características individuales.', ['Identifican datos personales fundamentales y gustos propios.', 'Reconocen semejanzas y diferencias con sus pares.']],
+  ['OA 08', 'Geografía', 'Complementario', 'Reconocer que los mapas y planos son formas de representar lugares.', ['Identifican planos simples de la sala de clases y la escuela.', 'Ubican objetos utilizando puntos de referencia espaciales.']],
+  ['OA 11', 'Geografía', 'Complementario', 'Identificar trabajos y productos de su familia y su localidad y cómo estos aportan a su vida diaria, reconociendo la importancia de todos los trabajos, tanto remunerados como no remunerados.', ['Nombran oficios y profesiones presentes en su comunidad.', 'Explican la utilidad de distintos trabajos para la vida cotidiana.']],
+  ['OA 15', 'Formación Ciudadana', 'Basal', 'Identificar la labor que cumplen en beneficio de la comunidad servicios como los medios de transporte y de comunicación y el mercado, y algunas instituciones encargadas de proteger nuestro patrimonio cultural y natural, y de asegurar nuestra seguridad y bienestar (Carabineros, Bomberos, hospitales, municipalidades).', ['Asocian instituciones públicas (Bomberos, Hospital, Carabineros) con su función social.', 'Identifican a qué institución acudir ante una emergencia.']]
+]);
+
+addUnidad('1° Básico', ASIG_HIST, 'Unidad 3', 'Chile, sus paisajes, símbolos y tradiciones', [
+  ['OA 05', 'Historia', 'Basal', 'Reconocer los símbolos representativos de Chile (como la bandera, el escudo y el himno nacional), describir costumbres, actividades y la participación de hombres y mujeres respecto de conmemoraciones nacionales, y reconocer en ellos un elemento de unidad e identidad nacional.', ['Identifican la bandera, el escudo y el himno nacional de Chile.', 'Describen tradiciones y fiestas típicas chilenas.']],
+  ['OA 06', 'Historia', 'Complementario', 'Conocer expresiones culturales locales y nacionales (como comidas, flores y animales típicos, música y juegos, entre otros), describir fiestas y tradiciones importantes de nivel local y reconocer su valor.', ['Nombran juegos típicos, bailes y comidas tradicionales de Chile.', 'Valoran las celebraciones propias de su localidad.']],
+  ['OA 09', 'Geografía', 'Basal', 'Identificar a Chile en mapas, incluyendo la cordillera de los Andes, el océano Pacífico, su región, su capital y su localidad.', ['Localizan a Chile, la cordillera de los Andes y el océano Pacífico en un mapa.', 'Identifican su región y localidad en el mapa de Chile.']],
+  ['OA 10', 'Geografía', 'Basal', 'Observar y describir paisajes de su entorno local, utilizando vocabulario geográfico adecuado (país, ciudad, camino, pueblo, construcciones, cordillera, mar, vegetación y desierto) y categorías de ubicación relativa (derecha, izquierda, delante, detrás, entre otros).', ['Distinguen elementos naturales y culturales en paisajes locales.', 'Utilizan conceptos de ubicación relativa para describir un paisaje.']]
+]);
+
+addUnidad('1° Básico', ASIG_HIST, 'Unidad 4', 'Diversidad cultural en el mundo y aportes a nuestra sociedad', [
+  ['OA 07', 'Historia', 'Complementario', 'Conocer sobre la vida de hombres y mujeres que han contribuido a la sociedad chilena en diversos ámbitos, por ejemplo, los fundadores de las ciudades, los exploradores, las personas que han fundado o creado instituciones, las personas que se han destacado por su emprendimiento y su solidaridad, los deportistas, los científicos, los artistas y los grandes poetas, entre otros.', ['Relatan aportes de personajes destacados de la historia y cultura de Chile.', 'Reconocen el valor de artistas, científicos y deportistas nacionales.']],
+  ['OA 12', 'Geografía', 'Complementario', 'Conocer cómo viven otros niños en diferentes partes del mundo por medio de imágenes y relatos, ubicando en un globo terráqueo o mapamundi los países donde habitan y comparando su idioma, vestimenta, comida, fiestas, costumbres y principales tareas con las de niños chilenos.', ['Comparan modos de vida de niños de diversos continentes.', 'Valorizan el respeto por la diversidad cultural en el mundo.']]
+]);
+
+// ============================================================================
+// 2° BÁSICO - HISTORIA, GEOGRAFÍA Y CIENCIAS SOCIALES
+// ============================================================================
+addUnidad('2° Básico', ASIG_HIST, 'Unidad 1', 'Ubicación espacial y paisajes de Chile', [
+  ['OA 06', 'Geografía', 'Complementario', 'Leer y dibujar planos simples de su entorno, utilizando puntos de referencia, categorías de posición relativa y simbología pictórica.', ['Interpretan simbología pictórica en planos del barrio y la escuela.', 'Dibujan planos sencillos utilizando referencias espaciales.']],
+  ['OA 07', 'Geografía', 'Basal', 'Ubicar Chile, Santiago, la propia región y su capital en el globo terráqueo o en mapas, y describir la ubicación relativa de países limítrofes y de otros países de América del Sur, utilizando los puntos cardinales.', ['Utilizan los puntos cardinales (Norte, Sur, Este, Oeste) para orientarse.', 'Ubican Chile, su región y países limítrofes en el mapa de América del Sur.']],
+  ['OA 08', 'Geografía', 'Basal', 'Clasificar y caracterizar algunos paisajes de Chile según su ubicación en la zona norte, centro y sur del país, observando imágenes, utilizando diversas fuentes y un vocabulario geográfico adecuado.', ['Comparan paisajes de las zonas Norte, Centro y Sur de Chile.', 'Relacionan vegetación, relieve y clima de cada zona geográfica.']],
+  ['OA 14', 'Formación Ciudadana', 'Basal', 'Conocer, proponer, aplicar y explicar la importancia de algunas normas necesarias para: cuidarse, cuidar a otros y evitar situaciones de riesgo; organizar un ambiente propicio al aprendizaje y acogedor para todos; cuidar el patrimonio y el medioambiente.', ['Cumplen normas de convivencia y seguridad en el aula.', 'Proponen acciones concretas de cuidado de los espacios comunes.']]
+]);
+
+addUnidad('2° Básico', ASIG_HIST, 'Unidad 2', 'Pueblos originarios de Chile y su legado', [
+  ['OA 01', 'Historia', 'Basal', 'Describir los modos de vida de algunos pueblos originarios de Chile en el período precolombino, incluyendo ubicación geográfica, medio natural en que habitaban, vida nómade o sedentaria, roles de hombres y mujeres, herramientas y tecnología, principales actividades, vivienda, costumbres, idioma, creencias, alimentación y fiestas, entre otros.', ['Distinguen pueblos originarios nómades y sedentarios de Chile.', 'Describen viviendas, alimentación y costumbres de pueblos como Mapuche, Aymara, Rapa Nui, Diaguita y Kawésqar.']],
+  ['OA 02', 'Historia', 'Complementario', 'Comparar el modo de vida y expresiones culturales de algunos pueblos indígenas presentes en Chile actual (como Mapuche, Aymara o Rapa Nui) con respecto al periodo precolombino, identificando aspectos de su cultura que se han mantenido hasta el presente y aspectos que han cambiado.', ['Identifican tradiciones de los pueblos originarios vigentes en la actualidad.', 'Comparan elementos de continuidad y cambio en los pueblos indígenas de Chile.']],
+  ['OA 10', 'Geografía', 'Complementario', 'Ubicar en mapas las zonas habitadas por algunos pueblos originarios de Chile, distinguiendo zonas norte, centro y sur.', ['Localizan en el mapa de Chile la distribución geográfica de los pueblos originarios.', 'Relacionan el paisaje natural con el modo de vida de cada pueblo.']],
+  ['OA 12', 'Formación Ciudadana', 'Complementario', 'Mostrar actitudes y realizar acciones concretas en su entorno cercano que reflejen respeto al otro y valoración de la diversidad.', ['Demuestran trato respetuoso e inclusivo hacia todas las personas.', 'Valoran la diversidad cultural presente en su curso y comunidad.']]
+]);
+
+addUnidad('2° Básico', ASIG_HIST, 'Unidad 3', 'Aportes culturales a la sociedad chilena', [
+  ['OA 03', 'Historia', 'Basal', 'Distinguir los diversos aportes a la sociedad chilena proveniente de los pueblos originarios (palabras, alimentos, tradiciones, cultura, etc.) y de los españoles (idioma, religión, alimentos, costumbres, etc.) y reconocer nuestra sociedad como mestiza.', ['Explican el concepto de mestizaje cultural en Chile.', 'Dan ejemplos de palabras, comidas y tradiciones heredadas de pueblos originarios y españoles.']],
+  ['OA 04', 'Historia', 'Complementario', 'Reconocer y dar ejemplos de la influencia y aportes de inmigrantes de distintas naciones a la diversidad de la sociedad chilena, a lo largo de su historia, mostrando una actitud de respeto y empatía.', ['Identifican aportes de diversas colonias e inmigrantes del pasado y presente en Chile.', 'Manifiestan empatía e integración hacia compañeros migrantes.']],
+  ['OA 13', 'Formación Ciudadana', 'Complementario', 'Mantener una conducta honesta en la vida cotidiana, en los juegos y en el trabajo escolar, hablando con la verdad, respetando las reglas de los juegos sin hacer trampa y reconociendo sus errores y sus acciones.', ['Respetan las reglas en juegos y actividades grupales.', 'Asumen con honestidad sus responsabilidades escolares.']]
+]);
+
+addUnidad('2° Básico', ASIG_HIST, 'Unidad 4', 'Patrimonio, medioambiente y servicios públicos', [
+  ['OA 05', 'Historia', 'Complementario', 'Reconocer diversas expresiones del patrimonio cultural del país y de su región, como manifestaciones artísticas, tradiciones folclóricas, leyendas y tradiciones orales, costumbres familiares, creencias, idioma, construcciones, comidas típicas, fiestas, monumentos y sitios históricos.', ['Clasifican ejemplos de patrimonio cultural material e inmaterial de Chile.', 'Proponen formas de proteger monumentos y tradiciones locales.']],
+  ['OA 09', 'Geografía', 'Complementario', 'Reconocer diversas expresiones del patrimonio natural de Chile y de su región, como paisajes, flora y fauna característica y parques nacionales, entre otros.', ['Identifican parques y reservas nacionales de su región y del país.', 'Reconocen especies de flora y fauna nativa protegida.']],
+  ['OA 11', 'Geografía', 'Complementario', 'Relacionar las principales características geográficas de las zonas habitadas por algunos pueblos originarios de Chile con los recursos que utilizaron para satisfacer sus necesidades.', ['Explican cómo se adaptan las comunidades a los recursos de su entorno.', 'Valorizan el uso responsable de los recursos naturales.']],
+  ['OA 15', 'Formación Ciudadana', 'Complementario', 'Identificar algunos servicios públicos y privados de la comunidad y explicar cómo contribuyen al funcionamiento de la localidad.', ['Distinguen servicios públicos (salud, educación, transporte, correo) y su aporte.', 'Cuidan los espacios públicos y medios de transporte.']],
+  ['OA 16', 'Formación Ciudadana', 'Basal', 'Practicar y proponer acciones para cuidar y respetar los espacios públicos dentro y fuera de la escuela (como baños, patios, salas de clase, plazas, parques, playas y calles, entre otros), reconociendo que pertenecen y benefician a todos.', ['Mantienen limpios y ordenados los espacios comunes del colegio.', 'Diseñan campañas escolares para el cuidado del medioambiente y espacios públicos.']]
+]);
+
+// ============================================================================
+// 3° BÁSICO - HISTORIA, GEOGRAFÍA Y CIENCIAS SOCIALES
+// ============================================================================
+addUnidad('3° Básico', ASIG_HIST, 'Unidad 1', 'Ubicación geográfica y zonas climáticas de la Tierra', [
+  ['OA 06', 'Geografía', 'Complementario', 'Ubicar personas, lugares y elementos en una cuadrícula, utilizando líneas de referencia y puntos cardinales.', ['Localizan objetos y lugares en planos cuadriculados usando coordenadas simples.', 'Trazan rutas en cuadrículas empleando puntos cardinales.']],
+  ['OA 07', 'Geografía', 'Basal', 'Distinguir hemisferios, círculo del Ecuador, trópicos, polos, continentes y océanos del planeta en mapas y globos terráqueos.', ['Ubican la línea del Ecuador, trópicos, círculos polares y hemisferios en el mapamundi.', 'Identifican los continentes y océanos del planeta.']],
+  ['OA 08', 'Geografía', 'Basal', 'Identificar y ubicar en mapas las principales zonas climáticas del mundo, y dar ejemplos de distintos paisajes que pueden encontrarse en estas zonas y de cómo las personas han elaborado diferentes estrategias para habitarlos.', ['Caracterizan las zonas climáticas cálida, templadas y frías de la Tierra.', 'Explican cómo los seres humanos se adaptan a paisajes desérticos, selváticos o polares.']],
+  ['OA 11', 'Formación Ciudadana', 'Basal', 'Asumir sus deberes y sus responsabilidades como estudiante y en situaciones de la vida cotidiana, como cumplir con sus deberes escolares, colaborar en el orden y en la limpieza de los espacios que comparte con su familia, su escuela y su comunidad, cuidar las pertenencias propias y ajenas, practicar la honestidad en su vida cotidiana y respetar las normas de convivencia.', ['Cumplen puntualmente sus responsabilidades académicas y de convivencia.', 'Colaboran activamente en el orden del aula.']]
+]);
+
+addUnidad('3° Básico', ASIG_HIST, 'Unidad 2', 'La civilización griega de la Antigüedad y su legado', [
+  ['OA 01', 'Historia', 'Basal', 'Reconocer aspectos de la vida cotidiana de la civilización griega de la Antigüedad e identificar algunos elementos de su legado a sociedades y culturas del presente; entre ellos, la organización democrática, el desarrollo de la historia, el teatro como forma de expresión, el arte y la escultura, la arquitectura, la mitología, la geometría y la filosofía, la creación del alfabeto y los juegos olímpicos.', ['Describen la vida cotidiana, vivienda, vestimenta y educación en las polis griegas.', 'Explican el legado griego en la democracia, los Juegos Olímpicos, el teatro y la filosofía.']],
+  ['OA 09', 'Geografía', 'Basal', 'Caracterizar el entorno geográfico de las civilizaciones estudiadas, utilizando vocabulario geográfico adecuado (continente, valle, montaña, costa, isla, archipiélago, península, mar, océano, río, estrecho, golfo, cordillera, etc.).', ['Ubican la península de los Balcanes, el mar Egeo y el mar Mediterráneo.', 'Explican cómo el relieve montañoso e insular influyó en el comercio marítimo y las polis griegas.']],
+  ['OA 10', 'Geografía', 'Complementario', 'Reconocer algunos factores geográficos que influyeron en el desarrollo de las civilizaciones estudiadas (ubicación, relieve y clima, recursos naturales disponibles, importancia del mar Egeo y sus islas para Grecia y del mar Mediterráneo para Roma, entre otros).', ['Relacionan los recursos mediterráneos (vid, olivo, cereales) con la economía griega.', 'Identifican el mar como vía de intercambio cultural.']],
+  ['OA 14', 'Formación Ciudadana', 'Basal', 'Reconocer que los niños tienen derechos que les permiten recibir un cuidado especial por parte de la sociedad con el fin de que puedan aprender, crecer y desarrollarse, y dar ejemplos de cómo la sociedad les garantiza estos derechos.', ['Identifican derechos fundamentales de la infancia (educación, salud, familia, recreación).', 'Explican cómo la familia y el Estado protegen los derechos de los niños.']]
+]);
+
+addUnidad('3° Básico', ASIG_HIST, 'Unidad 3', 'La civilización romana de la Antigüedad y su legado', [
+  ['OA 02', 'Historia', 'Basal', 'Reconocer aspectos de la vida cotidiana de la civilización romana de la Antigüedad e identificar algunos elementos de su legado a sociedades y culturas del presente; entre ellos, el idioma, el derecho y las leyes, el arte y las obras arquitectónicas.', ['Describen costumbres, ciudades, espectáculos y vida familiar en la antigua Roma.', 'Reconocen el legado romano en el latín, el Derecho Romano y las obras de ingeniería (acueductos, calzadas, anfiteatros).']],
+  ['OA 03', 'Historia', 'Basal', 'Explicar, con ejemplos concretos, cómo diferentes culturas y pueblos (como griegos y romanos de la Antigüedad) han enfrentado de distintas maneras el desafío de desarrollarse y satisfacer las necesidades comunes a todos los seres humanos.', ['Comparan soluciones de griegos y romanos para abastecer de agua, transporte y alimentación a sus ciudades.', 'Relacionan las obras públicas con el bienestar de la población.']],
+  ['OA 04', 'Historia', 'Complementario', 'Comparar modos de vida de la Antigüedad con el propio, considerando costumbres, trabajos y oficios, creencias, vestimenta y características de las ciudades, entre otros.', ['Establecen semejanzas y diferencias entre una ciudad grecorromana y su ciudad actual.', 'Comparan los espacios públicos antiguos (ágora, foro) con las plazas actuales.']],
+  ['OA 05', 'Historia', 'Complementario', 'Investigar sobre algún tema de su interés con relación a las civilizaciones estudiadas (como los héroes, los dioses, las ciudades, las viviendas, la vestimenta, las herramientas tecnológicas y la esclavitud, entre otros) por medio de diferentes fuentes y comunicar lo aprendido.', ['Buscan información en textos e imágenes sobre mitología o ingeniería clásica.', 'Exponen oralmente o en afiches los resultados de su indagación.']]
+]);
+
+addUnidad('3° Básico', ASIG_HIST, 'Unidad 4', 'Derechos de los niños, deberes e instituciones en la vida en comunidad', [
+  ['OA 12', 'Formación Ciudadana', 'Complementario', 'Mostrar actitudes y realizar acciones concretas en su entorno cercano (familia, escuela y comunidad) que reflejen: el respeto al otro, la empatía, la tolerancia y la resolución pacífica de conflictos.', ['Aplican el diálogo para resolver desacuerdos entre compañeros.', 'Demuestran empatía ante las necesidades de otros miembros de la comunidad.']],
+  ['OA 13', 'Formación Ciudadana', 'Complementario', 'Mantener una conducta honesta en la vida cotidiana, en los juegos y en el trabajo escolar, hablando con la verdad, respetando las reglas de los juegos sin hacer trampa y reconociendo sus errores y sus acciones.', ['Reconocen la importancia de la honestidad y la confianza en la convivencia.', 'Cumplen acuerdos grupales con responsabilidad.']],
+  ['OA 15', 'Formación Ciudadana', 'Complementario', 'Investigar y comunicar sus resultados sobre algunas instituciones públicas y privadas (como JUNAEB, SERNAC, SII, Conaf, Fundación Integra, Hogar de Cristo, Bomberos, etc.), identificando el servicio que prestan en la comunidad y los diferentes trabajos que realizan las personas que se desempeñan en ellas.', ['Diferencian instituciones públicas y privadas de servicio social.', 'Explican cómo estas instituciones protegen derechos y apoyan a la comunidad.']],
+  ['OA 16', 'Formación Ciudadana', 'Basal', 'Participar responsable y activamente en su hogar y en su escuela, cumpliendo compromisos y responsabilidades adquiridos, opinando sobre temas de interés común y proponiendo iniciativas para mejorar la convivencia.', ['Participan en proyectos de curso asumiendo roles concretos.', 'Proponen ideas para mejorar la convivencia y el cuidado del entorno escolar.']]
+]);
+
+// ============================================================================
+// 4° BÁSICO - HISTORIA, GEOGRAFÍA Y CIENCIAS SOCIALES
+// ============================================================================
+addUnidad('4° Básico', ASIG_HIST, 'Unidad 1', 'Ubicación espacial, recursos naturales y paisajes de América', [
+  ['OA 06', 'Geografía', 'Complementario', 'Ubicar lugares en un mapa, utilizando coordenadas geográficas como referencia (paralelos y meridianos).', ['Determinan la latitud y longitud aproximada de lugares en un mapa.', 'Identifican la línea del Ecuador y el meridiano de Greenwich como referencias.']],
+  ['OA 07', 'Geografía', 'Complementario', 'Distinguir recursos naturales renovables y no renovables, reconocer el carácter limitado de los recursos naturales y la necesidad de cuidarlos, e identificar recursos presentes en objetos y bienes cotidianos.', ['Clasifican recursos naturales en renovables y no renovables.', 'Proponen medidas de reciclaje, reutilización y uso sustentable de recursos.']],
+  ['OA 08', 'Geografía', 'Basal', 'Describir distintos paisajes del continente americano, considerando climas, ríos, población, idiomas, países y grandes ciudades, entre otros, y utilizando vocabulario geográfico adecuado.', ['Identifican las regiones de América (Norte, Central y el Caribe, Sur) y sus principales relieves e hidrografía.', 'Comparan paisajes naturales y urbanos del continente americano.']],
+  ['OA 09', 'Geografía', 'Basal', 'Reconocer y ubicar los principales recursos naturales de América, considerando su distribución geográfica, su uso, y la importancia de cuidarlos en el marco de un desarrollo sostenible.', ['Localizan en mapas recursos agrícolas, ganaderos, mineros, forestales y pesqueros de América.', 'Explican la importancia del desarrollo sostenible para las futuras generaciones.']],
+  ['OA 10', 'Geografía', 'Complementario', 'Comparar, mediante la observación en imágenes, mapas y otras fuentes, paisajes de su región con paisajes de América, distinguiendo distintas formas de adaptación y transformación de la población a su ambiente natural.', ['Establecen semejanzas y diferencias entre el paisaje de su región y otros paisajes americanos.', 'Dan ejemplos de obras humanas de adaptación al medio geográfico.']]
+]);
+
+addUnidad('4° Básico', ASIG_HIST, 'Unidad 2', 'Las civilizaciones maya y azteca y su legado cultural', [
+  ['OA 01', 'Historia', 'Basal', 'Describir la civilización maya, considerando ubicación geográfica, organización política, actividades económicas, formas de cultivo y alimentos, organización de la sociedad, roles y oficios de hombres y mujeres, religión y ritos, desarrollo de la astronomía y la matemática, sistemas de escritura, guerras y sacrificios humanos, construcciones, costumbres y vida cotidiana, entre otros.', ['Ubican el área mesoamericana habitada por las ciudades-Estado mayas.', 'Describen el sistema de cultivo de tala y roza, el calendario maya y el uso del cero.']],
+  ['OA 02', 'Historia', 'Basal', 'Describir la civilización azteca, considerando ubicación geográfica, organización política y extensión, la ciudad de Tenochtitlán, formas de cultivo y alimentos, religión y ritos, avances tecnológicos, organización de la sociedad, roles y oficios de hombres y mujeres, construcciones, costumbres y vida cotidiana, entre otros.', ['Ubican el Imperio azteca y su capital Tenochtitlán en el lago Texcoco.', 'Explican el cultivo en chinampas, la sociedad jerárquica y la cosmovisión azteca.']],
+  ['OA 05', 'Historia', 'Complementario', 'Investigar en diversas fuentes (imágenes, medios audiovisuales, TICs, gráficos, textos y otras) sobre algunos temas relacionados con el presente de los pueblos indígenas americanos; por ejemplo, el protagonismo que tienen hoy, la influencia de las civilizaciones maya, azteca e inca sobre la cultura y la sociedad de los países actuales situados donde ellos se desarrollaron, y su influencia en las comidas y en la lengua que empleamos en la actualidad.', ['Reconocen palabras y alimentos de origen mesoamericano (maíz, cacao, tomate, palta).', 'Valoran la vigencia de los pueblos indígenas en América actual.']]
+]);
+
+addUnidad('4° Básico', ASIG_HIST, 'Unidad 3', 'La civilización inca y los pueblos originarios', [
+  ['OA 03', 'Historia', 'Basal', 'Describir la civilización inca, considerando ubicación geográfica, organización política, sistema de caminos y correos, religión y ritos, avances tecnológicos, organización de la sociedad, roles y oficios de hombres y mujeres, formas de cultivo y alimentos, construcciones, costumbres y vida cotidiana, entre otros.', ['Ubican el Tahuantinsuyo, su capital Cusco y su extensión hasta Chile central.', 'Explican el cultivo en terrazas, el Camino del Inca (Qhapaq Ñan), los chasquis y los quipus.']],
+  ['OA 04', 'Historia', 'Basal', 'Analizar y comparar las principales características de las civilizaciones americanas (Mayas, Aztecas e Incas).', ['Comparan la organización política (ciudades-Estado mayas vs. imperios azteca e inca).', 'Contrastan sus sistemas agrícolas (roza, chinampas, terrazas) y legados culturales.']]
+]);
+
+addUnidad('4° Básico', ASIG_HIST, 'Unidad 4', 'Organización política, derechos ciudadanos y participación en Chile', [
+  ['OA 11', 'Formación Ciudadana', 'Basal', 'Distinguir algunos actores de la organización política y democrática de Chile, como Presidente, ministros, senadores, diputados y alcaldes, considerando las instituciones en las que ejercen y cómo son nombrados o elegidos.', ['Identifican las funciones del Presidente de la República, parlamentarios y alcaldes.', 'Distinguen autoridades elegidas por votación popular de aquellas designadas.']],
+  ['OA 12', 'Formación Ciudadana', 'Basal', 'Reconocer sus principales derechos en situaciones de la vida cotidiana, como el derecho a la educación, a contar con alimentación, vivienda, recreo y servicios médicos adecuados, a expresarse, a ser protegido contra el abandono y la crueldad, y a no trabajar antes de la edad apropiada, y dar ejemplos de cómo se pueden ejercer y proteger esos derechos.', ['Reconocen situaciones en que se respetan o vulneran los derechos de la infancia.', 'Proponen acciones para promover el respeto de los derechos en la escuela.']],
+  ['OA 13', 'Formación Ciudadana', 'Complementario', 'Mantener una conducta honesta en la vida cotidiana, en los juegos y en el trabajo escolar, hablando con la verdad, respetando las reglas de los juegos sin hacer trampa y reconociendo sus errores y sus acciones.', ['Actúan con honestidad y responsabilidad en trabajos individuales y grupales.', 'Reconocen el valor de la confianza mutua en la comunidad escolar.']],
+  ['OA 14', 'Formación Ciudadana', 'Complementario', 'Demostrar respeto por todas las personas mediante acciones en su vida diaria, sin discriminar por condiciones físicas, sociales, económicas, étnicas o culturales.', ['Practican un trato inclusivo y libre de discriminación hacia todos sus compañeros.', 'Rechazan estereotipos y burlas en la convivencia diaria.']],
+  ['OA 15', 'Formación Ciudadana', 'Complementario', 'Participar en su comunidad, tomando parte en elecciones de la directiva del curso, asignando roles y funciones a cada cargo, y considerando la importancia de mantener una buena convivencia y una organización del curso que favorezca el trabajo escolar.', ['Participan democráticamente en la elección de representantes de curso.', 'Asumen compromisos en proyectos colaborativos para el bienestar común.']],
+  ['OA 16', 'Formación Ciudadana', 'Basal', 'Resolver conflictos, aplicando estrategias como determinar la causa del problema, proponer posibles soluciones, dialogar, buscar un punto de vista común y votar, entre otras, demostrando respeto y empatía por las partes involucradas para mejorar la convivencia en el curso y en la comunidad escolar.', ['Aplican pasos de mediación y diálogo pacífico frente a desacuerdos.', 'Escuchan los argumentos de las partes involucradas antes de tomar decisiones.']]
+]);
+
+// ============================================================================
+// 5° BÁSICO - HISTORIA, GEOGRAFÍA Y CIENCIAS SOCIALES
+// ============================================================================
+addUnidad('5° Básico', ASIG_HIST, 'Unidad 1', 'Las zonas naturales de Chile y sus recursos', [
+  ['OA 09', 'Geografía', 'Basal', 'Caracterizar las grandes zonas de Chile y sus paisajes (Norte Grande, Norte Chico, Zona Central, Zona Sur y Zona Austral), considerando ubicación, clima (temperatura y precipitaciones), relieve, hidrografía, población y recursos naturales, entre otros.', ['Ubican y delimitan las cinco grandes zonas naturales de Chile en mapas físicos.', 'Comparan el relieve (cordillera de los Andes, depresión intermedia, cordillera de la Costa, planicies litorales), clima y vegetación de cada zona.']],
+  ['OA 10', 'Geografía', 'Basal', 'Reconocer y ubicar en mapas recursos naturales significativos de Chile, como cobre, hierro, recursos marítimos y forestales, entre otros; diferenciar recursos renovables y no renovables y explicar la importancia de cuidarlos en el marco de un desarrollo sostenible.', ['Localizan los principales recursos mineros, silvoagropecuarios, pesqueros y energéticos de Chile.', 'Explican prácticas de explotación sustentable de los recursos naturales.']],
+  ['OA 11', 'Geografía', 'Complementario', 'Analizar y dar ejemplos de diversas maneras en las que el trabajo de las personas, sus ideas y proyectos potencian y dan valor a los recursos naturales (por ejemplo: tecnología de riego, elaboración de vinos, uso de madera en la construcción, nuevas formas de explotación sustentable).', ['Relacionan la innovación tecnológica con el aprovechamiento sustentable de recursos.', 'Analizan cadenas productivas regionales.']],
+  ['OA 12', 'Geografía', 'Basal', 'Investigar, describir y ubicar los riesgos naturales que afectan a su localidad, como sismos, maremotos, inundaciones, derrumbes y volcanismo, e identificar formas en que la comunidad puede protegerse (construcciones antisísmicas, medidas de seguridad y evacuación en el hogar, en la escuela y en los distintos espacios públicos, entre otros).', ['Identifican riesgos geológicos, hidrometeorológicos y biológicos presentes en Chile y su región.', 'Explican protocolos de prevención y evacuación ante emergencias naturales.']],
+  ['OA 16', 'Formación Ciudadana', 'Complementario', 'Demostrar actitudes cívicas con acciones en su vida diaria, como cuidar y valorar el patrimonio y el medioambiente.', ['Proponen medidas de ahorro energético e hídrico en el colegio y el hogar.', 'Valoran el patrimonio natural de las distintas zonas de Chile.']]
+]);
+
+addUnidad('5° Básico', ASIG_HIST, 'Unidad 2', 'Descubrimiento y conquista de América y de Chile', [
+  ['OA 01', 'Historia', 'Complementario', 'Explicar los viajes de descubrimiento de Cristóbal Colón, de Hernando de Magallanes y de algún otro explorador, considerando sus objetivos, las rutas recorridas, los avances tecnológicos que facilitaron la navegación, las dificultades y los desafíos que enfrentaron las tripulaciones y el contexto europeo general en que se desarrollaron.', ['Explican las motivaciones económicas y políticas de la expansión europea del siglo XV y XVI.', 'Trazan en mapas las rutas de Colón y Hernando de Magallanes.']],
+  ['OA 02', 'Historia', 'Basal', 'Describir el proceso de conquista de América y de Chile, incluyendo a los principales actores (Corona española, Iglesia católica y hombres y mujeres protagonistas, entre otros), algunas expediciones y conflictos bélicos, y la fundación de ciudades como expresión de la voluntad de los españoles de quedarse y expandirse, y reconocer en este proceso el surgimiento de una nueva sociedad.', ['Comparan las expediciones de Diego de Almagro y Pedro de Valdivia.', 'Explican la función política, militar y económica de la fundación de ciudades en Chile.']],
+  ['OA 03', 'Historia', 'Basal', 'Analizar el impacto y las consecuencias que tuvo el proceso de conquista para Europa y para América, considerando diversos ámbitos, como el demográfico, el cultural, el alimenticio y el económico.', ['Analizan la crisis demográfica indígena y sus causas (enfermedades, trabajo forzado, guerra).', 'Explican el intercambio de productos, plantas y animales entre Europa y América.']],
+  ['OA 04', 'Historia', 'Complementario', 'Investigar sobre los efectos de la conquista sobre los pueblos indígenas americanos, utilizando fuentes dadas por el docente.', ['Contrastan crónicas españolas y visiones indígenas sobre la conquista.', 'Comunican conclusiones fundamentadas en evidencia histórica.']]
+]);
+
+addUnidad('5° Básico', ASIG_HIST, 'Unidad 3', 'El período colonial en América y en Chile', [
+  ['OA 05', 'Historia', 'Complementario', 'Describir algunas dimensiones de la vida colonial en Chile, como organización de la sociedad y grupos sociales, oficios y actividades económicas, costumbres y vida cotidiana, arte y celebraciones.', ['Caracterizan la sociedad estamental y pigmentocrática de la Colonia (españoles, criollos, mestizos, indígenas, afrodescendientes).', 'Describen la vida cotidiana en las ciudades coloniales y en el campo.']],
+  ['OA 06', 'Historia', 'Basal', 'Explicar aspectos centrales de la Colonia, como la dependencia de las colonias americanas de la metrópoli, el rol de la Iglesia católica y el surgimiento de una sociedad mestiza.', ['Identifican las instituciones de administración colonial (Virreinato, Real Audiencia, Gobernación, Cabildo) y el monopolio comercial.', 'Explican el rol evangelizador, educativo y cultural de la Iglesia católica y el sincretismo cultural.']],
+  ['OA 07', 'Historia', 'Basal', 'Explicar y dar ejemplos de las distintas formas en las que españoles y mapuches se relacionaron en el período colonial, considerando resistencia mapuche y guerra de Arauco, mestizaje, formas de trabajo (como la encomienda y la esclavitud), evangelización, vida fronteriza y el sistema de parlamentos.', ['Distinguen las etapas de la Guerra de Arauco y la formación de la frontera en el río Biobío.', 'Explican la importancia de los Parlamentos y el comercio fronterizo colonial.']],
+  ['OA 08', 'Historia', 'Complementario', 'Reconocer y dar ejemplos de elementos del patrimonio colonial de Chile que siguen presentes hoy, como edificios, obras de arte, fiestas, costumbres, comidas y el trazado de las ciudades.', ['Identifican el plano damero y monumentos coloniales presentes en ciudades chilenas.', 'Reconocen tradiciones, comidas y expresiones lingüísticas heredadas de la Colonia.']]
+]);
+
+addUnidad('5° Básico', ASIG_HIST, 'Unidad 4', 'Derechos de las personas, el Estado y las actitudes cívicas', [
+  ['OA 13', 'Formación Ciudadana', 'Basal', 'Reconocer que todas las personas son sujetos de derecho, que deben ser respetados por los pares, la comunidad y el Estado, y que esos derechos no dependen de características individuales, como etnia, sexo, lugar de nacimiento u otras.', ['Fundamentan por qué los derechos humanos son universales, inalienables e iguales para todas las personas.', 'Analizan situaciones cotidianas e históricas desde la perspectiva de los derechos humanos.']],
+  ['OA 14', 'Formación Ciudadana', 'Basal', 'Reconocer que los derechos generan deberes y responsabilidades en las personas y en el Estado, lo que se manifiesta, por ejemplo, en que las personas deben respetar los derechos de los demás, todas las personas deben respetar las leyes, el Estado debe asegurar que las personas puedan ejercer sus derechos y el Estado debe asegurar los servicios públicos.', ['Relacionan cada derecho fundamental con los deberes que implica para los ciudadanos y el Estado.', 'Explican cómo el Estado garantiza derechos mediante políticas públicas y leyes.']],
+  ['OA 15', 'Formación Ciudadana', 'Complementario', 'Reconocer que hay logros y beneficios que dependen del esfuerzo, el mérito y el compromiso de cada persona (como las calificaciones, premios deportivos o artísticos, etc.) y otros que responden a derechos que deben ser asegurados para todos.', ['Distinguen entre derechos garantizados para todos y logros basados en el esfuerzo personal.', 'Valoran la perseverancia en el cumplimiento de metas escolares.']],
+  ['OA 17', 'Formación Ciudadana', 'Complementario', 'Informarse y opinar sobre temas relevantes y de su interés en el país y el mundo (política, medioambiente, deporte, arte y música, entre otros) por medio de periódicos y TICs.', ['Leen y comentan noticias de actualidad nacional e internacional.', 'Expresan opiniones fundamentadas respetando posturas diversas.']],
+  ['OA 18', 'Formación Ciudadana', 'Basal', 'Diseñar y participar en un proyecto que solucione un problema de la comunidad escolar, considerando temas como el apoyo a la convivencia, el reciclaje, el hermoseamiento del entorno o la solidaridad.', ['Identifican un problema de su curso o escuela y planifican un proyecto grupal para abordarlo.', 'Evalúan el cumplimiento de los objetivos y responsabilidades del proyecto.']]
+]);
+
+// ============================================================================
+// 6° BÁSICO - HISTORIA, GEOGRAFÍA Y CIENCIAS SOCIALES (OFICIAL MINEDUC)
+// ============================================================================
+addUnidad('6° Básico', ASIG_HIST, 'Unidad 1', 'Constitución y organización política de Chile', [
+  ['OA 15', 'Formación Ciudadana', 'Basal', 'Explicar algunos elementos fundamentales de la organización democrática de Chile, incluyendo: la división de poderes del Estado; la representación mediante cargos de elección popular (concejales, alcaldes, diputados, senadores y Presidente); la importancia de la participación ciudadana.', ['Explican las características de una república democrática y el principio de separación de los poderes del Estado (Ejecutivo, Legislativo y Judicial).', 'Identifican los cargos de elección popular (Presidente, senadores, diputados, alcaldes, concejales, gobernadores regionales) y sus funciones.', 'Argumentan sobre la importancia de la participación ciudadana en una sociedad democrática.']],
+  ['OA 16', 'Formación Ciudadana', 'Complementario', 'Reconocer que la Constitución Política de Chile establece la organización política del país y garantiza los derechos y las libertades de las personas, instaurando un sistema democrático.', ['Explican qué es la Constitución Política de la República y por qué es la ley fundamental del Estado.', 'Reconocen que la Constitución establece las atribuciones de los poderes públicos y resguarda los derechos fundamentales.']],
+  ['OA 17', 'Formación Ciudadana', 'Basal', 'Comprender que todas las personas tienen derechos que deben ser respetados por los pares, la comunidad y el Estado, lo que constituye la base para vivir en una sociedad justa, y dar como ejemplo algunos artículos de la Constitución y de la Declaración Universal de los Derechos Humanos.', ['Relacionan artículos de la Constitución Política de Chile y de la Declaración Universal de los Derechos Humanos con situaciones de la vida diaria.', 'Identifican mecanismos e instituciones que protegen los derechos de las personas cuando son vulnerados.']],
+  ['OA 18', 'Formación Ciudadana', 'Basal', 'Explicar que los derechos generan deberes y responsabilidades en las personas e instituciones, y lo importante que es cumplirlos para la convivencia social y el bien común.', ['Dan ejemplos de cómo el ejercicio de los derechos ciudadanos conlleva deberes hacia los demás y hacia la comunidad.', 'Explican la responsabilidad del Estado y de las instituciones en la promoción del bien común.']],
+  ['OA 19', 'Formación Ciudadana', 'Complementario', 'Proponer y fundamentar iniciativas para impulsar el cumplimiento de los derechos de las personas y aportar al desarrollo de una sociedad más justa.', ['Formulan propuestas concretas para promover el respeto de los derechos y la inclusión en su entorno escolar y local.', 'Fundamentan sus propuestas con argumentos basados en la dignidad humana y el bien común.']],
+  ['OA 20', 'Formación Ciudadana', 'Complementario', 'Demostrar actitudes cívicas con acciones en su vida diaria, como actuar con honestidad y responsabilidad, respetar a todas las personas y contribuir a la buena convivencia.', ['Practican el diálogo respetuoso, la tolerancia y la empatía en debates y trabajos de aula.', 'Respetan normas de convivencia democrática en el establecimiento.']],
+  ['OA 21', 'Formación Ciudadana', 'Complementario', 'Trabajar en equipo de manera efectiva para llevar a cabo una investigación u otro proyecto, asignando y asumiendo roles y cumpliendo las responsabilidades asignadas.', ['Planifican tareas colaborativas distribuyendo roles equitativamente.', 'Cumplen los plazos y compromisos asumidos con su equipo de trabajo.']],
+  ['OA 22', 'Formación Ciudadana', 'Complementario', 'Participar en su comunidad, tomando parte en elecciones de la directiva del curso, evaluando las propuestas de los candidatos y diseñando proyectos grupales.', ['Participan informadamente en votaciones estudiantiles evaluando propuestas.', 'Colaboran en iniciativas de mejora para su curso y comunidad escolar.']]
+]);
+
+addUnidad('6° Básico', ASIG_HIST, 'Unidad 2', 'El proceso de independencia de Chile y la construcción de la nación', [
+  ['OA 01', 'Historia', 'Complementario', 'Explicar los múltiples antecedentes de la independencia de las colonias americanas y reconocer que la independencia de Chile se enmarca en un proceso continental.', ['Distinguen antecedentes externos (Ilustración, Independencia de EE. UU., Revolución Francesa, invasión napoleónica a España) e internos (descontento criollo, reformas borbónicas).', 'Relacionan el proceso independentista chileno con los movimientos emancipadores del resto de Hispanoamérica.']],
+  ['OA 02', 'Historia', 'Basal', 'Explicar el desarrollo del proceso de independencia de Chile, considerando actores y bandos que se enfrentaron, hombres y mujeres destacados, avances y retrocesos de la causa patriota y algunos acontecimientos significativos, como la celebración del cabildo abierto de 1810 y la formación de la Primera Junta Nacional de Gobierno, la elección del primer Congreso Nacional, las batallas de Rancagua, Chacabuco y Maipú, y la Declaración de la Independencia, entre otros.', ['Secuencian las etapas de la Independencia de Chile (Patria Vieja, Reconquista y Patria Nueva) y sus hitos fundamentales.', 'Caracterizan los bandos patriota y realista y el aporte de figuras como Bernardo O\'Higgins, José Miguel Carrera, Manuel Rodríguez, Javiera Carrera y Paula Jaraquemada.']],
+  ['OA 03', 'Historia', 'Complementario', 'Describir algunos hitos y procesos de la organización de la república, incluyendo las dificultades y los desafíos que implicó organizar en Chile una nueva forma de gobierno, el surgimiento de grupos con diferentes ideas políticas (conservadores y liberales), las características de la Constitución de 1833 y el impacto de las reformas realizadas por los liberales en la segunda mitad del siglo XIX.', ['Comparan los proyectos políticos de pipiolos/liberales y pelucones/conservadores durante las décadas de 1820 y 1830.', 'Identifican los principios autoritarios y presidencialistas de la Constitución de 1833 y las posteriores reformas liberales y secularizadoras.']],
+  ['OA 04', 'Historia', 'Basal', 'Investigar sobre algunos aspectos culturales del siglo XIX, como los avances en educación y la fundación de instituciones, el aporte de intelectuales y científicos nacionales y extranjeros, las primeras mujeres en obtener títulos universitarios y el impacto en la sociedad de la llegada del ferrocarril y de otros avances tecnológicos.', ['Reconocen la fundación de la Universidad de Chile, la Escuela Normal de Preceptores y la Ley de Instrucción Primaria.', 'Explican el aporte de científicos e intelectuales (Claudio Gay, Andrés Bello, Ignacio Domeyko) y de pioneras como Eloísa Díaz y Ernestina Pérez.', 'Analizan el impacto del ferrocarril, el telégrafo y el alumbrado en la modernización del país.']],
+  ['OA 05', 'Historia', 'Complementario', 'Describir cómo se conformó el territorio de Chile durante el siglo XIX, considerando colonizaciones europeas, la incorporación de Isla de Pascua, la ocupación de la Araucanía, la Guerra del Pacífico y diversos conflictos bélicos, entre otros factores.', ['Ubican en mapas los cambios territoriales de Chile durante el siglo XIX (soberanía en Magallanes, colonización de Llanquihue, Guerra del Pacífico, incorporación de Rapa Nui y Ocupación de la Araucanía).', 'Analizan las consecuencias económicas, sociales y humanas de la expansión territorial para el Estado y los pueblos indígenas.']]
+]);
+
+addUnidad('6° Básico', ASIG_HIST, 'Unidad 3', 'Historia de Chile: época del salitre y grandes transformaciones del siglo XX', [
+  ['OA 06', 'Historia', 'Complementario', 'Caracterizar los principales aspectos que definieron el período de riqueza aportada por la explotación del salitre, considerando la expansión económica y el inicio de la "cuestión social".', ['Explican la importancia de los ingresos del salitre para la inversión en obras públicas, educación y crecimiento urbano.', 'Describen las condiciones de vida y trabajo de los obreros en las oficinas salitreras y ciudades, y el surgimiento de mutuales, mancomunales y sindicatos.']],
+  ['OA 07', 'Historia', 'Basal', 'Explicar y dar ejemplos de las progresivas democratizaciones de la sociedad durante el siglo XX, considerando el creciente acceso al voto, la participación de la mujer en la vida pública y el acceso a la educación y a la cultura.', ['Explican la ampliación del sufragio en el siglo XX (voto femenino en 1934 y 1949, voto de no videntes, analfabetos y mayores de 18 años).', 'Describen la incorporación de las clases medias y sectores populares a la educación, la cultura de masas y la política.']],
+  ['OA 08', 'Historia', 'Basal', 'Comparar diferentes visiones sobre el quiebre de la democracia en Chile, el régimen o dictadura militar y el proceso de recuperación de la democracia a fines del siglo XX, considerando los distintos actores, experiencias y puntos de vista, y el consenso actual con respecto al valor de la democracia y los derechos humanos.', ['Contrastan diversas fuentes e interpretaciones sobre las causas del golpe de Estado de 1973.', 'Analizan las características de la dictadura militar, las violaciones a los derechos humanos y las transformaciones económicas.', 'Explican el proceso de retorno a la democracia a partir del plebiscito de 1988 y el valor irrestricto de los derechos humanos.']],
+  ['OA 09', 'Historia', 'Complementario', 'Explicar y dar ejemplos de aspectos que se mantienen y aspectos que han cambiado o se han desarrollado en la sociedad chilena a lo largo de su historia.', ['Identifican elementos de continuidad y cambio en la vida cotidiana, la tecnología, la demografía y la organización política de Chile entre los siglos XIX y XXI.']]
+]);
+
+addUnidad('6° Básico', ASIG_HIST, 'Unidad 4', 'Geografía de Chile: regiones político-administrativas, ambientes naturales y desarrollo sustentable', [
+  ['OA 10', 'Geografía', 'Complementario', 'Identificar elementos constitutivos del territorio nacional, considerando la localización de Chile en el mundo y su carácter tricontinental.', ['Ubican en mapas los espacios terrestre, marítimo y aéreo que conforman el territorio chileno en América, Antártica y Oceanía.', 'Explican las ventajas y desafíos de la tricontinentalidad y la forma longitudinal de Chile.']],
+  ['OA 11', 'Geografía', 'Complementario', 'Caracterizar geográficamente las regiones político-administrativas del país, destacando los rasgos físicos (como clima, relieve, hidrografía y vegetación) y humanos (como volumen y distribución de la población y actividades económicas) que les dan unidad.', ['Identifican las 16 regiones político-administrativas de Chile y sus respectivas capitales.', 'Comparan la distribución de la población y las actividades productivas predominantes entre distintas regiones.']],
+  ['OA 12', 'Geografía', 'Basal', 'Comparar diversos ambientes naturales en Chile (desértico, altiplánico, costero, mediterráneo, andino, frío y lluvioso, patagónico y polar), considerando como criterios las oportunidades y las dificultades que presentan para el desarrollo de las actividades humanas.', ['Localizan y caracterizan los ocho ambientes naturales de Chile según clima, relieve y disponibilidad hídrica.', 'Analizan las oportunidades y desafíos de cada ambiente natural para el asentamiento humano y el desarrollo sustentable.']],
+  ['OA 13', 'Geografía', 'Complementario', 'Explicar las principales características físicas, humanas y económicas de su región y de su localidad.', ['Describen el relieve, clima, demografía y principales actividades económicas de su propia región.', 'Valoran el patrimonio natural y cultural de su entorno regional.']],
+  ['OA 14', 'Geografía', 'Complementario', 'Explicar cómo han influido los desastres socioambientales en el desarrollo de Chile durante su historia reciente, dando ejemplos de nivel local y nacional (como sismos, tsunamis, aluviones, sequías e incendios forestales).', ['Analizan el impacto social, económico y territorial de grandes catástrofes naturales en la historia reciente de Chile.', 'Proponen medidas de prevención, mitigación y responsabilidad ciudadana frente a riesgos socioambientales.']]
+]);
+
+// ============================================================================
+// 7° BÁSICO - HISTORIA, GEOGRAFÍA Y CIENCIAS SOCIALES
+// ============================================================================
+addUnidad('7° Básico', ASIG_HIST, 'Unidad 1', 'Complejización de las primeras sociedades: de la hominización al surgimiento de las civilizaciones', [
+  ['OA 01', 'Historia', 'Complementario', 'Explicar el proceso de hominización, reconociendo las principales etapas de la evolución de la especie humana, la influencia de factores geográficos, su dispersión en el planeta y las distintas teorías del poblamiento americano.', ['Describen los hitos evolutivos, biológicos y culturales del proceso de hominización.', 'Comparan las rutas y teorías del poblamiento del continente americano.']],
+  ['OA 02', 'Historia', 'Basal', 'Explicar que el surgimiento de la agricultura, la domesticación de animales, la sedentarización, la acumulación de bienes y el desarrollo del comercio, fueron procesos de larga duración que revolucionaron la forma en que los seres humanos se relacionaron con el espacio geográfico.', ['Contrastan las sociedades paleolíticas cazadoras-recolectoras con las sociedades neolíticas agroalfareras.', 'Explican cómo la revolución del Neolítico transformó el entorno natural y la organización social.']],
+  ['OA 03', 'Historia', 'Basal', 'Explicar que en las primeras civilizaciones la formación de Estados organizados y el ejercicio del poder estuvieron marcados por la centralización de la administración, la organización en torno a ciudades, la estratificación social, la formación de sistemas religiosos y el desarrollo de técnicas de contabilidad y escritura.', ['Ubican las primeras civilizaciones prístinas (Mesopotamia, Egipto, India, China, Olmeca y Chavín).', 'Analizan la relación entre poder político teocrático, excedentes agrícolas, escritura y jerarquía social.']],
+  ['OA 21', 'Geografía', 'Basal', 'Reconocer procesos de adaptación y transformación que se derivan de la relación entre el ser humano y el medio, e identificar factores que inciden en el asentamiento de las sociedades humanas.', ['Explican cómo el control hidráulico de grandes ríos permitió el desarrollo de civilizaciones fluviales.', 'Evalúan impactos ambientales de la acción humana en perspectiva histórica.']]
+]);
+
+addUnidad('7° Básico', ASIG_HIST, 'Unidad 2', 'La Antigüedad clásica y el legado grecorromano', [
+  ['OA 04', 'Historia', 'Complementario', 'Caracterizar el mar Mediterráneo como ecúmene y como espacio de circulación e intercambio, e inferir cómo sus características geográficas influyeron en el desarrollo de la ciudad-Estado griega y en la expansión de la república romana.', ['Explican el concepto de ecúmene mediterránea y su rol articulador entre Europa, Asia y África.', 'Relacionan la geografía de los Balcanes y la península Itálica con el desarrollo griego y romano.']],
+  ['OA 05', 'Historia', 'Basal', 'Analizar cómo el desarrollo de espacios de participación ciudadana en la Atenas clásica y en la Roma republicana aportó a la configuración del ideario democrático y republicano del mundo occidental.', ['Comparan la democracia directa ateniense (Ekklesía, Bulé, magistrados) con la República romana (Senado, comicios, magistraturas).', 'Identifican quiénes eran considerados ciudadanos y quiénes quedaban excluidos (mujeres, extranjeros, esclavos).']],
+  ['OA 06', 'Historia', 'Basal', 'Analizar las principales características de la democracia en Atenas, considerando el contraste con otras formas de gobierno del mundo antiguo, y su importancia para el desarrollo de la vida política actual y el reconocimiento de los derechos de los ciudadanos.', ['Contrastan la ciudadanía ateniense con la democracia representativa e inclusiva contemporánea.', 'Valoran la isonomía y la participación cívica como herencias clásicas.']],
+  ['OA 07', 'Historia', 'Complementario', 'Relacionar las principales características de la civilización romana (derecho, organización burocrática y militar, infraestructura, esclavitud, entre otros) con la extensión territorial de su Imperio, la relación con los pueblos conquistados, el proceso de romanización y la difusión del cristianismo.', ['Explican los factores de expansión, romanización y posterior crisis del Imperio romano de Occidente.', 'Reconocen el surgimiento y difusión del cristianismo en el mundo mediterráneo.']],
+  ['OA 08', 'Historia', 'Complementario', 'Analizar, apoyándose en diversas fuentes, la centralidad del ser humano y su capacidad de transformar el mundo en las expresiones culturales de la Antigüedad clásica y su vigencia actual.', ['Identifican el canon clásico en la filosofía, el arte, la literatura y la ciencia grecorromana.']]
+]);
+
+addUnidad('7° Básico', ASIG_HIST, 'Unidad 3', 'La Edad Media y el nacimiento de la civilización europea', [
+  ['OA 09', 'Historia', 'Basal', 'Explicar que la civilización europea se conforma a partir de la fragmentación de la unidad imperial de Occidente y la confluencia de las tradiciones grecorromana, judeocristiana y germana, e identificar a la Iglesia Católica como el elemento que articuló esta síntesis y que legitimó el poder político.', ['Explican la síntesis cultural entre los mundos grecorromano, judeocristiano y germano en la temprana Edad Media.', 'Analizan el rol unificador político, cultural y espiritual de la Iglesia católica medieval.']],
+  ['OA 10', 'Historia', 'Complementario', 'Caracterizar algunos rasgos distintivos de la sociedad medieval, como la visión cristiana del mundo, el orden estamental, las relaciones de fidelidad y vasallaje, la importancia de la tierra y las actividades agrícolas, y la vida en el castillo y en el monasterio.', ['Explican el funcionamiento del sistema feudal, el vasallaje y la economía señorial.', 'Describen los tres estamentos medievales (nobleza, clero y campesinado).']],
+  ['OA 11', 'Historia', 'Complementario', 'Analizar ejemplos de relaciones de influencia, convivencia y conflicto entre el mundo europeo, el bizantino y el islámico durante la Edad Media, considerando la división del cristianismo y las relaciones de frontera entre cristianos y musulmanes en la península ibérica y en las Cruzadas.', ['Comparan las civilizaciones cristiana occidental, bizantina e islámica en torno al Mediterráneo.', 'Reconocen los intercambios científicos, comerciales y culturales entre Oriente y Occidente.']],
+  ['OA 12', 'Historia', 'Basal', 'Analizar las transformaciones que se producen en Europa a partir del siglo XII, considerando el renacimiento de la vida urbana, los cambios demográficos, las innovaciones tecnológicas, el desarrollo del comercio y el surgimiento de las universidades.', ['Explican el resurgimiento urbano y comercial de la Baja Edad Media, el rol de la burguesía, los gremios y las universidades.', 'Identifican los factores que marcan la transición hacia la Edad Moderna.']]
+]);
+
+addUnidad('7° Básico', ASIG_HIST, 'Unidad 4', 'Civilizaciones de América y configuración de la ciudadanía', [
+  ['OA 13', 'Historia', 'Complementario', 'Identificar las principales características de las civilizaciones maya y azteca, considerando las tecnologías utilizadas para transformar el territorio que habitaban (obras hidráulicas, chinampas, terrazas) y el desarrollo de una red comercial que vinculaba al área mesoamericana.', ['Analizan el manejo territorial y las redes de comercio e tributación en Mesoamérica.', 'Describen la cosmovisión y avances astronómicos de mayas y aztecas.']],
+  ['OA 14', 'Historia', 'Complementario', 'Caracterizar el Imperio inca, y analizar los factores que posibilitaron la dominación y unidad del Tahuantinsuyo (como el sistema de reciprocidad y redistribución, la red vial, la administración y el uso de los pisos ecológicos).', ['Explican el control vertical de pisos ecológicos, la mita, el ayllu y los principios de reciprocidad y redistribución incaica.']],
+  ['OA 16', 'Formación Ciudadana', 'Basal', 'Reconocer en expresiones culturales americanas del presente la confluencia del legado de múltiples civilizaciones como la maya, azteca, inca y europea.', ['Identifican elementos del sincretismo y legado indígena y europeo en la identidad latinoamericana actual.']],
+  ['OA 18', 'Formación Ciudadana', 'Basal', 'Comparar los conceptos de ciudadanía, democracia, derecho, república, municipio y gremio del mundo clásico y medieval, con la sociedad contemporánea.', ['Contrastan las nociones antiguas y medievales de ciudadanía y derecho con la democracia constitucional contemporánea.']],
+  ['OA 23', 'Geografía', 'Basal', 'Investigar sobre problemáticas medioambientales relacionadas con fenómenos como el calentamiento global, los recursos energéticos, la sobrepoblación y la desertificación, y analizar su impacto a nivel local.', ['Analizan causas y efectos del cambio climático y la presión antrópica sobre los ecosistemas.', 'Proponen acciones locales de sustentabilidad ambiental.']]
+]);
+
+// ============================================================================
+// 8° BÁSICO - HISTORIA, GEOGRAFÍA Y CIENCIAS SOCIALES
+// ============================================================================
+addUnidad('8° Básico', ASIG_HIST, 'Unidad 1', 'Los inicios de la modernidad: humanismo, Reforma y el choque de dos mundos', [
+  ['OA 01', 'Historia', 'Basal', 'Analizar, apoyándose en diversas fuentes, la centralidad del ser humano y su capacidad de transformar el mundo en las expresiones culturales del Humanismo y del Renacimiento.', ['Explican el paso del teocentrismo medieval al antropocentrismo humanista y renacentista.', 'Analizan obras artísticas, literarias y científicas del Renacimiento y la importancia de la imprenta.']],
+  ['OA 02', 'Historia', 'Basal', 'Comparar la sociedad medieval y moderna, considerando los cambios que implicó la ruptura de la unidad religiosa de Europa, el surgimiento del Estado centralizado, el impacto de la imprenta en la difusión del conocimiento y de las ideas, la revolución científica y el nacimiento de la ciencia moderna.', ['Explican las causas y consecuencias de la Reforma protestante y la Contrarreforma católica.', 'Caracterizan la formación de las monarquías absolutas, el mercantilismo y el método científico moderno.']],
+  ['OA 03', 'Historia', 'Basal', 'Caracterizar el Estado moderno considerando sus principales rasgos, como la concentración del poder en la figura del rey, el desarrollo de la burocracia y de un sistema fiscal centralizado, la expansión del territorio, la creación de ejércitos profesionales y el monopolio del comercio internacional, y contrastar con la fragmentación del poder que caracterizó a la Edad Media.', ['Contrastan la fragmentación feudal con la centralización administrativa, militar y fiscal del Estado moderno.', 'Explican los principios del mercantilismo y la acumulación de metales preciosos.']],
+  ['OA 05', 'Historia', 'Complementario', 'Argumentar por qué la llegada de los europeos a América implicó un enfrentamiento de culturas, considerando aspectos como la profundidad de las diferencias culturales, la magnitud del escenario natural americano, y la desarticulación de la cosmovisión indígena.', ['Analizan el impacto demográfico, cultural y espiritual de la conquista europea sobre las sociedades americanas.']]
+]);
+
+addUnidad('8° Básico', ASIG_HIST, 'Unidad 2', 'Formación de la sociedad americana y de los principales rasgos del Chile colonial', [
+  ['OA 07', 'Historia', 'Complementario', 'Analizar y evaluar el impacto de la conquista de América en la cultura europea, considerando la ampliación del mundo conocido, el desafío de representar una nueva realidad y los debates morales relacionados con la condición humana de los indígenas.', ['Explican las controversias de Valladolid (Las Casas vs. Sepúlveda) y las Leyes Nuevas sobre el trato a los indígenas.']],
+  ['OA 10', 'Historia', 'Complementario', 'Explicar la importancia de los mercados americanos en el comercio atlántico de los siglos XVII y XVIII, considerando el monopolio comercial, las flotas y galeones, el contrabando y las rutas comerciales.', ['Describen el sistema de flotas y galeones, la economía extractiva colonial y el rol de la hacienda en Chile.']],
+  ['OA 11', 'Historia', 'Basal', 'Analizar el proceso de formación de la sociedad colonial americana considerando elementos como la evangelización, la esclavitud y otras formas de trabajo no remunerado (por ejemplo, encomienda y mita), los roles de género, la transculturación, el mestizaje, la sociedad de castas y las relaciones de frontera.', ['Explican el funcionamiento de la encomienda, la mita y la esclavitud afrodescendiente.', 'Analizan la sociedad de castas, el mestizaje, el sincretismo religioso y la vida fronteriza en la Araucanía.']],
+  ['OA 12', 'Historia', 'Complementario', 'Analizar la importancia del cabildo, la ciudad colonial y la hacienda en la configuración del territorio y la sociedad chilena.', ['Explican el rol de la hacienda en la configuración social y económica del Valle Central de Chile.']]
+]);
+
+addUnidad('8° Básico', ASIG_HIST, 'Unidad 3', 'Nuevos principios que configuran el mundo occidental: Ilustración, revolución e independencia', [
+  ['OA 14', 'Historia', 'Basal', 'Caracterizar la Ilustración como corriente de pensamiento basada en la razón, considerando sus principales ideas tales como el ordenamiento constitucional, la separación y el equilibrio de poderes del Estado, los principios de libertad, igualdad y soberanía popular y la secularización, y fundamentar su rol en la crítica al absolutismo y en la promoción del ideario republicano.', ['Identifican los postulados políticos de Montesquieu, Rousseau y Voltaire en su crítica al Antiguo Régimen.', 'Relacionan las ideas ilustradas con los fundamentos del constitucionalismo y la democracia actual.']],
+  ['OA 15', 'Historia', 'Complementario', 'Analizar cómo las ideas ilustradas se manifestaron en los procesos revolucionarios de fines del siglo XVIII y comienzos del siglo XIX, considerando la independencia de Estados Unidos, la Revolución Francesa y las independencias de las colonias españolas en Latinoamérica.', ['Comparan la Independencia de Estados Unidos y la Revolución Francesa como procesos fundacionales del mundo contemporáneo.', 'Evalúan el alcance de la Declaración de los Derechos del Hombre y del Ciudadano.']],
+  ['OA 16', 'Historia', 'Basal', 'Explicar la independencia de las colonias hispanoamericanas como un proceso continental, marcado por la crisis del sistema colonial, la apropiación de las ideas ilustradas y la opción por el modelo republicano, y analizar en este marco el proceso de Independencia de Chile.', ['Explican la multicausalidad de la independencia hispanoamericana y chilena.', 'Analizan cómo las nuevas repúblicas adoptaron la soberanía popular y el constitucionalismo.']],
+  ['OA 18', 'Formación Ciudadana', 'Basal', 'Explicar el concepto de Derechos del Hombre y del Ciudadano difundido en el marco de la Ilustración y la Revolución francesa, y reconocer su vigencia actual en los derechos humanos.', ['Comparan las declaraciones de derechos del siglo XVIII con los Derechos Humanos universales vigentes hoy.']]
+]);
+
+addUnidad('8° Básico', ASIG_HIST, 'Unidad 4', 'Sociedad y territorio: la región en Chile y en América', [
+  ['OA 20', 'Geografía', 'Complementario', 'Explicar los criterios que definen a una región, considerando factores físicos y humanos que la constituyen (como vegetación, suelo, clima, lengua común, religión, historia, actividades económicas, etc.) y dar ejemplos de distintos tipos de regiones en América y en Chile.', ['Distinguen regiones naturales, culturales, económicas y político-administrativas.', 'Analizan el proceso de regionalización en Chile.']],
+  ['OA 21', 'Geografía', 'Complementario', 'Analizar y evaluar problemáticas asociadas a la región en Chile -como los grados de conexión y de aislamiento, el centralismo y las demandas de autonomía, la desigualdad en el desarrollo económico y social- a partir del análisis de indicadores demográficos y económicos.', ['Interpretan indicadores socioeconómicos regionales y debaten sobre descentralización y equidad territorial.']],
+  ['OA 22', 'Geografía', 'Basal', 'Aplicar el concepto de desarrollo para analizar diversos aspectos de las regiones en Chile, considerando el índice de desarrollo humano, la diversidad productiva, de intercambio y de consumo, las ventajas comparativas, la inserción en los mercados internacionales, y el desarrollo sustentable.', ['Analizan el desarrollo regional chileno integrando crecimiento económico, equidad social y sustentabilidad ambiental.', 'Evalúan ventajas comparativas y desafíos socioambientales de las regiones de Chile.']]
+]);
+
+// ============================================================================
+// I° MEDIO - HISTORIA, GEOGRAFÍA Y CIENCIAS SOCIALES
+// ============================================================================
+addUnidad('I° Medio', ASIG_HIST, 'Unidad 1', 'Construcción de Estados naciones en Europa, América y Chile y los desafíos de su consolidación', [
+  ['OA 01', 'Historia', 'Basal', 'Explicar las ideas republicanas y liberales y su relación con las transformaciones políticas y económicas de América y de Europa durante el siglo XIX, considerando el parlamentarismo, el constitucionalismo, el movimiento abolicionista, el libre comercio, la ampliación de la ciudadanía y el reconocimiento de los derechos individuales.', ['Explican los principios políticos y económicos del liberalismo decimonónico.', 'Relacionan las oleadas revolucionarias de 1820, 1830 y 1848 y el surgimiento de los Estados nacionales en Europa y América.']],
+  ['OA 02', 'Historia', 'Complementario', 'Caracterizar la cultura burguesa, su ideal de vida y su protagonismo en las transformaciones políticas, sociales y económicas del siglo XIX.', ['Describen los valores, costumbres y rol económico-político de la burguesía en el siglo XIX.']],
+  ['OA 03', 'Historia', 'Complementario', 'Analizar cómo durante el siglo XIX la geografía política de América Latina y de Europa se reorganizó con el surgimiento del Estado nación, caracterizado por la unificación de territorios y de tradiciones culturales (por ejemplo, lengua e historia) según el principio de soberanía y el sentido de pertenencia a una comunidad política.', ['Analizan los procesos de unificación de Italia y Alemania y los desafíos de formación de los Estados nacionales latinoamericanos.']],
+  ['OA 08', 'Historia', 'Basal', 'Analizar el período de formación de la República de Chile como un proceso que implicó el enfrentamiento de distintas visiones sobre el modo de organizar al país, y examinar los factores que explican la relativa estabilidad política alcanzada a partir de la Constitución de 1833.', ['Contrastan los ensayos constitucionales de la década de 1820 (moralista, federal y liberal) con el orden conservador portaliano.', 'Analizan las disposiciones e instituciones de la Constitución de 1833.']],
+  ['OA 09', 'Historia', 'Complementario', 'Caracterizar la consolidación de la República en Chile, considerando la defensa del territorio nacional, la creación de símbolos nacionales, el desarrollo educacional y cultural (Universidad de Chile, Generación de 1842) y la inserción en la economía mundial.', ['Explican el rol del Estado docente, la Generación de 1842 y los ciclos exportadores de trigo, plata y cobre en el siglo XIX.']]
+]);
+
+addUnidad('I° Medio', ASIG_HIST, 'Unidad 2', 'Progreso, industrialización y crisis: conformación e impactos del nuevo orden contemporáneo en Chile y el mundo', [
+  ['OA 04', 'Historia', 'Complementario', 'Reconocer que el siglo XIX latinoamericano y europeo está marcado por la idea de progreso indefinido, que se manifestó en aspectos como el desarrollo científico y tecnológico, el dominio de la naturaleza, el positivismo y el optimismo histórico, entre otros.', ['Explican la fe decimonónica en el progreso indefinido, la ciencia y el positivismo.']],
+  ['OA 05', 'Historia', 'Basal', 'Caracterizar el proceso de industrialización y analizar sus efectos sobre la economía, la población y el territorio, considerando la expansión del trabajo asalariado, las transformaciones en los modos de producción, el surgimiento del proletariado y la consolidación de la burguesía, el desarrollo de la ciudad contemporánea (por ejemplo, expansión urbana, explosión demográfica, marginalidad) y la revolución del transporte y de las comunicaciones.', ['Distinguen las fases de la Primera y Segunda Revolución Industrial y sus fuentes de energía.', 'Analizan las transformaciones sociales (proletariado, urbanización, cuestión social) e impactos medioambientales de la industrialización.']],
+  ['OA 06', 'Historia', 'Complementario', 'Analizar el imperialismo europeo del siglo XIX, considerando su relación con las transformaciones económicas del capitalismo, el reparto de África y Asia y el impacto del dominio colonial en los pueblos sometidos.', ['Explican las causas económicas, políticas e ideológicas del imperialismo colonial europeo y el reparto de África.']],
+  ['OA 07', 'Historia', 'Basal', 'Analizar el impacto de la Primera Guerra Mundial en la sociedad civil, considerando la movilización de la población, el ingreso masivo de la mujer al mundo laboral, el uso de la propaganda y los cambios geopolíticos e ideológicos en Europa y el mundo.', ['Explican las causas de la Primera Guerra Mundial, la guerra de trincheras y la Revolución Rusa de 1917.', 'Evalúan las consecuencias demográficas, geopolíticas (Tratado de Versalles) y el nuevo rol social de las mujeres.']]
+]);
+
+addUnidad('I° Medio', ASIG_HIST, 'Unidad 3', 'La configuración del territorio chileno y sus proyecciones desde el siglo XIX', [
+  ['OA 10', 'Historia', 'Basal', 'Explicar que Chile durante el siglo XIX se insertó en los procesos de industrialización del mundo atlántico y en los mercados internacionales mediante la explotación y exportación de recursos naturales, reconociendo la persistencia de una economía tradicional y rural basada en la hacienda y el inquilinaje.', ['Analizan el modelo primario-exportador chileno del siglo XIX y su vinculación con el capitalismo industrial europeo.', 'Describen la permanencia de la hacienda y el inquilinaje en el mundo rural.']],
+  ['OA 12', 'Historia', 'Complementario', 'Describir los procesos de exploración y reconocimiento del territorio que impulsó el Estado para caracterizar su población, desarrollar sus recursos, organizar su administración y delimitar sus fronteras, entre ellos, las misiones científicas, los censos, la colonización de Llanquihue y la incorporación de la Isla de Pascua.', ['Ubican las transformaciones territoriales del Estado chileno en el siglo XIX.']],
+  ['OA 13', 'Historia', 'Complementario', 'Describir el proceso de ocupación de la Araucanía, considerando el discurso civilizatorio del Estado, las estrategias militares y políticas implementadas, la radicación en reducciones y el impacto sobre la sociedad mapuche.', ['Analizan críticamente las causas, mecanismos y consecuencias históricas de la Ocupación de la Araucanía para el pueblo mapuche y el Estado chileno.']],
+  ['OA 14', 'Historia', 'Complementario', 'Explicar que la Guerra del Pacífico fue un conflicto que involucró factores económicos, geopolíticos y diplomáticos, y evaluar sus consecuencias territoriales, económicas y sociales para Chile, Perú y Bolivia.', ['Explican los antecedentes, desarrollo y consecuencias limítrofes y económicas de la Guerra del Pacífico.']]
+]);
+
+addUnidad('I° Medio', ASIG_HIST, 'Unidad 4', 'Componentes económicos y financieros de la vida en sociedad y la cuestión social en el cambio de siglo', [
+  ['OA 16', 'Historia', 'Complementario', 'Analizar el período parlamentario en Chile, considerando el predominio del Congreso sobre el Ejecutivo, las prácticas políticas de la oligarquía, la riqueza del salitre y las celebraciones del Centenario.', ['Caracterizan el régimen parlamentario chileno (1891-1925), el ciclo del salitre y los debates del Centenario de 1910.']],
+  ['OA 18', 'Historia', 'Basal', 'Analizar las principales transformaciones de la sociedad en el cambio de siglo, considerando los factores que originaron la cuestión social y sus características, la emergencia de nuevas demandas de los sectores populares y las nuevas formas de lucha obrera, la discusión de ideas en torno al problema social y las primeras leyes sociales.', ['Describen las condiciones laborales y habitacionales del proletariado urbano y minero (conventillos, fichas salitreras, trabajo infantil).', 'Comparan las propuestas frente a la cuestión social (liberal, socialcristiana, socialista y anarquista) y el movimiento obrero.']],
+  ['OA 19', 'Formación Ciudadana', 'Complementario', 'Explicar el problema económico de la escasez y las necesidades ilimitadas con ejemplos de la vida cotidiana, y de las relaciones económicas (por ejemplo, compra y venta de bienes y servicios, pago de remuneraciones y de impuestos, importaciones-exportaciones) que se dan entre los distintos agentes (personas, familias, empresas, Estado y el resto del mundo).', ['Explican el flujo circular de la economía y la relación entre escasez, necesidades y toma de decisiones económicas.']],
+  ['OA 20', 'Formación Ciudadana', 'Basal', 'Explicar el funcionamiento del mercado (cómo se determinan los precios y la relación entre oferta y demanda) y los factores que pueden alterarlo: por ejemplo, el monopolio, la colusión, la inflación y la deflación, la fijación de precios y de aranceles, entre otros.', ['Interpretan el mecanismo de oferta y demanda en la fijación de precios.', 'Analizan imperfecciones del mercado (monopolio, oligopolio, colusión) y el rol regulador del Estado y defensa de los consumidores.']],
+  ['OA 23', 'Formación Ciudadana', 'Complementario', 'Explicar los elementos que constituyen el ahorro y el endeudamiento responsable en la vida personal y familiar, comparando distintos instrumentos financieros.', ['Distinguen medios de pago, crédito, tasas de interés, CAE y prácticas de consumo y ahorro responsable.']]
+]);
+
+// ============================================================================
+// II° MEDIO - HISTORIA, GEOGRAFÍA Y CIENCIAS SOCIALES
+// ============================================================================
+addUnidad('II° Medio', ASIG_HIST, 'Unidad 1', 'Crisis, totalitarismo y guerra en la primera mitad del siglo XX: los desafíos para el Estado y la democracia en Chile y el mundo', [
+  ['OA 01', 'Historia', 'Complementario', 'Relacionar la transformación cultural del período de entreguerras con la ruptura de los cánones culturales y estéticos tradicionales, y reconocer cómo se manifestó en las vanguardias artísticas y en la aparición de la cultura de masas (cine, radio, prensa, deporte).', ['Caracterizan los "locos años veinte", las vanguardias artísticas y la expansión de los medios de comunicación de masas.']],
+  ['OA 02', 'Historia', 'Basal', 'Analizar la crisis del Estado liberal decimonónico a comienzos del siglo XX, considerando la Gran Depresión de 1929 y el surgimiento de distintos modelos políticos y económicos en Europa, Estados Unidos y América Latina, como los totalitarismos y su oposición a la democracia liberal (por ejemplo, nazismo, fascismo y estalinismo), el populismo latinoamericano y los inicios del Estado de Bienestar.', ['Explican las causas y el impacto mundial y chileno de la Gran Depresión de 1929.', 'Comparan los rasgos comunes y específicos de los regímenes totalitarios (fascismo italiano, nazismo alemán y estalinismo soviético).', 'Explican el surgimiento del modelo keynesiano, el Estado de bienestar y los populismos latinoamericanos.']],
+  ['OA 03', 'Historia', 'Complementario', 'Analizar el fin del predominio oligárquico y la crisis del parlamentarismo en Chile, considerando la Constitución de 1925, el nuevo rol del Estado y la emergencia de nuevos actores sociales y políticos (sectores medios y populares).', ['Explican el retorno al presidencialismo en la Constitución de 1925 y la ampliación de la legislación laboral y social en Chile.']],
+  ['OA 04', 'Historia', 'Basal', 'Evaluar las consecuencias de la Segunda Guerra Mundial, considerando el surgimiento de Estados Unidos y la URSS como superpotencias y la pérdida de hegemonía de Europa, el inicio del proceso de descolonización, los acuerdos de las conferencias de paz y la creación de un nuevo marco regulador de las relaciones internacionales reflejado en la ONU y en la Declaración Universal de Derechos Humanos.', ['Analizan el desarrollo de la Segunda Guerra Mundial, el Holocausto (Shoá) y el impacto del armamento nuclear.', 'Evalúan el nuevo orden internacional de posguerra: creación de la ONU, Declaración Universal de los Derechos Humanos (1948) y procesos de descolonización en Asia y África.']],
+  ['OA 05', 'Historia', 'Basal', 'Analizar el impacto económico y social en Chile de la Gran Depresión de 1929 y la implementación del modelo de Industrialización por Sustitución de Importaciones (ISI), el rol de la CORFO y el Estado empresario y benefactor.', ['Explican los objetivos y alcances del modelo ISI y la creación de la CORFO (1939) y empresas estratégicas nacionales.']]
+]);
+
+addUnidad('II° Medio', ASIG_HIST, 'Unidad 2', 'El mundo bipolar: proyectos políticos, transformaciones estructurales y quiebre de la democracia en Chile', [
+  ['OA 07', 'Historia', 'Complementario', 'Evaluar cómo la participación de nuevos actores sociales y la expansión de la cultura de masas a mediados del siglo XX, junto con el alcance del voto universal y la creciente urbanización, impulsaron la democratización de la sociedad chilena.', ['Analizan la migración campo-ciudad, la conquista del voto femenino pleno (1949) y el protagonismo de jóvenes, mujeres y trabajadores a mediados del siglo XX.']],
+  ['OA 08', 'Historia', 'Basal', 'Analizar la Guerra Fría como la confrontación ideológica de dos proyectos antagónicos que, bajo la amenaza del enfrentamiento nuclear, se manifestó en distintos escenarios locales, y dar ejemplos de cómo afectó diversas esferas, como la política, la cultura, la carrera espacial y el deporte.', ['Caracterizan el mundo bipolar (bloque capitalista liderado por EE. UU. vs. bloque socialista liderado por la URSS).', 'Analizan conflictos emblemáticos de la Guerra Fría (Berlín, Corea, Crisis de los Misiles en Cuba, Vietnam) y su impacto en América Latina.']],
+  ['OA 12', 'Historia', 'Complementario', 'Caracterizar la extendida pobreza y precariedad de la sociedad chilena de mediados del siglo XX (magros indicadores sociodemográficos, bajo poder adquisitivo y de acceso al crédito, desnutrición y marginalidad) y evaluar el impacto que generó en esta sociedad la migración del campo a la ciudad (por ejemplo, el progresivo crecimiento de la población urbana, la segregación urbana, la escasez de viviendas y el surgimiento de las "poblaciones callampas").', ['Describen los desafíos estructurales de la sociedad chilena hacia 1950-1960: inflación, déficit habitacional y estancamiento agrario.']],
+  ['OA 13', 'Historia', 'Complementario', 'Analizar el Chile de la década de 1960 como un escenario caracterizado por la organización y la movilización de nuevos actores sociales y por la implementación de proyectos de reformas estructurales ("revolución en libertad" y "vía chilena al socialismo"), considerando la reforma agraria, la chilenización y nacionalización del cobre.', ['Comparan los proyectos globales y reformas estructurales de los gobiernos de Jorge Alessandri, Eduardo Frei Montalva y Salvador Allende.']],
+  ['OA 15', 'Historia', 'Basal', 'Analizar y comparar críticamente diversas interpretaciones historiográficas sobre el golpe de Estado de 1973 y el quiebre de la democracia.', ['Contrastan interpretaciones historiográficas sobre los factores internos y externos, políticos, económicos y sociales que condujeron al quiebre democrático de 1973.']]
+]);
+
+addUnidad('II° Medio', ASIG_HIST, 'Unidad 3', 'Dictadura militar, transición política y los desafíos de la democracia en Chile', [
+  ['OA 16', 'Historia', 'Basal', 'Explicar que durante la dictadura militar se suprimió el Estado de Derecho y se violaron sistemáticamente los Derechos Humanos, reconociendo que hubo instituciones civiles y religiosas que procuraron la defensa de las víctimas.', ['Explican la supresión del Estado de derecho, el cierre del Congreso, la restricción de libertades públicas y la institucionalización de la Constitución de 1980.', 'Analizan las violaciones sistemáticas a los Derechos Humanos documentadas en los Informes Rettig y Valech, y la labor del Comité Pro Paz y la Vicaría de la Solidaridad.']],
+  ['OA 17', 'Historia', 'Basal', 'Caracterizar el modelo económico neoliberal implementado en Chile durante el régimen o dictadura militar, considerando la reducción del rol del Estado, las privatizaciones, la apertura comercial, las reformas laborales y previsionales, y evaluar sus consecuencias sociales.', ['Explican los pilares de la transformación económica neoliberal (apertura al comercio exterior, privatizaciones, subsidiariedad del Estado, reforma previsional de AFP e Isapres) y la crisis de 1982.']],
+  ['OA 18', 'Historia', 'Complementario', 'Analizar la nueva institucionalidad política creada por la Constitución de 1980 y explicar los factores que permitieron el proceso de recuperación de la democracia durante la década de 1980, como la crisis económica, las protestas nacionales, la rearticulación de la oposición política, las presiones internacionales y el plebiscito de 1988.', ['Explican el itinerario de transición pacífica hacia la democracia: protestas nacionales, acuerdos políticos y triunfo del "No" en el plebiscito de 1988.']],
+  ['OA 19', 'Historia', 'Complementario', 'Explicar los factores que incidieron en el proceso de transición a la democracia durante la década de 1990, considerando las reformas constitucionales, las políticas de verdad, justicia y reparación en materia de Derechos Humanos, la reducción de la pobreza y la reinserción internacional de Chile.', ['Evalúan los avances y desafíos de los gobiernos democráticos desde 1990 en materia de derechos humanos, reducción de la pobreza y reformas institucionales.']]
+]);
+
+addUnidad('II° Medio', ASIG_HIST, 'Unidad 4', 'Sociedad contemporánea: diversidad, convivencia y territorio en el Chile actual', [
+  ['OA 22', 'Formación Ciudadana', 'Basal', 'Analizar el concepto de Derechos Humanos, considerando características como su universalidad, indivisibilidad, interdependencia e imprescriptibilidad y la institucionalidad creada para resguardarlos a nivel nacional e internacional, reconociendo, en este marco, los derechos vinculados a los grupos de especial protección.', ['Explican las características jurídicas y éticas de los Derechos Humanos y el rol del INDH, tribunales nacionales y tratados internacionales.', 'Analizan la protección de derechos de pueblos indígenas, mujeres, niños, personas con discapacidad y migrantes.']],
+  ['OA 24', 'Geografía', 'Complementario', 'Analizar las transformaciones del espacio geográfico y del territorio chileno en las últimas décadas, considerando la conectividad, la expansión urbana, las demandas socioambientales y la relación con los pueblos originarios.', ['Evalúan conflictos socioambientales, ordenamiento urbano y demandas ciudadanas en el Chile contemporáneo.']],
+  ['OA 25', 'Formación Ciudadana', 'Basal', 'Reconocer la diversidad inherente a las sociedades como manifestación de la libertad y de la dignidad humana, y evaluar las oportunidades y los desafíos que un mundo globalizado entrega para evitar toda forma de discriminación, sea por raza o etnia, nacionalidad, situación socioeconómica, religión o creencia, género, orientación sexual o discapacidad, entre otras.', ['Debaten con fundamentos éticos y jurídicos sobre inclusión, interculturalidad y no discriminación en la sociedad actual.']]
+]);
+
+// ============================================================================
+// III° MEDIO - EDUCACIÓN CIUDADANA
+// ============================================================================
+addUnidad('III° Medio', ASIG_CIUD, 'Unidad 1', 'Estado, democracia y ciudadanía', [
+  ['OA 01', 'Ciudadanía y Democracia', 'Basal', 'Identificar los fundamentos, atributos y dimensiones de la democracia y la ciudadanía, considerando las libertades fundamentales de las personas como un principio de estas y reconociendo sus implicancias en los deberes del Estado y en los derechos y responsabilidades ciudadanas.', ['Analizan los principios del Estado democrático de derecho: soberanía popular, separación de poderes, constitucionalismo y pluralismo.', 'Contrastan concepciones liberales, republicanas y comunitaristas de la ciudadanía.']],
+  ['OA 02', 'Ciudadanía y Democracia', 'Complementario', 'Investigar sobre la realidad de la democracia en Chile y en el mundo contemporáneo, considerando fenómenos como el abstencionismo, la desafección política, la corrupción, el populismo y las noticias falsas (fake news).', ['Evalúan los riesgos y desafíos de las democracias contemporáneas a partir de datos electorales y estudios de opinión pública.']]
+]);
+
+addUnidad('III° Medio', ASIG_CIUD, 'Unidad 2', 'Justicia, derechos humanos y grupos de especial protección', [
+  ['OA 03', 'Estado de Derecho y Justicia', 'Complementario', 'Reflexionar personal y grupalmente sobre diversas formas de participación y su aporte al fortalecimiento del bien común, considerando las experiencias personales, fenómenos sociales contemporáneos y las perspectivas del republicanismo, el liberalismo, y el comunitarismo.', ['Diseñan propuestas de participación ciudadana estudiantil y comunitaria orientadas al bien común.']],
+  ['OA 04', 'Estado de Derecho y Justicia', 'Complementario', 'Evaluar las relaciones entre el Estado y el mercado, considerando temas como los sueldos justos, la productividad, la carga tributaria, el comercio justo, la probidad, el desarrollo sustentable, la riqueza y la pobreza.', ['Debaten sobre justicia distributiva, políticas sociales, impuestos y responsabilidad social empresarial.']],
+  ['OA 06', 'Estado de Derecho y Justicia', 'Basal', 'Reflexionar personal y grupalmente sobre los riesgos para la democracia en Chile y el mundo, tales como el narcotráfico, la violencia política y de género, la desigualdad, la exclusión y la vulneración de derechos de grupos de especial protección.', ['Analizan mecanismos constitucionales y legales de protección de los derechos fundamentales y el acceso a la justicia en Chile.']]
+]);
+
+addUnidad('III° Medio', ASIG_CIUD, 'Unidad 3', 'Participación ciudadana, territorio y medioambiente', [
+  ['OA 05', 'Territorio y Sustentabilidad', 'Complementario', 'Promover el reconocimiento, la defensa y la exigibilidad de los derechos humanos en la vida cotidiana, considerando los principios de universalidad, indivisibilidad, inalienabilidad, igualdad y no discriminación que los sustentan.', ['Proponen iniciativas concretas de promoción de derechos humanos e inclusión en su comunidad.']],
+  ['OA 07', 'Territorio y Sustentabilidad', 'Basal', 'Distinguir relaciones políticas, económicas y socioculturales que configuran el territorio en distintas escalas, proponiendo soluciones o alternativas sustentables a problemas socioambientales locales.', ['Analizan la planificación territorial, la segregación socioespacial y los conflictos socioambientales locales.', 'Formulan proyectos ciudadanos de sustentabilidad para su comuna o región.']]
+]);
+
+addUnidad('III° Medio', ASIG_CIUD, 'Unidad 4', 'Sistema judicial y medios de comunicación en democracia', [
+  ['OA 08', 'Institucionalidad y Medios', 'Basal', 'Tomar posición fundamentada frente a dilemas éticos, políticos y jurídicos relacionados con el funcionamiento del sistema judicial chileno y el rol de los medios de comunicación y las tecnologías digitales en el espacio público.', ['Explican la estructura y principios del Poder Judicial, el Ministerio Público y la Defensoría Penal Pública en Chile.', 'Evalúan críticamente el pluralismo informativo, los algoritmos de redes sociales y la libertad de expresión en democracia.']]
+]);
+
+// ============================================================================
+// IV° MEDIO - EDUCACIÓN CIUDADANA
+// ============================================================================
+addUnidad('IV° Medio', ASIG_CIUD, 'Unidad 1', 'El Estado de derecho en Chile: elementos y mecanismos para la organización política e institucional', [
+  ['OA 01', 'Estado de Derecho', 'Basal', 'Evaluar las características y el funcionamiento de la institucionalidad democrática, las formas de representación y su impacto en la distribución del poder en la sociedad, a la luz del bien común, la cohesión social y la justicia.', ['Analizan las atribuciones de los poderes del Estado, los órganos autónomos (Banco Central, Contraloría, Tribunal Constitucional, SERVEL) y el sistema electoral chileno.', 'Evalúan mecanismos de transparencia, probidad y rendición de cuentas en la función pública.']],
+  ['OA 02', 'Estado de Derecho', 'Complementario', 'Participar de forma corresponsable y ética en la búsqueda de estrategias y soluciones a desafíos, problemas y conflictos en diversas escalas, que impliquen armonizar desarrollo, democracia, equidad y sustentabilidad.', ['Debaten propuestas de reforma institucional y participación ciudadana deliberativa.']]
+]);
+
+addUnidad('IV° Medio', ASIG_CIUD, 'Unidad 2', 'Participación ciudadana y el impacto de los medios de comunicación masiva', [
+  ['OA 05', 'Participación y Espacio Público', 'Complementario', 'Relacionar de manera fundamentada los conceptos de libertad, igualdad y solidaridad, con desafíos y problemas de la democracia como la desigualdad y la superación de la pobreza, el reconocimiento de las minorías, la violencia y la corrupción, considerando distintos marcos teóricos y doctrinarios.', ['Contrastan perspectivas políticas y filosóficas sobre libertad, igualdad y justicia social.']],
+  ['OA 06', 'Participación y Espacio Público', 'Basal', 'Evaluar oportunidades y riesgos de los medios de comunicación masiva y del uso de las nuevas tecnologías de la información en el marco de una sociedad democrática, reflexionando personal y grupalmente sobre sus implicancias en la participación ciudadana y en el resguardo de la vida privada.', ['Analizan el impacto de la desinformación, las cámaras de eco digitales y el uso de datos personales en los procesos electorales y el debate público.']]
+]);
+
+addUnidad('IV° Medio', ASIG_CIUD, 'Unidad 3', 'Modelos de desarrollo económico, mercado del trabajo y derechos laborales en Chile', [
+  ['OA 03', 'Economía y Trabajo', 'Basal', 'Analizar el impacto de diversos modelos de desarrollo y las políticas económicas en la vida cotidiana y en el cambio climático, en función de la sustentabilidad y del aseguramiento de una vida digna y justa para todos y todas con condiciones para el desarrollo personal y colectivo.', ['Comparan modelos de desarrollo económico y evalúan indicadores de crecimiento, desigualdad (Gini) y sustentabilidad.', 'Analizan el rol de la política fiscal, tributaria y monetaria en el bienestar social.']],
+  ['OA 04', 'Economía y Trabajo', 'Basal', 'Comprender la importancia de los derechos laborales en Chile, considerando las principales tendencias globales y nacionales, la evolución de los mecanismos institucionales que buscan resguardarlos y los aportes de los movimientos y organizaciones sociales a su fortalecimiento.', ['Identifican los derechos individuales y colectivos establecidos en el Código del Trabajo (contrato, jornada, remuneración, sindicalización, negociación colectiva, seguridad social).', 'Evalúan desafíos del mundo laboral contemporáneo (automatización, trabajo en plataformas, brecha salarial de género, informalidad).']]
+]);
+
+addUnidad('IV° Medio', ASIG_CIUD, 'Unidad 4', 'Relaciones entre el Estado, el mercado y los desafíos globales de la ciudadanía', [
+  ['OA 07', 'Ciudadanía Global', 'Basal', 'Proponer formas de organización del territorio y del espacio público que promuevan la acción colectiva, la interculturalidad, la inclusión, la seguridad ciudadana y el mejoramiento de la vida comunitaria.', ['Diseñan un proyecto de intervención ciudadana o política pública escolar basado en diagnóstico, evidencia y marco normativo vigente.']],
+  ['OA 08', 'Ciudadanía Global', 'Complementario', 'Evaluar el rol de Chile frente a desafíos globales contemporáneos (migraciones internacionales, crisis climática, tratados de derechos humanos y cooperación multilateral).', ['Analizan los compromisos internacionales suscritos por el Estado de Chile en materia de derechos humanos y desarrollo sostenible (Agenda 2030).']]
+]);
 
 module.exports = {
   HISTORIA_CURRICULO

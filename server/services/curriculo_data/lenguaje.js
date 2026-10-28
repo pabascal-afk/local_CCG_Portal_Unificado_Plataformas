@@ -1,2889 +1,484 @@
-// Catálogo Oficial Curricular MINEDUC - Lenguaje y Comunicación / Lengua y Literatura
-// Enriquecido con Unidades (1 a 4), Habilidades e Indicadores de Evaluación oficiales
+const oas = [];
 
-const LENGUAJE_CURRICULO = [
-  {
-    "nivel": "1° Básico",
-    "asignatura": "LENGUAJE Y COMUNICACION",
-    "eje": "Lectura",
-    "unidad": "Unidad 1",
-    "codigo": "OA 01",
-    "categoria": "Basal",
-    "descripcion": "Reconocer que los textos escritos transmiten mensajes y que son escritos por alguien para cumplir un propósito.",
-    "indicadores": [
-      "Diferencian texto de ilustración.",
-      "Señalan la dirección de lectura de izquierda a derecha y arriba hacia abajo."
-    ]
-  },
-  {
-    "nivel": "1° Básico",
-    "asignatura": "LENGUAJE Y COMUNICACION",
-    "eje": "Lectura",
-    "unidad": "Unidad 1",
-    "codigo": "OA 02",
-    "categoria": "Basal",
-    "descripcion": "Reconocer que las palabras son unidades de significado separadas por espacios en el texto escrito.",
-    "indicadores": [
-      "Cuentan palabras en oraciones simples.",
-      "Identifican el espacio en blanco entre palabras."
-    ]
-  },
-  {
-    "nivel": "1° Básico",
-    "asignatura": "LENGUAJE Y COMUNICACION",
-    "eje": "Lectura",
-    "unidad": "Unidad 1",
-    "codigo": "OA 03",
-    "categoria": "Basal",
-    "descripcion": "Identificar los sonidos que componen las palabras (conciencia fonológica), reconociendo, separando y combinando sus fonemas y sílabas.",
-    "indicadores": [
-      "Segmentan palabras en sílabas con palmadas.",
-      "Identifican el fonema inicial y final de palabras cotidianas."
-    ]
-  },
-  {
-    "nivel": "1° Básico",
-    "asignatura": "LENGUAJE Y COMUNICACION",
-    "eje": "Lectura",
-    "unidad": "Unidad 1",
-    "codigo": "OA 04",
-    "categoria": "Basal",
-    "descripcion": "Leer palabras aisladas y en contexto, aplicando su conocimiento de la correspondencia letra-sonido.",
-    "indicadores": [
-      "Nombran las letras del abecedario y su sonido.",
-      "Leen sílabas directas con vocales y consonantes m, p, l, s."
-    ]
-  },
-  {
-    "nivel": "1° Básico",
-    "asignatura": "LENGUAJE Y COMUNICACION",
-    "eje": "Escritura",
-    "unidad": "Unidad 1",
-    "codigo": "OA 13",
-    "categoria": "Basal",
-    "descripcion": "Experimentar con la escritura para comunicar hechos, ideas y sentimientos.",
-    "indicadores": [
-      "Escriben su propio nombre sin modelo.",
-      "Escriben palabras familiares usando correspondencia grafema-fonema."
-    ]
-  },
-  {
-    "nivel": "1° Básico",
-    "asignatura": "LENGUAJE Y COMUNICACION",
-    "eje": "Comunicación Oral",
-    "unidad": "Unidad 1",
-    "codigo": "OA 18",
-    "categoria": "Basal",
-    "descripcion": "Comprender textos orales (explicaciones, instrucciones, relatos, anécdotas) para obtener información.",
-    "indicadores": [
-      "Siguen instrucciones orales de 2 o 3 pasos.",
-      "Responden preguntas sobre el relato escuchado."
-    ]
-  },
-  {
-    "nivel": "1° Básico",
-    "asignatura": "LENGUAJE Y COMUNICACION",
-    "eje": "Lectura",
-    "unidad": "Unidad 2",
-    "codigo": "OA 05",
-    "categoria": "Basal",
-    "descripcion": "Leer oraciones y textos breves en voz alta con fluidez y precisión.",
-    "indicadores": [
-      "Leen oraciones simples sin silabear en exceso.",
-      "Pausan adecuadamente ante el punto final."
-    ]
-  },
-  {
-    "nivel": "1° Básico",
-    "asignatura": "LENGUAJE Y COMUNICACION",
-    "eje": "Lectura",
-    "unidad": "Unidad 2",
-    "codigo": "OA 08",
-    "categoria": "Basal",
-    "descripcion": "Demostrar comprensión de narraciones que aborden temas que les sean familiares.",
-    "indicadores": [
-      "Identifican a los personajes del cuento.",
-      "Secuencian imágenes del relato (inicio, desarrollo y desenlace)."
-    ]
-  },
-  {
-    "nivel": "1° Básico",
-    "asignatura": "LENGUAJE Y COMUNICACION",
-    "eje": "Escritura",
-    "unidad": "Unidad 2",
-    "codigo": "OA 14",
-    "categoria": "Basal",
-    "descripcion": "Escribir oraciones completas para transmitir mensajes breves.",
-    "indicadores": [
-      "Separan cada palabra con un espacio en blanco.",
-      "Inician oraciones con mayúscula y terminan con punto."
-    ]
-  },
-  {
-    "nivel": "1° Básico",
-    "asignatura": "LENGUAJE Y COMUNICACION",
-    "eje": "Comunicación Oral",
-    "unidad": "Unidad 2",
-    "codigo": "OA 23",
-    "categoria": "Basal",
-    "descripcion": "Expresarse de manera clara sobre temas cotidianos.",
-    "indicadores": [
-      "Pronuncian con articulación adecuada.",
-      "Usan vocabulario variado para describir acciones."
-    ]
-  },
-  {
-    "nivel": "1° Básico",
-    "asignatura": "LENGUAJE Y COMUNICACION",
-    "eje": "Lectura",
-    "unidad": "Unidad 3",
-    "codigo": "OA 09",
-    "categoria": "Basal",
-    "descripcion": "Comprender textos informativos simples extrayendo información explícita e implícita.",
-    "indicadores": [
-      "Localizan datos específicos en el texto.",
-      "Explican de qué se trata el artículo leído."
-    ]
-  },
-  {
-    "nivel": "1° Básico",
-    "asignatura": "LENGUAJE Y COMUNICACION",
-    "eje": "Lectura",
-    "unidad": "Unidad 3",
-    "codigo": "OA 10",
-    "categoria": "Basal",
-    "descripcion": "Leer independientemente y familiarizarse con poemas infantiles.",
-    "indicadores": [
-      "Reconocen rimas en versos sencillos.",
-      "Recitan de memoria estrofas cortas."
-    ]
-  },
-  {
-    "nivel": "1° Básico",
-    "asignatura": "LENGUAJE Y COMUNICACION",
-    "eje": "Escritura",
-    "unidad": "Unidad 3",
-    "codigo": "OA 15",
-    "categoria": "Complementario",
-    "descripcion": "Escribir con letra clara, separando las palabras con un espacio regular.",
-    "indicadores": [
-      "Trazan correctamente mayúsculas y minúsculas.",
-      "Mantienen el espaciado entre palabras."
-    ]
-  },
-  {
-    "nivel": "1° Básico",
-    "asignatura": "LENGUAJE Y COMUNICACION",
-    "eje": "Comunicación Oral",
-    "unidad": "Unidad 3",
-    "codigo": "OA 25",
-    "categoria": "Transversal",
-    "descripcion": "Participar activamente en conversaciones guiadas respetando turnos de habla.",
-    "indicadores": [
-      "Piden la palabra levantando la mano.",
-      "Escuchan con atención a compañeros."
-    ]
-  },
-  {
-    "nivel": "1° Básico",
-    "asignatura": "LENGUAJE Y COMUNICACION",
-    "eje": "Lectura",
-    "unidad": "Unidad 4",
-    "codigo": "OA 07",
-    "categoria": "Complementario",
-    "descripcion": "Desarrollar el gusto por la lectura, explorando libros de la biblioteca escolar.",
-    "indicadores": [
-      "Eligen voluntariamente libros ilustrados.",
-      "Comentan sus lecturas favoritas en voz alta."
-    ]
-  },
-  {
-    "nivel": "1° Básico",
-    "asignatura": "LENGUAJE Y COMUNICACION",
-    "eje": "Escritura",
-    "unidad": "Unidad 4",
-    "codigo": "OA 16",
-    "categoria": "Basal",
-    "descripcion": "Incorporar vocabulario nuevo extraído de los textos leídos en sus producciones.",
-    "indicadores": [
-      "Utilizan palabras recién aprendidas en oraciones.",
-      "Preguntan el significado de términos desconocidos."
-    ]
-  },
-  {
-    "nivel": "1° Básico",
-    "asignatura": "LENGUAJE Y COMUNICACION",
-    "eje": "Comunicación Oral",
-    "unidad": "Unidad 4",
-    "codigo": "OA 21",
-    "categoria": "Complementario",
-    "descripcion": "Participar en declamaciones, dramatizaciones y cantos corales.",
-    "indicadores": [
-      "Representan pequeños roles con entusiasmo.",
-      "Acompañan su expresión oral con gestos y mímica."
-    ]
-  },
-  {
-    "nivel": "2° Básico",
-    "asignatura": "LENGUAJE Y COMUNICACION",
-    "eje": "Lectura",
-    "unidad": "Unidad 1",
-    "codigo": "OA 01",
-    "categoria": "Basal",
-    "descripcion": "Leer en voz alta con fluidez y precisión textos acordes al nivel de 2° Básico (Unidad 1).",
-    "indicadores": [
-      "Leen respetando la entonación de preguntas y exclamaciones.",
-      "Pronuncian con precisión fonológica y velocidad adecuada."
-    ]
-  },
-  {
-    "nivel": "2° Básico",
-    "asignatura": "LENGUAJE Y COMUNICACION",
-    "eje": "Lectura",
-    "unidad": "Unidad 1",
-    "codigo": "OA 02",
-    "categoria": "Basal",
-    "descripcion": "Comprender y profundizar en narraciones extrayendo información explícita e implícita (Unidad 1).",
-    "indicadores": [
-      "Describen personajes física y emocionalmente.",
-      "Identifican el conflicto o problema de la historia."
-    ]
-  },
-  {
-    "nivel": "2° Básico",
-    "asignatura": "LENGUAJE Y COMUNICACION",
-    "eje": "Escritura",
-    "unidad": "Unidad 1",
-    "codigo": "OA 10",
-    "categoria": "Basal",
-    "descripcion": "Escribir creativamente narraciones y textos no literarios estructurados (Unidad 1).",
-    "indicadores": [
-      "Escriben con orden cronológico (inicio, desarrollo y final).",
-      "Aplican mayúsculas y punto final consistentemente."
-    ]
-  },
-  {
-    "nivel": "2° Básico",
-    "asignatura": "LENGUAJE Y COMUNICACION",
-    "eje": "Comunicación Oral",
-    "unidad": "Unidad 1",
-    "codigo": "OA 20",
-    "categoria": "Complementario",
-    "descripcion": "Interactuar y dialogar para compartir impresiones y experiencias personales (Unidad 1).",
-    "indicadores": [
-      "Mantienen el hilo temático en sus intervenciones.",
-      "Formulan preguntas para aclarar dudas."
-    ]
-  },
-  {
-    "nivel": "2° Básico",
-    "asignatura": "LENGUAJE Y COMUNICACION",
-    "eje": "Lectura",
-    "unidad": "Unidad 2",
-    "codigo": "OA 03",
-    "categoria": "Basal",
-    "descripcion": "Leer en voz alta con fluidez y precisión textos acordes al nivel de 2° Básico (Unidad 2).",
-    "indicadores": [
-      "Leen respetando la entonación de preguntas y exclamaciones.",
-      "Pronuncian con precisión fonológica y velocidad adecuada."
-    ]
-  },
-  {
-    "nivel": "2° Básico",
-    "asignatura": "LENGUAJE Y COMUNICACION",
-    "eje": "Lectura",
-    "unidad": "Unidad 2",
-    "codigo": "OA 04",
-    "categoria": "Basal",
-    "descripcion": "Comprender y profundizar en narraciones extrayendo información explícita e implícita (Unidad 2).",
-    "indicadores": [
-      "Describen personajes física y emocionalmente.",
-      "Identifican el conflicto o problema de la historia."
-    ]
-  },
-  {
-    "nivel": "2° Básico",
-    "asignatura": "LENGUAJE Y COMUNICACION",
-    "eje": "Escritura",
-    "unidad": "Unidad 2",
-    "codigo": "OA 12",
-    "categoria": "Basal",
-    "descripcion": "Escribir creativamente narraciones y textos no literarios estructurados (Unidad 2).",
-    "indicadores": [
-      "Escriben con orden cronológico (inicio, desarrollo y final).",
-      "Aplican mayúsculas y punto final consistentemente."
-    ]
-  },
-  {
-    "nivel": "2° Básico",
-    "asignatura": "LENGUAJE Y COMUNICACION",
-    "eje": "Comunicación Oral",
-    "unidad": "Unidad 2",
-    "codigo": "OA 21",
-    "categoria": "Complementario",
-    "descripcion": "Interactuar y dialogar para compartir impresiones y experiencias personales (Unidad 2).",
-    "indicadores": [
-      "Mantienen el hilo temático en sus intervenciones.",
-      "Formulan preguntas para aclarar dudas."
-    ]
-  },
-  {
-    "nivel": "2° Básico",
-    "asignatura": "LENGUAJE Y COMUNICACION",
-    "eje": "Lectura",
-    "unidad": "Unidad 3",
-    "codigo": "OA 05",
-    "categoria": "Basal",
-    "descripcion": "Leer en voz alta con fluidez y precisión textos acordes al nivel de 2° Básico (Unidad 3).",
-    "indicadores": [
-      "Leen respetando la entonación de preguntas y exclamaciones.",
-      "Pronuncian con precisión fonológica y velocidad adecuada."
-    ]
-  },
-  {
-    "nivel": "2° Básico",
-    "asignatura": "LENGUAJE Y COMUNICACION",
-    "eje": "Lectura",
-    "unidad": "Unidad 3",
-    "codigo": "OA 06",
-    "categoria": "Basal",
-    "descripcion": "Comprender y profundizar en narraciones extrayendo información explícita e implícita (Unidad 3).",
-    "indicadores": [
-      "Describen personajes física y emocionalmente.",
-      "Identifican el conflicto o problema de la historia."
-    ]
-  },
-  {
-    "nivel": "2° Básico",
-    "asignatura": "LENGUAJE Y COMUNICACION",
-    "eje": "Escritura",
-    "unidad": "Unidad 3",
-    "codigo": "OA 14",
-    "categoria": "Basal",
-    "descripcion": "Escribir creativamente narraciones y textos no literarios estructurados (Unidad 3).",
-    "indicadores": [
-      "Escriben con orden cronológico (inicio, desarrollo y final).",
-      "Aplican mayúsculas y punto final consistentemente."
-    ]
-  },
-  {
-    "nivel": "2° Básico",
-    "asignatura": "LENGUAJE Y COMUNICACION",
-    "eje": "Comunicación Oral",
-    "unidad": "Unidad 3",
-    "codigo": "OA 22",
-    "categoria": "Complementario",
-    "descripcion": "Interactuar y dialogar para compartir impresiones y experiencias personales (Unidad 3).",
-    "indicadores": [
-      "Mantienen el hilo temático en sus intervenciones.",
-      "Formulan preguntas para aclarar dudas."
-    ]
-  },
-  {
-    "nivel": "2° Básico",
-    "asignatura": "LENGUAJE Y COMUNICACION",
-    "eje": "Lectura",
-    "unidad": "Unidad 4",
-    "codigo": "OA 07",
-    "categoria": "Basal",
-    "descripcion": "Leer en voz alta con fluidez y precisión textos acordes al nivel de 2° Básico (Unidad 4).",
-    "indicadores": [
-      "Leen respetando la entonación de preguntas y exclamaciones.",
-      "Pronuncian con precisión fonológica y velocidad adecuada."
-    ]
-  },
-  {
-    "nivel": "2° Básico",
-    "asignatura": "LENGUAJE Y COMUNICACION",
-    "eje": "Lectura",
-    "unidad": "Unidad 4",
-    "codigo": "OA 08",
-    "categoria": "Basal",
-    "descripcion": "Comprender y profundizar en narraciones extrayendo información explícita e implícita (Unidad 4).",
-    "indicadores": [
-      "Describen personajes física y emocionalmente.",
-      "Identifican el conflicto o problema de la historia."
-    ]
-  },
-  {
-    "nivel": "2° Básico",
-    "asignatura": "LENGUAJE Y COMUNICACION",
-    "eje": "Escritura",
-    "unidad": "Unidad 4",
-    "codigo": "OA 16",
-    "categoria": "Basal",
-    "descripcion": "Escribir creativamente narraciones y textos no literarios estructurados (Unidad 4).",
-    "indicadores": [
-      "Escriben con orden cronológico (inicio, desarrollo y final).",
-      "Aplican mayúsculas y punto final consistentemente."
-    ]
-  },
-  {
-    "nivel": "2° Básico",
-    "asignatura": "LENGUAJE Y COMUNICACION",
-    "eje": "Comunicación Oral",
-    "unidad": "Unidad 4",
-    "codigo": "OA 23",
-    "categoria": "Complementario",
-    "descripcion": "Interactuar y dialogar para compartir impresiones y experiencias personales (Unidad 4).",
-    "indicadores": [
-      "Mantienen el hilo temático en sus intervenciones.",
-      "Formulan preguntas para aclarar dudas."
-    ]
-  },
-  {
-    "nivel": "3° Básico",
-    "asignatura": "LENGUAJE Y COMUNICACION",
-    "eje": "Lectura",
-    "unidad": "Unidad 1",
-    "codigo": "OA 01",
-    "categoria": "Basal",
-    "descripcion": "Leer y comprender una variedad de textos aplicando estrategias de lectura activa (Unidad 1).",
-    "indicadores": [
-      "Relacionan el contenido con sus saberes previos.",
-      "Releen párrafos confusos para aclarar el sentido."
-    ]
-  },
-  {
-    "nivel": "3° Básico",
-    "asignatura": "LENGUAJE Y COMUNICACION",
-    "eje": "Lectura",
-    "unidad": "Unidad 1",
-    "codigo": "OA 04",
-    "categoria": "Basal",
-    "descripcion": "Profundizar en la comprensión de textos literarios y fábulas determinando moralejas (Unidad 1).",
-    "indicadores": [
-      "Identifican el valor o enseñanza implícita en la moraleja.",
-      "Comparan actitudes de los personajes."
-    ]
-  },
-  {
-    "nivel": "3° Básico",
-    "asignatura": "LENGUAJE Y COMUNICACION",
-    "eje": "Escritura",
-    "unidad": "Unidad 1",
-    "codigo": "OA 12",
-    "categoria": "Basal",
-    "descripcion": "Planificar y redactar textos narrativos e informativos organizando párrafos (Unidad 1).",
-    "indicadores": [
-      "Organizan el texto en párrafos separados por punto aparte.",
-      "Utilizan conectores causales y temporales."
-    ]
-  },
-  {
-    "nivel": "3° Básico",
-    "asignatura": "LENGUAJE Y COMUNICACION",
-    "eje": "Comunicación Oral",
-    "unidad": "Unidad 1",
-    "codigo": "OA 22",
-    "categoria": "Complementario",
-    "descripcion": "Exponer oralmente sobre un tema investigado apoyándose en material visual (Unidad 1).",
-    "indicadores": [
-      "Estructuran su charla en inicio, exposición y cierre.",
-      "Responden preguntas de sus compañeros con seguridad."
-    ]
-  },
-  {
-    "nivel": "3° Básico",
-    "asignatura": "LENGUAJE Y COMUNICACION",
-    "eje": "Lectura",
-    "unidad": "Unidad 2",
-    "codigo": "OA 02",
-    "categoria": "Basal",
-    "descripcion": "Leer y comprender una variedad de textos aplicando estrategias de lectura activa (Unidad 2).",
-    "indicadores": [
-      "Relacionan el contenido con sus saberes previos.",
-      "Releen párrafos confusos para aclarar el sentido."
-    ]
-  },
-  {
-    "nivel": "3° Básico",
-    "asignatura": "LENGUAJE Y COMUNICACION",
-    "eje": "Lectura",
-    "unidad": "Unidad 2",
-    "codigo": "OA 05",
-    "categoria": "Basal",
-    "descripcion": "Profundizar en la comprensión de textos literarios y fábulas determinando moralejas (Unidad 2).",
-    "indicadores": [
-      "Identifican el valor o enseñanza implícita en la moraleja.",
-      "Comparan actitudes de los personajes."
-    ]
-  },
-  {
-    "nivel": "3° Básico",
-    "asignatura": "LENGUAJE Y COMUNICACION",
-    "eje": "Escritura",
-    "unidad": "Unidad 2",
-    "codigo": "OA 13",
-    "categoria": "Basal",
-    "descripcion": "Planificar y redactar textos narrativos e informativos organizando párrafos (Unidad 2).",
-    "indicadores": [
-      "Organizan el texto en párrafos separados por punto aparte.",
-      "Utilizan conectores causales y temporales."
-    ]
-  },
-  {
-    "nivel": "3° Básico",
-    "asignatura": "LENGUAJE Y COMUNICACION",
-    "eje": "Comunicación Oral",
-    "unidad": "Unidad 2",
-    "codigo": "OA 23",
-    "categoria": "Complementario",
-    "descripcion": "Exponer oralmente sobre un tema investigado apoyándose en material visual (Unidad 2).",
-    "indicadores": [
-      "Estructuran su charla en inicio, exposición y cierre.",
-      "Responden preguntas de sus compañeros con seguridad."
-    ]
-  },
-  {
-    "nivel": "3° Básico",
-    "asignatura": "LENGUAJE Y COMUNICACION",
-    "eje": "Lectura",
-    "unidad": "Unidad 3",
-    "codigo": "OA 03",
-    "categoria": "Basal",
-    "descripcion": "Leer y comprender una variedad de textos aplicando estrategias de lectura activa (Unidad 3).",
-    "indicadores": [
-      "Relacionan el contenido con sus saberes previos.",
-      "Releen párrafos confusos para aclarar el sentido."
-    ]
-  },
-  {
-    "nivel": "3° Básico",
-    "asignatura": "LENGUAJE Y COMUNICACION",
-    "eje": "Lectura",
-    "unidad": "Unidad 3",
-    "codigo": "OA 06",
-    "categoria": "Basal",
-    "descripcion": "Profundizar en la comprensión de textos literarios y fábulas determinando moralejas (Unidad 3).",
-    "indicadores": [
-      "Identifican el valor o enseñanza implícita en la moraleja.",
-      "Comparan actitudes de los personajes."
-    ]
-  },
-  {
-    "nivel": "3° Básico",
-    "asignatura": "LENGUAJE Y COMUNICACION",
-    "eje": "Escritura",
-    "unidad": "Unidad 3",
-    "codigo": "OA 14",
-    "categoria": "Basal",
-    "descripcion": "Planificar y redactar textos narrativos e informativos organizando párrafos (Unidad 3).",
-    "indicadores": [
-      "Organizan el texto en párrafos separados por punto aparte.",
-      "Utilizan conectores causales y temporales."
-    ]
-  },
-  {
-    "nivel": "3° Básico",
-    "asignatura": "LENGUAJE Y COMUNICACION",
-    "eje": "Comunicación Oral",
-    "unidad": "Unidad 3",
-    "codigo": "OA 24",
-    "categoria": "Complementario",
-    "descripcion": "Exponer oralmente sobre un tema investigado apoyándose en material visual (Unidad 3).",
-    "indicadores": [
-      "Estructuran su charla en inicio, exposición y cierre.",
-      "Responden preguntas de sus compañeros con seguridad."
-    ]
-  },
-  {
-    "nivel": "3° Básico",
-    "asignatura": "LENGUAJE Y COMUNICACION",
-    "eje": "Lectura",
-    "unidad": "Unidad 4",
-    "codigo": "OA 04",
-    "categoria": "Basal",
-    "descripcion": "Leer y comprender una variedad de textos aplicando estrategias de lectura activa (Unidad 4).",
-    "indicadores": [
-      "Relacionan el contenido con sus saberes previos.",
-      "Releen párrafos confusos para aclarar el sentido."
-    ]
-  },
-  {
-    "nivel": "3° Básico",
-    "asignatura": "LENGUAJE Y COMUNICACION",
-    "eje": "Lectura",
-    "unidad": "Unidad 4",
-    "codigo": "OA 07",
-    "categoria": "Basal",
-    "descripcion": "Profundizar en la comprensión de textos literarios y fábulas determinando moralejas (Unidad 4).",
-    "indicadores": [
-      "Identifican el valor o enseñanza implícita en la moraleja.",
-      "Comparan actitudes de los personajes."
-    ]
-  },
-  {
-    "nivel": "3° Básico",
-    "asignatura": "LENGUAJE Y COMUNICACION",
-    "eje": "Escritura",
-    "unidad": "Unidad 4",
-    "codigo": "OA 15",
-    "categoria": "Basal",
-    "descripcion": "Planificar y redactar textos narrativos e informativos organizando párrafos (Unidad 4).",
-    "indicadores": [
-      "Organizan el texto en párrafos separados por punto aparte.",
-      "Utilizan conectores causales y temporales."
-    ]
-  },
-  {
-    "nivel": "3° Básico",
-    "asignatura": "LENGUAJE Y COMUNICACION",
-    "eje": "Comunicación Oral",
-    "unidad": "Unidad 4",
-    "codigo": "OA 25",
-    "categoria": "Complementario",
-    "descripcion": "Exponer oralmente sobre un tema investigado apoyándose en material visual (Unidad 4).",
-    "indicadores": [
-      "Estructuran su charla en inicio, exposición y cierre.",
-      "Responden preguntas de sus compañeros con seguridad."
-    ]
-  },
-  {
-    "nivel": "4° Básico",
-    "asignatura": "LENGUAJE Y COMUNICACION",
-    "eje": "Lectura",
-    "unidad": "Unidad 1",
-    "codigo": "OA 01",
-    "categoria": "Basal",
-    "descripcion": "Leer en voz alta de manera fluida variados textos apropiados a su edad: pronunciando cada palabra con precisión; respetando la coma, el punto y los signos de exclamación e interrogación; leyendo con velocidad adecuada para el nivel.",
-    "indicadores": [
-      "Leen en voz alta con entonación expresiva y sin vacilaciones excesivas.",
-      "Respetan los signos de puntuación ajustando el ritmo de la lectura.",
-      "Articulan claramente todas las sílabas de palabras complejas."
-    ]
-  },
-  {
-    "nivel": "4° Básico",
-    "asignatura": "LENGUAJE Y COMUNICACION",
-    "eje": "Lectura",
-    "unidad": "Unidad 1",
-    "codigo": "OA 02",
-    "categoria": "Basal",
-    "descripcion": "Comprender textos aplicando estrategias de comprensión lectora; por ejemplo: relacionar la información del texto con sus experiencias y conocimientos; releer lo que no fue comprendido; formular preguntas sobre lo leído y responderlas; identificar las ideas más importantes; organizar la información en esquemas o mapas conceptuales.",
-    "indicadores": [
-      "Relacionan datos del texto con experiencias cotidianas o lecturas anteriores.",
-      "Subrayan ideas centrales y palabras clave de cada párrafo.",
-      "Elaboran resúmenes breves y esquemas gráficos de lo leído."
-    ]
-  },
-  {
-    "nivel": "4° Básico",
-    "asignatura": "LENGUAJE Y COMUNICACION",
-    "eje": "Lectura",
-    "unidad": "Unidad 1",
-    "codigo": "OA 03",
-    "categoria": "Basal",
-    "descripcion": "Leer y familiarizarse con un amplio repertorio de literatura para aumentar su conocimiento del mundo y desarrollar su imaginación; por ejemplo: poemas, cuentos folclóricos y de autor, fábulas, leyendas, mitos, novelas, historietas, otros.",
-    "indicadores": [
-      "Reconocen características distintivas de mitos, leyendas y fábulas.",
-      "Identifican elementos folclóricos y culturales presentes en relatos tradicionales.",
-      "Expresan opiniones sobre las motivaciones y conductas de los personajes."
-    ]
-  },
-  {
-    "nivel": "4° Básico",
-    "asignatura": "LENGUAJE Y COMUNICACION",
-    "eje": "Lectura",
-    "unidad": "Unidad 1",
-    "codigo": "OA 04",
-    "categoria": "Basal",
-    "descripcion": "Profundizar su comprensión de las narraciones leídas: extrayendo información explícita e implícita; determinando las consecuencias de hechos o acciones; describiendo y comparando a los personajes; describiendo los diferentes ambientes que aparecen en un texto; reconociendo el problema y la solución en una narración; expresando opiniones fundamentadas sobre actitudes y acciones de los personajes; comparando diferentes versiones de un mismo relato.",
-    "indicadores": [
-      "Identifican el dilema o conflicto central que motiva la trama.",
-      "Describen características físicas y psicológicas de los personajes.",
-      "Determinan relaciones de causa y efecto en las acciones narradas.",
-      "Fundamentan juicios éticos sobre las acciones de los protagonistas."
-    ]
-  },
-  {
-    "nivel": "4° Básico",
-    "asignatura": "LENGUAJE Y COMUNICACION",
-    "eje": "Lectura",
-    "unidad": "Unidad 1",
-    "codigo": "OA 06",
-    "categoria": "Basal",
-    "descripcion": "Leer independientemente y comprender textos no literarios (cartas, biografías, relatos históricos, instrucciones, libros y artículos informativos, noticias, etc.) para ampliar su conocimiento del mundo y formarse una opinión: extrayendo información explícita e implícita; comprendiendo la información que aportan las ilustraciones, símbolos y pictogramas a un texto; formulando una opinión sobre algún aspecto de la lectura.",
-    "indicadores": [
-      "Identifican la idea principal y detalles complementarios en artículos de divulgación.",
-      "Interpretan esquemas, infografías y fotografías de apoyo.",
-      "Distinguen hechos objetivos de apreciaciones subjetivas del emisor."
-    ]
-  },
-  {
-    "nivel": "4° Básico",
-    "asignatura": "LENGUAJE Y COMUNICACION",
-    "eje": "Lectura",
-    "unidad": "Unidad 1",
-    "codigo": "OA 10",
-    "categoria": "Basal",
-    "descripcion": "Aplicar estrategias para determinar el significado de palabras nuevas: claves del texto (para qué se usa el término, contexto en el que se ubica); raíces y afijos; preguntar a otro; consultar un diccionario o glosario.",
-    "indicadores": [
-      "Deducen el significado de términos desconocidos a partir del contexto oracional.",
-      "Reconocen prefijos y sufijos comunes para inferir nuevos sentidos.",
-      "Consultan diccionarios físicos o digitales para verificar acepciones."
-    ]
-  },
-  {
-    "nivel": "4° Básico",
-    "asignatura": "LENGUAJE Y COMUNICACION",
-    "eje": "Escritura",
-    "unidad": "Unidad 1",
-    "codigo": "OA 12",
-    "categoria": "Basal",
-    "descripcion": "Escribir frecuentemente, para desarrollar la creatividad y expresar sus ideas, textos como poemas, diarios de vida, cuentos, anécdotas, cartas, comentarios sobre sus lecturas, noticias, etc.",
-    "indicadores": [
-      "Redactan anécdotas y experiencias personales con orden cronológico.",
-      "Utilizan adjetivos calificativos para describir ambientes y emociones.",
-      "Manifiestan agrado y motivación por la producción escrita autónoma."
-    ]
-  },
-  {
-    "nivel": "4° Básico",
-    "asignatura": "LENGUAJE Y COMUNICACION",
-    "eje": "Comunicación Oral",
-    "unidad": "Unidad 1",
-    "codigo": "OA 26",
-    "categoria": "Basal",
-    "descripcion": "Participar de manera activa en conversaciones grupales sobre textos leídos o escuchados en clases o temas de su interés: manteniendo el foco de la conversación; expresando sus ideas u opiniones y fundamentándolas; formulando preguntas para aclarar dudas; respondiendo preguntas con información relevante; esperando que el interlocutor termine su idea; respetando turnos de habla.",
-    "indicadores": [
-      "Aportan ideas pertinentes sin desviarse del tema en discusión.",
-      "Formulan preguntas de aclaración con respeto y claridad.",
-      "Esperan su turno de hablar y escuchan atentamente las opiniones de sus pares."
-    ]
-  },
-  {
-    "nivel": "4° Básico",
-    "asignatura": "LENGUAJE Y COMUNICACION",
-    "eje": "Lectura",
-    "unidad": "Unidad 2",
-    "codigo": "OA 01",
-    "categoria": "Basal",
-    "descripcion": "Leer en voz alta de manera fluida variados textos líricos y poéticos respetando ritmo y entonación.",
-    "indicadores": [
-      "Modulan la voz acorde a la cadencia del verso.",
-      "Pronuncian palabras con claridad en lecturas compartidas."
-    ]
-  },
-  {
-    "nivel": "4° Básico",
-    "asignatura": "LENGUAJE Y COMUNICACION",
-    "eje": "Lectura",
-    "unidad": "Unidad 2",
-    "codigo": "OA 02",
-    "categoria": "Basal",
-    "descripcion": "Comprender textos aplicando estrategias de comprensión lectora (poemas, odas y rimas).",
-    "indicadores": [
-      "Identifican el hablante lírico y el objeto poético.",
-      "Relacionan sensaciones poéticas con vivencias personales."
-    ]
-  },
-  {
-    "nivel": "4° Básico",
-    "asignatura": "LENGUAJE Y COMUNICACION",
-    "eje": "Lectura",
-    "unidad": "Unidad 2",
-    "codigo": "OA 05",
-    "categoria": "Basal",
-    "descripcion": "Comprender poemas adecuados al nivel e interpretar el lenguaje figurado presente en ellos (metáforas sencillas, personificaciones y comparaciones).",
-    "indicadores": [
-      "Explican el significado de expresiones figuradas en los poemas.",
-      "Reconocen estrofas, versos y esquemas de rima consonante o asonante."
-    ]
-  },
-  {
-    "nivel": "4° Básico",
-    "asignatura": "LENGUAJE Y COMUNICACION",
-    "eje": "Lectura",
-    "unidad": "Unidad 2",
-    "codigo": "OA 06",
-    "categoria": "Basal",
-    "descripcion": "Leer independientemente y comprender textos no literarios vinculados a la cultura y el arte.",
-    "indicadores": [
-      "Resumen biografías de poetas y escritores chilenos.",
-      "Localizan datos temporales y geográficos en crónicas culturales."
-    ]
-  },
-  {
-    "nivel": "4° Básico",
-    "asignatura": "LENGUAJE Y COMUNICACION",
-    "eje": "Lectura",
-    "unidad": "Unidad 2",
-    "codigo": "OA 07",
-    "categoria": "Complementario",
-    "descripcion": "Desarrollar el gusto por la lectura, leyendo habitualmente diversos textos líricos y narrativos.",
-    "indicadores": [
-      "Seleccionan voluntariamente libros de poesía de la biblioteca de aula.",
-      "Comparten sus poemas predilectos con el grupo curso."
-    ]
-  },
-  {
-    "nivel": "4° Básico",
-    "asignatura": "LENGUAJE Y COMUNICACION",
-    "eje": "Escritura",
-    "unidad": "Unidad 2",
-    "codigo": "OA 11",
-    "categoria": "Basal",
-    "descripcion": "Escribir creativamente narraciones y poemas utilizando rimas y figuras retóricas básicas.",
-    "indicadores": [
-      "Escriben estrofas poéticas incorporando comparaciones y personificaciones.",
-      "Cuidan la sonoridad y el ritmo de los versos."
-    ]
-  },
-  {
-    "nivel": "4° Básico",
-    "asignatura": "LENGUAJE Y COMUNICACION",
-    "eje": "Escritura",
-    "unidad": "Unidad 2",
-    "codigo": "OA 17",
-    "categoria": "Complementario",
-    "descripcion": "Escribir con letra clara y legible, separando las palabras con un espacio regular para facilitar la lectura.",
-    "indicadores": [
-      "Mantienen una caligrafía uniforme y legible.",
-      "Respetan los márgenes y la diagramación del poema en el cuaderno."
-    ]
-  },
-  {
-    "nivel": "4° Básico",
-    "asignatura": "LENGUAJE Y COMUNICACION",
-    "eje": "Escritura",
-    "unidad": "Unidad 2",
-    "codigo": "OA 21",
-    "categoria": "Basal",
-    "descripcion": "Escribir correctamente aplicando las reglas de acentuación general (palabras agudas, graves y esdrújulas).",
-    "indicadores": [
-      "Clasifican palabras según su sílaba tónica.",
-      "Aplican tilde correctamente respetando las reglas de terminación (-n, -s o vocal)."
-    ]
-  },
-  {
-    "nivel": "4° Básico",
-    "asignatura": "LENGUAJE Y COMUNICACION",
-    "eje": "Comunicación Oral",
-    "unidad": "Unidad 2",
-    "codigo": "OA 22",
-    "categoria": "Basal",
-    "descripcion": "Comprender y disfrutar versiones completas o adaptadas de obras y textos orales: relatos, mitos y poemas declamados.",
-    "indicadores": [
-      "Identifican las emociones transmitidas por la declamación oral.",
-      "Comentan el impacto estético de los textos orales escuchados."
-    ]
-  },
-  {
-    "nivel": "4° Básico",
-    "asignatura": "LENGUAJE Y COMUNICACION",
-    "eje": "Comunicación Oral",
-    "unidad": "Unidad 2",
-    "codigo": "OA 26",
-    "categoria": "Transversal",
-    "descripcion": "Participar activamente en conversaciones y recitales poéticos respetando turnos de habla.",
-    "indicadores": [
-      "Aportan interpretaciones fundamentadas sobre el sentido de los poemas.",
-      "Escuchan con empatía y atención a sus compañeros."
-    ]
-  },
-  {
-    "nivel": "4° Básico",
-    "asignatura": "LENGUAJE Y COMUNICACION",
-    "eje": "Lectura",
-    "unidad": "Unidad 3",
-    "codigo": "OA 02",
-    "categoria": "Basal",
-    "descripcion": "Comprender textos aplicando estrategias de comprensión lectora en artículos informativos e investigaciones escolares.",
-    "indicadores": [
-      "Elaboran mapas conceptuales con las ideas centrales.",
-      "Identifican subtemas por cada subtítulo del texto."
-    ]
-  },
-  {
-    "nivel": "4° Básico",
-    "asignatura": "LENGUAJE Y COMUNICACION",
-    "eje": "Lectura",
-    "unidad": "Unidad 3",
-    "codigo": "OA 04",
-    "categoria": "Basal",
-    "descripcion": "Profundizar en la comprensión de relatos históricos y biografías reconociendo hechos y consecuencias.",
-    "indicadores": [
-      "Secuencian hitos cronológicos en la vida del personaje biográfico.",
-      "Identifican el legado o contribución del personaje histórico."
-    ]
-  },
-  {
-    "nivel": "4° Básico",
-    "asignatura": "LENGUAJE Y COMUNICACION",
-    "eje": "Lectura",
-    "unidad": "Unidad 3",
-    "codigo": "OA 06",
-    "categoria": "Basal",
-    "descripcion": "Leer independientemente textos no literarios complejos para ampliar conocimientos científicos y sociales.",
-    "indicadores": [
-      "Comparan información proveniente de dos fuentes informativas.",
-      "Evalúan si el texto ofrece datos comprobables y claros."
-    ]
-  },
-  {
-    "nivel": "4° Básico",
-    "asignatura": "LENGUAJE Y COMUNICACION",
-    "eje": "Lectura",
-    "unidad": "Unidad 3",
-    "codigo": "OA 08",
-    "categoria": "Basal",
-    "descripcion": "Investigar sobre un tema para ampliar su conocimiento y sintetizar información consultando libros, enciclopedias y fuentes digitales seguras.",
-    "indicadores": [
-      "Plantean preguntas de investigación delimitadas.",
-      "Registran datos relevantes en fichas temáticas citando la fuente."
-    ]
-  },
-  {
-    "nivel": "4° Básico",
-    "asignatura": "LENGUAJE Y COMUNICACION",
-    "eje": "Escritura",
-    "unidad": "Unidad 3",
-    "codigo": "OA 14",
-    "categoria": "Basal",
-    "descripcion": "Escribir artículos informativos para comunicar información sobre un tema investigado: organizando el texto en párrafos con subtítulos y diagramación adecuada.",
-    "indicadores": [
-      "Estructuran el artículo en introducción, desarrollo temático y conclusión.",
-      "Incorporan imágenes con pie de foto explicativo."
-    ]
-  },
-  {
-    "nivel": "4° Básico",
-    "asignatura": "LENGUAJE Y COMUNICACION",
-    "eje": "Escritura",
-    "unidad": "Unidad 3",
-    "codigo": "OA 15",
-    "categoria": "Complementario",
-    "descripcion": "Escribir cartas, afiches e instrucciones claras para diversos propósitos comunicativos.",
-    "indicadores": [
-      "Utilizan formato de carta formal o afiche persuasivo según la situación.",
-      "Emplean verbos en imperativo o infinitivo en textos instructivos."
-    ]
-  },
-  {
-    "nivel": "4° Básico",
-    "asignatura": "LENGUAJE Y COMUNICACION",
-    "eje": "Escritura",
-    "unidad": "Unidad 3",
-    "codigo": "OA 18",
-    "categoria": "Basal",
-    "descripcion": "Incorporar de manera pertinente en la escritura el vocabulario técnico o disciplinar aprendido.",
-    "indicadores": [
-      "Emplean términos científicos o históricos con precisión conceptual.",
-      "Evitan redundancias mediante pronombres y sinónimos."
-    ]
-  },
-  {
-    "nivel": "4° Básico",
-    "asignatura": "LENGUAJE Y COMUNICACION",
-    "eje": "Comunicación Oral",
-    "unidad": "Unidad 3",
-    "codigo": "OA 23",
-    "categoria": "Basal",
-    "descripcion": "Comprender textos orales explicativos y documentales para formular preguntas sobre el tema expuesto.",
-    "indicadores": [
-      "Toman apuntes breves durante la exposición oral del docente o video.",
-      "Sintetizan las ideas más llamativas del contenido audiovisual."
-    ]
-  },
-  {
-    "nivel": "4° Básico",
-    "asignatura": "LENGUAJE Y COMUNICACION",
-    "eje": "Comunicación Oral",
-    "unidad": "Unidad 3",
-    "codigo": "OA 24",
-    "categoria": "Basal",
-    "descripcion": "Expresarse de manera coherente y articulada sobre temas de su interés apoyándose en presentaciones digitales o afiches.",
-    "indicadores": [
-      "Presentan con voz audible y contacto visual con el auditorio.",
-      "Responden preguntas del público complementando su explicación."
-    ]
-  },
-  {
-    "nivel": "4° Básico",
-    "asignatura": "LENGUAJE Y COMUNICACION",
-    "eje": "Lectura",
-    "unidad": "Unidad 4",
-    "codigo": "OA 03",
-    "categoria": "Basal",
-    "descripcion": "Leer y familiarizarse con obras dramáticas, libretos infantiles y diálogos teatrales.",
-    "indicadores": [
-      "Diferencian parlamentos de personajes y acotaciones del dramaturgo.",
-      "Reconocen el conflicto dramático central de la obra."
-    ]
-  },
-  {
-    "nivel": "4° Básico",
-    "asignatura": "LENGUAJE Y COMUNICACION",
-    "eje": "Lectura",
-    "unidad": "Unidad 4",
-    "codigo": "OA 04",
-    "categoria": "Basal",
-    "descripcion": "Profundizar en la comprensión de obras teatrales reconociendo motivaciones y quiebres argumentales.",
-    "indicadores": [
-      "Caracterizan a los protagonistas y antagonistas de la pieza teatral.",
-      "Infieren sentimientos a partir de las acotaciones de escena."
-    ]
-  },
-  {
-    "nivel": "4° Básico",
-    "asignatura": "LENGUAJE Y COMUNICACION",
-    "eje": "Escritura",
-    "unidad": "Unidad 4",
-    "codigo": "OA 13",
-    "categoria": "Basal",
-    "descripcion": "Escribir creativamente diálogos dramáticos y narraciones teatrales aplicando normas ortográficas.",
-    "indicadores": [
-      "Escriben libretos breves con nombres de personajes y dos puntos.",
-      "Utilizan signos de interrogación y exclamación para dar emotividad a las réplicas."
-    ]
-  },
-  {
-    "nivel": "4° Básico",
-    "asignatura": "LENGUAJE Y COMUNICACION",
-    "eje": "Escritura",
-    "unidad": "Unidad 4",
-    "codigo": "OA 16",
-    "categoria": "Basal",
-    "descripcion": "Planificar, escribir, revisar y editar sus textos en función del destinatario y propósito.",
-    "indicadores": [
-      "Revisan borradores con pautas de cotejo ortográficas.",
-      "Corrigen errores de concordancia y puntuación antes de la entrega final."
-    ]
-  },
-  {
-    "nivel": "4° Básico",
-    "asignatura": "LENGUAJE Y COMUNICACION",
-    "eje": "Escritura",
-    "unidad": "Unidad 4",
-    "codigo": "OA 21",
-    "categoria": "Basal",
-    "descripcion": "Escribir correctamente aplicando reglas de ortografía literal (uso de b/v, c/s/z, g/j) y signos de puntuación.",
-    "indicadores": [
-      "Escriben sin faltas en palabras de alta frecuencia.",
-      "Puntúan correctamente párrafos con punto seguido y punto aparte."
-    ]
-  },
-  {
-    "nivel": "4° Básico",
-    "asignatura": "LENGUAJE Y COMUNICACION",
-    "eje": "Comunicación Oral",
-    "unidad": "Unidad 4",
-    "codigo": "OA 25",
-    "categoria": "Complementario",
-    "descripcion": "Participar en dramatizaciones, representaciones teatrales y lecturas dramatizadas frente al curso.",
-    "indicadores": [
-      "Caracterizan la voz y postura corporal del personaje asignado.",
-      "Memorizan e interpretan sus parlamentos con soltura y expresividad."
-    ]
-  },
-  {
-    "nivel": "4° Básico",
-    "asignatura": "LENGUAJE Y COMUNICACION",
-    "eje": "Comunicación Oral",
-    "unidad": "Unidad 4",
-    "codigo": "OA 27",
-    "categoria": "Complementario",
-    "descripcion": "Interactuar de acuerdo con las convenciones sociales en diferentes situaciones cotidianas y escolares.",
-    "indicadores": [
-      "Saludan, se despiden y agradecen con lenguaje cortés.",
-      "Piden aclaraciones utilizando fórmulas de cortesía adecuadas."
-    ]
-  },
-  {
-    "nivel": "5° Básico",
-    "asignatura": "LENGUAJE Y COMUNICACION",
-    "eje": "Lectura",
-    "unidad": "Unidad 1",
-    "codigo": "OA 01",
-    "categoria": "Basal",
-    "descripcion": "Analizar e interpretar críticamente textos literarios (narrativa, lírica, drama) de diversos autores y épocas (5° Básico - Unidad 1).",
-    "indicadores": [
-      "Analizan la influencia del contexto histórico en la visión de mundo de la obra.",
-      "Interpretan símbolos, alegorías y figuras estilísticas complejas.",
-      "Evalúan las decisiones morales y conflictos de los protagonistas."
-    ]
-  },
-  {
-    "nivel": "5° Básico",
-    "asignatura": "LENGUAJE Y COMUNICACION",
-    "eje": "Lectura",
-    "unidad": "Unidad 1",
-    "codigo": "OA 02",
-    "categoria": "Basal",
-    "descripcion": "Analizar y evaluar textos no literarios, discursos y medios de comunicación reconociendo posturas e intencionalidades (5° Básico - Unidad 1).",
-    "indicadores": [
-      "Diferencian tesis, argumentos de respaldo y contraargumentos.",
-      "Identifican sesgos, estereotipos y falacias argumentativas.",
-      "Evalúan la validez de la evidencia documental y testimonial."
-    ]
-  },
-  {
-    "nivel": "5° Básico",
-    "asignatura": "LENGUAJE Y COMUNICACION",
-    "eje": "Escritura",
-    "unidad": "Unidad 1",
-    "codigo": "OA 10",
-    "categoria": "Basal",
-    "descripcion": "Planificar, escribir y revisar ensayos, informes académicos y textos argumentativos bien estructurados (5° Básico - Unidad 1).",
-    "indicadores": [
-      "Formulan una tesis clara y la defienden con argumentos documentados.",
-      "Aplican conectores lógicos interoracionales con precisión gramatical.",
-      "Citan fuentes siguiendo estándares bibliográficos."
-    ]
-  },
-  {
-    "nivel": "5° Básico",
-    "asignatura": "LENGUAJE Y COMUNICACION",
-    "eje": "Comunicación Oral",
-    "unidad": "Unidad 1",
-    "codigo": "OA 20",
-    "categoria": "Complementario",
-    "descripcion": "Participar en debates, mesas redondas y discursos argumentativos orales con postura crítica y fundamentada (5° Básico - Unidad 1).",
-    "indicadores": [
-      "Rebaten posturas contrarias sin recurrir a ataques personales.",
-      "Utilizan entonación convincente y lenguaje académico adecuado.",
-      "Gestionan adecuadamente el tiempo de exposición asignado."
-    ]
-  },
-  {
-    "nivel": "5° Básico",
-    "asignatura": "LENGUAJE Y COMUNICACION",
-    "eje": "Lectura",
-    "unidad": "Unidad 2",
-    "codigo": "OA 03",
-    "categoria": "Basal",
-    "descripcion": "Analizar e interpretar críticamente textos literarios (narrativa, lírica, drama) de diversos autores y épocas (5° Básico - Unidad 2).",
-    "indicadores": [
-      "Analizan la influencia del contexto histórico en la visión de mundo de la obra.",
-      "Interpretan símbolos, alegorías y figuras estilísticas complejas.",
-      "Evalúan las decisiones morales y conflictos de los protagonistas."
-    ]
-  },
-  {
-    "nivel": "5° Básico",
-    "asignatura": "LENGUAJE Y COMUNICACION",
-    "eje": "Lectura",
-    "unidad": "Unidad 2",
-    "codigo": "OA 04",
-    "categoria": "Basal",
-    "descripcion": "Analizar y evaluar textos no literarios, discursos y medios de comunicación reconociendo posturas e intencionalidades (5° Básico - Unidad 2).",
-    "indicadores": [
-      "Diferencian tesis, argumentos de respaldo y contraargumentos.",
-      "Identifican sesgos, estereotipos y falacias argumentativas.",
-      "Evalúan la validez de la evidencia documental y testimonial."
-    ]
-  },
-  {
-    "nivel": "5° Básico",
-    "asignatura": "LENGUAJE Y COMUNICACION",
-    "eje": "Escritura",
-    "unidad": "Unidad 2",
-    "codigo": "OA 12",
-    "categoria": "Basal",
-    "descripcion": "Planificar, escribir y revisar ensayos, informes académicos y textos argumentativos bien estructurados (5° Básico - Unidad 2).",
-    "indicadores": [
-      "Formulan una tesis clara y la defienden con argumentos documentados.",
-      "Aplican conectores lógicos interoracionales con precisión gramatical.",
-      "Citan fuentes siguiendo estándares bibliográficos."
-    ]
-  },
-  {
-    "nivel": "5° Básico",
-    "asignatura": "LENGUAJE Y COMUNICACION",
-    "eje": "Comunicación Oral",
-    "unidad": "Unidad 2",
-    "codigo": "OA 21",
-    "categoria": "Complementario",
-    "descripcion": "Participar en debates, mesas redondas y discursos argumentativos orales con postura crítica y fundamentada (5° Básico - Unidad 2).",
-    "indicadores": [
-      "Rebaten posturas contrarias sin recurrir a ataques personales.",
-      "Utilizan entonación convincente y lenguaje académico adecuado.",
-      "Gestionan adecuadamente el tiempo de exposición asignado."
-    ]
-  },
-  {
-    "nivel": "5° Básico",
-    "asignatura": "LENGUAJE Y COMUNICACION",
-    "eje": "Lectura",
-    "unidad": "Unidad 3",
-    "codigo": "OA 05",
-    "categoria": "Basal",
-    "descripcion": "Analizar e interpretar críticamente textos literarios (narrativa, lírica, drama) de diversos autores y épocas (5° Básico - Unidad 3).",
-    "indicadores": [
-      "Analizan la influencia del contexto histórico en la visión de mundo de la obra.",
-      "Interpretan símbolos, alegorías y figuras estilísticas complejas.",
-      "Evalúan las decisiones morales y conflictos de los protagonistas."
-    ]
-  },
-  {
-    "nivel": "5° Básico",
-    "asignatura": "LENGUAJE Y COMUNICACION",
-    "eje": "Lectura",
-    "unidad": "Unidad 3",
-    "codigo": "OA 06",
-    "categoria": "Basal",
-    "descripcion": "Analizar y evaluar textos no literarios, discursos y medios de comunicación reconociendo posturas e intencionalidades (5° Básico - Unidad 3).",
-    "indicadores": [
-      "Diferencian tesis, argumentos de respaldo y contraargumentos.",
-      "Identifican sesgos, estereotipos y falacias argumentativas.",
-      "Evalúan la validez de la evidencia documental y testimonial."
-    ]
-  },
-  {
-    "nivel": "5° Básico",
-    "asignatura": "LENGUAJE Y COMUNICACION",
-    "eje": "Escritura",
-    "unidad": "Unidad 3",
-    "codigo": "OA 14",
-    "categoria": "Basal",
-    "descripcion": "Planificar, escribir y revisar ensayos, informes académicos y textos argumentativos bien estructurados (5° Básico - Unidad 3).",
-    "indicadores": [
-      "Formulan una tesis clara y la defienden con argumentos documentados.",
-      "Aplican conectores lógicos interoracionales con precisión gramatical.",
-      "Citan fuentes siguiendo estándares bibliográficos."
-    ]
-  },
-  {
-    "nivel": "5° Básico",
-    "asignatura": "LENGUAJE Y COMUNICACION",
-    "eje": "Comunicación Oral",
-    "unidad": "Unidad 3",
-    "codigo": "OA 22",
-    "categoria": "Complementario",
-    "descripcion": "Participar en debates, mesas redondas y discursos argumentativos orales con postura crítica y fundamentada (5° Básico - Unidad 3).",
-    "indicadores": [
-      "Rebaten posturas contrarias sin recurrir a ataques personales.",
-      "Utilizan entonación convincente y lenguaje académico adecuado.",
-      "Gestionan adecuadamente el tiempo de exposición asignado."
-    ]
-  },
-  {
-    "nivel": "5° Básico",
-    "asignatura": "LENGUAJE Y COMUNICACION",
-    "eje": "Lectura",
-    "unidad": "Unidad 4",
-    "codigo": "OA 07",
-    "categoria": "Basal",
-    "descripcion": "Analizar e interpretar críticamente textos literarios (narrativa, lírica, drama) de diversos autores y épocas (5° Básico - Unidad 4).",
-    "indicadores": [
-      "Analizan la influencia del contexto histórico en la visión de mundo de la obra.",
-      "Interpretan símbolos, alegorías y figuras estilísticas complejas.",
-      "Evalúan las decisiones morales y conflictos de los protagonistas."
-    ]
-  },
-  {
-    "nivel": "5° Básico",
-    "asignatura": "LENGUAJE Y COMUNICACION",
-    "eje": "Lectura",
-    "unidad": "Unidad 4",
-    "codigo": "OA 08",
-    "categoria": "Basal",
-    "descripcion": "Analizar y evaluar textos no literarios, discursos y medios de comunicación reconociendo posturas e intencionalidades (5° Básico - Unidad 4).",
-    "indicadores": [
-      "Diferencian tesis, argumentos de respaldo y contraargumentos.",
-      "Identifican sesgos, estereotipos y falacias argumentativas.",
-      "Evalúan la validez de la evidencia documental y testimonial."
-    ]
-  },
-  {
-    "nivel": "5° Básico",
-    "asignatura": "LENGUAJE Y COMUNICACION",
-    "eje": "Escritura",
-    "unidad": "Unidad 4",
-    "codigo": "OA 16",
-    "categoria": "Basal",
-    "descripcion": "Planificar, escribir y revisar ensayos, informes académicos y textos argumentativos bien estructurados (5° Básico - Unidad 4).",
-    "indicadores": [
-      "Formulan una tesis clara y la defienden con argumentos documentados.",
-      "Aplican conectores lógicos interoracionales con precisión gramatical.",
-      "Citan fuentes siguiendo estándares bibliográficos."
-    ]
-  },
-  {
-    "nivel": "5° Básico",
-    "asignatura": "LENGUAJE Y COMUNICACION",
-    "eje": "Comunicación Oral",
-    "unidad": "Unidad 4",
-    "codigo": "OA 23",
-    "categoria": "Complementario",
-    "descripcion": "Participar en debates, mesas redondas y discursos argumentativos orales con postura crítica y fundamentada (5° Básico - Unidad 4).",
-    "indicadores": [
-      "Rebaten posturas contrarias sin recurrir a ataques personales.",
-      "Utilizan entonación convincente y lenguaje académico adecuado.",
-      "Gestionan adecuadamente el tiempo de exposición asignado."
-    ]
-  },
-  {
-    "nivel": "6° Básico",
-    "asignatura": "LENGUAJE Y COMUNICACION",
-    "eje": "Lectura",
-    "unidad": "Unidad 1",
-    "codigo": "OA 01",
-    "categoria": "Basal",
-    "descripcion": "Analizar e interpretar críticamente textos literarios (narrativa, lírica, drama) de diversos autores y épocas (6° Básico - Unidad 1).",
-    "indicadores": [
-      "Analizan la influencia del contexto histórico en la visión de mundo de la obra.",
-      "Interpretan símbolos, alegorías y figuras estilísticas complejas.",
-      "Evalúan las decisiones morales y conflictos de los protagonistas."
-    ]
-  },
-  {
-    "nivel": "6° Básico",
-    "asignatura": "LENGUAJE Y COMUNICACION",
-    "eje": "Lectura",
-    "unidad": "Unidad 1",
-    "codigo": "OA 02",
-    "categoria": "Basal",
-    "descripcion": "Analizar y evaluar textos no literarios, discursos y medios de comunicación reconociendo posturas e intencionalidades (6° Básico - Unidad 1).",
-    "indicadores": [
-      "Diferencian tesis, argumentos de respaldo y contraargumentos.",
-      "Identifican sesgos, estereotipos y falacias argumentativas.",
-      "Evalúan la validez de la evidencia documental y testimonial."
-    ]
-  },
-  {
-    "nivel": "6° Básico",
-    "asignatura": "LENGUAJE Y COMUNICACION",
-    "eje": "Escritura",
-    "unidad": "Unidad 1",
-    "codigo": "OA 10",
-    "categoria": "Basal",
-    "descripcion": "Planificar, escribir y revisar ensayos, informes académicos y textos argumentativos bien estructurados (6° Básico - Unidad 1).",
-    "indicadores": [
-      "Formulan una tesis clara y la defienden con argumentos documentados.",
-      "Aplican conectores lógicos interoracionales con precisión gramatical.",
-      "Citan fuentes siguiendo estándares bibliográficos."
-    ]
-  },
-  {
-    "nivel": "6° Básico",
-    "asignatura": "LENGUAJE Y COMUNICACION",
-    "eje": "Comunicación Oral",
-    "unidad": "Unidad 1",
-    "codigo": "OA 20",
-    "categoria": "Complementario",
-    "descripcion": "Participar en debates, mesas redondas y discursos argumentativos orales con postura crítica y fundamentada (6° Básico - Unidad 1).",
-    "indicadores": [
-      "Rebaten posturas contrarias sin recurrir a ataques personales.",
-      "Utilizan entonación convincente y lenguaje académico adecuado.",
-      "Gestionan adecuadamente el tiempo de exposición asignado."
-    ]
-  },
-  {
-    "nivel": "6° Básico",
-    "asignatura": "LENGUAJE Y COMUNICACION",
-    "eje": "Lectura",
-    "unidad": "Unidad 2",
-    "codigo": "OA 03",
-    "categoria": "Basal",
-    "descripcion": "Analizar e interpretar críticamente textos literarios (narrativa, lírica, drama) de diversos autores y épocas (6° Básico - Unidad 2).",
-    "indicadores": [
-      "Analizan la influencia del contexto histórico en la visión de mundo de la obra.",
-      "Interpretan símbolos, alegorías y figuras estilísticas complejas.",
-      "Evalúan las decisiones morales y conflictos de los protagonistas."
-    ]
-  },
-  {
-    "nivel": "6° Básico",
-    "asignatura": "LENGUAJE Y COMUNICACION",
-    "eje": "Lectura",
-    "unidad": "Unidad 2",
-    "codigo": "OA 04",
-    "categoria": "Basal",
-    "descripcion": "Analizar y evaluar textos no literarios, discursos y medios de comunicación reconociendo posturas e intencionalidades (6° Básico - Unidad 2).",
-    "indicadores": [
-      "Diferencian tesis, argumentos de respaldo y contraargumentos.",
-      "Identifican sesgos, estereotipos y falacias argumentativas.",
-      "Evalúan la validez de la evidencia documental y testimonial."
-    ]
-  },
-  {
-    "nivel": "6° Básico",
-    "asignatura": "LENGUAJE Y COMUNICACION",
-    "eje": "Escritura",
-    "unidad": "Unidad 2",
-    "codigo": "OA 12",
-    "categoria": "Basal",
-    "descripcion": "Planificar, escribir y revisar ensayos, informes académicos y textos argumentativos bien estructurados (6° Básico - Unidad 2).",
-    "indicadores": [
-      "Formulan una tesis clara y la defienden con argumentos documentados.",
-      "Aplican conectores lógicos interoracionales con precisión gramatical.",
-      "Citan fuentes siguiendo estándares bibliográficos."
-    ]
-  },
-  {
-    "nivel": "6° Básico",
-    "asignatura": "LENGUAJE Y COMUNICACION",
-    "eje": "Comunicación Oral",
-    "unidad": "Unidad 2",
-    "codigo": "OA 21",
-    "categoria": "Complementario",
-    "descripcion": "Participar en debates, mesas redondas y discursos argumentativos orales con postura crítica y fundamentada (6° Básico - Unidad 2).",
-    "indicadores": [
-      "Rebaten posturas contrarias sin recurrir a ataques personales.",
-      "Utilizan entonación convincente y lenguaje académico adecuado.",
-      "Gestionan adecuadamente el tiempo de exposición asignado."
-    ]
-  },
-  {
-    "nivel": "6° Básico",
-    "asignatura": "LENGUAJE Y COMUNICACION",
-    "eje": "Lectura",
-    "unidad": "Unidad 3",
-    "codigo": "OA 05",
-    "categoria": "Basal",
-    "descripcion": "Analizar e interpretar críticamente textos literarios (narrativa, lírica, drama) de diversos autores y épocas (6° Básico - Unidad 3).",
-    "indicadores": [
-      "Analizan la influencia del contexto histórico en la visión de mundo de la obra.",
-      "Interpretan símbolos, alegorías y figuras estilísticas complejas.",
-      "Evalúan las decisiones morales y conflictos de los protagonistas."
-    ]
-  },
-  {
-    "nivel": "6° Básico",
-    "asignatura": "LENGUAJE Y COMUNICACION",
-    "eje": "Lectura",
-    "unidad": "Unidad 3",
-    "codigo": "OA 06",
-    "categoria": "Basal",
-    "descripcion": "Analizar y evaluar textos no literarios, discursos y medios de comunicación reconociendo posturas e intencionalidades (6° Básico - Unidad 3).",
-    "indicadores": [
-      "Diferencian tesis, argumentos de respaldo y contraargumentos.",
-      "Identifican sesgos, estereotipos y falacias argumentativas.",
-      "Evalúan la validez de la evidencia documental y testimonial."
-    ]
-  },
-  {
-    "nivel": "6° Básico",
-    "asignatura": "LENGUAJE Y COMUNICACION",
-    "eje": "Escritura",
-    "unidad": "Unidad 3",
-    "codigo": "OA 14",
-    "categoria": "Basal",
-    "descripcion": "Planificar, escribir y revisar ensayos, informes académicos y textos argumentativos bien estructurados (6° Básico - Unidad 3).",
-    "indicadores": [
-      "Formulan una tesis clara y la defienden con argumentos documentados.",
-      "Aplican conectores lógicos interoracionales con precisión gramatical.",
-      "Citan fuentes siguiendo estándares bibliográficos."
-    ]
-  },
-  {
-    "nivel": "6° Básico",
-    "asignatura": "LENGUAJE Y COMUNICACION",
-    "eje": "Comunicación Oral",
-    "unidad": "Unidad 3",
-    "codigo": "OA 22",
-    "categoria": "Complementario",
-    "descripcion": "Participar en debates, mesas redondas y discursos argumentativos orales con postura crítica y fundamentada (6° Básico - Unidad 3).",
-    "indicadores": [
-      "Rebaten posturas contrarias sin recurrir a ataques personales.",
-      "Utilizan entonación convincente y lenguaje académico adecuado.",
-      "Gestionan adecuadamente el tiempo de exposición asignado."
-    ]
-  },
-  {
-    "nivel": "6° Básico",
-    "asignatura": "LENGUAJE Y COMUNICACION",
-    "eje": "Lectura",
-    "unidad": "Unidad 4",
-    "codigo": "OA 07",
-    "categoria": "Basal",
-    "descripcion": "Analizar e interpretar críticamente textos literarios (narrativa, lírica, drama) de diversos autores y épocas (6° Básico - Unidad 4).",
-    "indicadores": [
-      "Analizan la influencia del contexto histórico en la visión de mundo de la obra.",
-      "Interpretan símbolos, alegorías y figuras estilísticas complejas.",
-      "Evalúan las decisiones morales y conflictos de los protagonistas."
-    ]
-  },
-  {
-    "nivel": "6° Básico",
-    "asignatura": "LENGUAJE Y COMUNICACION",
-    "eje": "Lectura",
-    "unidad": "Unidad 4",
-    "codigo": "OA 08",
-    "categoria": "Basal",
-    "descripcion": "Analizar y evaluar textos no literarios, discursos y medios de comunicación reconociendo posturas e intencionalidades (6° Básico - Unidad 4).",
-    "indicadores": [
-      "Diferencian tesis, argumentos de respaldo y contraargumentos.",
-      "Identifican sesgos, estereotipos y falacias argumentativas.",
-      "Evalúan la validez de la evidencia documental y testimonial."
-    ]
-  },
-  {
-    "nivel": "6° Básico",
-    "asignatura": "LENGUAJE Y COMUNICACION",
-    "eje": "Escritura",
-    "unidad": "Unidad 4",
-    "codigo": "OA 16",
-    "categoria": "Basal",
-    "descripcion": "Planificar, escribir y revisar ensayos, informes académicos y textos argumentativos bien estructurados (6° Básico - Unidad 4).",
-    "indicadores": [
-      "Formulan una tesis clara y la defienden con argumentos documentados.",
-      "Aplican conectores lógicos interoracionales con precisión gramatical.",
-      "Citan fuentes siguiendo estándares bibliográficos."
-    ]
-  },
-  {
-    "nivel": "6° Básico",
-    "asignatura": "LENGUAJE Y COMUNICACION",
-    "eje": "Comunicación Oral",
-    "unidad": "Unidad 4",
-    "codigo": "OA 23",
-    "categoria": "Complementario",
-    "descripcion": "Participar en debates, mesas redondas y discursos argumentativos orales con postura crítica y fundamentada (6° Básico - Unidad 4).",
-    "indicadores": [
-      "Rebaten posturas contrarias sin recurrir a ataques personales.",
-      "Utilizan entonación convincente y lenguaje académico adecuado.",
-      "Gestionan adecuadamente el tiempo de exposición asignado."
-    ]
-  },
-  {
-    "nivel": "7° Básico",
-    "asignatura": "LENGUA Y LITERATURA",
-    "eje": "Lectura",
-    "unidad": "Unidad 1",
-    "codigo": "OA 01",
-    "categoria": "Basal",
-    "descripcion": "Analizar e interpretar críticamente textos literarios (narrativa, lírica, drama) de diversos autores y épocas (7° Básico - Unidad 1).",
-    "indicadores": [
-      "Analizan la influencia del contexto histórico en la visión de mundo de la obra.",
-      "Interpretan símbolos, alegorías y figuras estilísticas complejas.",
-      "Evalúan las decisiones morales y conflictos de los protagonistas."
-    ]
-  },
-  {
-    "nivel": "7° Básico",
-    "asignatura": "LENGUA Y LITERATURA",
-    "eje": "Lectura",
-    "unidad": "Unidad 1",
-    "codigo": "OA 02",
-    "categoria": "Basal",
-    "descripcion": "Analizar y evaluar textos no literarios, discursos y medios de comunicación reconociendo posturas e intencionalidades (7° Básico - Unidad 1).",
-    "indicadores": [
-      "Diferencian tesis, argumentos de respaldo y contraargumentos.",
-      "Identifican sesgos, estereotipos y falacias argumentativas.",
-      "Evalúan la validez de la evidencia documental y testimonial."
-    ]
-  },
-  {
-    "nivel": "7° Básico",
-    "asignatura": "LENGUA Y LITERATURA",
-    "eje": "Escritura",
-    "unidad": "Unidad 1",
-    "codigo": "OA 10",
-    "categoria": "Basal",
-    "descripcion": "Planificar, escribir y revisar ensayos, informes académicos y textos argumentativos bien estructurados (7° Básico - Unidad 1).",
-    "indicadores": [
-      "Formulan una tesis clara y la defienden con argumentos documentados.",
-      "Aplican conectores lógicos interoracionales con precisión gramatical.",
-      "Citan fuentes siguiendo estándares bibliográficos."
-    ]
-  },
-  {
-    "nivel": "7° Básico",
-    "asignatura": "LENGUA Y LITERATURA",
-    "eje": "Comunicación Oral",
-    "unidad": "Unidad 1",
-    "codigo": "OA 20",
-    "categoria": "Complementario",
-    "descripcion": "Participar en debates, mesas redondas y discursos argumentativos orales con postura crítica y fundamentada (7° Básico - Unidad 1).",
-    "indicadores": [
-      "Rebaten posturas contrarias sin recurrir a ataques personales.",
-      "Utilizan entonación convincente y lenguaje académico adecuado.",
-      "Gestionan adecuadamente el tiempo de exposición asignado."
-    ]
-  },
-  {
-    "nivel": "7° Básico",
-    "asignatura": "LENGUA Y LITERATURA",
-    "eje": "Lectura",
-    "unidad": "Unidad 2",
-    "codigo": "OA 03",
-    "categoria": "Basal",
-    "descripcion": "Analizar e interpretar críticamente textos literarios (narrativa, lírica, drama) de diversos autores y épocas (7° Básico - Unidad 2).",
-    "indicadores": [
-      "Analizan la influencia del contexto histórico en la visión de mundo de la obra.",
-      "Interpretan símbolos, alegorías y figuras estilísticas complejas.",
-      "Evalúan las decisiones morales y conflictos de los protagonistas."
-    ]
-  },
-  {
-    "nivel": "7° Básico",
-    "asignatura": "LENGUA Y LITERATURA",
-    "eje": "Lectura",
-    "unidad": "Unidad 2",
-    "codigo": "OA 04",
-    "categoria": "Basal",
-    "descripcion": "Analizar y evaluar textos no literarios, discursos y medios de comunicación reconociendo posturas e intencionalidades (7° Básico - Unidad 2).",
-    "indicadores": [
-      "Diferencian tesis, argumentos de respaldo y contraargumentos.",
-      "Identifican sesgos, estereotipos y falacias argumentativas.",
-      "Evalúan la validez de la evidencia documental y testimonial."
-    ]
-  },
-  {
-    "nivel": "7° Básico",
-    "asignatura": "LENGUA Y LITERATURA",
-    "eje": "Escritura",
-    "unidad": "Unidad 2",
-    "codigo": "OA 12",
-    "categoria": "Basal",
-    "descripcion": "Planificar, escribir y revisar ensayos, informes académicos y textos argumentativos bien estructurados (7° Básico - Unidad 2).",
-    "indicadores": [
-      "Formulan una tesis clara y la defienden con argumentos documentados.",
-      "Aplican conectores lógicos interoracionales con precisión gramatical.",
-      "Citan fuentes siguiendo estándares bibliográficos."
-    ]
-  },
-  {
-    "nivel": "7° Básico",
-    "asignatura": "LENGUA Y LITERATURA",
-    "eje": "Comunicación Oral",
-    "unidad": "Unidad 2",
-    "codigo": "OA 21",
-    "categoria": "Complementario",
-    "descripcion": "Participar en debates, mesas redondas y discursos argumentativos orales con postura crítica y fundamentada (7° Básico - Unidad 2).",
-    "indicadores": [
-      "Rebaten posturas contrarias sin recurrir a ataques personales.",
-      "Utilizan entonación convincente y lenguaje académico adecuado.",
-      "Gestionan adecuadamente el tiempo de exposición asignado."
-    ]
-  },
-  {
-    "nivel": "7° Básico",
-    "asignatura": "LENGUA Y LITERATURA",
-    "eje": "Lectura",
-    "unidad": "Unidad 3",
-    "codigo": "OA 05",
-    "categoria": "Basal",
-    "descripcion": "Analizar e interpretar críticamente textos literarios (narrativa, lírica, drama) de diversos autores y épocas (7° Básico - Unidad 3).",
-    "indicadores": [
-      "Analizan la influencia del contexto histórico en la visión de mundo de la obra.",
-      "Interpretan símbolos, alegorías y figuras estilísticas complejas.",
-      "Evalúan las decisiones morales y conflictos de los protagonistas."
-    ]
-  },
-  {
-    "nivel": "7° Básico",
-    "asignatura": "LENGUA Y LITERATURA",
-    "eje": "Lectura",
-    "unidad": "Unidad 3",
-    "codigo": "OA 06",
-    "categoria": "Basal",
-    "descripcion": "Analizar y evaluar textos no literarios, discursos y medios de comunicación reconociendo posturas e intencionalidades (7° Básico - Unidad 3).",
-    "indicadores": [
-      "Diferencian tesis, argumentos de respaldo y contraargumentos.",
-      "Identifican sesgos, estereotipos y falacias argumentativas.",
-      "Evalúan la validez de la evidencia documental y testimonial."
-    ]
-  },
-  {
-    "nivel": "7° Básico",
-    "asignatura": "LENGUA Y LITERATURA",
-    "eje": "Escritura",
-    "unidad": "Unidad 3",
-    "codigo": "OA 14",
-    "categoria": "Basal",
-    "descripcion": "Planificar, escribir y revisar ensayos, informes académicos y textos argumentativos bien estructurados (7° Básico - Unidad 3).",
-    "indicadores": [
-      "Formulan una tesis clara y la defienden con argumentos documentados.",
-      "Aplican conectores lógicos interoracionales con precisión gramatical.",
-      "Citan fuentes siguiendo estándares bibliográficos."
-    ]
-  },
-  {
-    "nivel": "7° Básico",
-    "asignatura": "LENGUA Y LITERATURA",
-    "eje": "Comunicación Oral",
-    "unidad": "Unidad 3",
-    "codigo": "OA 22",
-    "categoria": "Complementario",
-    "descripcion": "Participar en debates, mesas redondas y discursos argumentativos orales con postura crítica y fundamentada (7° Básico - Unidad 3).",
-    "indicadores": [
-      "Rebaten posturas contrarias sin recurrir a ataques personales.",
-      "Utilizan entonación convincente y lenguaje académico adecuado.",
-      "Gestionan adecuadamente el tiempo de exposición asignado."
-    ]
-  },
-  {
-    "nivel": "7° Básico",
-    "asignatura": "LENGUA Y LITERATURA",
-    "eje": "Lectura",
-    "unidad": "Unidad 4",
-    "codigo": "OA 07",
-    "categoria": "Basal",
-    "descripcion": "Analizar e interpretar críticamente textos literarios (narrativa, lírica, drama) de diversos autores y épocas (7° Básico - Unidad 4).",
-    "indicadores": [
-      "Analizan la influencia del contexto histórico en la visión de mundo de la obra.",
-      "Interpretan símbolos, alegorías y figuras estilísticas complejas.",
-      "Evalúan las decisiones morales y conflictos de los protagonistas."
-    ]
-  },
-  {
-    "nivel": "7° Básico",
-    "asignatura": "LENGUA Y LITERATURA",
-    "eje": "Lectura",
-    "unidad": "Unidad 4",
-    "codigo": "OA 08",
-    "categoria": "Basal",
-    "descripcion": "Analizar y evaluar textos no literarios, discursos y medios de comunicación reconociendo posturas e intencionalidades (7° Básico - Unidad 4).",
-    "indicadores": [
-      "Diferencian tesis, argumentos de respaldo y contraargumentos.",
-      "Identifican sesgos, estereotipos y falacias argumentativas.",
-      "Evalúan la validez de la evidencia documental y testimonial."
-    ]
-  },
-  {
-    "nivel": "7° Básico",
-    "asignatura": "LENGUA Y LITERATURA",
-    "eje": "Escritura",
-    "unidad": "Unidad 4",
-    "codigo": "OA 16",
-    "categoria": "Basal",
-    "descripcion": "Planificar, escribir y revisar ensayos, informes académicos y textos argumentativos bien estructurados (7° Básico - Unidad 4).",
-    "indicadores": [
-      "Formulan una tesis clara y la defienden con argumentos documentados.",
-      "Aplican conectores lógicos interoracionales con precisión gramatical.",
-      "Citan fuentes siguiendo estándares bibliográficos."
-    ]
-  },
-  {
-    "nivel": "7° Básico",
-    "asignatura": "LENGUA Y LITERATURA",
-    "eje": "Comunicación Oral",
-    "unidad": "Unidad 4",
-    "codigo": "OA 23",
-    "categoria": "Complementario",
-    "descripcion": "Participar en debates, mesas redondas y discursos argumentativos orales con postura crítica y fundamentada (7° Básico - Unidad 4).",
-    "indicadores": [
-      "Rebaten posturas contrarias sin recurrir a ataques personales.",
-      "Utilizan entonación convincente y lenguaje académico adecuado.",
-      "Gestionan adecuadamente el tiempo de exposición asignado."
-    ]
-  },
-  {
-    "nivel": "8° Básico",
-    "asignatura": "LENGUA Y LITERATURA",
-    "eje": "Lectura",
-    "unidad": "Unidad 1",
-    "codigo": "OA 01",
-    "categoria": "Basal",
-    "descripcion": "Analizar e interpretar críticamente textos literarios (narrativa, lírica, drama) de diversos autores y épocas (8° Básico - Unidad 1).",
-    "indicadores": [
-      "Analizan la influencia del contexto histórico en la visión de mundo de la obra.",
-      "Interpretan símbolos, alegorías y figuras estilísticas complejas.",
-      "Evalúan las decisiones morales y conflictos de los protagonistas."
-    ]
-  },
-  {
-    "nivel": "8° Básico",
-    "asignatura": "LENGUA Y LITERATURA",
-    "eje": "Lectura",
-    "unidad": "Unidad 1",
-    "codigo": "OA 02",
-    "categoria": "Basal",
-    "descripcion": "Analizar y evaluar textos no literarios, discursos y medios de comunicación reconociendo posturas e intencionalidades (8° Básico - Unidad 1).",
-    "indicadores": [
-      "Diferencian tesis, argumentos de respaldo y contraargumentos.",
-      "Identifican sesgos, estereotipos y falacias argumentativas.",
-      "Evalúan la validez de la evidencia documental y testimonial."
-    ]
-  },
-  {
-    "nivel": "8° Básico",
-    "asignatura": "LENGUA Y LITERATURA",
-    "eje": "Escritura",
-    "unidad": "Unidad 1",
-    "codigo": "OA 10",
-    "categoria": "Basal",
-    "descripcion": "Planificar, escribir y revisar ensayos, informes académicos y textos argumentativos bien estructurados (8° Básico - Unidad 1).",
-    "indicadores": [
-      "Formulan una tesis clara y la defienden con argumentos documentados.",
-      "Aplican conectores lógicos interoracionales con precisión gramatical.",
-      "Citan fuentes siguiendo estándares bibliográficos."
-    ]
-  },
-  {
-    "nivel": "8° Básico",
-    "asignatura": "LENGUA Y LITERATURA",
-    "eje": "Comunicación Oral",
-    "unidad": "Unidad 1",
-    "codigo": "OA 20",
-    "categoria": "Complementario",
-    "descripcion": "Participar en debates, mesas redondas y discursos argumentativos orales con postura crítica y fundamentada (8° Básico - Unidad 1).",
-    "indicadores": [
-      "Rebaten posturas contrarias sin recurrir a ataques personales.",
-      "Utilizan entonación convincente y lenguaje académico adecuado.",
-      "Gestionan adecuadamente el tiempo de exposición asignado."
-    ]
-  },
-  {
-    "nivel": "8° Básico",
-    "asignatura": "LENGUA Y LITERATURA",
-    "eje": "Lectura",
-    "unidad": "Unidad 2",
-    "codigo": "OA 03",
-    "categoria": "Basal",
-    "descripcion": "Analizar e interpretar críticamente textos literarios (narrativa, lírica, drama) de diversos autores y épocas (8° Básico - Unidad 2).",
-    "indicadores": [
-      "Analizan la influencia del contexto histórico en la visión de mundo de la obra.",
-      "Interpretan símbolos, alegorías y figuras estilísticas complejas.",
-      "Evalúan las decisiones morales y conflictos de los protagonistas."
-    ]
-  },
-  {
-    "nivel": "8° Básico",
-    "asignatura": "LENGUA Y LITERATURA",
-    "eje": "Lectura",
-    "unidad": "Unidad 2",
-    "codigo": "OA 04",
-    "categoria": "Basal",
-    "descripcion": "Analizar y evaluar textos no literarios, discursos y medios de comunicación reconociendo posturas e intencionalidades (8° Básico - Unidad 2).",
-    "indicadores": [
-      "Diferencian tesis, argumentos de respaldo y contraargumentos.",
-      "Identifican sesgos, estereotipos y falacias argumentativas.",
-      "Evalúan la validez de la evidencia documental y testimonial."
-    ]
-  },
-  {
-    "nivel": "8° Básico",
-    "asignatura": "LENGUA Y LITERATURA",
-    "eje": "Escritura",
-    "unidad": "Unidad 2",
-    "codigo": "OA 12",
-    "categoria": "Basal",
-    "descripcion": "Planificar, escribir y revisar ensayos, informes académicos y textos argumentativos bien estructurados (8° Básico - Unidad 2).",
-    "indicadores": [
-      "Formulan una tesis clara y la defienden con argumentos documentados.",
-      "Aplican conectores lógicos interoracionales con precisión gramatical.",
-      "Citan fuentes siguiendo estándares bibliográficos."
-    ]
-  },
-  {
-    "nivel": "8° Básico",
-    "asignatura": "LENGUA Y LITERATURA",
-    "eje": "Comunicación Oral",
-    "unidad": "Unidad 2",
-    "codigo": "OA 21",
-    "categoria": "Complementario",
-    "descripcion": "Participar en debates, mesas redondas y discursos argumentativos orales con postura crítica y fundamentada (8° Básico - Unidad 2).",
-    "indicadores": [
-      "Rebaten posturas contrarias sin recurrir a ataques personales.",
-      "Utilizan entonación convincente y lenguaje académico adecuado.",
-      "Gestionan adecuadamente el tiempo de exposición asignado."
-    ]
-  },
-  {
-    "nivel": "8° Básico",
-    "asignatura": "LENGUA Y LITERATURA",
-    "eje": "Lectura",
-    "unidad": "Unidad 3",
-    "codigo": "OA 05",
-    "categoria": "Basal",
-    "descripcion": "Analizar e interpretar críticamente textos literarios (narrativa, lírica, drama) de diversos autores y épocas (8° Básico - Unidad 3).",
-    "indicadores": [
-      "Analizan la influencia del contexto histórico en la visión de mundo de la obra.",
-      "Interpretan símbolos, alegorías y figuras estilísticas complejas.",
-      "Evalúan las decisiones morales y conflictos de los protagonistas."
-    ]
-  },
-  {
-    "nivel": "8° Básico",
-    "asignatura": "LENGUA Y LITERATURA",
-    "eje": "Lectura",
-    "unidad": "Unidad 3",
-    "codigo": "OA 06",
-    "categoria": "Basal",
-    "descripcion": "Analizar y evaluar textos no literarios, discursos y medios de comunicación reconociendo posturas e intencionalidades (8° Básico - Unidad 3).",
-    "indicadores": [
-      "Diferencian tesis, argumentos de respaldo y contraargumentos.",
-      "Identifican sesgos, estereotipos y falacias argumentativas.",
-      "Evalúan la validez de la evidencia documental y testimonial."
-    ]
-  },
-  {
-    "nivel": "8° Básico",
-    "asignatura": "LENGUA Y LITERATURA",
-    "eje": "Escritura",
-    "unidad": "Unidad 3",
-    "codigo": "OA 14",
-    "categoria": "Basal",
-    "descripcion": "Planificar, escribir y revisar ensayos, informes académicos y textos argumentativos bien estructurados (8° Básico - Unidad 3).",
-    "indicadores": [
-      "Formulan una tesis clara y la defienden con argumentos documentados.",
-      "Aplican conectores lógicos interoracionales con precisión gramatical.",
-      "Citan fuentes siguiendo estándares bibliográficos."
-    ]
-  },
-  {
-    "nivel": "8° Básico",
-    "asignatura": "LENGUA Y LITERATURA",
-    "eje": "Comunicación Oral",
-    "unidad": "Unidad 3",
-    "codigo": "OA 22",
-    "categoria": "Complementario",
-    "descripcion": "Participar en debates, mesas redondas y discursos argumentativos orales con postura crítica y fundamentada (8° Básico - Unidad 3).",
-    "indicadores": [
-      "Rebaten posturas contrarias sin recurrir a ataques personales.",
-      "Utilizan entonación convincente y lenguaje académico adecuado.",
-      "Gestionan adecuadamente el tiempo de exposición asignado."
-    ]
-  },
-  {
-    "nivel": "8° Básico",
-    "asignatura": "LENGUA Y LITERATURA",
-    "eje": "Lectura",
-    "unidad": "Unidad 4",
-    "codigo": "OA 07",
-    "categoria": "Basal",
-    "descripcion": "Analizar e interpretar críticamente textos literarios (narrativa, lírica, drama) de diversos autores y épocas (8° Básico - Unidad 4).",
-    "indicadores": [
-      "Analizan la influencia del contexto histórico en la visión de mundo de la obra.",
-      "Interpretan símbolos, alegorías y figuras estilísticas complejas.",
-      "Evalúan las decisiones morales y conflictos de los protagonistas."
-    ]
-  },
-  {
-    "nivel": "8° Básico",
-    "asignatura": "LENGUA Y LITERATURA",
-    "eje": "Lectura",
-    "unidad": "Unidad 4",
-    "codigo": "OA 08",
-    "categoria": "Basal",
-    "descripcion": "Analizar y evaluar textos no literarios, discursos y medios de comunicación reconociendo posturas e intencionalidades (8° Básico - Unidad 4).",
-    "indicadores": [
-      "Diferencian tesis, argumentos de respaldo y contraargumentos.",
-      "Identifican sesgos, estereotipos y falacias argumentativas.",
-      "Evalúan la validez de la evidencia documental y testimonial."
-    ]
-  },
-  {
-    "nivel": "8° Básico",
-    "asignatura": "LENGUA Y LITERATURA",
-    "eje": "Escritura",
-    "unidad": "Unidad 4",
-    "codigo": "OA 16",
-    "categoria": "Basal",
-    "descripcion": "Planificar, escribir y revisar ensayos, informes académicos y textos argumentativos bien estructurados (8° Básico - Unidad 4).",
-    "indicadores": [
-      "Formulan una tesis clara y la defienden con argumentos documentados.",
-      "Aplican conectores lógicos interoracionales con precisión gramatical.",
-      "Citan fuentes siguiendo estándares bibliográficos."
-    ]
-  },
-  {
-    "nivel": "8° Básico",
-    "asignatura": "LENGUA Y LITERATURA",
-    "eje": "Comunicación Oral",
-    "unidad": "Unidad 4",
-    "codigo": "OA 23",
-    "categoria": "Complementario",
-    "descripcion": "Participar en debates, mesas redondas y discursos argumentativos orales con postura crítica y fundamentada (8° Básico - Unidad 4).",
-    "indicadores": [
-      "Rebaten posturas contrarias sin recurrir a ataques personales.",
-      "Utilizan entonación convincente y lenguaje académico adecuado.",
-      "Gestionan adecuadamente el tiempo de exposición asignado."
-    ]
-  },
-  {
-    "nivel": "I° Medio",
-    "asignatura": "LENGUA Y LITERATURA",
-    "eje": "Lectura",
-    "unidad": "Unidad 1",
-    "codigo": "OA 01",
-    "categoria": "Basal",
-    "descripcion": "Analizar e interpretar críticamente textos literarios (narrativa, lírica, drama) de diversos autores y épocas (I° Medio - Unidad 1).",
-    "indicadores": [
-      "Analizan la influencia del contexto histórico en la visión de mundo de la obra.",
-      "Interpretan símbolos, alegorías y figuras estilísticas complejas.",
-      "Evalúan las decisiones morales y conflictos de los protagonistas."
-    ]
-  },
-  {
-    "nivel": "I° Medio",
-    "asignatura": "LENGUA Y LITERATURA",
-    "eje": "Lectura",
-    "unidad": "Unidad 1",
-    "codigo": "OA 02",
-    "categoria": "Basal",
-    "descripcion": "Analizar y evaluar textos no literarios, discursos y medios de comunicación reconociendo posturas e intencionalidades (I° Medio - Unidad 1).",
-    "indicadores": [
-      "Diferencian tesis, argumentos de respaldo y contraargumentos.",
-      "Identifican sesgos, estereotipos y falacias argumentativas.",
-      "Evalúan la validez de la evidencia documental y testimonial."
-    ]
-  },
-  {
-    "nivel": "I° Medio",
-    "asignatura": "LENGUA Y LITERATURA",
-    "eje": "Escritura",
-    "unidad": "Unidad 1",
-    "codigo": "OA 10",
-    "categoria": "Basal",
-    "descripcion": "Planificar, escribir y revisar ensayos, informes académicos y textos argumentativos bien estructurados (I° Medio - Unidad 1).",
-    "indicadores": [
-      "Formulan una tesis clara y la defienden con argumentos documentados.",
-      "Aplican conectores lógicos interoracionales con precisión gramatical.",
-      "Citan fuentes siguiendo estándares bibliográficos."
-    ]
-  },
-  {
-    "nivel": "I° Medio",
-    "asignatura": "LENGUA Y LITERATURA",
-    "eje": "Comunicación Oral",
-    "unidad": "Unidad 1",
-    "codigo": "OA 20",
-    "categoria": "Complementario",
-    "descripcion": "Participar en debates, mesas redondas y discursos argumentativos orales con postura crítica y fundamentada (I° Medio - Unidad 1).",
-    "indicadores": [
-      "Rebaten posturas contrarias sin recurrir a ataques personales.",
-      "Utilizan entonación convincente y lenguaje académico adecuado.",
-      "Gestionan adecuadamente el tiempo de exposición asignado."
-    ]
-  },
-  {
-    "nivel": "I° Medio",
-    "asignatura": "LENGUA Y LITERATURA",
-    "eje": "Lectura",
-    "unidad": "Unidad 2",
-    "codigo": "OA 03",
-    "categoria": "Basal",
-    "descripcion": "Analizar e interpretar críticamente textos literarios (narrativa, lírica, drama) de diversos autores y épocas (I° Medio - Unidad 2).",
-    "indicadores": [
-      "Analizan la influencia del contexto histórico en la visión de mundo de la obra.",
-      "Interpretan símbolos, alegorías y figuras estilísticas complejas.",
-      "Evalúan las decisiones morales y conflictos de los protagonistas."
-    ]
-  },
-  {
-    "nivel": "I° Medio",
-    "asignatura": "LENGUA Y LITERATURA",
-    "eje": "Lectura",
-    "unidad": "Unidad 2",
-    "codigo": "OA 04",
-    "categoria": "Basal",
-    "descripcion": "Analizar y evaluar textos no literarios, discursos y medios de comunicación reconociendo posturas e intencionalidades (I° Medio - Unidad 2).",
-    "indicadores": [
-      "Diferencian tesis, argumentos de respaldo y contraargumentos.",
-      "Identifican sesgos, estereotipos y falacias argumentativas.",
-      "Evalúan la validez de la evidencia documental y testimonial."
-    ]
-  },
-  {
-    "nivel": "I° Medio",
-    "asignatura": "LENGUA Y LITERATURA",
-    "eje": "Escritura",
-    "unidad": "Unidad 2",
-    "codigo": "OA 12",
-    "categoria": "Basal",
-    "descripcion": "Planificar, escribir y revisar ensayos, informes académicos y textos argumentativos bien estructurados (I° Medio - Unidad 2).",
-    "indicadores": [
-      "Formulan una tesis clara y la defienden con argumentos documentados.",
-      "Aplican conectores lógicos interoracionales con precisión gramatical.",
-      "Citan fuentes siguiendo estándares bibliográficos."
-    ]
-  },
-  {
-    "nivel": "I° Medio",
-    "asignatura": "LENGUA Y LITERATURA",
-    "eje": "Comunicación Oral",
-    "unidad": "Unidad 2",
-    "codigo": "OA 21",
-    "categoria": "Complementario",
-    "descripcion": "Participar en debates, mesas redondas y discursos argumentativos orales con postura crítica y fundamentada (I° Medio - Unidad 2).",
-    "indicadores": [
-      "Rebaten posturas contrarias sin recurrir a ataques personales.",
-      "Utilizan entonación convincente y lenguaje académico adecuado.",
-      "Gestionan adecuadamente el tiempo de exposición asignado."
-    ]
-  },
-  {
-    "nivel": "I° Medio",
-    "asignatura": "LENGUA Y LITERATURA",
-    "eje": "Lectura",
-    "unidad": "Unidad 3",
-    "codigo": "OA 05",
-    "categoria": "Basal",
-    "descripcion": "Analizar e interpretar críticamente textos literarios (narrativa, lírica, drama) de diversos autores y épocas (I° Medio - Unidad 3).",
-    "indicadores": [
-      "Analizan la influencia del contexto histórico en la visión de mundo de la obra.",
-      "Interpretan símbolos, alegorías y figuras estilísticas complejas.",
-      "Evalúan las decisiones morales y conflictos de los protagonistas."
-    ]
-  },
-  {
-    "nivel": "I° Medio",
-    "asignatura": "LENGUA Y LITERATURA",
-    "eje": "Lectura",
-    "unidad": "Unidad 3",
-    "codigo": "OA 06",
-    "categoria": "Basal",
-    "descripcion": "Analizar y evaluar textos no literarios, discursos y medios de comunicación reconociendo posturas e intencionalidades (I° Medio - Unidad 3).",
-    "indicadores": [
-      "Diferencian tesis, argumentos de respaldo y contraargumentos.",
-      "Identifican sesgos, estereotipos y falacias argumentativas.",
-      "Evalúan la validez de la evidencia documental y testimonial."
-    ]
-  },
-  {
-    "nivel": "I° Medio",
-    "asignatura": "LENGUA Y LITERATURA",
-    "eje": "Escritura",
-    "unidad": "Unidad 3",
-    "codigo": "OA 14",
-    "categoria": "Basal",
-    "descripcion": "Planificar, escribir y revisar ensayos, informes académicos y textos argumentativos bien estructurados (I° Medio - Unidad 3).",
-    "indicadores": [
-      "Formulan una tesis clara y la defienden con argumentos documentados.",
-      "Aplican conectores lógicos interoracionales con precisión gramatical.",
-      "Citan fuentes siguiendo estándares bibliográficos."
-    ]
-  },
-  {
-    "nivel": "I° Medio",
-    "asignatura": "LENGUA Y LITERATURA",
-    "eje": "Comunicación Oral",
-    "unidad": "Unidad 3",
-    "codigo": "OA 22",
-    "categoria": "Complementario",
-    "descripcion": "Participar en debates, mesas redondas y discursos argumentativos orales con postura crítica y fundamentada (I° Medio - Unidad 3).",
-    "indicadores": [
-      "Rebaten posturas contrarias sin recurrir a ataques personales.",
-      "Utilizan entonación convincente y lenguaje académico adecuado.",
-      "Gestionan adecuadamente el tiempo de exposición asignado."
-    ]
-  },
-  {
-    "nivel": "I° Medio",
-    "asignatura": "LENGUA Y LITERATURA",
-    "eje": "Lectura",
-    "unidad": "Unidad 4",
-    "codigo": "OA 07",
-    "categoria": "Basal",
-    "descripcion": "Analizar e interpretar críticamente textos literarios (narrativa, lírica, drama) de diversos autores y épocas (I° Medio - Unidad 4).",
-    "indicadores": [
-      "Analizan la influencia del contexto histórico en la visión de mundo de la obra.",
-      "Interpretan símbolos, alegorías y figuras estilísticas complejas.",
-      "Evalúan las decisiones morales y conflictos de los protagonistas."
-    ]
-  },
-  {
-    "nivel": "I° Medio",
-    "asignatura": "LENGUA Y LITERATURA",
-    "eje": "Lectura",
-    "unidad": "Unidad 4",
-    "codigo": "OA 08",
-    "categoria": "Basal",
-    "descripcion": "Analizar y evaluar textos no literarios, discursos y medios de comunicación reconociendo posturas e intencionalidades (I° Medio - Unidad 4).",
-    "indicadores": [
-      "Diferencian tesis, argumentos de respaldo y contraargumentos.",
-      "Identifican sesgos, estereotipos y falacias argumentativas.",
-      "Evalúan la validez de la evidencia documental y testimonial."
-    ]
-  },
-  {
-    "nivel": "I° Medio",
-    "asignatura": "LENGUA Y LITERATURA",
-    "eje": "Escritura",
-    "unidad": "Unidad 4",
-    "codigo": "OA 16",
-    "categoria": "Basal",
-    "descripcion": "Planificar, escribir y revisar ensayos, informes académicos y textos argumentativos bien estructurados (I° Medio - Unidad 4).",
-    "indicadores": [
-      "Formulan una tesis clara y la defienden con argumentos documentados.",
-      "Aplican conectores lógicos interoracionales con precisión gramatical.",
-      "Citan fuentes siguiendo estándares bibliográficos."
-    ]
-  },
-  {
-    "nivel": "I° Medio",
-    "asignatura": "LENGUA Y LITERATURA",
-    "eje": "Comunicación Oral",
-    "unidad": "Unidad 4",
-    "codigo": "OA 23",
-    "categoria": "Complementario",
-    "descripcion": "Participar en debates, mesas redondas y discursos argumentativos orales con postura crítica y fundamentada (I° Medio - Unidad 4).",
-    "indicadores": [
-      "Rebaten posturas contrarias sin recurrir a ataques personales.",
-      "Utilizan entonación convincente y lenguaje académico adecuado.",
-      "Gestionan adecuadamente el tiempo de exposición asignado."
-    ]
-  },
-  {
-    "nivel": "II° Medio",
-    "asignatura": "LENGUA Y LITERATURA",
-    "eje": "Lectura",
-    "unidad": "Unidad 1",
-    "codigo": "OA 01",
-    "categoria": "Basal",
-    "descripcion": "Analizar e interpretar críticamente textos literarios (narrativa, lírica, drama) de diversos autores y épocas (II° Medio - Unidad 1).",
-    "indicadores": [
-      "Analizan la influencia del contexto histórico en la visión de mundo de la obra.",
-      "Interpretan símbolos, alegorías y figuras estilísticas complejas.",
-      "Evalúan las decisiones morales y conflictos de los protagonistas."
-    ]
-  },
-  {
-    "nivel": "II° Medio",
-    "asignatura": "LENGUA Y LITERATURA",
-    "eje": "Lectura",
-    "unidad": "Unidad 1",
-    "codigo": "OA 02",
-    "categoria": "Basal",
-    "descripcion": "Analizar y evaluar textos no literarios, discursos y medios de comunicación reconociendo posturas e intencionalidades (II° Medio - Unidad 1).",
-    "indicadores": [
-      "Diferencian tesis, argumentos de respaldo y contraargumentos.",
-      "Identifican sesgos, estereotipos y falacias argumentativas.",
-      "Evalúan la validez de la evidencia documental y testimonial."
-    ]
-  },
-  {
-    "nivel": "II° Medio",
-    "asignatura": "LENGUA Y LITERATURA",
-    "eje": "Escritura",
-    "unidad": "Unidad 1",
-    "codigo": "OA 10",
-    "categoria": "Basal",
-    "descripcion": "Planificar, escribir y revisar ensayos, informes académicos y textos argumentativos bien estructurados (II° Medio - Unidad 1).",
-    "indicadores": [
-      "Formulan una tesis clara y la defienden con argumentos documentados.",
-      "Aplican conectores lógicos interoracionales con precisión gramatical.",
-      "Citan fuentes siguiendo estándares bibliográficos."
-    ]
-  },
-  {
-    "nivel": "II° Medio",
-    "asignatura": "LENGUA Y LITERATURA",
-    "eje": "Comunicación Oral",
-    "unidad": "Unidad 1",
-    "codigo": "OA 20",
-    "categoria": "Complementario",
-    "descripcion": "Participar en debates, mesas redondas y discursos argumentativos orales con postura crítica y fundamentada (II° Medio - Unidad 1).",
-    "indicadores": [
-      "Rebaten posturas contrarias sin recurrir a ataques personales.",
-      "Utilizan entonación convincente y lenguaje académico adecuado.",
-      "Gestionan adecuadamente el tiempo de exposición asignado."
-    ]
-  },
-  {
-    "nivel": "II° Medio",
-    "asignatura": "LENGUA Y LITERATURA",
-    "eje": "Lectura",
-    "unidad": "Unidad 2",
-    "codigo": "OA 03",
-    "categoria": "Basal",
-    "descripcion": "Analizar e interpretar críticamente textos literarios (narrativa, lírica, drama) de diversos autores y épocas (II° Medio - Unidad 2).",
-    "indicadores": [
-      "Analizan la influencia del contexto histórico en la visión de mundo de la obra.",
-      "Interpretan símbolos, alegorías y figuras estilísticas complejas.",
-      "Evalúan las decisiones morales y conflictos de los protagonistas."
-    ]
-  },
-  {
-    "nivel": "II° Medio",
-    "asignatura": "LENGUA Y LITERATURA",
-    "eje": "Lectura",
-    "unidad": "Unidad 2",
-    "codigo": "OA 04",
-    "categoria": "Basal",
-    "descripcion": "Analizar y evaluar textos no literarios, discursos y medios de comunicación reconociendo posturas e intencionalidades (II° Medio - Unidad 2).",
-    "indicadores": [
-      "Diferencian tesis, argumentos de respaldo y contraargumentos.",
-      "Identifican sesgos, estereotipos y falacias argumentativas.",
-      "Evalúan la validez de la evidencia documental y testimonial."
-    ]
-  },
-  {
-    "nivel": "II° Medio",
-    "asignatura": "LENGUA Y LITERATURA",
-    "eje": "Escritura",
-    "unidad": "Unidad 2",
-    "codigo": "OA 12",
-    "categoria": "Basal",
-    "descripcion": "Planificar, escribir y revisar ensayos, informes académicos y textos argumentativos bien estructurados (II° Medio - Unidad 2).",
-    "indicadores": [
-      "Formulan una tesis clara y la defienden con argumentos documentados.",
-      "Aplican conectores lógicos interoracionales con precisión gramatical.",
-      "Citan fuentes siguiendo estándares bibliográficos."
-    ]
-  },
-  {
-    "nivel": "II° Medio",
-    "asignatura": "LENGUA Y LITERATURA",
-    "eje": "Comunicación Oral",
-    "unidad": "Unidad 2",
-    "codigo": "OA 21",
-    "categoria": "Complementario",
-    "descripcion": "Participar en debates, mesas redondas y discursos argumentativos orales con postura crítica y fundamentada (II° Medio - Unidad 2).",
-    "indicadores": [
-      "Rebaten posturas contrarias sin recurrir a ataques personales.",
-      "Utilizan entonación convincente y lenguaje académico adecuado.",
-      "Gestionan adecuadamente el tiempo de exposición asignado."
-    ]
-  },
-  {
-    "nivel": "II° Medio",
-    "asignatura": "LENGUA Y LITERATURA",
-    "eje": "Lectura",
-    "unidad": "Unidad 3",
-    "codigo": "OA 05",
-    "categoria": "Basal",
-    "descripcion": "Analizar e interpretar críticamente textos literarios (narrativa, lírica, drama) de diversos autores y épocas (II° Medio - Unidad 3).",
-    "indicadores": [
-      "Analizan la influencia del contexto histórico en la visión de mundo de la obra.",
-      "Interpretan símbolos, alegorías y figuras estilísticas complejas.",
-      "Evalúan las decisiones morales y conflictos de los protagonistas."
-    ]
-  },
-  {
-    "nivel": "II° Medio",
-    "asignatura": "LENGUA Y LITERATURA",
-    "eje": "Lectura",
-    "unidad": "Unidad 3",
-    "codigo": "OA 06",
-    "categoria": "Basal",
-    "descripcion": "Analizar y evaluar textos no literarios, discursos y medios de comunicación reconociendo posturas e intencionalidades (II° Medio - Unidad 3).",
-    "indicadores": [
-      "Diferencian tesis, argumentos de respaldo y contraargumentos.",
-      "Identifican sesgos, estereotipos y falacias argumentativas.",
-      "Evalúan la validez de la evidencia documental y testimonial."
-    ]
-  },
-  {
-    "nivel": "II° Medio",
-    "asignatura": "LENGUA Y LITERATURA",
-    "eje": "Escritura",
-    "unidad": "Unidad 3",
-    "codigo": "OA 14",
-    "categoria": "Basal",
-    "descripcion": "Planificar, escribir y revisar ensayos, informes académicos y textos argumentativos bien estructurados (II° Medio - Unidad 3).",
-    "indicadores": [
-      "Formulan una tesis clara y la defienden con argumentos documentados.",
-      "Aplican conectores lógicos interoracionales con precisión gramatical.",
-      "Citan fuentes siguiendo estándares bibliográficos."
-    ]
-  },
-  {
-    "nivel": "II° Medio",
-    "asignatura": "LENGUA Y LITERATURA",
-    "eje": "Comunicación Oral",
-    "unidad": "Unidad 3",
-    "codigo": "OA 22",
-    "categoria": "Complementario",
-    "descripcion": "Participar en debates, mesas redondas y discursos argumentativos orales con postura crítica y fundamentada (II° Medio - Unidad 3).",
-    "indicadores": [
-      "Rebaten posturas contrarias sin recurrir a ataques personales.",
-      "Utilizan entonación convincente y lenguaje académico adecuado.",
-      "Gestionan adecuadamente el tiempo de exposición asignado."
-    ]
-  },
-  {
-    "nivel": "II° Medio",
-    "asignatura": "LENGUA Y LITERATURA",
-    "eje": "Lectura",
-    "unidad": "Unidad 4",
-    "codigo": "OA 07",
-    "categoria": "Basal",
-    "descripcion": "Analizar e interpretar críticamente textos literarios (narrativa, lírica, drama) de diversos autores y épocas (II° Medio - Unidad 4).",
-    "indicadores": [
-      "Analizan la influencia del contexto histórico en la visión de mundo de la obra.",
-      "Interpretan símbolos, alegorías y figuras estilísticas complejas.",
-      "Evalúan las decisiones morales y conflictos de los protagonistas."
-    ]
-  },
-  {
-    "nivel": "II° Medio",
-    "asignatura": "LENGUA Y LITERATURA",
-    "eje": "Lectura",
-    "unidad": "Unidad 4",
-    "codigo": "OA 08",
-    "categoria": "Basal",
-    "descripcion": "Analizar y evaluar textos no literarios, discursos y medios de comunicación reconociendo posturas e intencionalidades (II° Medio - Unidad 4).",
-    "indicadores": [
-      "Diferencian tesis, argumentos de respaldo y contraargumentos.",
-      "Identifican sesgos, estereotipos y falacias argumentativas.",
-      "Evalúan la validez de la evidencia documental y testimonial."
-    ]
-  },
-  {
-    "nivel": "II° Medio",
-    "asignatura": "LENGUA Y LITERATURA",
-    "eje": "Escritura",
-    "unidad": "Unidad 4",
-    "codigo": "OA 16",
-    "categoria": "Basal",
-    "descripcion": "Planificar, escribir y revisar ensayos, informes académicos y textos argumentativos bien estructurados (II° Medio - Unidad 4).",
-    "indicadores": [
-      "Formulan una tesis clara y la defienden con argumentos documentados.",
-      "Aplican conectores lógicos interoracionales con precisión gramatical.",
-      "Citan fuentes siguiendo estándares bibliográficos."
-    ]
-  },
-  {
-    "nivel": "II° Medio",
-    "asignatura": "LENGUA Y LITERATURA",
-    "eje": "Comunicación Oral",
-    "unidad": "Unidad 4",
-    "codigo": "OA 23",
-    "categoria": "Complementario",
-    "descripcion": "Participar en debates, mesas redondas y discursos argumentativos orales con postura crítica y fundamentada (II° Medio - Unidad 4).",
-    "indicadores": [
-      "Rebaten posturas contrarias sin recurrir a ataques personales.",
-      "Utilizan entonación convincente y lenguaje académico adecuado.",
-      "Gestionan adecuadamente el tiempo de exposición asignado."
-    ]
-  },
-  {
-    "nivel": "III° Medio",
-    "asignatura": "LENGUA Y LITERATURA",
-    "eje": "Lectura",
-    "unidad": "Unidad 1",
-    "codigo": "OA 01",
-    "categoria": "Basal",
-    "descripcion": "Analizar e interpretar críticamente textos literarios (narrativa, lírica, drama) de diversos autores y épocas (III° Medio - Unidad 1).",
-    "indicadores": [
-      "Analizan la influencia del contexto histórico en la visión de mundo de la obra.",
-      "Interpretan símbolos, alegorías y figuras estilísticas complejas.",
-      "Evalúan las decisiones morales y conflictos de los protagonistas."
-    ]
-  },
-  {
-    "nivel": "III° Medio",
-    "asignatura": "LENGUA Y LITERATURA",
-    "eje": "Lectura",
-    "unidad": "Unidad 1",
-    "codigo": "OA 02",
-    "categoria": "Basal",
-    "descripcion": "Analizar y evaluar textos no literarios, discursos y medios de comunicación reconociendo posturas e intencionalidades (III° Medio - Unidad 1).",
-    "indicadores": [
-      "Diferencian tesis, argumentos de respaldo y contraargumentos.",
-      "Identifican sesgos, estereotipos y falacias argumentativas.",
-      "Evalúan la validez de la evidencia documental y testimonial."
-    ]
-  },
-  {
-    "nivel": "III° Medio",
-    "asignatura": "LENGUA Y LITERATURA",
-    "eje": "Escritura",
-    "unidad": "Unidad 1",
-    "codigo": "OA 10",
-    "categoria": "Basal",
-    "descripcion": "Planificar, escribir y revisar ensayos, informes académicos y textos argumentativos bien estructurados (III° Medio - Unidad 1).",
-    "indicadores": [
-      "Formulan una tesis clara y la defienden con argumentos documentados.",
-      "Aplican conectores lógicos interoracionales con precisión gramatical.",
-      "Citan fuentes siguiendo estándares bibliográficos."
-    ]
-  },
-  {
-    "nivel": "III° Medio",
-    "asignatura": "LENGUA Y LITERATURA",
-    "eje": "Comunicación Oral",
-    "unidad": "Unidad 1",
-    "codigo": "OA 20",
-    "categoria": "Complementario",
-    "descripcion": "Participar en debates, mesas redondas y discursos argumentativos orales con postura crítica y fundamentada (III° Medio - Unidad 1).",
-    "indicadores": [
-      "Rebaten posturas contrarias sin recurrir a ataques personales.",
-      "Utilizan entonación convincente y lenguaje académico adecuado.",
-      "Gestionan adecuadamente el tiempo de exposición asignado."
-    ]
-  },
-  {
-    "nivel": "III° Medio",
-    "asignatura": "LENGUA Y LITERATURA",
-    "eje": "Lectura",
-    "unidad": "Unidad 2",
-    "codigo": "OA 03",
-    "categoria": "Basal",
-    "descripcion": "Analizar e interpretar críticamente textos literarios (narrativa, lírica, drama) de diversos autores y épocas (III° Medio - Unidad 2).",
-    "indicadores": [
-      "Analizan la influencia del contexto histórico en la visión de mundo de la obra.",
-      "Interpretan símbolos, alegorías y figuras estilísticas complejas.",
-      "Evalúan las decisiones morales y conflictos de los protagonistas."
-    ]
-  },
-  {
-    "nivel": "III° Medio",
-    "asignatura": "LENGUA Y LITERATURA",
-    "eje": "Lectura",
-    "unidad": "Unidad 2",
-    "codigo": "OA 04",
-    "categoria": "Basal",
-    "descripcion": "Analizar y evaluar textos no literarios, discursos y medios de comunicación reconociendo posturas e intencionalidades (III° Medio - Unidad 2).",
-    "indicadores": [
-      "Diferencian tesis, argumentos de respaldo y contraargumentos.",
-      "Identifican sesgos, estereotipos y falacias argumentativas.",
-      "Evalúan la validez de la evidencia documental y testimonial."
-    ]
-  },
-  {
-    "nivel": "III° Medio",
-    "asignatura": "LENGUA Y LITERATURA",
-    "eje": "Escritura",
-    "unidad": "Unidad 2",
-    "codigo": "OA 12",
-    "categoria": "Basal",
-    "descripcion": "Planificar, escribir y revisar ensayos, informes académicos y textos argumentativos bien estructurados (III° Medio - Unidad 2).",
-    "indicadores": [
-      "Formulan una tesis clara y la defienden con argumentos documentados.",
-      "Aplican conectores lógicos interoracionales con precisión gramatical.",
-      "Citan fuentes siguiendo estándares bibliográficos."
-    ]
-  },
-  {
-    "nivel": "III° Medio",
-    "asignatura": "LENGUA Y LITERATURA",
-    "eje": "Comunicación Oral",
-    "unidad": "Unidad 2",
-    "codigo": "OA 21",
-    "categoria": "Complementario",
-    "descripcion": "Participar en debates, mesas redondas y discursos argumentativos orales con postura crítica y fundamentada (III° Medio - Unidad 2).",
-    "indicadores": [
-      "Rebaten posturas contrarias sin recurrir a ataques personales.",
-      "Utilizan entonación convincente y lenguaje académico adecuado.",
-      "Gestionan adecuadamente el tiempo de exposición asignado."
-    ]
-  },
-  {
-    "nivel": "III° Medio",
-    "asignatura": "LENGUA Y LITERATURA",
-    "eje": "Lectura",
-    "unidad": "Unidad 3",
-    "codigo": "OA 05",
-    "categoria": "Basal",
-    "descripcion": "Analizar e interpretar críticamente textos literarios (narrativa, lírica, drama) de diversos autores y épocas (III° Medio - Unidad 3).",
-    "indicadores": [
-      "Analizan la influencia del contexto histórico en la visión de mundo de la obra.",
-      "Interpretan símbolos, alegorías y figuras estilísticas complejas.",
-      "Evalúan las decisiones morales y conflictos de los protagonistas."
-    ]
-  },
-  {
-    "nivel": "III° Medio",
-    "asignatura": "LENGUA Y LITERATURA",
-    "eje": "Lectura",
-    "unidad": "Unidad 3",
-    "codigo": "OA 06",
-    "categoria": "Basal",
-    "descripcion": "Analizar y evaluar textos no literarios, discursos y medios de comunicación reconociendo posturas e intencionalidades (III° Medio - Unidad 3).",
-    "indicadores": [
-      "Diferencian tesis, argumentos de respaldo y contraargumentos.",
-      "Identifican sesgos, estereotipos y falacias argumentativas.",
-      "Evalúan la validez de la evidencia documental y testimonial."
-    ]
-  },
-  {
-    "nivel": "III° Medio",
-    "asignatura": "LENGUA Y LITERATURA",
-    "eje": "Escritura",
-    "unidad": "Unidad 3",
-    "codigo": "OA 14",
-    "categoria": "Basal",
-    "descripcion": "Planificar, escribir y revisar ensayos, informes académicos y textos argumentativos bien estructurados (III° Medio - Unidad 3).",
-    "indicadores": [
-      "Formulan una tesis clara y la defienden con argumentos documentados.",
-      "Aplican conectores lógicos interoracionales con precisión gramatical.",
-      "Citan fuentes siguiendo estándares bibliográficos."
-    ]
-  },
-  {
-    "nivel": "III° Medio",
-    "asignatura": "LENGUA Y LITERATURA",
-    "eje": "Comunicación Oral",
-    "unidad": "Unidad 3",
-    "codigo": "OA 22",
-    "categoria": "Complementario",
-    "descripcion": "Participar en debates, mesas redondas y discursos argumentativos orales con postura crítica y fundamentada (III° Medio - Unidad 3).",
-    "indicadores": [
-      "Rebaten posturas contrarias sin recurrir a ataques personales.",
-      "Utilizan entonación convincente y lenguaje académico adecuado.",
-      "Gestionan adecuadamente el tiempo de exposición asignado."
-    ]
-  },
-  {
-    "nivel": "III° Medio",
-    "asignatura": "LENGUA Y LITERATURA",
-    "eje": "Lectura",
-    "unidad": "Unidad 4",
-    "codigo": "OA 07",
-    "categoria": "Basal",
-    "descripcion": "Analizar e interpretar críticamente textos literarios (narrativa, lírica, drama) de diversos autores y épocas (III° Medio - Unidad 4).",
-    "indicadores": [
-      "Analizan la influencia del contexto histórico en la visión de mundo de la obra.",
-      "Interpretan símbolos, alegorías y figuras estilísticas complejas.",
-      "Evalúan las decisiones morales y conflictos de los protagonistas."
-    ]
-  },
-  {
-    "nivel": "III° Medio",
-    "asignatura": "LENGUA Y LITERATURA",
-    "eje": "Lectura",
-    "unidad": "Unidad 4",
-    "codigo": "OA 08",
-    "categoria": "Basal",
-    "descripcion": "Analizar y evaluar textos no literarios, discursos y medios de comunicación reconociendo posturas e intencionalidades (III° Medio - Unidad 4).",
-    "indicadores": [
-      "Diferencian tesis, argumentos de respaldo y contraargumentos.",
-      "Identifican sesgos, estereotipos y falacias argumentativas.",
-      "Evalúan la validez de la evidencia documental y testimonial."
-    ]
-  },
-  {
-    "nivel": "III° Medio",
-    "asignatura": "LENGUA Y LITERATURA",
-    "eje": "Escritura",
-    "unidad": "Unidad 4",
-    "codigo": "OA 16",
-    "categoria": "Basal",
-    "descripcion": "Planificar, escribir y revisar ensayos, informes académicos y textos argumentativos bien estructurados (III° Medio - Unidad 4).",
-    "indicadores": [
-      "Formulan una tesis clara y la defienden con argumentos documentados.",
-      "Aplican conectores lógicos interoracionales con precisión gramatical.",
-      "Citan fuentes siguiendo estándares bibliográficos."
-    ]
-  },
-  {
-    "nivel": "III° Medio",
-    "asignatura": "LENGUA Y LITERATURA",
-    "eje": "Comunicación Oral",
-    "unidad": "Unidad 4",
-    "codigo": "OA 23",
-    "categoria": "Complementario",
-    "descripcion": "Participar en debates, mesas redondas y discursos argumentativos orales con postura crítica y fundamentada (III° Medio - Unidad 4).",
-    "indicadores": [
-      "Rebaten posturas contrarias sin recurrir a ataques personales.",
-      "Utilizan entonación convincente y lenguaje académico adecuado.",
-      "Gestionan adecuadamente el tiempo de exposición asignado."
-    ]
-  },
-  {
-    "nivel": "IV° Medio",
-    "asignatura": "LENGUA Y LITERATURA",
-    "eje": "Lectura",
-    "unidad": "Unidad 1",
-    "codigo": "OA 01",
-    "categoria": "Basal",
-    "descripcion": "Analizar e interpretar críticamente textos literarios (narrativa, lírica, drama) de diversos autores y épocas (IV° Medio - Unidad 1).",
-    "indicadores": [
-      "Analizan la influencia del contexto histórico en la visión de mundo de la obra.",
-      "Interpretan símbolos, alegorías y figuras estilísticas complejas.",
-      "Evalúan las decisiones morales y conflictos de los protagonistas."
-    ]
-  },
-  {
-    "nivel": "IV° Medio",
-    "asignatura": "LENGUA Y LITERATURA",
-    "eje": "Lectura",
-    "unidad": "Unidad 1",
-    "codigo": "OA 02",
-    "categoria": "Basal",
-    "descripcion": "Analizar y evaluar textos no literarios, discursos y medios de comunicación reconociendo posturas e intencionalidades (IV° Medio - Unidad 1).",
-    "indicadores": [
-      "Diferencian tesis, argumentos de respaldo y contraargumentos.",
-      "Identifican sesgos, estereotipos y falacias argumentativas.",
-      "Evalúan la validez de la evidencia documental y testimonial."
-    ]
-  },
-  {
-    "nivel": "IV° Medio",
-    "asignatura": "LENGUA Y LITERATURA",
-    "eje": "Escritura",
-    "unidad": "Unidad 1",
-    "codigo": "OA 10",
-    "categoria": "Basal",
-    "descripcion": "Planificar, escribir y revisar ensayos, informes académicos y textos argumentativos bien estructurados (IV° Medio - Unidad 1).",
-    "indicadores": [
-      "Formulan una tesis clara y la defienden con argumentos documentados.",
-      "Aplican conectores lógicos interoracionales con precisión gramatical.",
-      "Citan fuentes siguiendo estándares bibliográficos."
-    ]
-  },
-  {
-    "nivel": "IV° Medio",
-    "asignatura": "LENGUA Y LITERATURA",
-    "eje": "Comunicación Oral",
-    "unidad": "Unidad 1",
-    "codigo": "OA 20",
-    "categoria": "Complementario",
-    "descripcion": "Participar en debates, mesas redondas y discursos argumentativos orales con postura crítica y fundamentada (IV° Medio - Unidad 1).",
-    "indicadores": [
-      "Rebaten posturas contrarias sin recurrir a ataques personales.",
-      "Utilizan entonación convincente y lenguaje académico adecuado.",
-      "Gestionan adecuadamente el tiempo de exposición asignado."
-    ]
-  },
-  {
-    "nivel": "IV° Medio",
-    "asignatura": "LENGUA Y LITERATURA",
-    "eje": "Lectura",
-    "unidad": "Unidad 2",
-    "codigo": "OA 03",
-    "categoria": "Basal",
-    "descripcion": "Analizar e interpretar críticamente textos literarios (narrativa, lírica, drama) de diversos autores y épocas (IV° Medio - Unidad 2).",
-    "indicadores": [
-      "Analizan la influencia del contexto histórico en la visión de mundo de la obra.",
-      "Interpretan símbolos, alegorías y figuras estilísticas complejas.",
-      "Evalúan las decisiones morales y conflictos de los protagonistas."
-    ]
-  },
-  {
-    "nivel": "IV° Medio",
-    "asignatura": "LENGUA Y LITERATURA",
-    "eje": "Lectura",
-    "unidad": "Unidad 2",
-    "codigo": "OA 04",
-    "categoria": "Basal",
-    "descripcion": "Analizar y evaluar textos no literarios, discursos y medios de comunicación reconociendo posturas e intencionalidades (IV° Medio - Unidad 2).",
-    "indicadores": [
-      "Diferencian tesis, argumentos de respaldo y contraargumentos.",
-      "Identifican sesgos, estereotipos y falacias argumentativas.",
-      "Evalúan la validez de la evidencia documental y testimonial."
-    ]
-  },
-  {
-    "nivel": "IV° Medio",
-    "asignatura": "LENGUA Y LITERATURA",
-    "eje": "Escritura",
-    "unidad": "Unidad 2",
-    "codigo": "OA 12",
-    "categoria": "Basal",
-    "descripcion": "Planificar, escribir y revisar ensayos, informes académicos y textos argumentativos bien estructurados (IV° Medio - Unidad 2).",
-    "indicadores": [
-      "Formulan una tesis clara y la defienden con argumentos documentados.",
-      "Aplican conectores lógicos interoracionales con precisión gramatical.",
-      "Citan fuentes siguiendo estándares bibliográficos."
-    ]
-  },
-  {
-    "nivel": "IV° Medio",
-    "asignatura": "LENGUA Y LITERATURA",
-    "eje": "Comunicación Oral",
-    "unidad": "Unidad 2",
-    "codigo": "OA 21",
-    "categoria": "Complementario",
-    "descripcion": "Participar en debates, mesas redondas y discursos argumentativos orales con postura crítica y fundamentada (IV° Medio - Unidad 2).",
-    "indicadores": [
-      "Rebaten posturas contrarias sin recurrir a ataques personales.",
-      "Utilizan entonación convincente y lenguaje académico adecuado.",
-      "Gestionan adecuadamente el tiempo de exposición asignado."
-    ]
-  },
-  {
-    "nivel": "IV° Medio",
-    "asignatura": "LENGUA Y LITERATURA",
-    "eje": "Lectura",
-    "unidad": "Unidad 3",
-    "codigo": "OA 05",
-    "categoria": "Basal",
-    "descripcion": "Analizar e interpretar críticamente textos literarios (narrativa, lírica, drama) de diversos autores y épocas (IV° Medio - Unidad 3).",
-    "indicadores": [
-      "Analizan la influencia del contexto histórico en la visión de mundo de la obra.",
-      "Interpretan símbolos, alegorías y figuras estilísticas complejas.",
-      "Evalúan las decisiones morales y conflictos de los protagonistas."
-    ]
-  },
-  {
-    "nivel": "IV° Medio",
-    "asignatura": "LENGUA Y LITERATURA",
-    "eje": "Lectura",
-    "unidad": "Unidad 3",
-    "codigo": "OA 06",
-    "categoria": "Basal",
-    "descripcion": "Analizar y evaluar textos no literarios, discursos y medios de comunicación reconociendo posturas e intencionalidades (IV° Medio - Unidad 3).",
-    "indicadores": [
-      "Diferencian tesis, argumentos de respaldo y contraargumentos.",
-      "Identifican sesgos, estereotipos y falacias argumentativas.",
-      "Evalúan la validez de la evidencia documental y testimonial."
-    ]
-  },
-  {
-    "nivel": "IV° Medio",
-    "asignatura": "LENGUA Y LITERATURA",
-    "eje": "Escritura",
-    "unidad": "Unidad 3",
-    "codigo": "OA 14",
-    "categoria": "Basal",
-    "descripcion": "Planificar, escribir y revisar ensayos, informes académicos y textos argumentativos bien estructurados (IV° Medio - Unidad 3).",
-    "indicadores": [
-      "Formulan una tesis clara y la defienden con argumentos documentados.",
-      "Aplican conectores lógicos interoracionales con precisión gramatical.",
-      "Citan fuentes siguiendo estándares bibliográficos."
-    ]
-  },
-  {
-    "nivel": "IV° Medio",
-    "asignatura": "LENGUA Y LITERATURA",
-    "eje": "Comunicación Oral",
-    "unidad": "Unidad 3",
-    "codigo": "OA 22",
-    "categoria": "Complementario",
-    "descripcion": "Participar en debates, mesas redondas y discursos argumentativos orales con postura crítica y fundamentada (IV° Medio - Unidad 3).",
-    "indicadores": [
-      "Rebaten posturas contrarias sin recurrir a ataques personales.",
-      "Utilizan entonación convincente y lenguaje académico adecuado.",
-      "Gestionan adecuadamente el tiempo de exposición asignado."
-    ]
-  },
-  {
-    "nivel": "IV° Medio",
-    "asignatura": "LENGUA Y LITERATURA",
-    "eje": "Lectura",
-    "unidad": "Unidad 4",
-    "codigo": "OA 07",
-    "categoria": "Basal",
-    "descripcion": "Analizar e interpretar críticamente textos literarios (narrativa, lírica, drama) de diversos autores y épocas (IV° Medio - Unidad 4).",
-    "indicadores": [
-      "Analizan la influencia del contexto histórico en la visión de mundo de la obra.",
-      "Interpretan símbolos, alegorías y figuras estilísticas complejas.",
-      "Evalúan las decisiones morales y conflictos de los protagonistas."
-    ]
-  },
-  {
-    "nivel": "IV° Medio",
-    "asignatura": "LENGUA Y LITERATURA",
-    "eje": "Lectura",
-    "unidad": "Unidad 4",
-    "codigo": "OA 08",
-    "categoria": "Basal",
-    "descripcion": "Analizar y evaluar textos no literarios, discursos y medios de comunicación reconociendo posturas e intencionalidades (IV° Medio - Unidad 4).",
-    "indicadores": [
-      "Diferencian tesis, argumentos de respaldo y contraargumentos.",
-      "Identifican sesgos, estereotipos y falacias argumentativas.",
-      "Evalúan la validez de la evidencia documental y testimonial."
-    ]
-  },
-  {
-    "nivel": "IV° Medio",
-    "asignatura": "LENGUA Y LITERATURA",
-    "eje": "Escritura",
-    "unidad": "Unidad 4",
-    "codigo": "OA 16",
-    "categoria": "Basal",
-    "descripcion": "Planificar, escribir y revisar ensayos, informes académicos y textos argumentativos bien estructurados (IV° Medio - Unidad 4).",
-    "indicadores": [
-      "Formulan una tesis clara y la defienden con argumentos documentados.",
-      "Aplican conectores lógicos interoracionales con precisión gramatical.",
-      "Citan fuentes siguiendo estándares bibliográficos."
-    ]
-  },
-  {
-    "nivel": "IV° Medio",
-    "asignatura": "LENGUA Y LITERATURA",
-    "eje": "Comunicación Oral",
-    "unidad": "Unidad 4",
-    "codigo": "OA 23",
-    "categoria": "Complementario",
-    "descripcion": "Participar en debates, mesas redondas y discursos argumentativos orales con postura crítica y fundamentada (IV° Medio - Unidad 4).",
-    "indicadores": [
-      "Rebaten posturas contrarias sin recurrir a ataques personales.",
-      "Utilizan entonación convincente y lenguaje académico adecuado.",
-      "Gestionan adecuadamente el tiempo de exposición asignado."
-    ]
-  }
-];
+function addUnidad(nivel, asignatura, unidad, nombreUnidad, lista) {
+    for (const [codigo, eje, categoria, descripcion, indicadores] of lista) {
+        oas.push({
+            nivel,
+            asignatura,
+            unidad,
+            nombre_unidad: nombreUnidad,
+            eje,
+            codigo,
+            categoria,
+            descripcion,
+            indicadores
+        });
+    }
+}
 
-module.exports = {
-  LENGUAJE_CURRICULO
-};
+// ==========================================
+// 1° BÁSICO - LENGUAJE Y COMUNICACIÓN
+// ==========================================
+addUnidad('1° BASICO', 'LENGUAJE Y COMUNICACION', 1, 'Unidad 1: Conciencia fonológica, correspondencia fonema-grafema y comprensión de textos breves', [
+    ['OA 01', 'Lectura', 'Complementario', 'Reconocer que los textos escritos transmiten mensajes y que son escritos por alguien para cumplir un propósito.', ['Distinguen entre imagen y texto escrito.', 'Indican dónde comienza y termina una oración o texto.']],
+    ['OA 02', 'Lectura', 'Complementario', 'Reconocer que las palabras son unidades de significado separadas por espacios en el texto escrito.', ['Cuentan las palabras que componen una oración escrita.']],
+    ['OA 03', 'Lectura', 'Basal', 'Identificar los sonidos que componen las palabras (conciencia fonológica), reconociendo, separando y combinando sus fonemas y sílabas.', ['Identifican sonidos iniciales y finales de las palabras.', 'Descomponen palabras en las sílabas y fonemas que las forman.']],
+    ['OA 04', 'Lectura', 'Complementario', 'Leer palabras aisladas y en contexto, aplicando su conocimiento de la correspondencia letra-sonido en diferentes combinaciones: sílaba directa, indirecta o compleja.', ['Nombran las letras estudiadas y reproducen su sonido.', 'Leen palabras que contienen vocales y consonantes en estudio.']],
+    ['OA 08', 'Lectura', 'Basal', 'Demostrar comprensión de narraciones que aborden temas que les sean familiares: extrayendo información explícita e implícita; respondiendo preguntas simples, oralmente o por escrito.', ['Contestaron preguntas que aluden a información explícita del texto.', 'Identifican personajes y acontecimientos principales de un cuento escuchado.']],
+    ['OA 13', 'Escritura', 'Basal', 'Experimentar con la escritura para comunicar hechos, ideas y sentimientos, entre otros.', ['Escriben palabras y oraciones breves copiando o al dictado con las letras aprendidas.']],
+    ['OA 18', 'Comunicación Oral', 'Basal', 'Comprender textos orales (explicaciones, instrucciones, relatos, anécdotas, etc.) para obtener información y desarrollar su curiosidad por el mundo.', ['Relacionan lo que han aprendido en otras asignaturas con un texto escuchado en clases.']],
+    ['OA 23', 'Comunicación Oral', 'Basal', 'Expresarse de manera coherente y articulada sobre temas de su interés: presentando información o narrando un evento relacionado con el tema.', ['Relatan experiencias personales siguiendo una secuencia coherente.']]
+]);
+
+addUnidad('1° BASICO', 'LENGUAJE Y COMUNICACION', 2, 'Unidad 2: Lectura de palabras y oraciones simples, narraciones, poemas y escritura inicial', [
+    ['OA 03', 'Lectura', 'Basal', 'Identificar los sonidos que componen las palabras (conciencia fonológica), reconociendo, separando y combinando sus fonemas y sílabas.', ['Forman palabras uniendo fonemas escuchados oralmente.']],
+    ['OA 04', 'Lectura', 'Complementario', 'Leer palabras aisladas y en contexto, aplicando su conocimiento de la correspondencia letra-sonido.', ['Leen palabras con sílabas directas e indirectas de forma progresiva.']],
+    ['OA 05', 'Lectura', 'Basal', 'Leer textos breves en voz alta para adquirir fluidez: pronunciando cada palabra con precisión, aunque se autocorrijan en algunas ocasiones; leyendo palabra a palabra.', ['Leen en voz alta oraciones y textos breves comprensibles.']],
+    ['OA 06', 'Lectura', 'Complementario', 'Comprender textos aplicando estrategias de comprensión lectora; por ejemplo: relacionar la información del texto con sus experiencias y conocimientos; visualizar lo que describe el texto.', ['Relacionan episodios de un texto con sus propias experiencias.']],
+    ['OA 08', 'Lectura', 'Basal', 'Demostrar comprensión de narraciones que aborden temas que les sean familiares.', ['Reconstruyen la secuencia de acciones de una historia mediante dibujos o comentarios.']],
+    ['OA 10', 'Lectura', 'Basal', 'Leer independientemente y comprender textos no literarios escritos con oraciones simples (cartas, notas, instrucciones y artículos informativos).', ['Extraen información explícita de notas e instrucciones breves.']],
+    ['OA 14', 'Escritura', 'Complementario', 'Escribir oraciones completas para transmitir mensajes.', ['Escriben mensajes breves y oraciones con sentido completo.']],
+    ['OA 21', 'Comunicación Oral', 'Complementario', 'Participar activamente en conversaciones grupales sobre textos leídos o escuchados en clases o temas de su interés.', ['Esperan su turno para hablar y aportan comentarios pertinentes al tema.']]
+]);
+
+addUnidad('1° BASICO', 'LENGUAJE Y COMUNICACION', 3, 'Unidad 3: Fluidez lectora, comprensión de cuentos, poemas y textos informativos, y escritura de oraciones', [
+    ['OA 05', 'Lectura', 'Basal', 'Leer textos breves en voz alta para adquirir fluidez: respetando el punto seguido y el punto aparte.', ['Leen con precisión palabras con todas las consonantes estudiadas y respetan pausas de puntuación.']],
+    ['OA 07', 'Lectura', 'Complementario', 'Leer habitualmente y disfrutar los mejores poemas de autor y de la tradición oral adecuados a su edad.', ['Recitan poemas, rimas y adivinanzas infantiles.']],
+    ['OA 08', 'Lectura', 'Basal', 'Demostrar comprensión de narraciones que aborden temas que les sean familiares: estableciendo relaciones entre el texto y sus propias experiencias; emitiendo una opinión sobre un aspecto de la lectura.', ['Emiten una opinión sobre la actitud de un personaje fundamentando con el texto.']],
+    ['OA 10', 'Lectura', 'Basal', 'Leer independientemente y comprender textos no literarios escritos con oraciones simples.', ['Explican con sus palabras lo aprendido en un artículo informativo breve.']],
+    ['OA 13', 'Escritura', 'Basal', 'Experimentar con la escritura para comunicar hechos, ideas y sentimientos.', ['Escriben descripciones breves, listas y tarjetas.']],
+    ['OA 15', 'Escritura', 'Complementario', 'Escribir con letra clara, separando las palabras con un espacio para que puedan ser leídas por otros con facilidad.', ['Escriben con letra legible respetando la separación entre palabras.']],
+    ['OA 18', 'Comunicación Oral', 'Basal', 'Comprender textos orales para obtener información y desarrollar su curiosidad por el mundo.', ['Formulan preguntas para aclarar dudas sobre lo escuchado.']]
+]);
+
+addUnidad('1° BASICO', 'LENGUAJE Y COMUNICACION', 4, 'Unidad 4: Consolidación de la lectura y escritura autónoma, textos literarios y representación teatral', [
+    ['OA 05', 'Lectura', 'Basal', 'Leer textos breves en voz alta para adquirir fluidez.', ['Leen textos breves de manera autónoma y comprensiva.']],
+    ['OA 08', 'Lectura', 'Basal', 'Demostrar comprensión de narraciones que aborden temas que les sean familiares.', ['Describen los lugares donde ocurre la acción y comparan personajes.']],
+    ['OA 09', 'Lectura', 'Complementario', 'Leer habitualmente y disfrutar los mejores poemas de autor y de la tradición oral adecuados a su edad.', ['Identifican versos, rimas y el sentido figurado simple en poemas.']],
+    ['OA 10', 'Lectura', 'Basal', 'Leer independientemente y comprender textos no literarios escritos con oraciones simples.', ['Localizan información específica apoyándose en títulos e ilustraciones.']],
+    ['OA 14', 'Escritura', 'Complementario', 'Escribir oraciones completas para transmitir mensajes.', ['Escriben relatos breves o mensajes de varias oraciones conectadas.']],
+    ['OA 16', 'Escritura', 'Complementario', 'Incorporar de manera pertinente en la escritura el vocabulario nuevo extraído de textos escuchados o leídos.', ['Usan palabras nuevas aprendidas en sus producciones escritas.']],
+    ['OA 23', 'Comunicación Oral', 'Basal', 'Expresarse de manera coherente y articulada sobre temas de su interés.', ['Exponen oralmente un tema breve utilizando vocabulario variado.']],
+    ['OA 25', 'Comunicación Oral', 'Complementario', 'Desempeñar diferentes roles para desarrollar su lenguaje y autoestima, y aprender a trabajar en equipo.', ['Representan partes de cuentos o diálogos grupales.']]
+]);
+
+// ==========================================
+// 2° BÁSICO - LENGUAJE Y COMUNICACIÓN
+// ==========================================
+addUnidad('2° BASICO', 'LENGUAJE Y COMUNICACION', 1, 'Unidad 1: Lectura de cuentos y poemas, comprensión de textos no literarios y escritura de párrafos breves', [
+    ['OA 01', 'Lectura', 'Basal', 'Leer textos significativos que incluyan palabras con hiatos y diptongos, con grupos consonánticos y con combinación ce-ci, que-qui, ge-gi, gue-gui, güe-güi.', ['Leen en voz alta palabras con grupos consonánticos y sílabas ce-ci, que-qui, ge-gi.']],
+    ['OA 02', 'Lectura', 'Complementario', 'Leer en voz alta para adquirir fluidez: pronunciando cada palabra con precisión; respetando la coma, el punto y los signos de exclamación e interrogación.', ['Leen en voz alta respetando los signos de puntuación y con entonación adecuada.']],
+    ['OA 05', 'Lectura', 'Basal', 'Demostrar comprensión de las narraciones leídas: extrayendo información explícita e implícita; reconstruyendo la secuencia de las acciones en la historia; identificando y describiendo las características físicas y sentimientos de los distintos personajes.', ['Describen a los personajes física y psicológicamente.', 'Ordenan cronológicamente los hechos de un cuento.']],
+    ['OA 07', 'Lectura', 'Basal', 'Leer independientemente y comprender textos no literarios (cartas, notas, instrucciones y artículos informativos) para entretenerse y ampliar su conocimiento del mundo.', ['Extraen información explícita e implícita de artículos informativos e instrucciones.']],
+    ['OA 12', 'Escritura', 'Basal', 'Escribir frecuentemente, para desarrollar la creatividad y expresar sus ideas, textos como poemas, diarios de vida, anécdotas, cartas, recados, etc.', ['Escriben anécdotas, cartas y relatos breves expresando sus ideas con claridad.']],
+    ['OA 17', 'Escritura', 'Basal', 'Escribir, revisar y editar sus textos para satisfacer un propósito y transmitir sus ideas con claridad.', ['Revisan y corrigen mayúsculas, puntos y concordancia en sus borradores.']],
+    ['OA 27', 'Comunicación Oral', 'Basal', 'Expresarse de manera coherente y articulada sobre temas de su interés.', ['Exponen oralmente un tema utilizando material de apoyo visual.']]
+]);
+
+addUnidad('2° BASICO', 'LENGUAJE Y COMUNICACION', 2, 'Unidad 2: Estrategias de comprensión lectora, artículos informativos, leyendas y uso de sustantivos y adjetivos', [
+    ['OA 03', 'Lectura', 'Complementario', 'Comprender textos aplicando estrategias de comprensión lectora; por ejemplo: relacionar la información del texto con sus experiencias y conocimientos; visualizar lo que describe el texto; hacer preguntas mientras se lee.', ['Formulan preguntas sobre lo leído y visualizan descripciones.']],
+    ['OA 05', 'Lectura', 'Basal', 'Demostrar comprensión de las narraciones leídas.', ['Establecen relaciones entre los problemas de los personajes y situaciones cotidianas.']],
+    ['OA 06', 'Lectura', 'Complementario', 'Leer habitualmente y disfrutar los mejores poemas de autor y de la tradición oral adecuados a su edad.', ['Explican con sus palabras el tema y las imágenes poéticas de un poema.']],
+    ['OA 07', 'Lectura', 'Basal', 'Leer independientemente y comprender textos no literarios para entretenerse y ampliar su conocimiento del mundo.', ['Comprenden la información que aportan las ilustraciones, símbolos y pictogramas en un texto.']],
+    ['OA 14', 'Escritura', 'Complementario', 'Escribir artículos informativos para comunicar información sobre un tema.', ['Escriben un artículo informativo breve organizando las ideas en oraciones claras.']],
+    ['OA 19', 'Escritura', 'Complementario', 'Comprender la función de los artículos, sustantivos y adjetivos en textos orales y escritos, y reemplazarlos o combinarlos de diversas maneras para enriquecer o precisar sus producciones.', ['Usan sustantivos propios, comunes y adjetivos calificativos para enriquecer sus escritos.']],
+    ['OA 23', 'Comunicación Oral', 'Basal', 'Comprender textos orales (explicaciones, instrucciones, relatos, anécdotas, etc.) para obtener información y desarrollar su curiosidad por el mundo.', ['Responden preguntas sobre información explícita e implícita de textos escuchados.']]
+]);
+
+addUnidad('2° BASICO', 'LENGUAJE Y COMUNICACION', 3, 'Unidad 3: Fábulas, cuentos folclóricos, concordancia gramatical y conversación colaborativa', [
+    ['OA 02', 'Lectura', 'Complementario', 'Leer en voz alta para adquirir fluidez: leyendo con velocidad adecuada para el nivel.', ['Leen textos adecuados a su edad con ritmo y fluidez.']],
+    ['OA 05', 'Lectura', 'Basal', 'Demostrar comprensión de las narraciones leídas.', ['Identifican la enseñanza o moraleja en fábulas y cuentos folclóricos.']],
+    ['OA 08', 'Lectura', 'Basal', 'Desarrollar el gusto por la lectura, leyendo habitualmente diversos textos.', ['Seleccionan libros de la biblioteca de aula y comentan sus lecturas.']],
+    ['OA 13', 'Escritura', 'Complementario', 'Escribir creativamente narraciones (experiencias personales, relatos de hechos, cuentos, etc.) que tengan inicio, desarrollo y desenlace.', ['Escriben cuentos o relatos personales estructurados en inicio, desarrollo y desenlace.']],
+    ['OA 17', 'Escritura', 'Basal', 'Escribir, revisar y editar sus textos para satisfacer un propósito y transmitir sus ideas con claridad.', ['Mejoran la claridad de sus textos agregando detalles y conectores.']],
+    ['OA 20', 'Escritura', 'Complementario', 'Identificar el género y número de las palabras para asegurar la concordancia en sus escritos.', ['Mantienen la concordancia de género y número entre artículos, sustantivos y adjetivos.']],
+    ['OA 25', 'Comunicación Oral', 'Complementario', 'Participar activamente en conversaciones grupales sobre textos leídos o escuchados en clases o temas de su interés.', ['Formulan opiniones fundamentadas y respetan los turnos de habla.']]
+]);
+
+addUnidad('2° BASICO', 'LENGUAJE Y COMUNICACION', 4, 'Unidad 4: Relatos, poemas, ortografía puntual y expresión oral y dramática', [
+    ['OA 05', 'Lectura', 'Basal', 'Demostrar comprensión de las narraciones leídas.', ['Comparan personajes de distintos cuentos leídos en el año.']],
+    ['OA 07', 'Lectura', 'Basal', 'Leer independientemente y comprender textos no literarios.', ['Sintetizan la información principal de un texto instructivo o informativo.']],
+    ['OA 12', 'Escritura', 'Basal', 'Escribir frecuentemente, para desarrollar la creatividad y expresar sus ideas.', ['Escriben cartas y poemas breves expresando sentimientos e ideas.']],
+    ['OA 21', 'Escritura', 'Complementario', 'Escribir correctamente para facilitar la comprensión por parte del lector, usando de manera apropiada: combinaciones ce-ci, que-qui, ge-gi, gue-gui, güe-güi; r-rr-nr; mayúsculas al iniciar una oración y al escribir sustantivos propios; punto al finalizar una oración; signos de interrogación y exclamación al inicio y final de preguntas y exclamaciones.', ['Aplican reglas ortográficas de uso de mayúsculas, punto final y signos de interrogación y exclamación.']],
+    ['OA 27', 'Comunicación Oral', 'Basal', 'Expresarse de manera coherente y articulada sobre temas de su interés.', ['Narra hechos o presenta temas manteniendo el foco y un vocabulario variado.']],
+    ['OA 30', 'Comunicación Oral', 'Complementario', 'Recitar con entonación y expresión poemas, rimas, canciones, trabalenguas y adivinanzas para fortalecer la confianza en sí mismos, aumentar el vocabulario y desarrollar su capacidad expresiva.', ['Recitan poemas con entonación y expresividad frente al curso.']]
+]);
+
+// ==========================================
+// 3° BÁSICO - LENGUAJE Y COMUNICACIÓN
+// ==========================================
+addUnidad('3° BASICO', 'LENGUAJE Y COMUNICACION', 1, 'Unidad 1: Profundización de la comprensión de narraciones, uso de diccionario y escritura creativa', [
+    ['OA 01', 'Lectura', 'Complementario', 'Leer en voz alta de manera fluida variados textos apropiados a su edad: pronunciando cada palabra con precisión; respetando la coma, el punto y los signos de exclamación e interrogación; leyendo con velocidad adecuada para el nivel.', ['Leen en voz alta respetando signos de puntuación y con entonación adecuada al sentido del texto.']],
+    ['OA 04', 'Lectura', 'Basal', 'Profundizar su comprensión de las narraciones leídas: extrayendo información explícita e implícita; reconstruyendo la secuencia de las acciones en la historia; describiendo a los personajes; describiendo el ambiente en que ocurre la acción; expresando opiniones fundamentadas sobre hechos y situaciones del texto.', ['Describen física y psicológicamente a los personajes y el ambiente del relato.', 'Fundamentan sus opiniones con ejemplos extraídos del texto.']],
+    ['OA 06', 'Lectura', 'Basal', 'Leer independientemente y comprender textos no literarios (cartas, biografías, relatos históricos, instrucciones, libros y artículos informativos, noticias, etc.) para ampliar su conocimiento del mundo y formarse una opinión.', ['Explican la información que aportan ilustraciones, diagramas y tablas en textos informativos.', 'Extraen información explícita e implícita de noticias y biografías.']],
+    ['OA 11', 'Lectura', 'Complementario', 'Determinar el significado de palabras desconocidas, usando claves contextuales o el conocimiento de raíces (morfemas de base), prefijos y sufijos.', ['Infieren el significado de palabras nuevas a partir del contexto y del análisis de prefijos y sufijos.']],
+    ['OA 12', 'Escritura', 'Basal', 'Escribir frecuentemente, para desarrollar la creatividad y expresar sus ideas, textos como poemas, diarios de vida, cuentos, anécdotas, cartas, comentarios sobre sus lecturas, etc.', ['Escriben comentarios de lectura y relatos personales de forma regular.']],
+    ['OA 18', 'Escritura', 'Basal', 'Escribir, revisar y editar sus textos para satisfacer un propósito y transmitir sus ideas con claridad.', ['Planifican, escriben, revisan y reescriben sus textos mejorando su coherencia y ortografía.']]
+]);
+
+addUnidad('3° BASICO', 'LENGUAJE Y COMUNICACION', 2, 'Unidad 2: Textos informativos, poemas, estrategias de comprensión y escritura de artículos informativos', [
+    ['OA 02', 'Lectura', 'Basal', 'Comprender textos aplicando estrategias de comprensión lectora; por ejemplo: relacionar la información del texto con sus experiencias y conocimientos; releer lo que no fue comprendido; visualizar lo que describe el texto; recapitular; formular preguntas sobre lo leído y responderlas; subrayar información relevante en un texto.', ['Subrayan ideas importantes y recapitulan párrafos para asegurar su comprensión.']],
+    ['OA 05', 'Lectura', 'Complementario', 'Comprender poemas adecuados al nivel e interpretar el lenguaje figurado presente en ellos.', ['Explican el significado de expresiones en lenguaje figurado dentro de poemas.']],
+    ['OA 06', 'Lectura', 'Basal', 'Leer independientemente y comprender textos no literarios para ampliar su conocimiento del mundo y formarse una opinión.', ['Comparan información de dos textos que tratan un mismo tema.']],
+    ['OA 09', 'Lectura', 'Complementario', 'Buscar y clasificar información sobre un tema en internet, libros, diarios, revistas, enciclopedias, atlas, etc., para llevar a cabo una investigación.', ['Buscan y seleccionan información en diversas fuentes impresas y digitales para investigar un tema.']],
+    ['OA 14', 'Escritura', 'Basal', 'Escribir artículos informativos para comunicar información sobre un tema: organizando las ideas en párrafos; desarrollando las ideas mediante información que explica el tema.', ['Escriben artículos informativos estructurados en introducción, desarrollo por párrafos y cierre.']],
+    ['OA 20', 'Escritura', 'Complementario', 'Comprender la función de los artículos, sustantivos y adjetivos en textos orales y escritos, y reemplazarlos o combinarlos de diversas maneras para enriquecer o precisar sus producciones.', ['Emplean adjetivos y sustantivos precisos para describir objetos, lugares y procesos.']],
+    ['OA 24', 'Comunicación Oral', 'Basal', 'Comprender textos orales (explicaciones, instrucciones, noticias, documentales, películas, relatos, anécdotas, etc.) para obtener información y desarrollar su curiosidad por el mundo.', ['Sintetizan las ideas principales de un documental o noticia escuchada.']]
+]);
+
+addUnidad('3° BASICO', 'LENGUAJE Y COMUNICACION', 3, 'Unidad 3: Fábulas, leyendas, escritura narrativa, pronombres y exposiciones orales', [
+    ['OA 04', 'Lectura', 'Basal', 'Profundizar su comprensión de las narraciones leídas.', ['Comparan personajes y explican las consecuencias de sus acciones en fábulas y leyendas.']],
+    ['OA 07', 'Lectura', 'Basal', 'Desarrollar el gusto por la lectura, leyendo habitualmente diversos textos.', ['Leen libros completos de su elección y recomiendan lecturas a sus pares.']],
+    ['OA 13', 'Escritura', 'Complementario', 'Escribir creativamente narraciones (experiencias personales, relatos de hechos, cuentos, etc.) que incluyan: una secuencia lógica de eventos; inicio, desarrollo y desenlace; conectores adecuados.', ['Escriben cuentos utilizando conectores temporales y descripciones de personajes y ambientes.']],
+    ['OA 18', 'Escritura', 'Basal', 'Escribir, revisar y editar sus textos para satisfacer un propósito y transmitir sus ideas con claridad.', ['Utilizan pautas de revisión para mejorar la cohesión y puntuación de sus narraciones.']],
+    ['OA 21', 'Escritura', 'Complementario', 'Comprender la función de los pronombres en textos orales y escritos, y usarlos para reemplazar sustantivos y evitar la repetición.', ['Reemplazan sustantivos por pronombres personales para evitar repeticiones en sus textos.']],
+    ['OA 28', 'Comunicación Oral', 'Basal', 'Expresarse de manera coherente y articulada sobre temas de su interés: organizando las ideas en introducción y desarrollo; incorporando descripciones y ejemplos que ilustren las ideas.', ['Realizan exposiciones orales organizadas en introducción, desarrollo y conclusión.']]
+]);
+
+addUnidad('3° BASICO', 'LENGUAJE Y COMUNICACION', 4, 'Unidad 4: Cartas, textos instructivos, ortografía acentual y puntual, y apreciación teatral', [
+    ['OA 04', 'Lectura', 'Basal', 'Profundizar su comprensión de las narraciones leídas.', ['Emiten juicios fundamentados sobre el actuar de los personajes y el desenlace de las obras.']],
+    ['OA 06', 'Lectura', 'Basal', 'Leer independientemente y comprender textos no literarios.', ['Siguen instrucciones complejas y comprenden el propósito de cartas y afiches.']],
+    ['OA 15', 'Escritura', 'Complementario', 'Escribir cartas, instrucciones, afiches, reportes de una experiencia, entre otros, para lograr diferentes propósitos: usando un formato adecuado; transmitiendo el mensaje con claridad.', ['Escriben cartas y afiches respetando la estructura propia de cada género.']],
+    ['OA 22', 'Escritura', 'Complementario', 'Escribir correctamente para facilitar la comprensión por parte del lector, aplicando lo aprendido en años anteriores y usando de manera apropiada: mayúsculas al iniciar una oración y al escribir sustantivos propios; punto al finalizar una oración y punto aparte al finalizar un párrafo; plurales de palabras terminadas en z; palabras con ge-gi, je-ji; palabras terminadas en cito-cita; coma en enumeración.', ['Usan coma en enumeraciones, plurales de palabras terminadas en -z y punto seguido y aparte.']],
+    ['OA 26', 'Comunicación Oral', 'Basal', 'Participar activamente en conversaciones grupales sobre textos leídos o escuchados en clases o temas de su interés.', ['Aportan información y opiniones pertinentes manteniendo el foco de la discusión.']],
+    ['OA 30', 'Comunicación Oral', 'Complementario', 'Caracterizar distintos personajes para desarrollar su lenguaje y autoestima, y aprender a trabajar en equipo.', ['Dramatizan escenas adaptando la voz y gestualidad al personaje representado.']]
+]);
+
+// ==========================================
+// 4° BÁSICO - LENGUAJE Y COMUNICACIÓN
+// ==========================================
+addUnidad('4° BASICO', 'LENGUAJE Y COMUNICACION', 1, 'Unidad 1: Comprensión de cuentos y mitos, estrategias lectoras y escritura de narraciones', [
+    ['OA 01', 'Lectura', 'Complementario', 'Leer en voz alta de manera fluida variados textos apropiados a su edad: pronunciando las palabras con precisión; respetando los signos de puntuación; leyendo con entonación adecuada; leyendo con velocidad adecuada para el nivel.', ['Leen en voz alta con fluidez, ritmo y entonación expresiva.']],
+    ['OA 02', 'Lectura', 'Basal', 'Comprender textos aplicando estrategias de comprensión lectora; por ejemplo: relacionar la información del texto con sus experiencias y conocimientos; releer lo que no fue comprendido; visualizar lo que describe el texto; recapitular; formular preguntas sobre lo leído y responderlas; subrayar información relevante en un texto.', ['Sintetizan la idea principal de cada párrafo y subrayan información clave.']],
+    ['OA 04', 'Lectura', 'Basal', 'Profundizar su comprensión de las narraciones leídas: extrayendo información explícita e implícita; determinando las consecuencias de hechos o acciones; describiendo y comparando a los personajes; describiendo los diferentes ambientes que aparecen en un texto; reconociendo el problema y la solución en una narración; expresando opiniones fundamentadas sobre actitudes y acciones de los personajes.', ['Explican las causas y consecuencias de las acciones de los personajes.', 'Fundamentan sus opiniones citando ejemplos del texto.']],
+    ['OA 11', 'Escritura', 'Basal', 'Escribir frecuentemente, para desarrollar la creatividad y expresar sus ideas, textos como poemas, diarios de vida, cuentos, anécdotas, cartas, comentarios sobre sus lecturas, noticias, etc.', ['Escriben relatos y comentarios literarios expresando puntos de vista personales.']],
+    ['OA 12', 'Escritura', 'Complementario', 'Escribir creativamente narraciones (experiencias personales, relatos de hechos, cuentos, etc.) que incluyan: una secuencia lógica de eventos; inicio, desarrollo y desenlace; conectores adecuados; descripciones; un lenguaje expresivo para desarrollar la acción.', ['Escriben cuentos incorporando diálogos, descripciones de ambientes y conectores variados.']],
+    ['OA 17', 'Escritura', 'Basal', 'Escribir, revisar y editar sus textos para satisfacer un propósito y transmitir sus ideas con claridad.', ['Reescriben sus textos corrigiendo problemas de coherencia, repeticiones y ortografía.']]
+]);
+
+addUnidad('4° BASICO', 'LENGUAJE Y COMUNICACION', 2, 'Unidad 2: Comprensión de poemas y textos no literarios, investigación y escritura de artículos informativos', [
+    ['OA 05', 'Lectura', 'Complementario', 'Comprender poemas adecuados al nivel e interpretar el lenguaje figurado presente en ellos.', ['Interpretan metáforas, comparaciones y personificaciones en poemas leídos.']],
+    ['OA 06', 'Lectura', 'Basal', 'Leer independientemente y comprender textos no literarios (cartas, biografías, relatos históricos, instrucciones, libros y artículos informativos, noticias, etc.) para ampliar su conocimiento del mundo y formarse una opinión.', ['Extraen las ideas principales de noticias y artículos informativos y formulan una opinión sobre ellos.']],
+    ['OA 09', 'Lectura', 'Complementario', 'Buscar y clasificar información sobre un tema en internet, libros, diarios, revistas, enciclopedias, atlas, etc., para llevar a cabo una investigación.', ['Seleccionan información relevante de al menos dos fuentes distintas para investigar un tema.']],
+    ['OA 10', 'Lectura', 'Complementario', 'Aplicar estrategias para determinar el significado de palabras nuevas: claves del texto; raíces y afijos; preguntar a otro; diccionarios, enciclopedias e internet.', ['Determinan el significado preciso de palabras desconocidas mediante el contexto y el diccionario.']],
+    ['OA 13', 'Escritura', 'Basal', 'Escribir artículos informativos para comunicar información sobre un tema: presentando el tema en una oración; desarrollando una idea central por párrafo; utilizando sus propias palabras.', ['Escriben artículos informativos organizando subtemas en párrafos con vocabulario técnico adecuado.']],
+    ['OA 19', 'Escritura', 'Complementario', 'Comprender la función de los adverbios en textos orales y escritos, y reemplazarlos o combinarlos para enriquecer o precisar sus producciones.', ['Utilizan adverbios de tiempo, lugar, modo y cantidad para precisar las acciones en sus escritos.']],
+    ['OA 23', 'Comunicación Oral', 'Basal', 'Comprender textos orales (explicaciones, instrucciones, noticias, documentales, películas, testimonios, relatos, etc.) para obtener información y desarrollar su curiosidad por el mundo.', ['Comparan información proveniente de un texto oral con la de un texto escrito sobre el mismo tema.']]
+]);
+
+addUnidad('4° BASICO', 'LENGUAJE Y COMUNICACION', 3, 'Unidad 3: Relatos históricos, biografías, verbos, conjugación y exposiciones orales', [
+    ['OA 04', 'Lectura', 'Basal', 'Profundizar su comprensión de las narraciones leídas.', ['Comparan textos narrativos de diferentes autores que abordan un tema similar.']],
+    ['OA 06', 'Lectura', 'Basal', 'Leer independientemente y comprender textos no literarios (cartas, biografías, relatos históricos, noticias).', ['Reconstruyen secuencias cronológicas en biografías y relatos históricos.']],
+    ['OA 07', 'Lectura', 'Basal', 'Desarrollar el gusto por la lectura, leyendo habitualmente diversos textos.', ['Comentan sus lecturas personales argumentando por qué recomiendan una obra.']],
+    ['OA 14', 'Escritura', 'Complementario', 'Escribir cartas, instrucciones, afiches, reportes de una experiencia o noticias, entre otros, para lograr diferentes propósitos.', ['Redactan noticias respondiendo a las preguntas clave (qué, quién, cuándo, dónde, cómo, por qué).']],
+    ['OA 20', 'Escritura', 'Complementario', 'Comprender la función de los verbos en textos orales y escritos, y usarlos manteniendo la concordancia con el sujeto.', ['Conjugan correctamente verbos regulares en pasado, presente y futuro manteniendo concordancia con el sujeto.']],
+    ['OA 27', 'Comunicación Oral', 'Basal', 'Expresarse de manera coherente y articulada sobre temas de su interés: organizando las ideas en introducción, desarrollo y cierre; incorporando descripciones y ejemplos que ilustren las ideas; utilizando un vocabulario variado.', ['Realizan presentaciones orales claras, estructuradas y apoyadas en recursos visuales.']]
+]);
+
+addUnidad('4° BASICO', 'LENGUAJE Y COMUNICACION', 4, 'Unidad 4: Novelas breves, ortografía acentual (agudas, graves, esdrújulas), discusión grupal y teatro', [
+    ['OA 04', 'Lectura', 'Basal', 'Profundizar su comprensión de las narraciones leídas.', ['Analizan la evolución de los personajes a lo largo de una novela breve o relato extenso.']],
+    ['OA 17', 'Escritura', 'Basal', 'Escribir, revisar y editar sus textos para satisfacer un propósito y transmitir sus ideas con claridad.', ['Editan sus textos aplicando conectores, sinónimos y corrección ortográfica.']],
+    ['OA 21', 'Escritura', 'Complementario', 'Escribir correctamente para facilitar la comprensión por parte del lector, aplicando todas las reglas de ortografía literal y puntual aprendidas en años anteriores, además de: palabras con b-v; palabras con h de uso frecuente; acentuación de palabras agudas, graves, esdrújulas y sobreesdrújulas.', ['Aplican las reglas generales de acentuación en palabras agudas, graves y esdrújulas y el uso de b, v y h.']],
+    ['OA 25', 'Comunicación Oral', 'Basal', 'Participar activamente en conversaciones grupales sobre textos leídos o escuchados en clases o temas de su interés: manteniendo el foco de la conversación; expresando sus ideas u opiniones y fundamentándolas.', ['Debaten respetuosamente fundamentando sus posturas con ejemplos de los textos leídos.']],
+    ['OA 29', 'Comunicación Oral', 'Complementario', 'Caracterizar distintos personajes para desarrollar su lenguaje y autoestima, y aprender a trabajar en equipo.', ['Montan y representan una escena teatral breve trabajando colaborativamente.']]
+]);
+
+// ==========================================
+// 5° BÁSICO - LENGUAJE Y COMUNICACIÓN
+// ==========================================
+addUnidad('5° BASICO', 'LENGUAJE Y COMUNICACION', 1, 'Unidad 1: Comprensión de cuentos y novelas, análisis de personajes, textos no literarios y escritura creativa', [
+    ['OA 01', 'Lectura', 'Complementario', 'Leer de manera fluida textos variados apropiados a su edad: pronunciando las palabras con precisión; respetando la prosodia indicada por todos los signos de puntuación; decodificando de manera automática la mayoría de las palabras del texto.', ['Leen en voz alta con fluidez y prosodia adecuada textos literarios y no literarios.']],
+    ['OA 02', 'Lectura', 'Complementario', 'Comprender textos aplicando estrategias de comprensión lectora; por ejemplo: relacionar la información del texto con sus experiencias y conocimientos; releer lo que no fue comprendido; formular preguntas sobre lo leído y responderlas; identificar las ideas más importantes de acuerdo con el propósito del lector.', ['Aplican estrategias de relectura, formulación de preguntas y resumen por párrafos.']],
+    ['OA 03', 'Lectura', 'Basal', 'Leer y familiarizarse con un amplio repertorio de literatura para aumentar su conocimiento del mundo, desarrollar su imaginación y reconocer su valor social y cultural; por ejemplo: poemas, cuentos folclóricos y de autor, fábulas, leyendas, mitos, novelas, historietas, otros.', ['Relacionan situaciones de la vida cotidiana con personajes o acciones de los textos leídos en clases.']],
+    ['OA 04', 'Lectura', 'Basal', 'Analizar aspectos relevantes de narraciones leídas para profundizar su comprensión: interpretando el lenguaje figurado presente en el texto; expresando opiniones sobre las actitudes y acciones de los personajes y fundamentándolas con ejemplos del texto; determinando las consecuencias de hechos o acciones; describiendo el ambiente y las costumbres representadas en el texto.', ['Explican las motivaciones de los personajes y las consecuencias de sus actos.', 'Describen las costumbres y el ambiente físico y psicológico de una narración.']],
+    ['OA 06', 'Lectura', 'Basal', 'Leer independientemente y comprender textos no literarios (cartas, biografías, relatos históricos, libros y artículos informativos, noticias, etc.) para ampliar su conocimiento del mundo y formarse una opinión.', ['Extraen información explícita e implícita y distinguen las ideas principales de las secundarias.']],
+    ['OA 14', 'Escritura', 'Basal', 'Escribir creativamente narraciones (relatos de experiencias personales, noticias, cuentos, etc.) que: tengan una estructura clara; utilicen conectores adecuados; incluyan descripciones y diálogo (si es pertinente) para desarrollar la trama, los personajes y el ambiente.', ['Escriben cuentos o relatos desarrollando personajes, diálogos y una secuencia narrativa coherente.']],
+    ['OA 18', 'Escritura', 'Basal', 'Escribir, revisar y editar sus textos para satisfacer un propósito y transmitir sus ideas con claridad.', ['Corrigen la coherencia, precisión léxica y ortografía de sus borradores.']]
+]);
+
+addUnidad('5° BASICO', 'LENGUAJE Y COMUNICACION', 2, 'Unidad 2: Poesía y lenguaje figurado, textos informativos, investigación y escritura de artículos informativos', [
+    ['OA 03', 'Lectura', 'Basal', 'Leer y familiarizarse con un amplio repertorio de literatura para aumentar su conocimiento del mundo, desarrollar su imaginación y reconocer su valor social y cultural.', ['Identifican temas y motivos recurrentes en diversos poemas y relatos.']],
+    ['OA 05', 'Lectura', 'Complementario', 'Analizar aspectos relevantes de diversos poemas para profundizar su comprensión: explicando cómo el lenguaje poético que emplea el autor apela a los sentidos, sugiere estados de ánimo y crea imágenes en el lector; identificando personificaciones y comparaciones y explicando su significado dentro del poema.', ['Interpretan personificaciones, comparaciones e imágenes sensoriales en poemas.']],
+    ['OA 06', 'Lectura', 'Basal', 'Leer independientemente y comprender textos no literarios para ampliar su conocimiento del mundo y formarse una opinión.', ['Integran información de dos o más textos informativos sobre un mismo tema.']],
+    ['OA 09', 'Lectura', 'Basal', 'Desarrollar el gusto por la lectura, leyendo habitualmente diversos textos.', ['Comparten sus apreciaciones sobre lecturas personales argumentando sus preferencias.']],
+    ['OA 11', 'Lectura', 'Complementario', 'Buscar y seleccionar la información más relevante sobre un tema en internet, libros, diarios, revistas, enciclopedias, atlas, etc., para llevar a cabo una investigación.', ['Evalúan la pertinencia de la información encontrada en distintas fuentes para una investigación.']],
+    ['OA 15', 'Escritura', 'Basal', 'Escribir artículos informativos para comunicar información sobre un tema: presentando el tema en una oración; desarrollando una idea central por párrafo; agregando las fuentes utilizadas.', ['Redactan artículos informativos estructurados con introducción, subtemas y registro de fuentes consultadas.']],
+    ['OA 24', 'Comunicación Oral', 'Basal', 'Comprender textos orales (explicaciones, instrucciones, noticias, documentales, entrevistas, testimonios, relatos, etc.) para obtener información y desarrollar su curiosidad por el mundo.', ['Registran apuntes con las ideas clave de un documental o exposición oral escuchada.']]
+]);
+
+addUnidad('5° BASICO', 'LENGUAJE Y COMUNICACION', 3, 'Unidad 3: Lectura crítica de textos y medios, escritura de comentarios y cartas, diálogo y debate', [
+    ['OA 04', 'Lectura', 'Basal', 'Analizar aspectos relevantes de narraciones leídas para profundizar su comprensión.', ['Comparan dos textos narrativos de autores diferentes que tratan un mismo problema humano.']],
+    ['OA 07', 'Lectura', 'Basal', 'Evaluar críticamente la información presente en textos de diversa procedencia: determinando quién es el emisor, cuál es su propósito y a quién dirige el mensaje; evaluando si un texto entrega suficiente información para responder una determinada pregunta o cumplir un propósito.', ['Identifican el emisor, destinatario y propósito comunicativo de noticias, cartas al director y afiches.']],
+    ['OA 08', 'Lectura', 'Complementario', 'Sintetizar y registrar las ideas principales de textos leídos para satisfacer propósitos como estudiar, hacer una investigación, recordar detalles, etc.', ['Elaboran resúmenes y organizadores gráficos con las ideas principales de textos de estudio.']],
+    ['OA 16', 'Escritura', 'Complementario', 'Escribir frecuentemente para compartir impresiones sobre sus lecturas, desarrollando un tema relevante del texto leído y fundamentando sus comentarios con ejemplos.', ['Escriben reseñas o comentarios literarios respaldados con citas o ejemplos de la obra.']],
+    ['OA 21', 'Escritura', 'Complementario', 'Conjugar correctamente los verbos regulares al utilizarlos en sus producciones escritas.', ['Mantienen la correlación temporal y conjugan adecuadamente verbos regulares en sus textos.']],
+    ['OA 26', 'Comunicación Oral', 'Basal', 'Dialogar para compartir y desarrollar ideas y buscar acuerdos: manteniendo el foco en un tema; aceptando sugerencias; haciendo comentarios en los momentos adecuados; mostrando acuerdo o desacuerdo con respeto; fundamentando su postura.', ['Participan en discusiones fundamentando sus posturas y construyendo acuerdos grupales.']],
+    ['OA 28', 'Comunicación Oral', 'Basal', 'Expresarse de manera clara y efectiva en exposiciones orales para comunicar temas de su interés.', ['Exponen oralmente un tema investigado utilizando vocabulario preciso y apoyo visual pertinente.']]
+]);
+
+addUnidad('5° BASICO', 'LENGUAJE Y COMUNICACION', 4, 'Unidad 4: Textos dramáticos, ortografía acentual y literal, apreciación de obras teatrales y producción oral', [
+    ['OA 03', 'Lectura', 'Basal', 'Leer y familiarizarse con un amplio repertorio de literatura, incluyendo obras dramáticas.', ['Identifican el conflicto dramático, los diálogos y las acotaciones en textos dramáticos.']],
+    ['OA 18', 'Escritura', 'Basal', 'Escribir, revisar y editar sus textos para satisfacer un propósito y transmitir sus ideas con claridad.', ['Aplican procesos completos de edición mejorando la sintaxis, el léxico y la presentación de sus escritos.']],
+    ['OA 22', 'Escritura', 'Complementario', 'Escribir correctamente para facilitar la comprensión por parte del lector, aplicando las reglas ortográficas aprendidas en años anteriores, además de: uso de c-s-z; raya para indicar diálogo; acento diacrítico y dierético.', ['Aplican tilde diacrítica, uso de c-s-z y raya de diálogo en sus producciones escritas.']],
+    ['OA 25', 'Comunicación Oral', 'Complementario', 'Apreciar obras de teatro, películas o representaciones: discutiendo aspectos relevantes de la historia; describiendo a los personajes según su manera de hablar y de comportarse.', ['Analizan el conflicto, la puesta en escena y la actuación de los personajes en una obra teatral o película.']],
+    ['OA 30', 'Comunicación Oral', 'Complementario', 'Producir textos orales espontáneos o planificados de diverso tipo para desarrollar su capacidad expresiva: poemas; narraciones; dramatizaciones.', ['Representan escenas dramáticas empleando adecuadamente el lenguaje verbal, paraverbal y no verbal.']]
+]);
+
+// ==========================================
+// 6° BÁSICO - LENGUAJE Y COMUNICACIÓN
+// ==========================================
+addUnidad('6° BÁSICO'.replace('Á', 'A'), 'LENGUAJE Y COMUNICACION', 1, 'Unidad 1: Narraciones literarias, análisis del conflicto y personajes, y escritura creativa', [
+    ['OA 01', 'Lectura', 'Complementario', 'Leer de manera fluida textos variados apropiados a su edad: pronunciando las palabras con precisión; respetando la prosodia indicada por todos los signos de puntuación; decodificando de manera automática la mayoría de las palabras del texto.', ['Leen fluidamente en voz alta textos extensos respetando puntuación y sentido.']],
+    ['OA 02', 'Lectura', 'Complementario', 'Comprender textos aplicando estrategias de comprensión lectora; por ejemplo: relacionar la información del texto con sus experiencias y conocimientos; formular preguntas sobre lo leído y responderlas; organizar la información en esquemas o mapas conceptuales.', ['Elaboran mapas conceptuales y esquemas para sintetizar textos complejos.']],
+    ['OA 03', 'Lectura', 'Basal', 'Leer y familiarizarse con un amplio repertorio de literatura para aumentar su conocimiento del mundo, desarrollar su imaginación y reconocer su valor social y cultural; por ejemplo: poemas, cuentos folclóricos y de autor, fábulas, leyendas, mitos, novelas, historietas, otros.', ['Relacionan las obras leídas con el contexto histórico o cultural en que se ambientan.']],
+    ['OA 04', 'Lectura', 'Basal', 'Analizar aspectos relevantes de las narraciones leídas para profundizar su comprensión: identificando las acciones principales del relato y explicando cómo influyen en el desarrollo de la historia; explicando las actitudes y reacciones de los personajes de acuerdo con sus motivaciones y las situaciones que viven.', ['Explican cómo determinadas acciones modifican el curso de la historia.', 'Analizan las motivaciones internas y externas de los personajes principales y secundarios.']],
+    ['OA 14', 'Escritura', 'Basal', 'Escribir creativamente narraciones (relatos de experiencias personales, noticias, cuentos, etc.) que: tengan una estructura clara; utilicen conectores adecuados; tengan coherencia en todas sus oraciones; incluyan descripciones y diálogo (si es pertinente) que desarrollen la trama, los personajes y el ambiente.', ['Escriben relatos coherentes integrando diálogos, descripciones psicológicas y conectores causales y temporales.']],
+    ['OA 18', 'Escritura', 'Basal', 'Escribir, revisar y editar sus textos para satisfacer un propósito y transmitir sus ideas con claridad.', ['Revisan y reescriben sus textos verificando la cohesión, la variedad léxica y la ortografía.']]
+]);
+
+addUnidad('6° BASICO', 'LENGUAJE Y COMUNICACION', 2, 'Unidad 2: Poesía, lenguaje poético y sonoridad, textos informativos y escritura de artículos de investigación', [
+    ['OA 05', 'Lectura', 'Complementario', 'Analizar aspectos relevantes de diversos poemas para profundizar su comprensión: explicando cómo el lenguaje poético que emplea el autor apela a los sentidos, sugiere estados de ánimo y crea imágenes en el lector; identificando personificaciones, comparaciones e hipérboles y explicando su significado dentro del poema; analizando cómo los efectos sonoros (aliteración y onomatopeya) utilizados por el poeta refuerzan lo dicho.', ['Identifican e interpretan hipérboles, personificaciones, comparaciones, aliteraciones y onomatopeyas en poemas.']],
+    ['OA 06', 'Lectura', 'Basal', 'Leer independientemente y comprender textos no literarios (cartas, biografías, relatos históricos, libros y artículos informativos, noticias, etc.) para ampliar su conocimiento del mundo y formarse una opinión: extrayendo información explícita e implícita; haciendo inferencias a partir de la información del texto y de sus experiencias y conocimientos.', ['Realizan inferencias complejas e interpretan gráficos, tablas y diagramas en textos expositivos.']],
+    ['OA 08', 'Lectura', 'Complementario', 'Sintetizar, registrar y ordenar las ideas principales de textos leídos para satisfacer propósitos como estudiar, hacer una investigación, recordar detalles, etc.', ['Registran fichas de resumen y esquemas jerárquicos a partir de lecturas de investigación.']],
+    ['OA 11', 'Lectura', 'Complementario', 'Buscar y comparar información sobre un tema, utilizando fuentes como internet, enciclopedias, libros, prensa, etc., para llevar a cabo una investigación.', ['Contrastan información de distintas fuentes confiables sobre un tema de investigación.']],
+    ['OA 15', 'Escritura', 'Basal', 'Escribir artículos informativos para comunicar información sobre un tema: organizando el texto en una estructura clara; desarrollando una idea central por párrafo; agregando las fuentes utilizadas.', ['Escriben artículos informativos rigurosos con introducción, desarrollo en subtemas, conclusión y bibliografía.']],
+    ['OA 24', 'Comunicación Oral', 'Basal', 'Comprender textos orales (explicaciones, instrucciones, noticias, documentales, entrevistas, testimonios, relatos, reportajes, etc.) para obtener información y desarrollar su curiosidad por el mundo.', ['Formulan opiniones fundamentadas sobre reportajes y entrevistas escuchadas.']]
+]);
+
+addUnidad('6° BASICO', 'LENGUAJE Y COMUNICACION', 3, 'Unidad 3: Evaluación crítica de textos y publicidad, comentarios literarios, participios irregulares y debate', [
+    ['OA 04', 'Lectura', 'Basal', 'Analizar aspectos relevantes de las narraciones leídas para profundizar su comprensión.', ['Comparan el tratamiento de un mismo tema en distintas narraciones y épocas.']],
+    ['OA 07', 'Lectura', 'Basal', 'Evaluar críticamente la información presente en textos de diversa procedencia: determinando quién es el emisor, cuál es su propósito y a quién dirige el mensaje; evaluando si un texto entrega suficiente información para responder una determinada pregunta o cumplir un propósito; comparando la información que entregan dos o más textos sobre un mismo tema.', ['Analizan el propósito persuasivo y los recursos gráficos y verbales en afiches publicitarios y propagandísticos.']],
+    ['OA 09', 'Lectura', 'Basal', 'Desarrollar el gusto por la lectura, leyendo habitualmente diversos textos.', ['Sustentan juicios críticos sobre novelas y cuentos leídos de forma autónoma.']],
+    ['OA 16', 'Escritura', 'Complementario', 'Escribir frecuentemente para compartir impresiones sobre sus lecturas, desarrollando un tema relevante del texto leído y fundamentando sus comentarios con ejemplos.', ['Redactan críticas o reseñas literarias fundamentadas con citas textuales.']],
+    ['OA 20', 'Escritura', 'Complementario', 'Ampliar su capacidad expresiva, utilizando los recursos que ofrece el lenguaje para expresar un mismo mensaje de diversas maneras; por ejemplo: sinónimos, hipónimos e hiperónimos, locuciones, comparaciones, otros.', ['Utilizan hipónimos, hiperónimos y sinónimos para dar precisión y evitar repeticiones en sus textos.']],
+    ['OA 21', 'Escritura', 'Complementario', 'Utilizar correctamente los participios irregulares (por ejemplo, roto, abierto, dicho, escrito, muerto, puesto, vuelto) en sus producciones escritas.', ['Emplean correctamente los participios irregulares en tiempos compuestos y adjetivaciones.']],
+    ['OA 27', 'Comunicación Oral', 'Basal', 'Dialogar para compartir y desarrollar ideas y buscar acuerdos: manteniendo el foco en un tema; complementando las ideas de otro y ofreciendo sugerencias; aceptando sugerencias; haciendo comentarios en los momentos adecuados; mostrando acuerdo o desacuerdo con respeto; fundamentando su postura.', ['Debaten temas de interés respaldando sus posturas con datos y ejemplos verificables.']]
+]);
+
+addUnidad('6° BASICO', 'LENGUAJE Y COMUNICACION', 4, 'Unidad 4: Obras dramáticas, ortografía acentual y puntual, exposiciones orales y representación teatral', [
+    ['OA 03', 'Lectura', 'Basal', 'Leer y familiarizarse con un amplio repertorio de literatura, incluyendo obras dramáticas.', ['Analizan el desarrollo del conflicto dramático y las características de los personajes en obras teatrales.']],
+    ['OA 18', 'Escritura', 'Basal', 'Escribir, revisar y editar sus textos para satisfacer un propósito y transmitir sus ideas con claridad.', ['Editan colaborativamente sus textos aplicando criterios de adecuación, coherencia, cohesión y corrección.']],
+    ['OA 22', 'Escritura', 'Complementario', 'Escribir correctamente para facilitar la comprensión por parte del lector, aplicando todas las reglas de ortografía literal, acentual y puntual aprendidas en años anteriores, además de: escritura de los verbos haber, tener e ir; coma en frases explicativas; coma en presencia de conectores que la requieren; acentuación de pronombres interrogativos y exclamativos.', ['Aplican correctamente el uso de coma en frases explicativas y conectores, tilde en interrogativos/exclamativos y ortografía de haber, tener e ir.']],
+    ['OA 25', 'Comunicación Oral', 'Complementario', 'Evaluar críticamente mensajes publicitarios: identificando al emisor; explicando cuál es la intención del emisor; identificando a quién está dirigido el mensaje (a niñas, a usuarios del metro, a adultos mayores, etc.) y fundamentando cómo llegaron a esa conclusión.', ['Evalúan críticamente anuncios publicitarios audiovisuales identificando público objetivo y estereotipos.']],
+    ['OA 29', 'Comunicación Oral', 'Basal', 'Expresarse de manera clara y efectiva en exposiciones orales para comunicar temas de su interés.', ['Realizan exposiciones orales formales utilizando apoyo multimedia y respondiendo preguntas de la audiencia.']],
+    ['OA 31', 'Comunicación Oral', 'Complementario', 'Producir textos orales espontáneos o planificados de diverso tipo para desarrollar su capacidad expresiva: poemas; narraciones; dramatizaciones.', ['Ponen en escena una obra dramática breve integrando actuación, vestuario y recursos sonoros.']]
+]);
+
+// ==========================================
+// 7° BÁSICO - LENGUA Y LITERATURA
+// ==========================================
+addUnidad('7° BASICO', 'LENGUA Y LITERATURA', 1, 'Unidad 1: El héroe en distintas épocas: mitos, epopeyas, relatos y escritura narrativa y expositiva', [
+    ['OA 02', 'Lectura', 'Complementario', 'Reflexionar sobre las diferentes dimensiones de la experiencia humana, propia y ajena, a partir de la lectura de obras literarias y otros textos que forman parte de nuestras herencias culturales.', ['Interpretan cómo la figura del héroe refleja los valores e ideales de distintas épocas y culturas.']],
+    ['OA 03', 'Lectura', 'Basal', 'Analizar las narraciones leídas para enriquecer su comprensión, considerando, cuando sea pertinente: el o los conflictos de la historia; el papel que juega cada personaje en el conflicto y cómo sus acciones afectan a otros personajes; el efecto de ciertas acciones en el desarrollo de la historia; cuándo habla el narrador y cuándo hablan los personajes; la disposición temporal de los hechos.', ['Analizan el conflicto central, las motivaciones de los personajes y la distinción entre la voz del narrador y la de los personajes.']],
+    ['OA 06', 'Lectura', 'Complementario', 'Leer y comprender relatos mitológicos, considerando sus características y el contexto en el que se enmarcan.', ['Explican las características de los mitos y su función explicativa y cultural en las sociedades antiguas.']],
+    ['OA 07', 'Lectura', 'Basal', 'Formular una interpretación de los textos literarios, considerando su experiencia personal y sus conocimientos, un dilema presentado en el texto y su postura personal acerca del mismo.', ['Formulan una interpretación coherente sobre un dilema ético o humano presente en las obras leídas.']],
+    ['OA 08', 'Lectura', 'Basal', 'Analizar y evaluar textos con finalidad argumentativa como columnas de opinión, cartas y discursos, considerando: la postura del autor y los argumentos e información que la sostienen; la diferencia entre hecho y opinión.', ['Distinguen hechos de opiniones e identifican la tesis y los argumentos en columnas de opinión y cartas al director.']],
+    ['OA 12', 'Escritura', 'Complementario', 'Expresarse en forma creativa por medio de la escritura de textos de diversos géneros (por ejemplo, cuentos, crónicas, diarios de vida, cartas, poemas, etc.), escogiendo libremente el tema y el destinatario.', ['Escriben relatos heroicos o crónicas creativas desarrollando una voz narrativa propia.']],
+    ['OA 15', 'Escritura', 'Basal', 'Planificar, escribir, revisar, reescribir y editar sus textos en función del contexto, el destinatario y el propósito.', ['Aplican las etapas del proceso de escritura mejorando la estructura, coherencia y cohesión de sus textos.']]
+]);
+
+addUnidad('7° BASICO', 'LENGUA Y LITERATURA', 2, 'Unidad 2: La solidaridad y la amistad: expresión poética, textos argumentativos y discusión grupal', [
+    ['OA 03', 'Lectura', 'Basal', 'Analizar las narraciones leídas para enriquecer su comprensión, considerando la disposición temporal de los hechos y la visión del narrador.', ['Identifican saltos temporales (flashback, raconto) y el grado de conocimiento del narrador.']],
+    ['OA 04', 'Lectura', 'Complementario', 'Analizar los poemas leídos para enriquecer su comprensión, considerando, cuando sea pertinente: cómo el lenguaje poético que emplea el autor apela a los sentidos, sugiere estados de ánimo y crea imágenes; el significado o el efecto que produce el uso de lenguaje figurado en el poema; el efecto que produce el ritmo y la sonoridad del poema.', ['Interpretan el hablante lírico, las figuras literarias y el aporte del ritmo y la sonoridad al sentido del poema.']],
+    ['OA 07', 'Lectura', 'Basal', 'Formular una interpretación de los textos literarios, considerando su experiencia personal y sus conocimientos.', ['Elaboran interpretaciones literarias relacionando la obra con su visión de mundo.']],
+    ['OA 08', 'Lectura', 'Basal', 'Analizar y evaluar textos con finalidad argumentativa como columnas de opinión, cartas y discursos.', ['Evalúan la solidez de los argumentos empleados por el autor para defender su postura.']],
+    ['OA 14', 'Escritura', 'Basal', 'Escribir, con el propósito de persuadir, textos breves de diversos géneros (por ejemplo, cartas al director, editoriales, críticas literarias, etc.), caracterizados por: la presentación de una afirmación referida a temas contingentes o literarios; la presencia de evidencias e información pertinente; la mantención de la coherencia temática.', ['Redactan textos argumentativos estructurando una tesis clara respaldada con argumentos y evidencias pertinentes.']],
+    ['OA 21', 'Comunicación Oral', 'Basal', 'Dialogar constructivamente para debatir o explorar ideas: manteniendo el foco; demostrando comprensión de lo dicho por el interlocutor; fundamentando su postura de manera pertinente.', ['Participan en coloquios y debates contraargumentando con respeto y evidencia.']]
+]);
+
+addUnidad('7° BASICO', 'LENGUA Y LITERATURA', 3, 'Unidad 3: Mitología y creación, análisis crítico de medios de comunicación e investigación', [
+    ['OA 06', 'Lectura', 'Complementario', 'Leer y comprender relatos mitológicos, considerando sus características y el contexto en el que se enmarcan.', ['Comparan mitos de diversas culturas (clásica, precolombina, nórdica, oriental) identificando arquetipos comunes.']],
+    ['OA 09', 'Lectura', 'Basal', 'Analizar y evaluar textos de los medios de comunicación, como noticias, reportajes, cartas al director, textos publicitarios o de las redes sociales, considerando: los propósitos explícitos e implícitos del texto; una distinción entre los hechos y las opiniones expresados; presencia de estereotipos y prejuicios.', ['Evalúan críticamente noticias, reportajes y anuncios identificando estereotipos, prejuicios y propósitos implícitos.']],
+    ['OA 10', 'Lectura', 'Complementario', 'Leer y comprender textos no literarios para contextualizar y complementar las lecturas literarias realizadas en clases.', ['Vinculan textos históricos y de divulgación con las obras literarias estudiadas.']],
+    ['OA 13', 'Escritura', 'Complementario', 'Escribir, con el propósito de explicar un tema, textos de diversos géneros (por ejemplo, artículos, informes, reportajes, etc.), caracterizados por: una presentación clara del tema; la presencia de información de distintas fuentes; la inclusión de hechos, descripciones, ejemplos o explicaciones que desarrollen el tema.', ['Escriben informes o reportajes integrando información de diversas fuentes verificadas.']],
+    ['OA 15', 'Escritura', 'Basal', 'Planificar, escribir, revisar, reescribir y editar sus textos en función del contexto, el destinatario y el propósito.', ['Revisan y corrigen el uso de conectores, correferencia y puntuación en sus textos explicativos.']],
+    ['OA 24', 'Investigación', 'Complementario', 'Realizar investigaciones sobre diversos temas para complementar sus lecturas o responder interrogantes relacionadas con el lenguaje y la literatura.', ['Seleccionan fuentes confiables, toman apuntes y citan adecuadamente la información investigada.']]
+]);
+
+addUnidad('7° BASICO', 'LENGUA Y LITERATURA', 4, 'Unidad 4: La identidad: quién soy, cómo me ven los demás, el romance y la lira popular, y exposición oral', [
+    ['OA 03', 'Lectura', 'Basal', 'Analizar las narraciones leídas para enriquecer su comprensión.', ['Analizan cómo los prejuicios y estereotipos sociales influyen en los conflictos de los personajes.']],
+    ['OA 05', 'Lectura', 'Complementario', 'Leer y comprender romances y obras de la poesía popular, considerando sus características y el contexto en el que se enmarcan.', ['Reconocen la métrica (octosílabo, décima), los temas y el valor cultural del romance y la lira popular chilena.']],
+    ['OA 07', 'Lectura', 'Basal', 'Formular una interpretación de los textos literarios, considerando su experiencia personal y sus conocimientos.', ['Defienden interpretaciones literarias en ensayos o comentarios fundamentados con citas del texto.']],
+    ['OA 09', 'Lectura', 'Basal', 'Analizar y evaluar textos de los medios de comunicación.', ['Comparan la cobertura de un mismo hecho noticioso en distintos medios de comunicación.']],
+    ['OA 14', 'Escritura', 'Basal', 'Escribir, con el propósito de persuadir, textos breves de diversos géneros.', ['Redactan críticas literarias o columnas de opinión cuidando el registro formal y la fuerza argumentativa.']],
+    ['OA 22', 'Comunicación Oral', 'Complementario', 'Expresarse frente a una audiencia de manera clara y adecuada a la situación, para comunicar temas de su interés.', ['Realizan exposiciones orales formales apoyadas en recursos gráficos y dominio escénico.']]
+]);
+
+// ==========================================
+// 8° BÁSICO - LENGUA Y LITERATURA
+// ==========================================
+addUnidad('8° BASICO', 'LENGUA Y LITERATURA', 1, 'Unidad 1: Epopeya, relatos de aventuras y viajes: análisis narrativo y escritura de textos diversos', [
+    ['OA 02', 'Lectura', 'Complementario', 'Reflexionar sobre las diferentes dimensiones de la experiencia humana, propia y ajena, a partir de la lectura de obras literarias y otros textos que forman parte de nuestras herencias culturales.', ['Reflexionan sobre las visiones de mundo, el honor y el destino presentes en epopeyas y relatos clásicos.']],
+    ['OA 03', 'Lectura', 'Basal', 'Analizar las narraciones leídas para enriquecer su comprensión, considerando, cuando sea pertinente: el o los conflictos de la historia; los personajes, su evolución en el relato y su relación con otros personajes; la relación de un fragmento de la obra con el total; el narrador, distinguiéndolo del autor; personajes tipo (por ejemplo, el pícaro, el avaro, el seductor, la madrastra, etc.), símbolos y tópicos literarios presentes en el texto.', ['Distinguen al narrador del autor, identifican personajes tipo y tópicos literarios, y analizan la evolución de los personajes.']],
+    ['OA 06', 'Lectura', 'Complementario', 'Leer y comprender fragmentos de epopeya, considerando sus características y el contexto en el que se enmarcan.', ['Caracterizan la epopeya identificando la figura del héroe épico y los valores de su pueblo.']],
+    ['OA 08', 'Lectura', 'Basal', 'Formular una interpretación de los textos literarios leídos o vistos, que sea coherente con su análisis, considerando: su experiencia personal y sus conocimientos; un dilema presentado en el texto y su postura personal acerca del mismo; la relación de la obra con la visión de mundo y el contexto histórico en el que se ambienta y/o en el que fue creada.', ['Formulan interpretaciones que vinculan la obra literaria con su contexto histórico de producción y recepción.']],
+    ['OA 13', 'Escritura', 'Complementario', 'Expresarse en forma creativa por medio de la escritura de textos de diversos géneros (por ejemplo, cuentos, crónicas, diarios de vida, cartas, poemas, etc.), escogiendo libremente el tema, el género y el destinatario.', ['Escriben cuentos o crónicas aplicando recursos narrativos estudiados en la unidad.']],
+    ['OA 16', 'Escritura', 'Basal', 'Planificar, escribir, revisar, reescribir y editar sus textos en función del contexto, el destinatario y el propósito.', ['Planifican y editan sus textos asegurando coherencia global, precisión léxica y corrección gramatical.']]
+]);
+
+addUnidad('8° BASICO', 'LENGUA Y LITERATURA', 2, 'Unidad 2: Experiencias del amor y la naturaleza: lírica, comedia teatral y argumentación escrita', [
+    ['OA 04', 'Lectura', 'Complementario', 'Analizar los poemas leídos para enriquecer su comprensión, considerando, cuando sea pertinente: cómo el lenguaje poético que emplea el autor apela a los sentidos, sugiere estados de ánimo y crea imágenes; el significado o el efecto que produce el uso de lenguaje figurado en el poema; el efecto que tiene el uso de repeticiones (de estructuras, sonidos, palabras o ideas) en el poema; elementos en común con otros textos leídos en el año.', ['Analizan el motivo lírico, las figuras retóricas y los recursos de repetición en poemas sobre el amor y la naturaleza.']],
+    ['OA 05', 'Lectura', 'Complementario', 'Analizar los textos dramáticos leídos o vistos, para enriquecer su comprensión, considerando, cuando sea pertinente: el conflicto y sus semejanzas con situaciones cotidianas; los personajes principales y cómo sus acciones y dichos conducen al desenlace; personajes tipo, símbolos y tópicos literarios.', ['Analizan el conflicto dramático, los vicios sociales satirizados y los personajes tipo en comedias teatrales.']],
+    ['OA 07', 'Lectura', 'Complementario', 'Leer y comprender comedias teatrales, considerando sus características y el contexto en el que se enmarcan.', ['Explican los recursos cómicos y la crítica de costumbres presentes en la comedia teatral.']],
+    ['OA 08', 'Lectura', 'Basal', 'Formular una interpretación de los textos literarios leídos o vistos, que sea coherente con su análisis.', ['Comparan el tratamiento del tema del amor en poemas, relatos y obras dramáticas de distintas épocas.']],
+    ['OA 09', 'Lectura', 'Basal', 'Analizar y evaluar textos con finalidad argumentativa como columnas de opinión, cartas y discursos, considerando: la postura del autor y los argumentos e información que la sostienen; la diferencia entre hecho y opinión; con qué intención el autor usa diversos modos verbales.', ['Evalúan la postura del autor, los argumentos y el uso intencionado de modos verbales en textos argumentativos.']],
+    ['OA 15', 'Escritura', 'Basal', 'Escribir, con el propósito de persuadir, textos breves de diversos géneros (por ejemplo, cartas al director, editoriales, críticas literarias, etc.), caracterizados por: la presentación de una afirmación referida a temas contingentes o literarios; la presencia de evidencias e información pertinente; la mantención de la coherencia temática.', ['Redactan ensayos breves o columnas de opinión sosteniendo una tesis con respaldos y evidencias.']]
+]);
+
+addUnidad('8° BASICO', 'LENGUA Y LITERATURA', 3, 'Unidad 3: Relatos de misterio y policiales, análisis crítico de medios e investigación', [
+    ['OA 03', 'Lectura', 'Basal', 'Analizar las narraciones leídas para enriquecer su comprensión, considerando la disposición temporal de los hechos, los indicios y el suspenso en el relato policial y de misterio.', ['Analizan la estructura del relato policial, el rol del detective, las pistas y el manejo del suspenso.']],
+    ['OA 08', 'Lectura', 'Basal', 'Formular una interpretación de los textos literarios leídos o vistos, que sea coherente con su análisis.', ['Elaboran interpretaciones sobre el enigma y la resolución racional en cuentos policiales.']],
+    ['OA 10', 'Lectura', 'Basal', 'Analizar y evaluar textos de los medios de comunicación, como noticias, reportajes, cartas al director, textos publicitarios o de las redes sociales, considerando: los propósitos explícitos e implícitos del texto; una distinción entre los hechos y las opiniones expresados; presencia de estereotipos y prejuicios; la suficiencia de información entregada.', ['Evalúan la veracidad, suficiencia de fuentes y posibles sesgos o estereotipos en reportajes y redes sociales.']],
+    ['OA 11', 'Lectura', 'Complementario', 'Leer y comprender textos no literarios para contextualizar y complementar las lecturas literarias realizadas en clases.', ['Relacionan artículos de divulgación científica o histórica con la ambientación de los relatos policiales.']],
+    ['OA 14', 'Escritura', 'Complementario', 'Escribir, con el propósito de explicar un tema, textos de diversos géneros (por ejemplo, artículos, informes, reportajes, etc.), caracterizados por: una presentación clara del tema en que se esbozan los aspectos que se abordarán; la presencia de información de distintas fuentes; la inclusión de hechos, descripciones, ejemplos o explicaciones que desarrollen el tema.', ['Escriben artículos de divulgación o informes de investigación integrando citas y organizadores gráficos.']],
+    ['OA 25', 'Investigación', 'Complementario', 'Realizar investigaciones sobre diversos temas para complementar sus lecturas o responder interrogantes relacionadas con el lenguaje y la literatura.', ['Evalúan la confiabilidad de sitios web y fuentes impresas y registran referencias bibliográficas.']]
+]);
+
+addUnidad('8° BASICO', 'LENGUA Y LITERATURA', 4, 'Unidad 4: Naturaleza, medios de comunicación, debate argumentado y exposición oral', [
+    ['OA 09', 'Lectura', 'Basal', 'Analizar y evaluar textos con finalidad argumentativa como columnas de opinión, cartas y discursos.', ['Contrastan dos textos argumentativos con posturas opuestas sobre una misma controversia pública.']],
+    ['OA 10', 'Lectura', 'Basal', 'Analizar y evaluar textos de los medios de comunicación, como noticias, reportajes, cartas al director, textos publicitarios o de las redes sociales.', ['Analizan el impacto de los elementos gráficos, audiovisuales y verbales en campañas publicitarias y propagandísticas.']],
+    ['OA 15', 'Escritura', 'Basal', 'Escribir, con el propósito de persuadir, textos breves de diversos géneros.', ['Escriben editoriales o cartas al director refutando contraargumentos con evidencias verificables.']],
+    ['OA 16', 'Escritura', 'Basal', 'Planificar, escribir, revisar, reescribir y editar sus textos en función del contexto, el destinatario y el propósito.', ['Perfeccionan la cohesión gramatical, el uso de conectores argumentativos y la puntuación de sus textos.']],
+    ['OA 22', 'Comunicación Oral', 'Basal', 'Dialogar constructivamente para debatir o explorar ideas: manteniendo el foco; demostrando comprensión de lo dicho por el interlocutor; fundamentando su postura de manera pertinente; formulando preguntas o comentarios que estimulen o hagan avanzar la discusión.', ['Participan en debates formales haciendo avanzar la discusión mediante preguntas y contraargumentos pertinentes.']],
+    ['OA 23', 'Comunicación Oral', 'Complementario', 'Expresarse frente a una audiencia de manera clara y adecuada a la situación para comunicar temas de su interés.', ['Exponen oralmente los resultados de una investigación utilizando un registro formal y recursos multimodales.']]
+]);
+
+// ==========================================
+// I° MEDIO - LENGUA Y LITERATURA
+// ==========================================
+addUnidad('I° MEDIO', 'LENGUA Y LITERATURA', 1, 'Unidad 1: La libertad como tema literario: narrativa y lírica del Romanticismo y escritura de ensayo', [
+    ['OA 02', 'Lectura', 'Complementario', 'Reflexionar sobre las diferentes dimensiones de la experiencia humana, propia y ajena, a partir de la lectura de obras literarias y otros textos que forman parte de nuestras herencias culturales.', ['Reflexionan sobre el ideal de libertad, rebeldía y subjetividad en obras literarias de distintas épocas.']],
+    ['OA 03', 'Lectura', 'Basal', 'Analizar las narraciones leídas para enriquecer su comprensión, considerando, cuando sea pertinente: el o los conflictos de la historia; un análisis de los personajes que considere su relación con otros personajes, qué dicen, qué se dice de ellos, sus acciones y motivaciones, sus convicciones y los dilemas que enfrentan; la relación de un fragmento de la obra con el total; cómo influye en el relato la narración en primera o tercera persona.', ['Analizan la complejidad psicológica de los personajes, sus dilemas morales y el efecto de la focalización del narrador.']],
+    ['OA 04', 'Lectura', 'Complementario', 'Analizar los poemas leídos para enriquecer su comprensión, considerando, cuando sea pertinente: los símbolos presentes en el texto y su relación con la totalidad del poema; la actitud del hablante hacia el tema que aborda; el significado o el efecto que produce el uso de lenguaje figurado en el poema.', ['Interpretan símbolos poéticos, la actitud lírica del hablante y las figuras retóricas en poemas románticos y modernos.']],
+    ['OA 07', 'Lectura', 'Complementario', 'Comprender la relevancia de las obras del Romanticismo, considerando sus características y el contexto en el que se enmarcan.', ['Relacionan temas y motivos del Romanticismo (libertad, naturaleza tempestuosa, amor imposible, misterio) con su contexto histórico.']],
+    ['OA 08', 'Lectura', 'Basal', 'Formular una interpretación de los textos literarios leídos o vistos, que sea coherente con su análisis, considerando: una hipótesis sobre el sentido de la obra, que muestre un punto de vista personal, histórico, social o universal; una crítica de la obra sustentada en citas o ejemplos.', ['Formulan hipótesis de lectura e interpretaciones literarias sustentadas con citas textuales.']],
+    ['OA 12', 'Escritura', 'Basal', 'Aplicar flexiblemente y creativamente las habilidades de escritura adquiridas en clases como medio de expresión personal y cuando se enfrentan a nuevos géneros.', ['Escriben ensayos literarios o textos creativos adecuando el estilo y registro a la situación comunicativa.']],
+    ['OA 14', 'Escritura', 'Complementario', 'Escribir, con el propósito de persuadir, textos de diversos géneros, en particular ensayos sobre los temas o lecturas propuestos para el nivel.', ['Escriben ensayos literarios estructurando una tesis interpretativa, argumentos y citas de respaldo.']]
+]);
+
+addUnidad('I° MEDIO', 'LENGUA Y LITERATURA', 2, 'Unidad 2: Ciudadanos y opinión: argumentación pública, falacias, medios de comunicación y debate', [
+    ['OA 09', 'Lectura', 'Basal', 'Analizar y evaluar textos con finalidad argumentativa, como columnas de opinión, cartas, discursos y ensayos, considerando: la tesis, ya sea explícita o implícita, y los argumentos e información que la sostienen; la diferencia entre hecho y opinión; si la información del texto es suficiente y pertinente para sustentar la tesis del autor; la manera en que el autor organiza el texto; con qué intención el autor usa diversos modos verbales; las expresiones y recursos léxicos que usa el autor para dirigir la atención del lector o generar determinados efectos.', ['Identifican tesis explícitas e implícitas, evalúan la suficiencia de las evidencias y reconocen recursos léxicos valorativos y modalizadores.']],
+    ['OA 10', 'Lectura', 'Basal', 'Analizar y evaluar textos de los medios de comunicación, como noticias, reportajes, cartas al director, propaganda o crónicas, considerando: los propósitos explícitos e implícitos del texto; las estrategias de persuasión utilizadas en el texto (uso del humor, presencia de estereotipos, apelación a los sentimientos, etc.) y evaluándolas; la veracidad y consistencia de la información; los efectos causados por recursos no lingüísticos presentes en el texto.', ['Analizan estrategias de persuasión, apelación emocional, estereotipos y recursos multimodales en propaganda y prensa.']],
+    ['OA 14', 'Escritura', 'Complementario', 'Escribir, con el propósito de persuadir, textos de diversos géneros, en particular ensayos y columnas de opinión.', ['Redactan columnas de opinión o ensayos sobre temas ciudadanos empleando conectores argumentativos y contraargumentación.']],
+    ['OA 15', 'Escritura', 'Basal', 'Planificar, escribir, revisar, reescribir y editar sus textos en función del contexto, el destinatario y el propósito.', ['Revisan y editan sus textos corrigiendo problemas de cohesión, correferencia y adecuación al registro formal.']],
+    ['OA 19', 'Comunicación Oral', 'Complementario', 'Comprender, comparar y evaluar textos orales y audiovisuales tales como exposiciones, discursos, documentales, noticias, reportajes, etc.', ['Evalúan discursos públicos y debates audiovisuales identificando falacias y estrategias retóricas.']],
+    ['OA 21', 'Comunicación Oral', 'Basal', 'Dialogar constructivamente para debatir o explorar ideas: manteniendo el foco; demostrando comprensión de lo dicho por el interlocutor; fundamentando su postura de manera pertinente y usando información que permita cumplir los propósitos establecidos; distinguiendo afirmaciones basadas en evidencias de aquellas que no lo están.', ['Debaten temas de interés público distinguiendo afirmaciones basadas en evidencia de opiniones sin respaldo.']]
+]);
+
+addUnidad('I° MEDIO', 'LENGUA Y LITERATURA', 3, 'Unidad 3: Relaciones humanas en el teatro y la literatura: tragedia griega y teatro contemporáneo', [
+    ['OA 05', 'Lectura', 'Complementario', 'Analizar los textos dramáticos leídos o vistos, para enriquecer su comprensión, considerando, cuando sea pertinente: el conflicto y qué problema humano se expresa a través de él; un análisis de los personajes principales que considere su evolución, su relación con otros personajes, qué dicen, qué se dice de ellos, lo que hacen, cómo reaccionan, qué piensan y cuáles son sus motivaciones; personajes tipo, símbolos y tópicos literarios; las creencias, prejuicios y estereotipos presentes en el relato, a la luz de la visión de mundo de la época en que fue escrito y su conexión con el mundo actual; la atmósfera de la obra y cómo se construye a través de los diálogos, los monólogos, las acciones y las acotaciones.', ['Analizan el conflicto trágico o dramático, las motivaciones de los personajes y la construcción de la atmósfera teatral.']],
+    ['OA 06', 'Lectura', 'Complementario', 'Comprender la visión de mundo que se expresa a través de las tragedias leídas, considerando sus características y el contexto en el que se enmarcan.', ['Explican los elementos de la tragedia clásica (destino, hybris, anagnórisis, catarsis, coro) y su vigencia humana.']],
+    ['OA 08', 'Lectura', 'Basal', 'Formular una interpretación de los textos literarios leídos o vistos, que sea coherente con su análisis.', ['Elaboran interpretaciones críticas que conectan el dilema trágico con problemáticas contemporáneas.']],
+    ['OA 11', 'Lectura', 'Complementario', 'Leer y comprender textos no literarios para contextualizar y complementar las lecturas literarias realizadas en clases.', ['Utilizan textos históricos y filosóficos para contextualizar las obras dramáticas estudiadas.']],
+    ['OA 12', 'Escritura', 'Basal', 'Aplicar flexiblemente y creativamente las habilidades de escritura adquiridas en clases como medio de expresión personal y cuando se enfrentan a nuevos géneros.', ['Escriben críticas teatrales, escenas dramáticas o ensayos interpretativos sobre las obras leídas.']],
+    ['OA 20', 'Comunicación Oral', 'Complementario', 'Evaluar el punto de vista de un emisor, explicando sus argumentos y la validez de la evidencia que usa.', ['Evalúan críticamente reseñas y paneles de discusión sobre obras artísticas y literarias.']]
+]);
+
+addUnidad('I° MEDIO', 'LENGUA Y LITERATURA', 4, 'Unidad 4: Comunicación y sociedad: medios masivos, investigación y expresión oral multimodal', [
+    ['OA 03', 'Lectura', 'Basal', 'Analizar las narraciones leídas para enriquecer su comprensión.', ['Analizan relatos contemporáneos considerando intertextualidad, símbolos y visión de mundo.']],
+    ['OA 10', 'Lectura', 'Basal', 'Analizar y evaluar textos de los medios de comunicación, como noticias, reportajes, cartas al director, propaganda o crónicas.', ['Comparan líneas editoriales y tratamiento informativo de distintos medios frente a un hecho relevante.']],
+    ['OA 13', 'Escritura', 'Complementario', 'Escribir, con el propósito de explicar un tema, textos de diversos géneros (por ejemplo, artículos, informes, reportajes, etc.).', ['Redactan reportajes o artículos de investigación integrando recursos gráficos e información de fuentes confiables.']],
+    ['OA 15', 'Escritura', 'Basal', 'Planificar, escribir, revisar, reescribir y editar sus textos en función del contexto, el destinatario y el propósito.', ['Aplican normas de citación, conectores discursivos y edición estilística en sus textos finales.']],
+    ['OA 22', 'Comunicación Oral', 'Complementario', 'Expresarse frente a una audiencia de manera clara y adecuada a la situación para comunicar temas de su interés.', ['Presentan oralmente investigaciones literarias o mediáticas utilizando apoyos multimodales efectivos.']],
+    ['OA 24', 'Investigación', 'Complementario', 'Realizar investigaciones sobre diversos temas para complementar sus lecturas o responder interrogantes relacionadas con el lenguaje y la literatura.', ['Desarrollan proyectos de investigación formulando preguntas, contrastando fuentes y sintetizando hallazgos.']]
+]);
+
+// ==========================================
+// II° MEDIO - LENGUA Y LITERATURA
+// ==========================================
+addUnidad('II° MEDIO', 'LENGUA Y LITERATURA', 1, 'Unidad 1: Sobre la ausencia: exilio, migración e identidad en la narrativa y la lírica', [
+    ['OA 02', 'Lectura', 'Complementario', 'Reflexionar sobre las diferentes dimensiones de la experiencia humana, propia y ajena, a partir de la lectura de obras literarias y otros textos que forman parte de nuestras herencias culturales.', ['Reflexionan sobre el desarraigo, la migración y la búsqueda de identidad a través de textos literarios y testimoniales.']],
+    ['OA 03', 'Lectura', 'Basal', 'Analizar las narraciones leídas para enriquecer su comprensión, considerando, cuando sea pertinente: el o los conflictos de la historia; un análisis de los personajes que considere su relación con otros personajes, qué dicen, qué se dice de ellos, sus acciones y motivaciones, sus convicciones y los dilemas que enfrentan; la relación de un fragmento de la obra con el total; cómo el relato está influido por la visión del narrador; personajes tipo, símbolos y tópicos literarios; las creencias, prejuicios y estereotipos presentes en el relato.', ['Analizan la perspectiva del narrador, los símbolos, tópicos y los prejuicios sociales representados en el relato.']],
+    ['OA 04', 'Lectura', 'Complementario', 'Analizar los poemas leídos para enriquecer su comprensión, considerando, cuando sea pertinente: los símbolos presentes en el texto y su relación con la totalidad del poema; la actitud del hablante hacia el tema que aborda; el significado o el efecto que produce el uso de lenguaje figurado en el poema.', ['Interpretan el sentido global, los símbolos y las figuras retóricas en poemas sobre la memoria, la ausencia y la identidad.']],
+    ['OA 08', 'Lectura', 'Basal', 'Formular una interpretación de los textos literarios leídos o vistos, que sea coherente con su análisis, considerando: una hipótesis sobre el sentido de la obra, que muestre un punto de vista personal, histórico, social o universal; una crítica de la obra sustentada en citas o ejemplos; los antecedentes culturales que influyen en la visión que refleja la obra.', ['Formulan interpretaciones críticas sustentadas en evidencias textuales y en el contexto sociocultural de la obra.']],
+    ['OA 12', 'Escritura', 'Basal', 'Aplicar flexiblemente y creativamente las habilidades de escritura adquiridas en clases como medio de expresión personal y cuando se enfrentan a nuevos géneros.', ['Escriben crónicas, relatos o ensayos explorando recursos estilísticos y expresivos.']],
+    ['OA 15', 'Escritura', 'Basal', 'Planificar, escribir, revisar, reescribir y editar sus textos en función del contexto, el destinatario y el propósito.', ['Revisan y reescriben sus textos perfeccionando la progresión temática, la precisión léxica y la sintaxis.']]
+]);
+
+addUnidad('II° MEDIO', 'LENGUA Y LITERATURA', 2, 'Unidad 2: Ciudadanía y trabajo: argumentación, discurso público, medios de comunicación y debate', [
+    ['OA 09', 'Lectura', 'Basal', 'Analizar y evaluar textos con finalidad argumentativa, como columnas de opinión, cartas al director, discursos y ensayos, considerando: la tesis, ya sea explícita o implícita, y los argumentos e información que la sostienen; los recursos emocionales que usa el autor para persuadir o convencer al lector, y evaluándolos; fallas evidentes en la argumentación, por ejemplo, exageración, estereotipos, generalizaciones, descalificaciones personales, entre otras; el efecto que produce el uso de modalizadores en el grado de certeza con que se presenta la información.', ['Evalúan el rigor argumentativo identificando falacias (generalización apresurada, ad hominem, falsa causa) y el uso de modalizadores discursivos.']],
+    ['OA 10', 'Lectura', 'Basal', 'Analizar y evaluar textos de los medios de comunicación, como noticias, reportajes, cartas al director, propaganda o crónicas, considerando: los propósitos explícitos e implícitos del texto; las estrategias de persuasión utilizadas en el texto y evaluándolas; los efectos causados por recursos no lingüísticos (como diseño, imágenes, disposición gráfica y efectos de audio) y lingüísticos (uso de imperativo, figuras literarias, expresiones populares, palabras en otros idiomas, intertextualidad, modalizaciones, etc.) presentes en el texto.', ['Deconstruyen mensajes mediáticos y propagandísticos analizando sus recursos verbales y no verbales de persuasión.']],
+    ['OA 14', 'Escritura', 'Complementario', 'Escribir, con el propósito de persuadir, textos de diversos géneros, en particular ensayos sobre los temas o lecturas propuestos para el nivel, caracterizados por: la presentación de una hipótesis o afirmación referida a temas contingentes o literarios; la presencia de evidencias e información pertinente; la mantención de la coherencia temática; una conclusión coherente con los argumentos presentados.', ['Escriben ensayos y textos argumentativos sólidos con introducción, tesis, argumentos respaldados, contraargumentación y conclusión.']],
+    ['OA 19', 'Comunicación Oral', 'Complementario', 'Comprender, comparar y evaluar textos orales y audiovisuales tales como exposiciones, discursos, documentales, noticias, reportajes, etc.', ['Analizan discursos públicos y documentales evaluando la postura del emisor, el tono y la validez de las fuentes.']],
+    ['OA 21', 'Comunicación Oral', 'Basal', 'Dialogar constructivamente para debatir o explorar ideas: manteniendo el foco; demostrando comprensión de lo dicho por el interlocutor; fundamentando su postura de manera pertinente y usando información que permita cumplir los propósitos establecidos; negociando acuerdos con los interlocutores.', ['Participan en debates y foros ciudadanos argumentando con rigor y negociando puntos de acuerdo.']]
+]);
+
+addUnidad('II° MEDIO', 'LENGUA Y LITERATURA', 3, 'Unidad 3: Lo divino y lo humano: literatura del Siglo de Oro, teatro y poesía barroca y renacentista', [
+    ['OA 04', 'Lectura', 'Complementario', 'Analizar los poemas leídos para enriquecer su comprensión, considerando símbolos, actitud del hablante y lenguaje figurado.', ['Analizan sonetos y poemas del Siglo de Oro identificando tópicos clásicos (carpe diem, tempus fugit, beatus ille, locus amoenus) y recursos conceptistas y culteranos.']],
+    ['OA 05', 'Lectura', 'Complementario', 'Analizar los textos dramáticos leídos o vistos, para enriquecer su comprensión, considerando el conflicto, los personajes, los símbolos y la visión de mundo.', ['Analizan obras dramáticas del Siglo de Oro y contemporáneas examinando el honor, el libre albedrío y el poder.']],
+    ['OA 06', 'Lectura', 'Complementario', 'Comprender la relevancia de las obras del Siglo de Oro, considerando sus características y el contexto en el que se enmarcan.', ['Relacionan la literatura del Renacimiento y el Barroco (novela picaresca, el Quijote, lírica y teatro) con la mentalidad de su época.']],
+    ['OA 08', 'Lectura', 'Basal', 'Formular una interpretación de los textos literarios leídos o vistos, que sea coherente con su análisis.', ['Elaboran ensayos interpretativos sobre las tensiones entre lo ideal y lo material en las obras del Siglo de Oro.']],
+    ['OA 11', 'Lectura', 'Complementario', 'Leer y comprender textos no literarios para contextualizar y complementar las lecturas literarias realizadas en clases.', ['Integran fuentes históricas y críticas para enriquecer la lectura de clásicos literarios.']],
+    ['OA 14', 'Escritura', 'Complementario', 'Escribir, con el propósito de persuadir, ensayos sobre los temas o lecturas propuestos para el nivel.', ['Escriben ensayos literarios comparando obras clásicas y contemporáneas.']]
+]);
+
+addUnidad('II° MEDIO', 'LENGUA Y LITERATURA', 4, 'Unidad 4: Poder y ambición: narrativa latinoamericana, medios masivos e investigación', [
+    ['OA 03', 'Lectura', 'Basal', 'Analizar las narraciones leídas para enriquecer su comprensión.', ['Analizan novelas y cuentos del Boom latinoamericano y narrativa contemporánea considerando técnicas narrativas, símbolos y contexto político-social.']],
+    ['OA 07', 'Lectura', 'Complementario', 'Leer y comprender cuentos y novelas del Boom latinoamericano, considerando sus características y el contexto en el que se enmarcan.', ['Explican rasgos como el realismo mágico, la multiplicidad de voces y la experimentación temporal en la narrativa latinoamericana.']],
+    ['OA 08', 'Lectura', 'Basal', 'Formular una interpretación de los textos literarios leídos o vistos, que sea coherente con su análisis.', ['Sustentan interpretaciones complejas sobre la representación del poder y la ambición en la literatura y el cine.']],
+    ['OA 10', 'Lectura', 'Basal', 'Analizar y evaluar textos de los medios de comunicación.', ['Evalúan críticamente el rol de los medios y las plataformas digitales en la formación de la opinión pública.']],
+    ['OA 13', 'Escritura', 'Complementario', 'Escribir, con el propósito de explicar un tema, textos de diversos géneros (artículos, informes, reportajes).', ['Redactan artículos académicos o reportajes en profundidad empleando citas y referencias bibliográficas.']],
+    ['OA 22', 'Comunicación Oral', 'Complementario', 'Expresarse frente a una audiencia de manera clara y adecuada a la situación para comunicar temas de su interés.', ['Exponen oralmente análisis críticos o investigaciones utilizando recursos retóricos y audiovisuales pertinentes.']]
+]);
+
+// ==========================================
+// III° MEDIO - LENGUA Y LITERATURA
+// ==========================================
+addUnidad('III° MEDIO', 'LENGUA Y LITERATURA', 1, 'Unidad 1: Diálogo: literatura y efecto estético', [
+    ['OA 01', 'Lectura', 'Basal', 'Formular interpretaciones surgidas de sus análisis literarios, considerando: la contribución de los recursos literarios (narrador, personajes, tópicos literarios, características del lenguaje, figuras literarias, etc.) en la construcción del sentido de la obra; las relaciones intertextuales que se establecen con otras obras leídas y con otros referentes de la cultura y del arte.', ['Formulan interpretaciones literarias explicando cómo los recursos formales y las relaciones intertextuales construyen el sentido y el efecto estético de la obra.']],
+    ['OA 02', 'Lectura', 'Complementario', 'Reflexionar sobre el efecto estético de las obras leídas, evaluando: cómo la obra dialoga con las experiencias personales del lector y sus puntos de vista sobre diversas problemáticas del ser humano; cómo los recursos y técnicas literarias de la obra inciden en el efecto estético producido.', ['Justifican su valoración estética de las obras literarias analizando el impacto de las decisiones estilísticas y estructurales del autor.']],
+    ['OA 06', 'Escritura', 'Basal', 'Producir textos y otras producciones que den cuenta de sus reflexiones sobre sí mismos y sobre diversas temáticas del mundo y del ser humano, surgidas de las interpretaciones de las obras leídas, de sus trayectorias de lectura personales y de los criterios de selección de estas.', ['Producen ensayos, críticas culturales o textos multimodales que articulan su interpretación literaria y reflexión estética.']],
+    ['OA 08', 'Comunicación Oral', 'Basal', 'Dialogar argumentativamente, evitando descalificaciones o prejuicios, para construir y ampliar ideas en torno a interpretaciones literarias y análisis crítico de textos.', ['Participan en seminarios y discusiones literarias contrastando interpretaciones con base en evidencias textuales.']]
+]);
+
+addUnidad('III° MEDIO', 'LENGUA Y LITERATURA', 2, 'Unidad 2: Elaborar y comunicar interpretaciones literarias', [
+    ['OA 01', 'Lectura', 'Basal', 'Formular interpretaciones surgidas de sus análisis literarios, considerando la contribución de los recursos literarios y las relaciones intertextuales.', ['Establecen vínculos intertextuales entre obras de distintas épocas y disciplinas artísticas (cine, pintura, música) para sostener una hipótesis interpretativa.']],
+    ['OA 05', 'Lectura', 'Complementario', 'Investigar sobre diversos temas para enriquecer sus lecturas y análisis, o para responder interrogantes propias de la asignatura: seleccionando fuentes e información según criterios de validez y confiabilidad; procesando la información mediante herramientas digitales o impresas; comunicando sus hallazgos por medio de géneros escritos, orales o multimodales.', ['Realizan investigaciones literarias y culturales utilizando fuentes académicas confiables y citación formal.']],
+    ['OA 06', 'Escritura', 'Basal', 'Producir textos y otras producciones que den cuenta de sus reflexiones e interpretaciones de las obras leídas.', ['Escriben ensayos de interpretación literaria rigurosos, cohesionados y adecuados al registro académico.']],
+    ['OA 07', 'Escritura', 'Complementario', 'Usar los recursos lingüísticos y no lingüísticos (visuales, sonoros y gestuales) al producir textos, considerando su incidencia en el sentido y en el efecto que se desea producir en la audiencia.', ['Exponen interpretaciones literarias en formatos orales o multimodales (podcast, videoensayo, ponencia) empleando recursos expresivos deliberados.']]
+]);
+
+addUnidad('III° MEDIO', 'LENGUA Y LITERATURA', 3, 'Unidad 3: Análisis crítico de géneros discursivos en comunidades digitales', [
+    ['OA 03', 'Lectura', 'Basal', 'Analizar críticamente textos de diversos géneros discursivos no literarios orales, escritos y audiovisuales, considerando: la influencia de los contextos socioculturales de enunciador y audiencia; las características del género discursivo al que pertenece el texto; los puntos de vista expresados y las estrategias discursivas y recursos lingüísticos y no lingüísticos usados para posicionarlos.', ['Analizan críticamente discursos públicos, columnas y reportajes identificando posicionamiento ideológico y estrategias de legitimación.']],
+    ['OA 04', 'Lectura', 'Complementario', 'Analizar críticamente los géneros discursivos surgidos en comunidades digitales (post, tweet, memes, foros, comentarios, video blogs, etc.), considerando: influencia del contexto sociocultural; intereses, motivaciones, características y temas compartidos por los participantes de la comunidad; posicionamiento de los enunciadores frente a los temas y el rol que asumen ante la audiencia; modos de razonamiento y calidad de la evidencia para sostener opiniones.', ['Evalúan discursos en redes sociales y comunidades digitales analizando cámaras de eco, desinformación, recursos multimodales y calidad argumentativa.']],
+    ['OA 08', 'Comunicación Oral', 'Basal', 'Dialogar argumentativamente, evitando descalificaciones o prejuicios, para construir y ampliar ideas en torno a interpretaciones literarias y análisis crítico de textos.', ['Debaten sobre problemáticas sociodiscursivas contemporáneas manteniendo el rigor argumentativo y la ética comunicativa.']]
+]);
+
+addUnidad('III° MEDIO', 'LENGUA Y LITERATURA', 4, 'Unidad 4: Producir textos complejos y multimodales para participar en la vida social', [
+    ['OA 03', 'Lectura', 'Basal', 'Analizar críticamente textos de diversos géneros discursivos no literarios orales, escritos y audiovisuales.', ['Contrastan diversas perspectivas discursivas frente a un problema social o cultural complejo.']],
+    ['OA 05', 'Lectura', 'Complementario', 'Investigar sobre diversos temas para enriquecer sus lecturas y análisis, seleccionando fuentes según criterios de validez y confiabilidad.', ['Sistematizan información de fuentes diversas para fundamentar un proyecto de producción discursiva.']],
+    ['OA 06', 'Escritura', 'Basal', 'Producir textos y otras producciones que den cuenta de sus reflexiones sobre diversas temáticas del mundo y del ser humano.', ['Redactan ensayos argumentativos o artículos de análisis crítico dirigidos a una audiencia definida.']],
+    ['OA 07', 'Escritura', 'Complementario', 'Usar los recursos lingüísticos y no lingüísticos (visuales, sonoros y gestuales) al producir textos, considerando su incidencia en el sentido y en el efecto en la audiencia.', ['Diseñan y presentan producciones multimodales integrando armónicamente recursos verbales, visuales y sonoros.']]
+]);
+
+// ==========================================
+// IV° MEDIO - LENGUA Y LITERATURA
+// ==========================================
+addUnidad('IV° MEDIO', 'LENGUA Y LITERATURA', 1, 'Unidad 1: Comparación de obras literarias: interpretaciones e intertextualidad', [
+    ['OA 01', 'Lectura', 'Basal', 'Formular interpretaciones de obras que aborden un mismo tema o problema, comparando: la relación de cada obra con sus contextos de producción y de recepción (historia, valores, creencias, etc.); el tratamiento del tema o problema y la perspectiva adoptada sobre estos; el efecto estético producido por los textos.', ['Formulan interpretaciones comparadas de dos o más obras literarias analizando cómo sus contextos de producción y recursos estéticos configuran distintas visiones sobre un mismo problema humano.']],
+    ['OA 05', 'Escritura', 'Basal', 'Producir textos (escritos, orales o audiovisuales) coherentes yals cohesionados, para comunicar sus análisis e interpretaciones de textos, desarrollar posturas sobre temas, o explorar creativamente con el lenguaje.', ['Escriben ensayos comparativos estructurando hipótesis de lectura, criterios de comparación y respaldo textual.']],
+    ['OA 07', 'Comunicación Oral', 'Basal', 'Dialogar argumentativamente, evitando descalificaciones o prejuicios, para construir y ampliar ideas en torno a interpretaciones literarias y análisis crítico de textos.', ['Discuten y defienden sus lecturas comparadas en coloquios literarios fundamentando con rigor.']]
+]);
+
+addUnidad('IV° MEDIO', 'LENGUA Y LITERATURA', 2, 'Unidad 2: Lectura crítica de discursos y estrategias de persuasión sociocultural', [
+    ['OA 02', 'Lectura', 'Complementario', 'Proponer distintas interpretaciones para una obra literaria, a partir de un criterio de análisis literario (por ejemplo: perspectiva de personajes, creencias, valores, contexto de producción y de recepción, etc.), fundamentándolas con evidencia coherente.', ['Construyen múltiples lecturas de una misma obra aplicando distintos enfoques críticos (histórico-social, psicológico, de género, estético).']],
+    ['OA 03', 'Lectura', 'Basal', 'Evaluar críticamente textos de diversos géneros no literarios (orales, escritos y audiovisuales), analizando cuando corresponda: intenciones explícitas e implícitas del texto; tratamiento de temas y veracidad de la información; presentación de ideologías, creencias y puntos de vista; posicionamiento del enunciador frente al tema y el rol que busca representar ante la audiencia.', ['Evalúan críticamente discursos públicos, políticos, periodísticos y publicitarios desmontando presupuestos ideológicos, sesgos y estrategias de manipulación.']],
+    ['OA 06', 'Escritura', 'Complementario', 'Producir textos y otras producciones que den cuenta de sus reflexiones sobre sí mismos y sobre diversas temáticas del mundo y del ser humano, empleando intencionadamente recursos lingüísticos y no lingüísticos.', ['Producen columnas críticas o análisis discursivos utilizando recursos retóricos y léxico especializado.']],
+    ['OA 07', 'Comunicación Oral', 'Basal', 'Dialogar argumentativamente, evitando descalificaciones o prejuicios, para construir y ampliar ideas en torno a análisis crítico de textos.', ['Participan en paneles de análisis crítico contrastando posturas con evidencia verificable.']]
+]);
+
+addUnidad('IV° MEDIO', 'LENGUA Y LITERATURA', 3, 'Unidad 3: Investigación, transformación creativa y producción de textos contemporáneos', [
+    ['OA 01', 'Lectura', 'Basal', 'Formular interpretaciones de obras que aborden un mismo tema o problema, comparando contextos, perspectivas y efecto estético.', ['Analizan comparativamente obras clásicas y contemporáneas identificando continuidades y rupturas estéticas.']],
+    ['OA 04', 'Lectura', 'Complementario', 'Evaluar los recursos lingüísticos y no lingüísticos (visuales, sonoros y gestuales) al comprender textos, considerando su incidencia en el sentido y en la crítica de la obra.', ['Evalúan el aporte de los recursos multimodales y estilísticos en obras literarias, cinematográficas y digitales.']],
+    ['OA 05', 'Escritura', 'Basal', 'Producir textos (escritos, orales o audiovisuales) coherentes y cohesionados, para comunicar sus análisis e interpretaciones o explorar creativamente con el lenguaje.', ['Realizan reescrituras creativas, adaptaciones o ensayos académicos cuidando la factura formal y estilística.']],
+    ['OA 08', 'Investigación', 'Complementario', 'Investigar sobre diversos temas para enriquecer sus lecturas y análisis, o para responder interrogantes propias de la asignatura, seleccionando fuentes según criterios de validez y confiabilidad.', ['Desarrollan investigaciones autónomas integrando marcos teóricos y fuentes primarias y secundarias.']]
+]);
+
+addUnidad('IV° MEDIO', 'LENGUA Y LITERATURA', 4, 'Unidad 4: Participación discursiva, argumentación pública y difusión de proyectos', [
+    ['OA 03', 'Lectura', 'Basal', 'Evaluar críticamente textos de diversos géneros no literarios (orales, escritos y audiovisuales).', ['Evalúan el discurso público contemporáneo y el debate mediático en torno a dilemas éticos y ciudadanos.']],
+    ['OA 05', 'Escritura', 'Basal', 'Producir textos (escritos, orales o audiovisuales) coherentes y cohesionados, para comunicar sus análisis e interpretaciones de textos o desarrollar posturas sobre temas.', ['Escriben ensayos finales o ponencias académicas con dominio del registro formal, citación y estructura argumentativa.']],
+    ['OA 06', 'Escritura', 'Complementario', 'Producir textos empleando intencionadamente recursos lingüísticos y no lingüísticos según el propósito, destinatario y situación comunicativa.', ['Editan y publican producciones escritas o multimodales adaptadas a audiencias reales.']],
+    ['OA 07', 'Comunicación Oral', 'Basal', 'Dialogar argumentativamente, evitando descalificaciones o prejuicios, para construir y ampliar ideas.', ['Exponen y defienden oralmente sus ensayos o proyectos ante la comunidad escolar respondiendo contraargumentos con solvencia.']]
+]);
+
+module.exports = oas;

@@ -693,13 +693,18 @@ async function obtenerPlanificacionDetalle(id) {
         } catch (e) {
             planCurr.habilidades_sugeridas = [];
         }
+        try {
+            planCurr.unidades_oficiales = JSON.parse(planCurr.unidades_oficiales || '[]');
+        } catch (e) {
+            planCurr.unidades_oficiales = [];
+        }
         if (planCurr.habilidades_sugeridas.length === 0) {
             planCurr.habilidades_sugeridas = curriculoSeed.HABILIDADES_POR_ASIGNATURA[planCurr.asignatura] || [];
         }
         plan.plan_curricular = planCurr;
 
         oasDisponibles = await queryAll(`
-            SELECT id, plan_id, tipo_objetivo, eje_unidad, unidad_sugerida, codigo, descripcion, categoria, indicadores_sugeridos, orden
+            SELECT id, plan_id, tipo_objetivo, eje_unidad, unidad_sugerida, nombre_unidad_oficial, codigo, descripcion, categoria, indicadores_sugeridos, orden, editado_manual
             FROM curriculo_objetivos 
             WHERE plan_id = ? AND activo = 1
             ORDER BY orden ASC, codigo ASC
@@ -708,7 +713,7 @@ async function obtenerPlanificacionDetalle(id) {
         // Si es un Plan Propio pero NO excluye al MINEDUC, se añaden también los OAs de MINEDUC para complementariedad
         if (planCurr.tipo === 'PROPIO' && !planCurr.excluir_oas_mineduc) {
             const oasMineduc = await queryAll(`
-                SELECT o.id, o.plan_id, o.tipo_objetivo, o.eje_unidad, o.unidad_sugerida, o.codigo, o.descripcion, o.categoria, o.indicadores_sugeridos, o.orden
+                SELECT o.id, o.plan_id, o.tipo_objetivo, o.eje_unidad, o.unidad_sugerida, o.nombre_unidad_oficial, o.codigo, o.descripcion, o.categoria, o.indicadores_sugeridos, o.orden, o.editado_manual
                 FROM curriculo_objetivos o
                 JOIN curriculo_planes cp ON cp.id = o.plan_id
                 WHERE (cp.anio = ? OR cp.anio = 2026)
@@ -729,7 +734,7 @@ async function obtenerPlanificacionDetalle(id) {
     } else {
         // Búsqueda flexible de OAs por nivel Y ASIGNATURA (respetando exclusión si existe plan propio)
         oasDisponibles = await queryAll(`
-            SELECT o.id, o.plan_id, o.tipo_objetivo, o.eje_unidad, o.unidad_sugerida, o.codigo, o.descripcion, o.categoria, o.indicadores_sugeridos, o.orden, cp.asignatura as asignatura_programa
+            SELECT o.id, o.plan_id, o.tipo_objetivo, o.eje_unidad, o.unidad_sugerida, o.nombre_unidad_oficial, o.codigo, o.descripcion, o.categoria, o.indicadores_sugeridos, o.orden, o.editado_manual, cp.asignatura as asignatura_programa
             FROM curriculo_objetivos o
             JOIN curriculo_planes cp ON cp.id = o.plan_id
             WHERE (cp.anio = ? OR cp.anio = 2026) 
@@ -756,19 +761,37 @@ async function obtenerPlanificacionDetalle(id) {
                       )
                 )
               )
-            ORDER BY o.eje_unidad ASC, o.codigo ASC
+            ORDER BY o.orden ASC, o.eje_unidad ASC, o.codigo ASC
         `, [plan.anio, nivel, `%${nivel}%`, asigEstandar, plan.asignatura, plan.asignatura, plan.asignatura]);
     }
 
-    // Parsear indicadores_sugeridos para cada OA
+    // Parsear indicadores_sugeridos para cada OA y armar catálogo de unidades oficiales
+    const mapaUnidadesOficiales = new Map();
+    if (planCurr && Array.isArray(planCurr.unidades_oficiales)) {
+        planCurr.unidades_oficiales.forEach(u => {
+            if (u && u.numero) mapaUnidadesOficiales.set(Number(u.numero), u.nombre || `Unidad ${u.numero}`);
+        });
+    }
     oasDisponibles.forEach(o => {
         try {
             o.indicadores_sugeridos = JSON.parse(o.indicadores_sugeridos || '[]');
         } catch (e) {
             o.indicadores_sugeridos = [];
         }
+        const mNum = String(o.unidad_sugerida || '').match(/(\d+)/);
+        if (mNum) {
+            const num = parseInt(mNum[1], 10);
+            if (o.nombre_unidad_oficial && !mapaUnidadesOficiales.has(num)) {
+                mapaUnidadesOficiales.set(num, o.nombre_unidad_oficial);
+            } else if (!o.nombre_unidad_oficial && mapaUnidadesOficiales.has(num)) {
+                o.nombre_unidad_oficial = mapaUnidadesOficiales.get(num);
+            }
+        }
     });
 
+    plan.unidades_oficiales = Array.from(mapaUnidadesOficiales.entries())
+        .sort((a, b) => a[0] - b[0])
+        .map(([numero, nombre]) => ({ numero, nombre }));
     plan.oas_disponibles = oasDisponibles;
     plan.actitudes_sugeridas = curriculoSeed.ACTITUDES_GENERALES_MINEDUC;
 
@@ -891,12 +914,46 @@ async function crearPlanificacion(payload, usuario) {
 
     const planId = resIns.lastID;
 
-    // Crear al menos Unidad 1 por defecto
-    await queryRun(`
-        INSERT INTO planificaciones_unidades 
-        (planificacion_id, numero_unidad, nombre_unidad, semestre, fecha_inicio, fecha_fin, horas_estimadas, orden)
-        VALUES (?, 1, 'Unidad 1: Introducción y Fundamentos', 1, '${anio}-03-02', '${anio}-04-30', 38, 1)
-    `, [planId]);
+    // Construir automáticamente las unidades oficiales y sus OAs asignados si existen en el programa curricular
+    let unidadesIniciales = [];
+    if (planCurricularId) {
+        const planCurrRow = await queryGet(`SELECT * FROM curriculo_planes WHERE id = ?`, [planCurricularId]);
+        const oasPlanCurr = await queryAll(`
+            SELECT id, codigo, descripcion, categoria, unidad_sugerida, nombre_unidad_oficial, indicadores_sugeridos, orden
+            FROM curriculo_objetivos
+            WHERE plan_id = ? AND activo = 1
+            ORDER BY orden ASC, codigo ASC
+        `, [planCurricularId]);
+        unidadesIniciales = construirUnidadesInicialesDesdeCurriculo(planCurrRow, oasPlanCurr, anio, horasAnuales);
+    }
+
+    if (unidadesIniciales.length > 0) {
+        for (const u of unidadesIniciales) {
+            await queryRun(`
+                INSERT INTO planificaciones_unidades 
+                (planificacion_id, numero_unidad, nombre_unidad, semestre, fecha_inicio, fecha_fin, horas_estimadas, oas_seleccionados, indicadores_evaluacion, orden)
+                VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+            `, [
+                planId,
+                u.numero_unidad,
+                u.nombre_unidad,
+                u.semestre,
+                u.fecha_inicio,
+                u.fecha_fin,
+                u.horas_estimadas,
+                JSON.stringify(u.oas_seleccionados || []),
+                u.indicadores_evaluacion || '',
+                u.orden
+            ]);
+        }
+    } else {
+        // Fallback: Crear Unidad 1 por defecto
+        await queryRun(`
+            INSERT INTO planificaciones_unidades 
+            (planificacion_id, numero_unidad, nombre_unidad, semestre, fecha_inicio, fecha_fin, horas_estimadas, orden)
+            VALUES (?, 1, 'Unidad 1: Introducción y Fundamentos', 1, '${anio}-03-02', '${anio}-04-30', 38, 1)
+        `, [planId]);
+    }
 
     // Snapshot inicial ("Tipo Git")
     await crearCheckpointVersion(planId, 'V1.0: Creación inicial de la planificación', usuario, 'checkpoint');
@@ -913,7 +970,185 @@ async function crearPlanificacion(payload, usuario) {
         nivel: 'success'
     });
 
-    return { id: planId, mensaje: "Planificación creada con éxito." };
+    return { id: planId, mensaje: "Planificación creada con éxito con sus unidades y OAs oficiales." };
+}
+
+function construirUnidadesInicialesDesdeCurriculo(planCurrRow, oasPlanCurr, anio, horasAnuales = 152) {
+    if (!oasPlanCurr || oasPlanCurr.length === 0) return [];
+    let unidadesOficialesCat = [];
+    if (planCurrRow && planCurrRow.unidades_oficiales) {
+        try {
+            unidadesOficialesCat = JSON.parse(planCurrRow.unidades_oficiales || '[]');
+        } catch (e) {
+            unidadesOficialesCat = [];
+        }
+    }
+
+    const mapaNombres = new Map();
+    unidadesOficialesCat.forEach(u => {
+        if (u && u.numero) mapaNombres.set(Number(u.numero), u.nombre);
+    });
+
+    const gruposPorUnidad = new Map();
+    for (const oa of oasPlanCurr) {
+        const m = String(oa.unidad_sugerida || 'Unidad 1').match(/(\d+)/);
+        const num = m ? parseInt(m[1], 10) : 1;
+        if (!gruposPorUnidad.has(num)) gruposPorUnidad.set(num, []);
+        gruposPorUnidad.get(num).push(oa);
+        if (oa.nombre_unidad_oficial && !mapaNombres.has(num)) {
+            mapaNombres.set(num, oa.nombre_unidad_oficial);
+        }
+    }
+
+    const numeros = Array.from(gruposPorUnidad.keys()).sort((a, b) => a - b);
+    if (numeros.length === 0) return [];
+
+    const rangosFechas = {
+        1: { semestre: 1, inicio: `${anio}-03-02`, fin: `${anio}-05-08` },
+        2: { semestre: 1, inicio: `${anio}-05-11`, fin: `${anio}-07-03` },
+        3: { semestre: 2, inicio: `${anio}-07-20`, fin: `${anio}-09-25` },
+        4: { semestre: 2, inicio: `${anio}-09-28`, fin: `${anio}-12-04` }
+    };
+
+    const horasPorUnidad = Math.max(10, Math.round((parseInt(horasAnuales, 10) || 152) / numeros.length));
+
+    return numeros.map((num, idx) => {
+        const oasUnidad = gruposPorUnidad.get(num) || [];
+        const nombreOficial = mapaNombres.get(num) || `Unidad ${num}`;
+        const rango = rangosFechas[num] || {
+            semestre: num <= 2 ? 1 : 2,
+            inicio: num <= 2 ? `${anio}-03-02` : `${anio}-07-20`,
+            fin: num <= 2 ? `${anio}-07-03` : `${anio}-12-04`
+        };
+
+        const oasSeleccionados = oasUnidad.map(o => ({
+            id: o.id,
+            codigo: o.codigo,
+            descripcion: o.descripcion,
+            categoria: o.categoria || 'Basal',
+            unidad_sugerida: `Unidad ${num}`
+        }));
+
+        const indicadoresSet = new Set();
+        oasUnidad.forEach(o => {
+            try {
+                const inds = typeof o.indicadores_sugeridos === 'string'
+                    ? JSON.parse(o.indicadores_sugeridos || '[]')
+                    : (o.indicadores_sugeridos || []);
+                inds.forEach(i => { if (i) indicadoresSet.add(`• [${o.codigo}] ${i}`); });
+            } catch (e) {}
+        });
+
+        return {
+            numero_unidad: num,
+            nombre_unidad: nombreOficial,
+            semestre: rango.semestre,
+            fecha_inicio: rango.inicio,
+            fecha_fin: rango.fin,
+            horas_estimadas: horasPorUnidad,
+            oas_seleccionados: oasSeleccionados,
+            indicadores_evaluacion: Array.from(indicadoresSet).join('\n'),
+            orden: idx + 1
+        };
+    });
+}
+
+async function cargarUnidadesOficialesEnPlan(planId, opciones = {}, usuario) {
+    const detalle = await obtenerPlanificacionDetalle(planId);
+    if (!detalle) throw new Error("Planificación no encontrada.");
+
+    const unidadesPropuestas = construirUnidadesInicialesDesdeCurriculo(
+        detalle.plan_curricular,
+        detalle.oas_disponibles,
+        detalle.anio,
+        detalle.horas_anuales
+    );
+
+    if (unidadesPropuestas.length === 0) {
+        throw new Error("No se encontraron unidades ni OAs oficiales en el catálogo curricular para este nivel y asignatura.");
+    }
+
+    const numUnidadFiltro = opciones.numero_unidad ? parseInt(opciones.numero_unidad, 10) : null;
+
+    if (numUnidadFiltro) {
+        const uOficial = unidadesPropuestas.find(u => u.numero_unidad === numUnidadFiltro);
+        if (!uOficial) {
+            throw new Error(`No existen OAs oficiales asignados a la Unidad ${numUnidadFiltro} para este nivel y asignatura.`);
+        }
+        const existente = await queryGet(
+            `SELECT * FROM planificaciones_unidades WHERE planificacion_id = ? AND numero_unidad = ?`,
+            [planId, numUnidadFiltro]
+        );
+        if (existente) {
+            await queryRun(`
+                UPDATE planificaciones_unidades
+                SET nombre_unidad = ?, oas_seleccionados = ?, indicadores_evaluacion = ?, actualizado_en = CURRENT_TIMESTAMP
+                WHERE id = ?
+            `, [
+                uOficial.nombre_unidad,
+                JSON.stringify(uOficial.oas_seleccionados),
+                uOficial.indicadores_evaluacion,
+                existente.id
+            ]);
+        } else {
+            await queryRun(`
+                INSERT INTO planificaciones_unidades
+                (planificacion_id, numero_unidad, nombre_unidad, semestre, fecha_inicio, fecha_fin, horas_estimadas, oas_seleccionados, indicadores_evaluacion, orden)
+                VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+            `, [
+                planId,
+                uOficial.numero_unidad,
+                uOficial.nombre_unidad,
+                uOficial.semestre,
+                uOficial.fecha_inicio,
+                uOficial.fecha_fin,
+                uOficial.horas_estimadas,
+                JSON.stringify(uOficial.oas_seleccionados),
+                uOficial.indicadores_evaluacion,
+                uOficial.orden
+            ]);
+        }
+    } else {
+        for (const uOficial of unidadesPropuestas) {
+            const existente = await queryGet(
+                `SELECT * FROM planificaciones_unidades WHERE planificacion_id = ? AND numero_unidad = ?`,
+                [planId, uOficial.numero_unidad]
+            );
+            if (existente) {
+                await queryRun(`
+                    UPDATE planificaciones_unidades
+                    SET nombre_unidad = ?, semestre = ?, oas_seleccionados = ?, indicadores_evaluacion = ?, actualizado_en = CURRENT_TIMESTAMP
+                    WHERE id = ?
+                `, [
+                    uOficial.nombre_unidad,
+                    uOficial.semestre,
+                    JSON.stringify(uOficial.oas_seleccionados),
+                    uOficial.indicadores_evaluacion,
+                    existente.id
+                ]);
+            } else {
+                await queryRun(`
+                    INSERT INTO planificaciones_unidades
+                    (planificacion_id, numero_unidad, nombre_unidad, semestre, fecha_inicio, fecha_fin, horas_estimadas, oas_seleccionados, indicadores_evaluacion, orden)
+                    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+                `, [
+                    planId,
+                    uOficial.numero_unidad,
+                    uOficial.nombre_unidad,
+                    uOficial.semestre,
+                    uOficial.fecha_inicio,
+                    uOficial.fecha_fin,
+                    uOficial.horas_estimadas,
+                    JSON.stringify(uOficial.oas_seleccionados),
+                    uOficial.indicadores_evaluacion,
+                    uOficial.orden
+                ]);
+            }
+        }
+    }
+
+    await queryRun(`UPDATE planificaciones SET actualizado_en = CURRENT_TIMESTAMP WHERE id = ?`, [planId]);
+    return await obtenerPlanificacionDetalle(planId);
 }
 
 // -------------------------------------------------------------
@@ -1534,10 +1769,19 @@ async function calcularCoberturaCurricular({ anio = 2026, curso, asignatura, pla
     }
 
     if (planCurr) {
-        const objs = await queryAll(`SELECT codigo, categoria, descripcion FROM curriculo_objetivos WHERE plan_id = ? AND activo = 1`, [planCurr.id]);
-        totalPrograma = objs.length;
+        const objs = await queryAll(`SELECT codigo, categoria, descripcion, unidad_sugerida, nombre_unidad_oficial FROM curriculo_objetivos WHERE plan_id = ? AND activo = 1 ORDER BY orden ASC, codigo ASC`, [planCurr.id]);
+        const codigosUnicosMap = new Map();
         objs.forEach(o => {
-            const cod = o.codigo.trim().toUpperCase();
+            const cod = (o.codigo || '').trim().toUpperCase();
+            if (!cod) return;
+            if (!codigosUnicosMap.has(cod)) {
+                codigosUnicosMap.set(cod, o);
+            } else if (o.categoria === 'Basal' && codigosUnicosMap.get(cod).categoria !== 'Basal') {
+                codigosUnicosMap.set(cod, o);
+            }
+        });
+        totalPrograma = codigosUnicosMap.size;
+        codigosUnicosMap.forEach((o, cod) => {
             oasPrograma.push(o);
             if (o.categoria === 'Basal') {
                 basalesPrograma++;
@@ -2578,34 +2822,40 @@ async function importarUnidadesSemanasExcel(planId, buffer, usuario = {}) {
 function generarPlantillaCurriculoExcel() {
     const ejemplo = [
         {
-            Nivel: '4° Básico',
-            Asignatura: 'Inglés Institucional (Plan Propio)',
+            Nivel: '6° BASICO',
+            Asignatura: 'HISTORIA, GEOGRAFIA Y CIENCIAS SOCIALES',
+            Unidad: 1,
+            Nombre_Unidad: 'Unidad 1: Constitución y organización política de Chile',
+            Eje: 'Formación Ciudadana',
+            Codigo_OA: 'OA 15',
+            Descripcion_OA: 'Explicar algunos elementos fundamentales de la organización democrática de Chile, incluyendo la división de poderes del Estado.',
+            Basal_Complementario: 'Basal',
+            Indicadores: 'Distinguen los poderes del Estado | Reconocen autoridades elegidas democráticamente',
+            Tipo_Plan: 'MINEDUC',
+            Suplantar_MINEDUC: 'NO',
+            Habilidades: 'Pensamiento temporal y espacial, análisis de fuentes y pensamiento crítico'
+        },
+        {
+            Nivel: '4° BASICO',
+            Asignatura: 'INGLES INSTITUCIONAL',
+            Unidad: 1,
+            Nombre_Unidad: 'Unit 1: Communication and Daily Life',
             Eje: 'Comprensión Oral y Escrita',
             Codigo_OA: 'OA 01',
             Descripcion_OA: 'Demostrar comprensión de textos orales y escritos propios del programa institucional.',
             Basal_Complementario: 'Basal',
+            Indicadores: 'Identifican vocabulario clave | Siguen instrucciones en inglés',
+            Tipo_Plan: 'PROPIO',
             Suplantar_MINEDUC: 'SI',
-            Habilidades: 'Comprensión auditiva, expresión oral y escrita',
-            Actitudes: 'Interés por comunicarse en un idioma extranjero'
-        },
-        {
-            Nivel: '4° Básico',
-            Asignatura: 'Inglés Institucional (Plan Propio)',
-            Eje: 'Expresión y Producción',
-            Codigo_OA: 'OA 02',
-            Descripcion_OA: 'Participar en diálogos sencillos y formular preguntas sobre situaciones cotidianas.',
-            Basal_Complementario: 'Basal',
-            Suplantar_MINEDUC: 'SI',
-            Habilidades: 'Fluidez, pronunciación y vocabulario activo',
-            Actitudes: 'Respeto e inclusión cultural'
+            Habilidades: 'Comprensión auditiva, expresión oral y escrita'
         }
     ];
 
     const wb = xlsx.utils.book_new();
     const ws = xlsx.utils.json_to_sheet(ejemplo);
     ws['!cols'] = [
-        { wch: 15 }, { wch: 38 }, { wch: 30 }, { wch: 14 },
-        { wch: 60 }, { wch: 20 }, { wch: 20 }, { wch: 38 }, { wch: 38 }
+        { wch: 15 }, { wch: 38 }, { wch: 10 }, { wch: 45 }, { wch: 28 }, { wch: 14 },
+        { wch: 60 }, { wch: 20 }, { wch: 45 }, { wch: 14 }, { wch: 18 }, { wch: 38 }
     ];
     xlsx.utils.book_append_sheet(wb, ws, "Curriculo");
     return xlsx.write(wb, { type: 'buffer', bookType: 'xlsx' });
@@ -2618,6 +2868,7 @@ module.exports = {
     listarPlanificaciones,
     obtenerPlanificacionDetalle,
     crearPlanificacion,
+    cargarUnidadesOficialesEnPlan,
     guardarPlanificacion,
     clonarPlanificacion,
     vincularCurso,
