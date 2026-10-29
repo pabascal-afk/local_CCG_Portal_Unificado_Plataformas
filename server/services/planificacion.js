@@ -3364,28 +3364,36 @@ async function obtenerClasesPlanificadasDocente(usuario = {}, fechaStr, anio = 2
                 : ((semanaActiva && semanaActiva.dua_adecuaciones && semanaActiva.dua_adecuaciones.trim()) ? semanaActiva.dua_adecuaciones.trim() : '');
 
             const duaPartes = [];
-            if (tagsDua) duaPartes.push(`Estrategias: ${tagsDua}`);
             if (duaTexto) duaPartes.push(duaTexto);
+            if (tagsDua && !duaTexto.includes(tagsDua)) {
+                duaPartes.push(duaTexto ? `Metodologías DUA: ${tagsDua}` : tagsDua);
+            }
             const dua = duaPartes.join(' - ');
 
-            // 8. Formateo limpio para el Libro Digital (Basta con decir OAX sin descripción para la copia)
-            const oaCodigosStr = oasFinales.map(o => o.codigo).filter(Boolean).join(', ');
-            const textoOasLibro = oaCodigosStr ? `OA: ${oaCodigosStr}` : '';
-            const textoActividadesLibro = actividades || 'Clase desarrollada conforme a planificación curricular semanal.';
-            const textoHabilidadesLibro = habs.length > 0 ? `Habilidades: ${habs.join(', ')}` : '';
-            const textoIndicadoresLibro = inds.length > 0 ? `Indicadores: ${inds.join('; ')}` : '';
-            const textoRecursosLibro = recursos ? `Recursos: ${recursos}` : '';
-            const textoDuaLibro = dua ? `DUA: ${dua}` : '';
+            // Limpiar viñetas en habilidades e indicadores
+            const habsLimpias = habs.map(h => String(h).replace(/^[•\-\*]\s*/, '').trim()).filter(Boolean);
+            const indsLimpios = inds.map(i => String(i).replace(/^[•\-\*]\s*/, '').trim()).filter(Boolean);
 
-            // Bloque unificado listo para pegar en el Leccionario
-            const textoCompletoLibroDigital = [
-                oaCodigosStr ? `[OA]: ${oaCodigosStr}` : '',
+            // 8. Formateo exacto solicitado para el Libro Digital
+            const oaCodigosStr = oasFinales.map(o => o.codigo).filter(Boolean).join(', ');
+            const textoOasLibro = oaCodigosStr ? `OAs de la Sesión [${oaCodigosStr}]` : '';
+            const textoHabilidadesLibro = habsLimpias.length > 0 ? `Habilidades\n${habsLimpias.join('\n')}` : '';
+            const textoIndicadoresLibro = indsLimpios.length > 0 ? `Indicadores de Evaluación\n${indsLimpios.join('\n')}` : '';
+            const textoActividadesLibro = actividades ? `Actividades de la Sesión\n${actividades}` : '';
+            const textoRecursosLibro = recursos ? `Recursos\n${recursos}` : '';
+            const textoDuaLibro = dua ? `DUA & Adecuaciones\n${dua}` : '';
+
+            // Bloque unificado estructurado para el Libro Digital (secciones separadas por doble salto de línea)
+            const seccionesLibro = [
+                textoOasLibro,
                 textoHabilidadesLibro,
-                actividades ? `[Actividades]: ${actividades}` : '',
                 textoIndicadoresLibro,
+                textoActividadesLibro,
                 textoRecursosLibro,
                 textoDuaLibro
-            ].filter(Boolean).join('\n');
+            ].filter(Boolean);
+
+            const textoCompletoLibroDigital = seccionesLibro.join('\n\n');
 
             planData = {
                 planId: planMatch.id,
@@ -3399,8 +3407,8 @@ async function obtenerClasesPlanificadasDocente(usuario = {}, fechaStr, anio = 2
                 sesionLabel: sesionActiva ? (sesionActiva.label || `Clase ${sesionActiva.numero || 1}`) : c.bloquesTexto,
                 oas: oasFinales,
                 oasCodigos: oaCodigosStr,
-                habilidades: habs,
-                indicadores: inds,
+                habilidades: habsLimpias,
+                indicadores: indsLimpios,
                 actividades: actividades,
                 recursos: recursos,
                 dua: dua,
@@ -3408,9 +3416,9 @@ async function obtenerClasesPlanificadasDocente(usuario = {}, fechaStr, anio = 2
                 textoOAs: textoOasLibro,
                 textoActividades: textoActividadesLibro,
                 textoHabilidades: textoHabilidadesLibro,
+                textoIndicadores: textoIndicadoresLibro,
                 textoRecursos: textoRecursosLibro,
-                textoDUA: textoDuaLibro,
-                textoRecursosCompleto: [textoRecursosLibro, textoDuaLibro].filter(Boolean).join('\n')
+                textoDUA: textoDuaLibro
             };
         } else {
             planData = {

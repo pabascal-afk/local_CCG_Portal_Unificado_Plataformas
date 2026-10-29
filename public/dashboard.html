@@ -1473,31 +1473,31 @@
       let etiquetaToast = '';
 
       if (tipo === 'completo') {
-        texto = p.textoCompletoLibro || `Clase: ${c.asignatura} - ${c.curso}\nHorario: ${c.horarioTexto}`;
+        texto = p.textoCompletoLibro || '';
         etiquetaToast = '¡Copiado para el Libro Digital!';
       } else if (tipo === 'oas') {
-        texto = p.textoOAs || (p.oasCodigos ? `OA: ${p.oasCodigos}` : '');
+        texto = p.textoOAs || (p.oasCodigos ? `OAs de la Sesión [${p.oasCodigos}]` : '');
         etiquetaToast = '¡OAs copiados al portapapeles!';
         if (!texto) {
           mostrarToastCopiado('Sin OAs específicos registrados para esta clase');
           return;
         }
       } else if (tipo === 'actividades') {
-        texto = p.actividades || p.textoActividades || '';
+        texto = p.textoActividades || (p.actividades ? `Actividades de la Sesión\n${p.actividades}` : '');
         etiquetaToast = '¡Actividades copiadas al portapapeles!';
         if (!texto) {
           mostrarToastCopiado('Sin actividades registradas para esta clase');
           return;
         }
       } else if (tipo === 'dua') {
-        texto = p.textoDUA || (p.dua ? `DUA: ${p.dua}` : '');
+        texto = p.textoDUA || (p.dua ? `DUA & Adecuaciones\n${p.dua}` : '');
         etiquetaToast = '¡DUA copiado al portapapeles!';
         if (!texto) {
           mostrarToastCopiado('Sin adecuaciones DUA registradas para esta clase');
           return;
         }
       } else if (tipo === 'recursos') {
-        texto = p.textoRecursos || (p.recursos ? `Recursos: ${p.recursos}` : '');
+        texto = p.textoRecursos || (p.recursos ? `Recursos\n${p.recursos}` : '');
         etiquetaToast = '¡Recursos copiados al portapapeles!';
         if (!texto) {
           mostrarToastCopiado('Sin recursos registrados para esta clase');
