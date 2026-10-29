@@ -3157,8 +3157,19 @@ async function obtenerClasesPlanificadasDocente(usuario = {}, fechaStr, anio = 2
             // 1. Identificar Unidad correspondiente a la fecha
             let unidadActiva = unidades.find(u => u.fecha_inicio && u.fecha_fin && u.fecha_inicio <= fechaIso && fechaIso <= u.fecha_fin);
             if (!unidadActiva && unidades.length > 0) {
+                // Verificar si alguna unidad tiene semanas cuyas fechas coincidan con fechaIso
+                unidadActiva = unidades.find(u => 
+                    Array.isArray(u.desglose_semanal) && u.desglose_semanal.some(s => s.fecha_inicio && s.fecha_fin && s.fecha_inicio <= fechaIso && fechaIso <= s.fecha_fin)
+                );
+            }
+            if (!unidadActiva && unidades.length > 0) {
                 const esSegundoSem = (mesNum >= 7);
-                unidadActiva = unidades.find(u => esSegundoSem ? u.semestre == 2 : u.semestre == 1) || unidades[0];
+                const unidadesSemestre = unidades.filter(u => esSegundoSem ? u.semestre == 2 : u.semestre == 1);
+                const tieneContenido = u => Array.isArray(u.desglose_semanal) && u.desglose_semanal.some(s => (s.actividades && s.actividades.trim()) || (s.clases && s.clases.length > 0) || (s.oas_semana && s.oas_semana.length > 0));
+                unidadActiva = unidadesSemestre.find(tieneContenido) ||
+                               unidades.find(tieneContenido) ||
+                               unidadesSemestre[0] ||
+                               unidades[0];
             }
 
             // 2. Identificar Semana lectiva correspondiente
@@ -3172,8 +3183,12 @@ async function obtenerClasesPlanificadasDocente(usuario = {}, fechaStr, anio = 2
                 const sMatch = unidadActiva.desglose_semanal.find(s => 
                     s.fecha_inicio && s.fecha_fin && s.fecha_inicio <= fechaIso && fechaIso <= s.fecha_fin
                 );
-                // Si no coincide por fecha exacta, usar la primera semana disponible
-                semanaActiva = sMatch || unidadActiva.desglose_semanal[0];
+                // Si no coincide por fecha exacta, buscar la primera semana que tenga actividades registradas, o la primera semana
+                const tieneContenidoSem = s => (s.actividades && s.actividades.trim()) || 
+                                               (s.clases && s.clases.some(c => c.actividades && c.actividades.trim()));
+                semanaActiva = sMatch || 
+                               unidadActiva.desglose_semanal.find(tieneContenidoSem) ||
+                               unidadActiva.desglose_semanal[0];
                 semanaNum = semanaActiva.semana || 1;
                 semanaRango = (semanaActiva.fecha_inicio && semanaActiva.fecha_fin) 
                     ? `${semanaActiva.fecha_inicio} al ${semanaActiva.fecha_fin}` 
@@ -3312,7 +3327,7 @@ async function obtenerClasesPlanificadasDocente(usuario = {}, fechaStr, anio = 2
                 ? sesionActiva.indicadores_tags
                 : [];
 
-            // 7. Actividades de la clase registradas
+            // 7. Actividades de la clase registradas (NUNCA VOLCAR DESCRIPCIONES DE OA)
             let actividades = '';
             if (sesionActiva && sesionActiva.actividades && sesionActiva.actividades.trim()) {
                 actividades = sesionActiva.actividades.trim();
@@ -3321,15 +3336,37 @@ async function obtenerClasesPlanificadasDocente(usuario = {}, fechaStr, anio = 2
             } else if (semanaActiva) {
                 if (semanaActiva.actividades && semanaActiva.actividades.trim()) {
                     actividades = semanaActiva.actividades.trim();
-                } else if (semanaActiva.tema && semanaActiva.tema.trim()) {
-                    actividades = semanaActiva.tema.trim();
                 } else if (semanaActiva.descripcion && semanaActiva.descripcion.trim()) {
                     actividades = semanaActiva.descripcion.trim();
+                } else if (semanaActiva.tema && semanaActiva.tema.trim()) {
+                    const temaTrim = semanaActiva.tema.trim();
+                    // Si el tema contiene código o descripción de OA (ej: "OA 04: Practicar..."), NO es una actividad de clase
+                    const esSoloOA = /^OA\s*\d+\s*[:\-]/i.test(temaTrim) || 
+                                     /^Desarrollo de OA\s*\d+/i.test(temaTrim) ||
+                                     oasUnidad.some(ou => ou.descripcion && ou.descripcion.trim() === temaTrim);
+                    if (!esSoloOA) {
+                        actividades = temaTrim;
+                    }
                 }
             }
 
-            const recursos = (sesionActiva && sesionActiva.recursos) ? sesionActiva.recursos : ((semanaActiva && semanaActiva.recursos) ? semanaActiva.recursos : '');
-            const dua = (sesionActiva && sesionActiva.dua) ? sesionActiva.dua : ((semanaActiva && semanaActiva.dua_adecuaciones) ? semanaActiva.dua_adecuaciones : '');
+            // Recursos
+            const recursos = (sesionActiva && sesionActiva.recursos && sesionActiva.recursos.trim()) 
+                ? sesionActiva.recursos.trim() 
+                : ((semanaActiva && semanaActiva.recursos && semanaActiva.recursos.trim()) ? semanaActiva.recursos.trim() : '');
+
+            // DUA: Extraer tanto de adecuaciones escritas como de tags metodológicos DUA
+            const tagsDua = (semanaActiva && Array.isArray(semanaActiva.tags) && semanaActiva.tags.length > 0)
+                ? semanaActiva.tags.join(', ')
+                : '';
+            const duaTexto = (sesionActiva && sesionActiva.dua && sesionActiva.dua.trim())
+                ? sesionActiva.dua.trim()
+                : ((semanaActiva && semanaActiva.dua_adecuaciones && semanaActiva.dua_adecuaciones.trim()) ? semanaActiva.dua_adecuaciones.trim() : '');
+
+            const duaPartes = [];
+            if (tagsDua) duaPartes.push(`Estrategias: ${tagsDua}`);
+            if (duaTexto) duaPartes.push(duaTexto);
+            const dua = duaPartes.join(' - ');
 
             // 8. Formateo limpio para el Libro Digital (Basta con decir OAX sin descripción para la copia)
             const oaCodigosStr = oasFinales.map(o => o.codigo).filter(Boolean).join(', ');
@@ -3371,7 +3408,9 @@ async function obtenerClasesPlanificadasDocente(usuario = {}, fechaStr, anio = 2
                 textoOAs: textoOasLibro,
                 textoActividades: textoActividadesLibro,
                 textoHabilidades: textoHabilidadesLibro,
-                textoRecursos: [textoRecursosLibro, textoDuaLibro].filter(Boolean).join('\n')
+                textoRecursos: textoRecursosLibro,
+                textoDUA: textoDuaLibro,
+                textoRecursosCompleto: [textoRecursosLibro, textoDuaLibro].filter(Boolean).join('\n')
             };
         } else {
             planData = {

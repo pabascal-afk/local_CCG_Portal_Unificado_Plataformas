@@ -1370,9 +1370,13 @@
               <i class="bi bi-card-text text-success"></i>
               <span>Actividades</span>
             </button>
-            <button type="button" class="btn btn-xs btn-outline-secondary flex-fill py-1 d-inline-flex align-items-center justify-content-center gap-1" onclick="copiarTextoLibroDigital('recursos', ${claseActivaIndex})" title="Copiar Recursos y DUA">
-              <i class="bi bi-tools text-warning"></i>
-              <span>Recursos/DUA</span>
+            <button type="button" class="btn btn-xs btn-outline-secondary flex-fill py-1 d-inline-flex align-items-center justify-content-center gap-1" onclick="copiarTextoLibroDigital('dua', ${claseActivaIndex})" title="Copiar adecuaciones DUA">
+              <i class="bi bi-universal-access text-warning"></i>
+              <span>DUA</span>
+            </button>
+            <button type="button" class="btn btn-xs btn-outline-secondary flex-fill py-1 d-inline-flex align-items-center justify-content-center gap-1" onclick="copiarTextoLibroDigital('recursos', ${claseActivaIndex})" title="Copiar Recursos pedagógicos">
+              <i class="bi bi-tools text-secondary"></i>
+              <span>Recursos</span>
             </button>
           </div>
 
@@ -1466,18 +1470,44 @@
       const p = c.plan || {};
 
       let texto = '';
+      let etiquetaToast = '';
+
       if (tipo === 'completo') {
         texto = p.textoCompletoLibro || `Clase: ${c.asignatura} - ${c.curso}\nHorario: ${c.horarioTexto}`;
+        etiquetaToast = '¡Copiado para el Libro Digital!';
       } else if (tipo === 'oas') {
         texto = p.textoOAs || (p.oasCodigos ? `OA: ${p.oasCodigos}` : '');
+        etiquetaToast = '¡OAs copiados al portapapeles!';
+        if (!texto) {
+          mostrarToastCopiado('Sin OAs específicos registrados para esta clase');
+          return;
+        }
       } else if (tipo === 'actividades') {
-        texto = p.textoActividades || 'Clase desarrollada conforme a planificación curricular.';
+        texto = p.actividades || p.textoActividades || '';
+        etiquetaToast = '¡Actividades copiadas al portapapeles!';
+        if (!texto) {
+          mostrarToastCopiado('Sin actividades registradas para esta clase');
+          return;
+        }
+      } else if (tipo === 'dua') {
+        texto = p.textoDUA || (p.dua ? `DUA: ${p.dua}` : '');
+        etiquetaToast = '¡DUA copiado al portapapeles!';
+        if (!texto) {
+          mostrarToastCopiado('Sin adecuaciones DUA registradas para esta clase');
+          return;
+        }
       } else if (tipo === 'recursos') {
-        texto = p.textoRecursos || '';
+        texto = p.textoRecursos || (p.recursos ? `Recursos: ${p.recursos}` : '');
+        etiquetaToast = '¡Recursos copiados al portapapeles!';
+        if (!texto) {
+          mostrarToastCopiado('Sin recursos registrados para esta clase');
+          return;
+        }
       }
 
       if (!texto) {
-        texto = `Clase: ${c.asignatura} - ${c.curso}\nHorario: ${c.horarioTexto}`;
+        mostrarToastCopiado('No hay contenido registrado para copiar');
+        return;
       }
 
       try {
@@ -1493,7 +1523,7 @@
           document.execCommand('copy');
           document.body.removeChild(ta);
         }
-        mostrarToastCopiado(tipo === 'completo' ? '¡Copiado para el Libro Digital!' : `¡${tipo.toUpperCase()} copiado al portapapeles!`);
+        mostrarToastCopiado(etiquetaToast || '¡Copiado al portapapeles!');
       } catch (err) {
         console.error('Error al copiar al portapapeles:', err);
         mostrarToastCopiado('¡Copiado!');
