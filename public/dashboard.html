@@ -90,48 +90,6 @@
       transform: translateY(-1px);
     }
 
-    /* Accesos Rápidos */
-    .quick-card {
-      background: white;
-      border: 1px solid var(--border-color);
-      border-radius: 12px;
-      padding: 14px 16px;
-      display: flex;
-      align-items: center;
-      gap: 14px;
-      text-decoration: none;
-      color: var(--text-main);
-      box-shadow: 0 1px 3px rgba(0,0,0,0.03);
-      transition: all 0.2s ease;
-      cursor: pointer;
-    }
-    .quick-card:hover {
-      transform: translateY(-2px);
-      box-shadow: 0 6px 18px rgba(0,0,0,0.06);
-      border-color: #cbd5e1;
-      color: var(--accent-color);
-    }
-    .quick-icon {
-      width: 44px;
-      height: 44px;
-      border-radius: 10px;
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      font-size: 1.35rem;
-      flex-shrink: 0;
-    }
-    .quick-title {
-      font-weight: 600;
-      font-size: 0.95rem;
-      margin: 0;
-    }
-    .quick-desc {
-      font-size: 0.78rem;
-      color: var(--text-muted);
-      margin: 0;
-    }
-
     /* KPIs / Métricas */
     .kpi-card {
       background: white;
@@ -392,65 +350,6 @@
       <button id="btn-toggle-rol" class="btn-switch-role d-none" onclick="toggleRolActivo()">
         <i class="bi bi-arrow-repeat"></i> <span id="btn-toggle-rol-text">Cambiar Vista</span>
       </button>
-    </div>
-  </div>
-
-  <!-- ACCESOS RÁPIDOS A 1 CLIC -->
-  <div class="row g-3 mb-4">
-    <div class="col-sm-6 col-lg-3 quick-access-col">
-      <div class="quick-card" onclick="irA('evaluaciones')">
-        <div class="quick-icon" style="background: #eff6ff; color: #2563eb;">
-          <i class="bi bi-journal-check"></i>
-        </div>
-        <div>
-          <h6 class="quick-title">Calendario Pruebas</h6>
-          <p class="quick-desc">Agendar o ver evaluaciones</p>
-        </div>
-      </div>
-    </div>
-    <div class="col-sm-6 col-lg-3 quick-access-col">
-      <div class="quick-card" onclick="irA('planificacion')">
-        <div class="quick-icon" style="background: #fdf2f8; color: #db2777;">
-          <i class="bi bi-journal-bookmark"></i>
-        </div>
-        <div>
-          <h6 class="quick-title">Planificación</h6>
-          <p class="quick-desc">Anual, unidades y OAs</p>
-        </div>
-      </div>
-    </div>
-    <div class="col-sm-6 col-lg-3 quick-access-col">
-      <div class="quick-card" onclick="irA('recursos')">
-        <div class="quick-icon" style="background: #f0fdf4; color: #16a34a;">
-          <i class="bi bi-building"></i>
-        </div>
-        <div>
-          <h6 class="quick-title">Reserva Recursos</h6>
-          <p class="quick-desc">Laboratorios, salas y equipos</p>
-        </div>
-      </div>
-    </div>
-    <div class="col-sm-6 col-lg-3 quick-access-col">
-      <div class="quick-card" onclick="irA('calendario')">
-        <div class="quick-icon" style="background: #fefce8; color: #ca8a04;">
-          <i class="bi bi-calendar-event"></i>
-        </div>
-        <div>
-          <h6 class="quick-title">Calendario Escolar</h6>
-          <p class="quick-desc">Actos, eventos y feriados</p>
-        </div>
-      </div>
-    </div>
-    <div class="col-sm-6 col-lg-3 d-none" id="col-quick-horarios">
-      <div class="quick-card" onclick="irA('horarios')">
-        <div class="quick-icon" style="background: #faf5ff; color: #9333ea;">
-          <i class="bi bi-clock-history"></i>
-        </div>
-        <div>
-          <h6 class="quick-title">Visor Horarios</h6>
-          <p class="quick-desc">Malla horaria y profesores</p>
-        </div>
-      </div>
     </div>
   </div>
 
@@ -801,26 +700,15 @@
         const badgeCont = document.getElementById('badge-rol-container');
         const btnToggleRol = document.getElementById('btn-toggle-rol');
         const btnToggleRolText = document.getElementById('btn-toggle-rol-text');
-        const colHorarios = document.getElementById('col-quick-horarios');
-        const quickCols = document.querySelectorAll('.quick-access-col');
 
         if (esAdmin) {
           badgeCont.innerHTML = `<span class="role-badge admin"><i class="bi bi-shield-fill-check"></i> Vista Administrador</span>`;
           document.getElementById('admin-tools-card').classList.remove('d-none');
           document.getElementById('btnNuevoAviso').classList.remove('d-none');
-          if (colHorarios) colHorarios.classList.remove('d-none');
-          quickCols.forEach(c => {
-            c.classList.remove('col-lg-4');
-            c.classList.add('col-lg-3');
-          });
         } else {
           badgeCont.innerHTML = `<span class="role-badge docente"><i class="bi bi-person-workspace"></i> Vista Profesor</span>`;
           document.getElementById('admin-tools-card').classList.add('d-none');
           document.getElementById('btnNuevoAviso').classList.add('d-none');
-          if (colHorarios) colHorarios.classList.add('d-none');
-          quickCols.forEach(c => {
-            c.classList.add('col-lg-3');
-          });
         }
 
         // Si el usuario tiene permisos duales (Admin + Profesor)
