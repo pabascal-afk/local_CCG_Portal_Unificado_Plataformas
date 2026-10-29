@@ -297,6 +297,80 @@
       display: inline-block;
       opacity: 0.5;
     }
+
+    /* Píldoras y Tarjetas de Clases Planificadas (Dashboard / Libro Digital) */
+    .pildora-clase {
+      font-size: 0.74rem;
+      padding: 4px 10px;
+      border-radius: 999px;
+      border: 1px solid #e2e8f0;
+      background: #ffffff;
+      color: #475569;
+      white-space: nowrap;
+      cursor: pointer;
+      transition: all 0.15s ease;
+      font-weight: 500;
+      display: inline-flex;
+      align-items: center;
+      gap: 5px;
+    }
+    .pildora-clase:hover {
+      background: #f1f5f9;
+      color: #0f172a;
+    }
+    .pildora-clase.active {
+      background: #2563eb;
+      color: #ffffff;
+      border-color: #2563eb;
+      font-weight: 600;
+    }
+    .clase-box-seccion {
+      background: #f8fafc;
+      border: 1px solid #e2e8f0;
+      border-radius: 8px;
+      padding: 10px 12px;
+      margin-bottom: 10px;
+    }
+    .clase-box-seccion-title {
+      font-size: 0.72rem;
+      font-weight: 700;
+      color: #64748b;
+      text-transform: uppercase;
+      letter-spacing: 0.3px;
+      margin-bottom: 4px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+    }
+    .clase-box-seccion-content {
+      font-size: 0.84rem;
+      color: #1e293b;
+      line-height: 1.45;
+    }
+    .toast-copiado-notif {
+      position: fixed;
+      bottom: 24px;
+      right: 24px;
+      background: #0f172a;
+      color: #ffffff;
+      padding: 10px 18px;
+      border-radius: 8px;
+      font-size: 0.85rem;
+      font-weight: 600;
+      box-shadow: 0 10px 25px -5px rgba(0,0,0,0.3);
+      z-index: 9999;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      opacity: 0;
+      transform: translateY(12px);
+      transition: all 0.25s cubic-bezier(0.16, 1, 0.3, 1);
+      pointer-events: none;
+    }
+    .toast-copiado-notif.show {
+      opacity: 1;
+      transform: translateY(0);
+    }
   </style>
 </head>
 <body>
@@ -534,6 +608,42 @@
           </div>
         </div>
       </div>
+
+      <!-- VISTA DE CLASES PLANIFICADAS DE HOY (LECCIONARIO / LIBRO DIGITAL) -->
+      <div class="main-card mt-4 shadow-sm border-0" id="cardClasesPlanificadas">
+        <div class="main-card-header py-2 px-3 d-flex justify-content-between align-items-center flex-wrap gap-1">
+          <div class="main-card-title d-flex align-items-center gap-2" style="font-size: 0.92rem;">
+            <i class="bi bi-journal-bookmark-fill text-primary"></i>
+            <span>Clases de Hoy</span>
+            <span class="badge bg-primary-subtle text-primary border" id="badgeTotalClasesDia" style="font-size: 0.7rem;">0</span>
+          </div>
+          <div class="d-flex align-items-center gap-1">
+            <button class="btn btn-sm btn-outline-secondary py-0 px-2" style="font-size: 0.74rem;" onclick="navegarDiaClases(-1)" title="Ver día anterior">
+              <i class="bi bi-chevron-left"></i>
+            </button>
+            <button class="btn btn-sm btn-light border py-0 px-2 fw-semibold text-dark" style="font-size: 0.74rem;" id="btnFechaClasesLabel" onclick="restablecerFechaHoy()" title="Volver a Hoy">
+              Hoy
+            </button>
+            <button class="btn btn-sm btn-outline-secondary py-0 px-2" style="font-size: 0.74rem;" onclick="navegarDiaClases(1)" title="Ver día siguiente">
+              <i class="bi bi-chevron-right"></i>
+            </button>
+          </div>
+        </div>
+
+        <!-- Selector de clases del día (Píldoras horizontales) -->
+        <div id="contenedorPildorasClases" class="p-2 bg-light border-bottom d-flex gap-1 overflow-x-auto" style="scrollbar-width: thin;">
+          <!-- Píldoras generadas dinámicamente -->
+        </div>
+
+        <!-- Detalle de la clase y botones de copiado para el libro digital -->
+        <div id="contenedorDetalleClase" class="p-3">
+          <div class="text-center py-4 text-muted small">
+            <div class="spinner-border spinner-border-sm text-primary mb-2" role="status"></div>
+            <div>Cargando clases planificadas...</div>
+          </div>
+        </div>
+      </div>
+
     </div>
   </div>
 
@@ -752,6 +862,9 @@
 
         // 6. Render Reservas
         renderReservas(data.reservas || []);
+
+        // 7. Render Clases Planificadas de Hoy (Libro Digital)
+        cargarClasesPlanificadas();
 
       } catch(e) {
         console.error("Error cargando dashboard:", e);
@@ -1176,6 +1289,347 @@
       if (!str) return '';
       return String(str).replace(/"/g, '&quot;').replace(/'/g, '&#39;');
     }
+
+    // -------------------------------------------------------------
+    // GESTIÓN DE CLASES PLANIFICADAS DEL DÍA (LIBRO DIGITAL)
+    // -------------------------------------------------------------
+    let fechaClasesActual = '';
+    let clasesDiaCache = [];
+    let claseActivaIndex = 0;
+    let fechaHoyReferencia = '';
+
+    async function cargarClasesPlanificadas(fechaStr = '') {
+      const contDetalle = document.getElementById('contenedorDetalleClase');
+      const contPildoras = document.getElementById('contenedorPildorasClases');
+      const badgeTotal = document.getElementById('badgeTotalClasesDia');
+      const btnLabel = document.getElementById('btnFechaClasesLabel');
+      if (!contDetalle) return;
+
+      try {
+        const url = fechaStr ? `/api/planificacion/mis-clases-dia?fecha=${encodeURIComponent(fechaStr)}` : '/api/planificacion/mis-clases-dia';
+        const res = await fetch(url);
+        const data = await res.json();
+
+        fechaClasesActual = data.fecha || fechaStr;
+        if (!fechaHoyReferencia) fechaHoyReferencia = data.fecha || '';
+
+        // Formato amigable en el botón central de fecha
+        const esHoy = (fechaClasesActual === fechaHoyReferencia);
+        if (btnLabel) {
+          if (esHoy) {
+            btnLabel.innerHTML = `Hoy <span class="text-muted fw-normal">(${data.dia})</span>`;
+          } else {
+            const fPart = fechaClasesActual.split('-');
+            btnLabel.innerHTML = `${fPart[2]}/${fPart[1]} <span class="text-muted fw-normal">(${data.dia.slice(0, 3)})</span>`;
+          }
+        }
+
+        clasesDiaCache = data.clases || [];
+        if (badgeTotal) badgeTotal.innerText = data.totalClases || 0;
+
+        claseActivaIndex = 0;
+        renderizarClasesPlanificadas(data);
+      } catch (e) {
+        console.error('Error cargando clases planificadas:', e);
+        contDetalle.innerHTML = `
+          <div class="text-center py-3 text-muted small">
+            <i class="bi bi-exclamation-circle text-warning fs-4 d-block mb-1"></i>
+            No se pudieron cargar las clases del día.
+          </div>
+        `;
+      }
+    }
+
+    function navegarDiaClases(delta) {
+      if (!fechaClasesActual) {
+        const ahora = new Date();
+        fechaClasesActual = ahora.toISOString().slice(0, 10);
+      }
+      const partes = fechaClasesActual.split('-').map(Number);
+      const d = new Date(partes[0], partes[1] - 1, partes[2]);
+      d.setDate(d.getDate() + delta);
+      const pad = n => String(n).padStart(2, '0');
+      const nuevaFecha = `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}`;
+      cargarClasesPlanificadas(nuevaFecha);
+    }
+
+    function restablecerFechaHoy() {
+      if (fechaHoyReferencia) {
+        cargarClasesPlanificadas(fechaHoyReferencia);
+      } else {
+        cargarClasesPlanificadas('');
+      }
+    }
+
+    function seleccionarClaseActiva(idx) {
+      claseActivaIndex = idx;
+      actualizarVistaClaseSeleccionada();
+    }
+
+    function renderizarClasesPlanificadas(data) {
+      const contPildoras = document.getElementById('contenedorPildorasClases');
+      const contDetalle = document.getElementById('contenedorDetalleClase');
+      if (!contPildoras || !contDetalle) return;
+
+      if (!data.clases || data.clases.length === 0) {
+        contPildoras.classList.add('d-none');
+        contDetalle.innerHTML = `
+          <div class="empty-state py-4">
+            <i class="bi bi-calendar-x" style="font-size: 2rem;"></i>
+            <h6 class="fw-bold text-dark mt-2 mb-1">Sin clases programadas</h6>
+            <p class="small text-muted mb-3">
+              ${data.esFinDeSemana ? 'Fin de semana sin jornada escolar lectiva.' : `No figuras con clases en el horario para el día ${data.dia}.`}
+            </p>
+            <div class="d-flex justify-content-center gap-2">
+              <button class="btn btn-xs btn-outline-primary" onclick="navegarDiaClases(-1)">
+                <i class="bi bi-arrow-left me-1"></i>Día anterior
+              </button>
+              <button class="btn btn-xs btn-outline-primary" onclick="navegarDiaClases(1)">
+                Día siguiente<i class="bi bi-arrow-right ms-1"></i>
+              </button>
+            </div>
+          </div>
+        `;
+        return;
+      }
+
+      contPildoras.classList.remove('d-none');
+
+      // Render Píldoras de Clases
+      contPildoras.innerHTML = data.clases.map((c, i) => `
+        <button type="button" 
+                class="pildora-clase ${i === claseActivaIndex ? 'active' : ''}" 
+                onclick="seleccionarClaseActiva(${i})"
+                title="${escapeAttr(c.curso)} • ${escapeAttr(c.asignatura)} (${c.horarioTexto})">
+          <i class="bi bi-clock"></i>
+          <span>${c.horaInicio}</span>
+          <span class="border-start ps-1 opacity-75">${escapeHtml(c.curso.split(' ')[0] || c.curso)}</span>
+        </button>
+      `).join('');
+
+      actualizarVistaClaseSeleccionada();
+    }
+
+    function actualizarVistaClaseSeleccionada() {
+      const contPildoras = document.getElementById('contenedorPildorasClases');
+      const contDetalle = document.getElementById('contenedorDetalleClase');
+      if (!contDetalle) return;
+
+      // Actualizar estado activo en píldoras
+      if (contPildoras) {
+        const btns = contPildoras.querySelectorAll('.pildora-clase');
+        btns.forEach((btn, i) => {
+          if (i === claseActivaIndex) btn.classList.add('active');
+          else btn.classList.remove('active');
+        });
+      }
+
+      const c = clasesDiaCache[claseActivaIndex];
+      if (!c) return;
+
+      const p = c.plan || {};
+      const tienePlan = p.tienePlan;
+
+      contDetalle.innerHTML = `
+        <!-- Encabezado de la Clase -->
+        <div class="d-flex justify-content-between align-items-start mb-2 pb-2 border-bottom">
+          <div>
+            <div class="fw-bold text-dark" style="font-size: 0.95rem;">
+              ${escapeHtml(c.asignatura)}
+            </div>
+            <div class="small text-secondary d-flex align-items-center gap-1 flex-wrap mt-1">
+              <span class="badge bg-secondary-subtle text-secondary border fw-semibold">${escapeHtml(c.curso)}</span>
+              <span>•</span>
+              <span class="fw-medium text-dark"><i class="bi bi-clock me-1 text-primary"></i>${c.horarioTexto}</span>
+              <span class="text-muted" style="font-size: 0.74rem;">(${c.bloquesTexto}, ${c.duracionMinutos} min)</span>
+            </div>
+          </div>
+          <div class="text-end">
+            <span class="badge ${tienePlan ? 'bg-success-subtle text-success border-success-subtle' : 'bg-warning-subtle text-dark border-warning-subtle'} border" style="font-size: 0.72rem;">
+              <i class="bi ${tienePlan ? 'bi-check-circle-fill' : 'bi-exclamation-triangle-fill'} me-1"></i>${tienePlan ? 'Planificada' : 'Sin plan'}
+            </span>
+          </div>
+        </div>
+
+        ${tienePlan ? `
+          <!-- Contexto Curricular: Unidad y Semana -->
+          <div class="p-2 mb-2 rounded bg-light border d-flex justify-content-between align-items-center flex-wrap gap-1" style="font-size: 0.75rem;">
+            <div>
+              <i class="bi bi-journal-text text-primary me-1"></i>
+              <strong class="text-dark">${escapeHtml(p.unidadNombre || ('Unidad ' + p.unidadNumero))}</strong>
+            </div>
+            <div class="text-muted">
+              Semana ${p.semanaNumero} ${p.semanaRango ? `(${p.semanaRango})` : ''}
+            </div>
+          </div>
+
+          <!-- BOTÓN PRINCIPAL: COPIAR PARA LIBRO DIGITAL -->
+          <button type="button" 
+                  class="btn btn-primary btn-sm w-100 fw-bold py-2 mb-2 d-flex align-items-center justify-content-center gap-2 shadow-sm"
+                  onclick="copiarTextoLibroDigital('completo', ${claseActivaIndex})"
+                  title="Copiar objetivo, habilidades, actividades y recursos formateados para el Libro Digital">
+            <i class="bi bi-clipboard-check-fill" style="font-size: 1.05rem;"></i>
+            <span>Copiar para Libro Digital</span>
+          </button>
+
+          <!-- BOTONES SECUNDARIOS: COPIADO INDIVIDUAL -->
+          <div class="d-flex gap-1 mb-3">
+            <button type="button" class="btn btn-xs btn-outline-secondary flex-fill py-1 d-inline-flex align-items-center justify-content-center gap-1" onclick="copiarTextoLibroDigital('oas', ${claseActivaIndex})" title="Copiar solo Objetivos de Aprendizaje">
+              <i class="bi bi-bullseye text-primary"></i>
+              <span>OA</span>
+            </button>
+            <button type="button" class="btn btn-xs btn-outline-secondary flex-fill py-1 d-inline-flex align-items-center justify-content-center gap-1" onclick="copiarTextoLibroDigital('actividades', ${claseActivaIndex})" title="Copiar solo Actividades">
+              <i class="bi bi-card-text text-success"></i>
+              <span>Actividades</span>
+            </button>
+            <button type="button" class="btn btn-xs btn-outline-secondary flex-fill py-1 d-inline-flex align-items-center justify-content-center gap-1" onclick="copiarTextoLibroDigital('recursos', ${claseActivaIndex})" title="Copiar Recursos y DUA">
+              <i class="bi bi-tools text-warning"></i>
+              <span>Recursos/DUA</span>
+            </button>
+          </div>
+
+          <!-- CAJAS PEDAGÓGICAS DESPLEGADAS -->
+          <div class="clase-box-seccion">
+            <div class="clase-box-seccion-title">
+              <span><i class="bi bi-bullseye text-primary me-1"></i>Objetivo / OAs</span>
+              ${p.oasCodigos ? `<span class="badge bg-primary text-white" style="font-size: 0.65rem;">${escapeHtml(p.oasCodigos)}</span>` : ''}
+            </div>
+            <div class="clase-box-seccion-content">
+              ${p.oas && p.oas.length > 0 
+                ? p.oas.map(o => `<div><strong>${escapeHtml(o.codigo)}:</strong> ${escapeHtml(o.descripcion || '')}</div>`).join('')
+                : '<span class="text-muted fst-italic">Sin OA específico registrado para esta semana.</span>'}
+            </div>
+          </div>
+
+          <!-- Actividades Planificadas -->
+          <div class="clase-box-seccion">
+            <div class="clase-box-seccion-title">
+              <span><i class="bi bi-journal-check text-success me-1"></i>Actividades de la Clase</span>
+            </div>
+            <div class="clase-box-seccion-content" style="white-space: pre-wrap;">
+              ${p.actividades ? escapeHtml(p.actividades) : '<span class="text-muted fst-italic">Sin descripción detallada de actividades.</span>'}
+            </div>
+          </div>
+
+          ${(p.habilidades && p.habilidades.length > 0) || (p.indicadores && p.indicadores.length > 0) ? `
+            <div class="clase-box-seccion">
+              <div class="clase-box-seccion-title">
+                <span><i class="bi bi-stars text-warning me-1"></i>Habilidades e Indicadores</span>
+              </div>
+              <div class="clase-box-seccion-content">
+                ${p.habilidades && p.habilidades.length > 0 ? `
+                  <div class="d-flex flex-wrap gap-1 mb-1">
+                    ${p.habilidades.map(h => `<span class="badge bg-info-subtle text-dark border border-info" style="font-size: 0.68rem;">${escapeHtml(h)}</span>`).join('')}
+                  </div>
+                ` : ''}
+                ${p.indicadores && p.indicadores.length > 0 ? `
+                  <div class="small text-muted" style="font-size: 0.72rem;">
+                    ${p.indicadores.map(ind => `<div>• ${escapeHtml(ind)}</div>`).join('')}
+                  </div>
+                ` : ''}
+              </div>
+            </div>
+          ` : ''}
+
+          ${p.recursos || p.dua ? `
+            <div class="clase-box-seccion mb-2">
+              <div class="clase-box-seccion-title">
+                <span><i class="bi bi-tools text-secondary me-1"></i>Recursos & DUA</span>
+              </div>
+              <div class="clase-box-seccion-content small">
+                ${p.recursos ? `<div><strong>Recursos:</strong> ${escapeHtml(p.recursos)}</div>` : ''}
+                ${p.dua ? `<div><strong>DUA:</strong> ${escapeHtml(p.dua)}</div>` : ''}
+              </div>
+            </div>
+          ` : ''}
+
+        ` : `
+          <!-- Sin Planificación Registrada -->
+          <div class="p-3 my-2 rounded bg-warning-subtle border border-warning-subtle text-center">
+            <i class="bi bi-info-circle text-warning fs-4 d-block mb-1"></i>
+            <div class="small fw-bold text-dark mb-1">Asignatura sin planificación activa</div>
+            <p class="small text-muted mb-2">Crea la planificación anual para tener tus OAs y lecciones listas para el libro digital.</p>
+            <button type="button" class="btn btn-sm btn-outline-primary" onclick="irA('planificacion')">
+              <i class="bi bi-plus-circle me-1"></i>Crear Planificación
+            </button>
+          </div>
+        `}
+
+        <!-- Pie de tarjeta con navegación entre clases -->
+        <div class="d-flex justify-content-between align-items-center mt-3 pt-2 border-top">
+          <div class="d-flex align-items-center gap-1">
+            <button type="button" class="btn btn-xs btn-outline-secondary py-0 px-2" ${claseActivaIndex === 0 ? 'disabled' : ''} onclick="seleccionarClaseActiva(${claseActivaIndex - 1})" title="Clase anterior">
+              <i class="bi bi-arrow-left"></i> Anterior
+            </button>
+            <button type="button" class="btn btn-xs btn-outline-secondary py-0 px-2" ${claseActivaIndex >= clasesDiaCache.length - 1 ? 'disabled' : ''} onclick="seleccionarClaseActiva(${claseActivaIndex + 1})" title="Clase siguiente">
+              Siguiente <i class="bi bi-arrow-right"></i>
+            </button>
+          </div>
+          <a href="#" onclick="irA('planificacion')" class="text-decoration-none fw-semibold small text-primary" style="font-size: 0.76rem;">
+            Ver Plan Completo <i class="bi bi-box-arrow-up-right ms-1"></i>
+          </a>
+        </div>
+      `;
+    }
+
+    async function copiarTextoLibroDigital(tipo, cIdx) {
+      const c = clasesDiaCache[cIdx];
+      if (!c) return;
+      const p = c.plan || {};
+
+      let texto = '';
+      if (tipo === 'completo') {
+        texto = p.textoCompletoLibro || `Clase: ${c.asignatura} - ${c.curso}\nHorario: ${c.horarioTexto}`;
+      } else if (tipo === 'oas') {
+        texto = p.textoOAs || (p.oasCodigos ? `OA: ${p.oasCodigos}` : '');
+      } else if (tipo === 'actividades') {
+        texto = p.textoActividades || 'Clase desarrollada conforme a planificación curricular.';
+      } else if (tipo === 'recursos') {
+        texto = p.textoRecursos || '';
+      }
+
+      if (!texto) {
+        texto = `Clase: ${c.asignatura} - ${c.curso}\nHorario: ${c.horarioTexto}`;
+      }
+
+      try {
+        if (navigator.clipboard && window.isSecureContext) {
+          await navigator.clipboard.writeText(texto);
+        } else {
+          const ta = document.createElement('textarea');
+          ta.value = texto;
+          ta.style.position = 'fixed';
+          ta.style.left = '-9999px';
+          document.body.appendChild(ta);
+          ta.select();
+          document.execCommand('copy');
+          document.body.removeChild(ta);
+        }
+        mostrarToastCopiado(tipo === 'completo' ? '¡Copiado para el Libro Digital!' : `¡${tipo.toUpperCase()} copiado al portapapeles!`);
+      } catch (err) {
+        console.error('Error al copiar al portapapeles:', err);
+        mostrarToastCopiado('¡Copiado!');
+      }
+    }
+
+    let toastTimer = null;
+    function mostrarToastCopiado(msg) {
+      const toast = document.getElementById('toastCopiadoNotif');
+      const msgEl = document.getElementById('toastCopiadoMsg');
+      if (!toast) return;
+      if (msgEl) msgEl.innerText = msg || '¡Copiado al portapapeles!';
+      toast.classList.add('show');
+      if (toastTimer) clearTimeout(toastTimer);
+      toastTimer = setTimeout(() => {
+        toast.classList.remove('show');
+      }, 2500);
+    }
   </script>
+
+  <!-- TOAST FLOTANTE DE NOTIFICACIÓN DE COPIADO -->
+  <div id="toastCopiadoNotif" class="toast-copiado-notif">
+    <i class="bi bi-check-circle-fill text-success" style="font-size: 1.15rem;"></i>
+    <span id="toastCopiadoMsg">¡Copiado para el Libro Digital!</span>
+  </div>
 </body>
 </html>

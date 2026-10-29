@@ -2958,7 +2958,350 @@ function generarPlantillaCurriculoExcel() {
     return xlsx.write(wb, { type: 'buffer', bookType: 'xlsx' });
 }
 
+// -------------------------------------------------------------
+// 12. Clases Planificadas del Docente para el Día (Libro Digital)
+// -------------------------------------------------------------
+const HORARIOS_BLOQUES_OFICIALES = {
+    1: { inicio: '08:00', fin: '08:45', duracion: 45 },
+    2: { inicio: '08:45', fin: '09:30', duracion: 45 },
+    3: { inicio: '09:45', fin: '10:30', duracion: 45 },
+    4: { inicio: '10:30', fin: '11:15', duracion: 45 },
+    5: { inicio: '11:30', fin: '12:15', duracion: 45 },
+    6: { inicio: '12:15', fin: '13:00', duracion: 45 },
+    7: { inicio: '13:45', fin: '14:30', duracion: 45 },
+    8: { inicio: '14:30', fin: '15:15', duracion: 45 },
+    9: { inicio: '15:30', fin: '16:15', duracion: 45 },
+    10: { inicio: '16:15', fin: '17:00', duracion: 45 }
+};
+
+async function obtenerClasesPlanificadasDocente(usuario = {}, fechaStr, anio = 2026) {
+    let fechaObj;
+    if (fechaStr && /^\d{4}-\d{2}-\d{2}$/.test(fechaStr)) {
+        fechaObj = new Date(`${fechaStr}T12:00:00`);
+    } else {
+        fechaObj = new Date();
+    }
+
+    const pad = (n) => String(n).padStart(2, '0');
+    const anioNum = fechaObj.getFullYear() || parseInt(anio, 10) || 2026;
+    const mesNum = fechaObj.getMonth() + 1;
+    const diaMes = fechaObj.getDate();
+    const fechaIso = `${anioNum}-${pad(mesNum)}-${pad(diaMes)}`;
+
+    // Fechas anterior y siguiente para navegación rápida
+    const dAnt = new Date(fechaObj);
+    dAnt.setDate(dAnt.getDate() - 1);
+    const fechaAnterior = `${dAnt.getFullYear()}-${pad(dAnt.getMonth() + 1)}-${pad(dAnt.getDate())}`;
+
+    const dSig = new Date(fechaObj);
+    dSig.setDate(dSig.getDate() + 1);
+    const fechaSiguiente = `${dSig.getFullYear()}-${pad(dSig.getMonth() + 1)}-${pad(dSig.getDate())}`;
+
+    const diasSemanaNombres = ['Domingo', 'Lunes', 'Martes', 'Miércoles', 'Jueves', 'Viernes', 'Sábado'];
+    const diaSemana = diasSemanaNombres[fechaObj.getDay()];
+
+    const userEmail = (usuario.email || '').trim().toLowerCase();
+    const userNombre = (usuario.nombre || '').trim();
+
+    // Buscar en horarios
+    let bloquesDocente = await queryAll(`
+        SELECT curso, asignatura, bloque, dia, profesor
+        FROM horarios
+        WHERE (anno = ? OR (anno IS NULL AND ? = 2026))
+          AND (
+            LOWER(profesor) LIKE '%' || LOWER(?) || '%' 
+            OR LOWER(?) LIKE '%' || LOWER(profesor) || '%'
+            OR LOWER(profesor) LIKE '%' || LOWER(?) || '%'
+            OR LOWER(?) LIKE '%' || LOWER(profesor) || '%'
+          )
+          AND (
+            LOWER(dia) = LOWER(?)
+            OR (LOWER(?) = 'miercoles' AND LOWER(dia) = 'miércoles')
+            OR (LOWER(?) = 'miércoles' AND LOWER(dia) = 'miercoles')
+            OR (LOWER(?) = 'sabado' AND LOWER(dia) = 'sábado')
+            OR (LOWER(?) = 'sábado' AND LOWER(dia) = 'sabado')
+          )
+        ORDER BY bloque ASC
+    `, [
+        anioNum, anioNum,
+        userNombre || userEmail, userNombre || userEmail,
+        userEmail || userNombre, userEmail || userNombre,
+        diaSemana, diaSemana, diaSemana, diaSemana, diaSemana
+    ]);
+
+    // Si el usuario es admin o dev y no tiene bloques asignados a su nombre exacto en ese día,
+    // buscamos los primeros bloques del día para visualización pedagógica
+    if (bloquesDocente.length === 0 && (usuario.rol === 'Administrador' || usuario.esAdminBase)) {
+        bloquesDocente = await queryAll(`
+            SELECT curso, asignatura, bloque, dia, profesor
+            FROM horarios
+            WHERE (anno = ? OR (anno IS NULL AND ? = 2026))
+              AND (
+                LOWER(dia) = LOWER(?)
+                OR (LOWER(?) = 'miercoles' AND LOWER(dia) = 'miércoles')
+                OR (LOWER(?) = 'miércoles' AND LOWER(dia) = 'miercoles')
+              )
+            ORDER BY bloque ASC
+            LIMIT 6
+        `, [anioNum, anioNum, diaSemana, diaSemana, diaSemana]);
+    }
+
+    // Agrupar bloques contiguos de la misma asignatura y curso (ej: bloques 1 y 2 -> 90 min)
+    const clasesAgrupadas = [];
+    const porCursoAsig = {};
+    bloquesDocente.forEach(b => {
+        const k = `${b.curso}___${b.asignatura}`;
+        if (!porCursoAsig[k]) porCursoAsig[k] = [];
+        porCursoAsig[k].push(b);
+    });
+
+    Object.keys(porCursoAsig).forEach(k => {
+        const items = porCursoAsig[k].sort((a, b) => a.bloque - b.bloque);
+        let i = 0;
+        while (i < items.length) {
+            const bActual = items[i];
+            const numB1 = parseInt(bActual.bloque, 10);
+            if (i + 1 < items.length && parseInt(items[i + 1].bloque, 10) === numB1 + 1) {
+                // Clase doble de 90 min
+                const numB2 = parseInt(items[i + 1].bloque, 10);
+                const info1 = HORARIOS_BLOQUES_OFICIALES[numB1] || { inicio: '08:00', fin: '08:45' };
+                const info2 = HORARIOS_BLOQUES_OFICIALES[numB2] || { inicio: '08:45', fin: '09:30' };
+                clasesAgrupadas.push({
+                    curso: bActual.curso,
+                    asignatura: bActual.asignatura,
+                    profesor: bActual.profesor,
+                    bloques: [numB1, numB2],
+                    bloquesTexto: `Bloques ${numB1} y ${numB2}`,
+                    horaInicio: info1.inicio,
+                    horaFin: info2.fin,
+                    horarioTexto: `${info1.inicio} - ${info2.fin}`,
+                    duracionMinutos: 90
+                });
+                i += 2;
+            } else {
+                // Clase individual de 45 min
+                const info = HORARIOS_BLOQUES_OFICIALES[numB1] || { inicio: '08:00', fin: '08:45' };
+                clasesAgrupadas.push({
+                    curso: bActual.curso,
+                    asignatura: bActual.asignatura,
+                    profesor: bActual.profesor,
+                    bloques: [numB1],
+                    bloquesTexto: `Bloque ${numB1}`,
+                    horaInicio: info.inicio,
+                    horaFin: info.fin,
+                    horarioTexto: `${info.inicio} - ${info.fin}`,
+                    duracionMinutos: 45
+                });
+                i += 1;
+            }
+        }
+    });
+
+    // Ordenar cronológicamente por hora de inicio
+    clasesAgrupadas.sort((a, b) => a.horaInicio.localeCompare(b.horaInicio));
+
+    // Obtener todas las planificaciones para este año escolar
+    const planesDocente = await queryAll(`
+        SELECT p.id, p.titulo, p.curso, p.asignatura, p.anio, p.horas_anuales, p.metas_anuales,
+               p.docente_responsable, p.docentes_colaboradores, cp.unidades_oficiales as cp_unidades
+        FROM planificaciones p
+        LEFT JOIN curriculo_planes cp ON cp.id = p.plan_curricular_id
+        WHERE (p.anio = ? OR p.anio = 2026)
+    `, [anioNum]);
+
+    // Para cada clase del horario, encontrar la planificación y la sesión correspondiente a la fecha
+    const clasesConPlan = [];
+
+    for (let idx = 0; idx < clasesAgrupadas.length; idx++) {
+        const c = clasesAgrupadas[idx];
+        const nivelC = inferirNivelDesdeCurso(c.curso);
+
+        // Buscar plan correspondiente priorizando coincidencia de docente
+        let planMatch = planesDocente.find(p => 
+            (p.docente_responsable && (
+                p.docente_responsable.toLowerCase().includes(userEmail) ||
+                (userNombre && p.docente_responsable.toLowerCase().includes(userNombre.toLowerCase()))
+            ) || (p.docentes_colaboradores && (
+                p.docentes_colaboradores.toLowerCase().includes(userEmail) ||
+                (userNombre && p.docentes_colaboradores.toLowerCase().includes(userNombre.toLowerCase()))
+            ))) &&
+            matchNivelCurricular(inferirNivelDesdeCurso(p.curso), nivelC) &&
+            matchAsignaturaCurricular(p.asignatura, c.asignatura, nivelC)
+        );
+
+        // Fallback: Si no coincide por docente, buscar el plan activo del colegio para ese curso y asignatura
+        if (!planMatch) {
+            planMatch = planesDocente.find(p => 
+                matchNivelCurricular(inferirNivelDesdeCurso(p.curso), nivelC) &&
+                matchAsignaturaCurricular(p.asignatura, c.asignatura, nivelC)
+            );
+        }
+
+        let planData = null;
+
+        if (planMatch) {
+            // Cargar unidades del plan
+            const unidades = await queryAll(`
+                SELECT * FROM planificaciones_unidades 
+                WHERE planificacion_id = ? 
+                ORDER BY numero_unidad ASC, orden ASC
+            `, [planMatch.id]);
+
+            unidades.forEach(u => {
+                try { u.oas_seleccionados = JSON.parse(u.oas_seleccionados || '[]'); } catch(e) { u.oas_seleccionados = []; }
+                try { u.desglose_semanal = JSON.parse(u.desglose_semanal || '[]'); } catch(e) { u.desglose_semanal = []; }
+                try { u.habilidades = JSON.parse(u.habilidades || '[]'); } catch(e) { u.habilidades = []; }
+                try { u.actitudes = JSON.parse(u.actitudes || '[]'); } catch(e) { u.actitudes = []; }
+            });
+
+            // 1. Identificar Unidad correspondiente a la fecha
+            let unidadActiva = unidades.find(u => u.fecha_inicio && u.fecha_fin && u.fecha_inicio <= fechaIso && fechaIso <= u.fecha_fin);
+            if (!unidadActiva && unidades.length > 0) {
+                const esSegundoSem = (mesNum >= 7);
+                unidadActiva = unidades.find(u => esSegundoSem ? u.semestre == 2 : u.semestre == 1) || unidades[0];
+            }
+
+            // 2. Identificar Semana lectiva correspondiente
+            let semanaActiva = null;
+            let semanaNum = 1;
+            let semanaRango = '';
+            let clasesSemana = [];
+
+            if (unidadActiva && Array.isArray(unidadActiva.desglose_semanal) && unidadActiva.desglose_semanal.length > 0) {
+                const sMatch = unidadActiva.desglose_semanal.find(s => 
+                    s.fecha_inicio && s.fecha_fin && s.fecha_inicio <= fechaIso && fechaIso <= s.fecha_fin
+                );
+                semanaActiva = sMatch || unidadActiva.desglose_semanal[0];
+                semanaNum = semanaActiva.semana || 1;
+                semanaRango = (semanaActiva.fecha_inicio && semanaActiva.fecha_fin) 
+                    ? `${semanaActiva.fecha_inicio} al ${semanaActiva.fecha_fin}` 
+                    : '';
+                clasesSemana = Array.isArray(semanaActiva.clases) ? semanaActiva.clases : [];
+            }
+
+            // 3. Identificar Sesión específica de la semana (por día o correlativo)
+            let sesionActiva = null;
+            if (clasesSemana.length > 0) {
+                sesionActiva = clasesSemana.find(cs => 
+                    (cs.dia && cs.dia.toLowerCase().includes(diaSemana.toLowerCase())) ||
+                    (cs.label && cs.label.toLowerCase().includes(diaSemana.toLowerCase()))
+                );
+                if (!sesionActiva) {
+                    sesionActiva = clasesSemana[0];
+                }
+            }
+
+            // 4. Extraer OAs de la semana / unidad
+            const oasCodigos = semanaActiva 
+                ? (Array.isArray(semanaActiva.oas_seleccionados) ? semanaActiva.oas_seleccionados : (Array.isArray(semanaActiva.oas) ? semanaActiva.oas : []))
+                : [];
+            
+            const oasUnidad = Array.isArray(unidadActiva?.oas_seleccionados) ? unidadActiva.oas_seleccionados : [];
+            const oasFinales = oasCodigos.length > 0 
+                ? oasCodigos.map(cCod => {
+                    const found = oasUnidad.find(ou => (typeof ou === 'string' ? ou : ou.codigo) === (typeof cCod === 'string' ? cCod : cCod.codigo));
+                    if (found && typeof found === 'object') return found;
+                    return { codigo: typeof cCod === 'string' ? cCod : cCod.codigo, descripcion: '', categoria: 'Basal' };
+                })
+                : oasUnidad.map(ou => typeof ou === 'string' ? { codigo: ou, descripcion: '', categoria: 'Basal' } : ou);
+
+            // 5. Habilidades e Indicadores
+            const habs = sesionActiva && Array.isArray(sesionActiva.habilidades_tags) && sesionActiva.habilidades_tags.length > 0
+                ? sesionActiva.habilidades_tags.map(h => typeof h === 'object' ? h.label : String(h))
+                : (Array.isArray(unidadActiva?.habilidades) ? unidadActiva.habilidades.map(h => typeof h === 'object' ? h.nombre : String(h)) : []);
+
+            const inds = sesionActiva && Array.isArray(sesionActiva.indicadores_tags) && sesionActiva.indicadores_tags.length > 0
+                ? sesionActiva.indicadores_tags
+                : [];
+
+            const actividades = (sesionActiva && sesionActiva.actividades) 
+                ? sesionActiva.actividades 
+                : (semanaActiva && semanaActiva.actividades ? semanaActiva.actividades : (semanaActiva && semanaActiva.descripcion ? semanaActiva.descripcion : ''));
+
+            const recursos = (semanaActiva && semanaActiva.recursos) ? semanaActiva.recursos : '';
+            const dua = (semanaActiva && semanaActiva.dua_adecuaciones) ? semanaActiva.dua_adecuaciones : '';
+
+            // 6. Generar bloques de texto preformateados para el Libro Digital
+            const oaCodigosStr = oasFinales.map(o => o.codigo).filter(Boolean).join(', ');
+            const oaDescCompleta = oasFinales.map(o => `[${o.codigo}]: ${o.descripcion || ''}`).filter(Boolean).join(' | ');
+
+            const textoOasLibro = oaCodigosStr ? `OA: ${oaCodigosStr}${oaDescCompleta ? ' - ' + oaDescCompleta : ''}` : '';
+            const textoActividadesLibro = actividades || 'Clase desarrollada conforme a planificación curricular semanal.';
+            const textoHabilidadesLibro = habs.length > 0 ? `Habilidades: ${habs.join(', ')}` : '';
+            const textoIndicadoresLibro = inds.length > 0 ? `Indicadores: ${inds.join('; ')}` : '';
+            const textoRecursosLibro = recursos ? `Recursos: ${recursos}` : '';
+            const textoDuaLibro = dua ? `DUA: ${dua}` : '';
+
+            // Bloque unificado listo para pegar en el Leccionario
+            const textoCompletoLibroDigital = [
+                oaCodigosStr ? `[OA]: ${oaCodigosStr}${oaDescCompleta ? ' - ' + oaDescCompleta : ''}` : '',
+                textoHabilidadesLibro,
+                `[Actividades]: ${textoActividadesLibro}`,
+                textoIndicadoresLibro,
+                textoRecursosLibro,
+                textoDuaLibro
+            ].filter(Boolean).join('\n');
+
+            planData = {
+                planId: planMatch.id,
+                planTitulo: planMatch.titulo,
+                tienePlan: true,
+                unidadNumero: unidadActiva ? unidadActiva.numero_unidad : 1,
+                unidadNombre: unidadActiva ? unidadActiva.nombre_unidad : 'Unidad 1',
+                semanaNumero: semanaNum,
+                semanaRango: semanaRango,
+                sesionNumero: sesionActiva ? (sesionActiva.numero || 1) : 1,
+                sesionLabel: sesionActiva ? (sesionActiva.label || `Clase ${sesionActiva.numero || 1}`) : c.bloquesTexto,
+                oas: oasFinales,
+                oasCodigos: oaCodigosStr,
+                habilidades: habs,
+                indicadores: inds,
+                actividades: actividades,
+                recursos: recursos,
+                dua: dua,
+                textoCompletoLibro: textoCompletoLibroDigital,
+                textoOAs: textoOasLibro,
+                textoActividades: textoActividadesLibro,
+                textoHabilidades: textoHabilidadesLibro,
+                textoRecursos: [textoRecursosLibro, textoDuaLibro].filter(Boolean).join('\n')
+            };
+        } else {
+            planData = {
+                tienePlan: false,
+                mensaje: `Sin planificación creada aún para ${c.curso} • ${c.asignatura}`,
+                textoCompletoLibro: `Clase: ${c.asignatura} - ${c.curso}\nHorario: ${c.horarioTexto} (${c.bloquesTexto})`
+            };
+        }
+
+        clasesConPlan.push({
+            id: `clase_${idx + 1}`,
+            numeroClase: idx + 1,
+            curso: c.curso,
+            asignatura: c.asignatura,
+            profesor: c.profesor,
+            bloques: c.bloques,
+            bloquesTexto: c.bloquesTexto,
+            horaInicio: c.horaInicio,
+            horaFin: c.horaFin,
+            horarioTexto: c.horarioTexto,
+            duracionMinutos: c.duracionMinutos,
+            plan: planData
+        });
+    }
+
+    return {
+        fecha: fechaIso,
+        dia: diaSemana,
+        fechaAnterior,
+        fechaSiguiente,
+        esFinDeSemana: (diaSemana === 'Sábado' || diaSemana === 'Domingo'),
+        totalClases: clasesConPlan.length,
+        clases: clasesConPlan
+    };
+}
+
 module.exports = {
+    obtenerClasesPlanificadasDocente,
     obtenerCursosDocente,
     obtenerPoolDocentes,
     obtenerSesionesClasesSemana,

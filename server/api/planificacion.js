@@ -74,6 +74,24 @@ router.get('/sesiones-semana', async (req, res) => {
     }
 });
 
+// 1d. Clases planificadas del docente para el día (Vista Dashboard & Libro Digital)
+router.get('/mis-clases-dia', async (req, res) => {
+    try {
+        const usuario = req.user || (req.session && req.session.user) || {
+            email: 'dev@colegio.edu',
+            nombre: 'Docente',
+            rol: 'Profesor'
+        };
+        const fecha = req.query.fecha || '';
+        const anio = req.query.anio || 2026;
+        const data = await planificacion.obtenerClasesPlanificadasDocente(usuario, fecha, anio);
+        res.json({ success: true, ...data });
+    } catch (e) {
+        console.error('Error al obtener clases del día:', e);
+        res.status(500).json({ error: e.message || 'Error al obtener clases del día' });
+    }
+});
+
 // 2. Listado de planificaciones con filtros
 router.get('/', async (req, res) => {
     try {
