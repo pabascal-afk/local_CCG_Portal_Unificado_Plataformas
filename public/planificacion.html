@@ -4276,6 +4276,9 @@
                                       </div>
                                       <div class="row g-3">
                                         ${s.clases.map((clase, cIdx) => {
+                                          const oasClaseSeleccionados = Array.isArray(clase.oas_tags) ? clase.oas_tags : [];
+                                          const oasBaseSemana = (codigosOAsSemana.length > 0) ? codigosOAsSemana : oasUnidad.map(o => o.codigo);
+                                          const oasClaseDisponibles = oasBaseSemana.filter(cod => !oasClaseSeleccionados.includes(cod));
                                           const habSeleccionadas = Array.isArray(clase.habilidades_tags) ? clase.habilidades_tags : [];
                                           const habDisponiblesPool = poolHabilidades.filter(hItem => !habSeleccionadas.some(hs => (typeof hs === 'object' ? hs.label : String(hs)) === hItem.label));
                                           const indSeleccionados = Array.isArray(clase.indicadores_tags) ? clase.indicadores_tags : [];
@@ -4294,6 +4297,72 @@
                                                     </button>
                                                   ` : ''}
                                                 </div>
+                                              </div>
+
+                                              <!-- 0. OAS EN LA SESIÓN (Pool de Tags según OAs de la semana) -->
+                                              <div class="mb-2 p-2 rounded bg-white border">
+                                                <div class="d-flex justify-content-between align-items-center mb-1">
+                                                  <label class="form-label fw-bold text-dark mb-0" style="font-size: 0.72rem;">
+                                                    <i class="bi bi-bullseye text-primary me-1"></i>OAs de la Sesión
+                                                  </label>
+                                                  ${oasClaseDisponibles.length > 1 ? `
+                                                    <button type="button" class="btn btn-link p-0 text-decoration-none fw-semibold" style="font-size: 0.66rem;" onclick="agregarTodosOAsClase(${idx}, ${sIdx}, ${cIdx})">
+                                                      + Todos
+                                                    </button>
+                                                  ` : ''}
+                                                </div>
+
+                                                ${oasClaseSeleccionados.length > 0 ? `
+                                                  <div class="d-flex flex-wrap gap-1 mb-2">
+                                                    ${oasClaseSeleccionados.map((oaCod, oaIdx) => {
+                                                      const oaInfo = oasUnidad.find(x => x.codigo === oaCod) || { codigo: oaCod, categoria: 'Basal', descripcion: '' };
+                                                      return `
+                                                        <span class="badge ${oaInfo.categoria === 'Basal' ? 'badge-oa-basal' : 'badge-oa-comp'} d-inline-flex align-items-center gap-1 py-1 px-2"
+                                                              style="font-size: 0.71rem;"
+                                                              data-bs-toggle="tooltip"
+                                                              data-bs-placement="top"
+                                                              title="${escapeHtml(oaInfo.descripcion || oaCod)}">
+                                                          <i class="bi bi-bullseye"></i>
+                                                          <span>${escapeHtml(oaCod)}</span>
+                                                          <i class="bi bi-x-circle-fill text-danger cursor-pointer ms-1" onclick="quitarOAClase(${idx}, ${sIdx}, ${cIdx}, ${oaIdx})" title="Quitar OA de esta sesión"></i>
+                                                        </span>
+                                                      `;
+                                                    }).join('')}
+                                                  </div>
+                                                ` : ''}
+
+                                                ${oasClaseDisponibles.length > 0 ? `
+                                                  <div class="p-1 px-2 rounded bg-light border border-dashed">
+                                                    <div class="text-secondary mb-1" style="font-size: 0.65rem;">
+                                                      <i class="bi bi-collection me-1 text-primary"></i>Pool de OAs de la semana (clic para asignar a esta clase):
+                                                    </div>
+                                                    <div class="d-flex flex-wrap gap-1">
+                                                      ${oasClaseDisponibles.map(codOA => {
+                                                        const oaInfo = oasUnidad.find(x => x.codigo === codOA) || { codigo: codOA };
+                                                        return `
+                                                          <button type="button"
+                                                                  class="btn btn-xs btn-outline-primary bg-white py-0 px-2 d-inline-flex align-items-center gap-1"
+                                                                  style="font-size: 0.69rem; border-style: dashed;"
+                                                                  onclick="agregarOAClase(${idx}, ${sIdx}, ${cIdx}, '${escapeHtml(codOA)}')"
+                                                                  data-bs-toggle="tooltip"
+                                                                  data-bs-placement="top"
+                                                                  title="${escapeHtml(oaInfo.descripcion || codOA)}">
+                                                            <i class="bi bi-plus-lg"></i>
+                                                            <span>${escapeHtml(codOA)}</span>
+                                                          </button>
+                                                        `;
+                                                      }).join('')}
+                                                    </div>
+                                                  </div>
+                                                ` : (oasClaseSeleccionados.length === 0 ? `
+                                                  <div class="text-muted fst-italic" style="font-size: 0.69rem;">
+                                                    ${oasBaseSemana.length === 0 ? 'Sin OAs asignados en esta semana.' : 'Todos los OAs de la semana asignados a esta clase.'}
+                                                  </div>
+                                                ` : `
+                                                  <div class="text-success" style="font-size: 0.68rem;">
+                                                    <i class="bi bi-check2-all me-1"></i>OAs de la semana asignados.
+                                                  </div>
+                                                `)}
                                               </div>
 
                                               <!-- 1. HABILIDADES EN LA SESIÓN (Pool de Tags) -->
@@ -6753,6 +6822,44 @@
       return { sinOAsSemana: false, items };
     }
 
+    function agregarOAClase(uIdx, sIdx, cIdx, codOA) {
+      if (!planActivo || !planActivo.unidades[uIdx]) return;
+      const s = planActivo.unidades[uIdx].desglose_semanal[sIdx];
+      if (!s || !s.clases || !s.clases[cIdx]) return;
+      const clase = s.clases[cIdx];
+      if (!Array.isArray(clase.oas_tags)) clase.oas_tags = [];
+      const codLimpio = String(codOA).trim().toUpperCase();
+      if (!clase.oas_tags.includes(codLimpio)) {
+        clase.oas_tags.push(codLimpio);
+      }
+      renderizarUnidadesAcordeon();
+      guardarBorradorActual(false);
+    }
+
+    function quitarOAClase(uIdx, sIdx, cIdx, oaIdx) {
+      if (!planActivo || !planActivo.unidades[uIdx]) return;
+      const s = planActivo.unidades[uIdx].desglose_semanal[sIdx];
+      if (!s || !s.clases || !s.clases[cIdx]) return;
+      const clase = s.clases[cIdx];
+      if (!Array.isArray(clase.oas_tags)) return;
+      clase.oas_tags.splice(oaIdx, 1);
+      renderizarUnidadesAcordeon();
+      guardarBorradorActual(false);
+    }
+
+    function agregarTodosOAsClase(uIdx, sIdx, cIdx) {
+      if (!planActivo || !planActivo.unidades[uIdx]) return;
+      const s = planActivo.unidades[uIdx].desglose_semanal[sIdx];
+      if (!s || !s.clases || !s.clases[cIdx]) return;
+      const clase = s.clases[cIdx];
+      const codigosOAsSemana = obtenerCodigosOAsSemana(uIdx, sIdx);
+      const oasUnidad = obtenerOAsDeUnidad(uIdx);
+      const base = (codigosOAsSemana.length > 0) ? codigosOAsSemana : oasUnidad.map(o => o.codigo);
+      clase.oas_tags = [...base];
+      renderizarUnidadesAcordeon();
+      guardarBorradorActual(false);
+    }
+
     function agregarHabilidadClase(uIdx, sIdx, cIdx, hPoolIdx) {
       if (!planActivo || !planActivo.unidades[uIdx]) return;
       const s = planActivo.unidades[uIdx].desglose_semanal[sIdx];
@@ -6806,6 +6913,13 @@
 
       if (!clase.indicadores_tags.includes(item.texto)) {
         clase.indicadores_tags.push(item.texto);
+        // Si el indicador corresponde a un OA específico, asociar el OA a la sesión
+        const matchOA = item.texto.match(/\[(OA\s*\d+)\]/i);
+        if (matchOA) {
+          const codOA = matchOA[1].toUpperCase();
+          if (!Array.isArray(clase.oas_tags)) clase.oas_tags = [];
+          if (!clase.oas_tags.includes(codOA)) clase.oas_tags.push(codOA);
+        }
       }
       renderizarUnidadesAcordeon();
       guardarBorradorActual(false);
@@ -6829,6 +6943,13 @@
       const clase = s.clases[cIdx];
       const { items } = obtenerPoolIndicadoresSemana(uIdx, sIdx);
       clase.indicadores_tags = items.map(it => it.texto);
+      if (!Array.isArray(clase.oas_tags)) clase.oas_tags = [];
+      items.forEach(it => {
+        const m = it.texto.match(/\[(OA\s*\d+)\]/i);
+        if (m && !clase.oas_tags.includes(m[1].toUpperCase())) {
+          clase.oas_tags.push(m[1].toUpperCase());
+        }
+      });
       renderizarUnidadesAcordeon();
       guardarBorradorActual(false);
     }

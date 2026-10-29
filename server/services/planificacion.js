@@ -3168,9 +3168,11 @@ async function obtenerClasesPlanificadasDocente(usuario = {}, fechaStr, anio = 2
             let clasesSemana = [];
 
             if (unidadActiva && Array.isArray(unidadActiva.desglose_semanal) && unidadActiva.desglose_semanal.length > 0) {
+                // Primero buscar por coincidencia de rango de fechas
                 const sMatch = unidadActiva.desglose_semanal.find(s => 
                     s.fecha_inicio && s.fecha_fin && s.fecha_inicio <= fechaIso && fechaIso <= s.fecha_fin
                 );
+                // Si no coincide por fecha exacta, usar la primera semana disponible
                 semanaActiva = sMatch || unidadActiva.desglose_semanal[0];
                 semanaNum = semanaActiva.semana || 1;
                 semanaRango = (semanaActiva.fecha_inicio && semanaActiva.fecha_fin) 
@@ -3179,53 +3181,159 @@ async function obtenerClasesPlanificadasDocente(usuario = {}, fechaStr, anio = 2
                 clasesSemana = Array.isArray(semanaActiva.clases) ? semanaActiva.clases : [];
             }
 
-            // 3. Identificar Sesión específica de la semana (por día o correlativo)
+            // 3. Determinar el orden de sesión de esta clase en la semana (para correlativo con clasesSemana)
+            let sesionIndexSemana = 0;
+            try {
+                const bloquesSemana = await queryAll(`
+                    SELECT dia, bloque FROM horarios
+                    WHERE (anno = ? OR (anno IS NULL AND ? = 2026))
+                      AND curso = ?
+                      AND asignatura = ?
+                    ORDER BY 
+                      CASE LOWER(dia)
+                        WHEN 'lunes' THEN 1
+                        WHEN 'martes' THEN 2
+                        WHEN 'miercoles' THEN 3
+                        WHEN 'miércoles' THEN 3
+                        WHEN 'jueves' THEN 4
+                        WHEN 'viernes' THEN 5
+                        WHEN 'sabado' THEN 6
+                        WHEN 'sábado' THEN 6
+                        ELSE 7
+                      END,
+                      bloque ASC
+                `, [anioNum, anioNum, c.curso, c.asignatura]);
+
+                const sesionesSemana = [];
+                let sIdx = 0;
+                while (sIdx < bloquesSemana.length) {
+                    const bCur = bloquesSemana[sIdx];
+                    const numB = parseInt(bCur.bloque, 10);
+                    if (sIdx + 1 < bloquesSemana.length && 
+                        bloquesSemana[sIdx + 1].dia === bCur.dia && 
+                        parseInt(bloquesSemana[sIdx + 1].bloque, 10) === numB + 1) {
+                        sesionesSemana.push({ dia: bCur.dia, bloqueInicio: numB });
+                        sIdx += 2;
+                    } else {
+                        sesionesSemana.push({ dia: bCur.dia, bloqueInicio: numB });
+                        sIdx += 1;
+                    }
+                }
+
+                const diaNorm = (diaSemana || '').toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '');
+                const bInicioClase = c.bloques && c.bloques.length > 0 ? c.bloques[0] : 1;
+                const matchPos = sesionesSemana.findIndex(ses => {
+                    const sDiaNorm = (ses.dia || '').toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '');
+                    return sDiaNorm === diaNorm && ses.bloqueInicio === bInicioClase;
+                });
+                if (matchPos >= 0) {
+                    sesionIndexSemana = matchPos;
+                }
+            } catch (errHor) {
+                // Silencioso
+            }
+
+            // 4. Identificar Sesión específica de la semana (por día, label o correlativo calculado)
             let sesionActiva = null;
             if (clasesSemana.length > 0) {
-                sesionActiva = clasesSemana.find(cs => 
-                    (cs.dia && cs.dia.toLowerCase().includes(diaSemana.toLowerCase())) ||
-                    (cs.label && cs.label.toLowerCase().includes(diaSemana.toLowerCase()))
-                );
+                const diaNorm = (diaSemana || '').toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '');
+                sesionActiva = clasesSemana.find(cs => {
+                    const cDia = (cs.dia || '').toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '');
+                    const cLab = (cs.label || '').toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '');
+                    return (cDia && cDia.includes(diaNorm)) || (cLab && cLab.includes(diaNorm));
+                });
                 if (!sesionActiva) {
-                    sesionActiva = clasesSemana[0];
+                    sesionActiva = clasesSemana.find(cs => cs.numero === (sesionIndexSemana + 1)) ||
+                                   clasesSemana[sesionIndexSemana] ||
+                                   clasesSemana[0];
                 }
             }
 
-            // 4. Extraer OAs de la semana / unidad
-            const oasCodigos = semanaActiva 
-                ? (Array.isArray(semanaActiva.oas_seleccionados) ? semanaActiva.oas_seleccionados : (Array.isArray(semanaActiva.oas) ? semanaActiva.oas : []))
-                : [];
-            
-            const oasUnidad = Array.isArray(unidadActiva?.oas_seleccionados) ? unidadActiva.oas_seleccionados : [];
-            const oasFinales = oasCodigos.length > 0 
-                ? oasCodigos.map(cCod => {
-                    const found = oasUnidad.find(ou => (typeof ou === 'string' ? ou : ou.codigo) === (typeof cCod === 'string' ? cCod : cCod.codigo));
-                    if (found && typeof found === 'object') return found;
-                    return { codigo: typeof cCod === 'string' ? cCod : cCod.codigo, descripcion: '', categoria: 'Basal' };
-                })
-                : oasUnidad.map(ou => typeof ou === 'string' ? { codigo: ou, descripcion: '', categoria: 'Basal' } : ou);
+            // 5. Extraer OAs específicos asignados a esta clase / semana (NUNCA VOLCAR LA UNIDAD COMPLETA)
+            const oasCodigosClase = [];
+            const agregarCodOa = (cod) => {
+                if (!cod) return;
+                const cLimpio = String(cod).trim().toUpperCase();
+                if (cLimpio && !oasCodigosClase.includes(cLimpio)) {
+                    oasCodigosClase.push(cLimpio);
+                }
+            };
 
-            // 5. Habilidades e Indicadores
+            // 5a. Prioridad 1: OAs asignados directamente a la sesión (oas_tags, oas_seleccionados, oas)
+            if (sesionActiva) {
+                const oasSesion = Array.isArray(sesionActiva.oas_tags) ? sesionActiva.oas_tags :
+                                  (Array.isArray(sesionActiva.oas_seleccionados) ? sesionActiva.oas_seleccionados :
+                                  (Array.isArray(sesionActiva.oas) ? sesionActiva.oas : []));
+                oasSesion.forEach(o => agregarCodOa(typeof o === 'object' ? o.codigo : o));
+
+                // 5b. Prioridad 2: Extraer códigos [OA XX] desde los indicadores asociados a esta sesión
+                if (Array.isArray(sesionActiva.indicadores_tags)) {
+                    sesionActiva.indicadores_tags.forEach(ind => {
+                        const m = String(ind).match(/\[(OA\s*\d+)\]/i);
+                        if (m) agregarCodOa(m[1]);
+                    });
+                }
+            }
+
+            // 5c. Prioridad 3: Si la sesión no especificó OAs propios, heredar los de la semana (oas_semana / actividades_formativas)
+            if (oasCodigosClase.length === 0 && semanaActiva) {
+                const oasSem = Array.isArray(semanaActiva.oas_semana) ? semanaActiva.oas_semana :
+                               (Array.isArray(semanaActiva.oas_seleccionados) ? semanaActiva.oas_seleccionados :
+                               (Array.isArray(semanaActiva.oas) ? semanaActiva.oas : []));
+                oasSem.forEach(o => agregarCodOa(typeof o === 'object' ? o.codigo : o));
+
+                if (oasCodigosClase.length === 0 && semanaActiva.actividades_formativas) {
+                    const matchesOa = String(semanaActiva.actividades_formativas).match(/OA\s*\d+/gi);
+                    if (matchesOa) {
+                        matchesOa.forEach(m => agregarCodOa(m));
+                    }
+                }
+            }
+
+            // 5d. Mapear códigos encontrados a sus metadatos (descripcion, categoria) de la unidad
+            const oasUnidad = Array.isArray(unidadActiva?.oas_seleccionados) ? unidadActiva.oas_seleccionados : [];
+            const oasFinales = oasCodigosClase.map(cod => {
+                const found = oasUnidad.find(ou => {
+                    const c = (typeof ou === 'object' ? ou.codigo : String(ou)).trim().toUpperCase();
+                    return c === cod;
+                });
+                if (found && typeof found === 'object') {
+                    return { codigo: cod, descripcion: found.descripcion || '', categoria: found.categoria || 'Basal' };
+                }
+                return { codigo: cod, descripcion: '', categoria: 'Basal' };
+            });
+
+            // 6. Habilidades e Indicadores
             const habs = sesionActiva && Array.isArray(sesionActiva.habilidades_tags) && sesionActiva.habilidades_tags.length > 0
                 ? sesionActiva.habilidades_tags.map(h => typeof h === 'object' ? h.label : String(h))
-                : (Array.isArray(unidadActiva?.habilidades) ? unidadActiva.habilidades.map(h => typeof h === 'object' ? h.nombre : String(h)) : []);
+                : [];
 
             const inds = sesionActiva && Array.isArray(sesionActiva.indicadores_tags) && sesionActiva.indicadores_tags.length > 0
                 ? sesionActiva.indicadores_tags
                 : [];
 
-            const actividades = (sesionActiva && sesionActiva.actividades) 
-                ? sesionActiva.actividades 
-                : (semanaActiva && semanaActiva.actividades ? semanaActiva.actividades : (semanaActiva && semanaActiva.descripcion ? semanaActiva.descripcion : ''));
+            // 7. Actividades de la clase registradas
+            let actividades = '';
+            if (sesionActiva && sesionActiva.actividades && sesionActiva.actividades.trim()) {
+                actividades = sesionActiva.actividades.trim();
+            } else if (sesionActiva && sesionActiva.descripcion && sesionActiva.descripcion.trim()) {
+                actividades = sesionActiva.descripcion.trim();
+            } else if (semanaActiva) {
+                if (semanaActiva.actividades && semanaActiva.actividades.trim()) {
+                    actividades = semanaActiva.actividades.trim();
+                } else if (semanaActiva.tema && semanaActiva.tema.trim()) {
+                    actividades = semanaActiva.tema.trim();
+                } else if (semanaActiva.descripcion && semanaActiva.descripcion.trim()) {
+                    actividades = semanaActiva.descripcion.trim();
+                }
+            }
 
-            const recursos = (semanaActiva && semanaActiva.recursos) ? semanaActiva.recursos : '';
-            const dua = (semanaActiva && semanaActiva.dua_adecuaciones) ? semanaActiva.dua_adecuaciones : '';
+            const recursos = (sesionActiva && sesionActiva.recursos) ? sesionActiva.recursos : ((semanaActiva && semanaActiva.recursos) ? semanaActiva.recursos : '');
+            const dua = (sesionActiva && sesionActiva.dua) ? sesionActiva.dua : ((semanaActiva && semanaActiva.dua_adecuaciones) ? semanaActiva.dua_adecuaciones : '');
 
-            // 6. Generar bloques de texto preformateados para el Libro Digital
+            // 8. Formateo limpio para el Libro Digital (Basta con decir OAX sin descripción para la copia)
             const oaCodigosStr = oasFinales.map(o => o.codigo).filter(Boolean).join(', ');
-            const oaDescCompleta = oasFinales.map(o => `[${o.codigo}]: ${o.descripcion || ''}`).filter(Boolean).join(' | ');
-
-            const textoOasLibro = oaCodigosStr ? `OA: ${oaCodigosStr}${oaDescCompleta ? ' - ' + oaDescCompleta : ''}` : '';
+            const textoOasLibro = oaCodigosStr ? `OA: ${oaCodigosStr}` : '';
             const textoActividadesLibro = actividades || 'Clase desarrollada conforme a planificación curricular semanal.';
             const textoHabilidadesLibro = habs.length > 0 ? `Habilidades: ${habs.join(', ')}` : '';
             const textoIndicadoresLibro = inds.length > 0 ? `Indicadores: ${inds.join('; ')}` : '';
@@ -3234,9 +3342,9 @@ async function obtenerClasesPlanificadasDocente(usuario = {}, fechaStr, anio = 2
 
             // Bloque unificado listo para pegar en el Leccionario
             const textoCompletoLibroDigital = [
-                oaCodigosStr ? `[OA]: ${oaCodigosStr}${oaDescCompleta ? ' - ' + oaDescCompleta : ''}` : '',
+                oaCodigosStr ? `[OA]: ${oaCodigosStr}` : '',
                 textoHabilidadesLibro,
-                `[Actividades]: ${textoActividadesLibro}`,
+                actividades ? `[Actividades]: ${actividades}` : '',
                 textoIndicadoresLibro,
                 textoRecursosLibro,
                 textoDuaLibro

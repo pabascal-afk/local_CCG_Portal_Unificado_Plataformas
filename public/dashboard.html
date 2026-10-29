@@ -1496,8 +1496,8 @@
             </div>
             <div class="clase-box-seccion-content">
               ${p.oas && p.oas.length > 0 
-                ? p.oas.map(o => `<div><strong>${escapeHtml(o.codigo)}:</strong> ${escapeHtml(o.descripcion || '')}</div>`).join('')
-                : '<span class="text-muted fst-italic">Sin OA específico registrado para esta semana.</span>'}
+                ? p.oas.map(o => `<div><strong class="text-primary">${escapeHtml(o.codigo)}</strong>${o.descripcion ? ': ' + escapeHtml(o.descripcion) : ''}</div>`).join('')
+                : '<span class="text-muted fst-italic">Sin OA específico asignado a esta clase.</span>'}
             </div>
           </div>
 
