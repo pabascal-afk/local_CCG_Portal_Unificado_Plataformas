@@ -4849,12 +4849,95 @@
         });
         const data = await res.json();
         if (!res.ok) throw new Error(data.error || 'No se pudieron cargar las unidades oficiales');
-        planActivo = data.plan;
+        planActivo = data.plan || data;
         renderizarUnidadesAcordeon();
-        Swal.fire({ icon: 'success', title: 'Unidades Oficiales Cargadas', text: data.mensaje, timer: 2000, showConfirmButton: false });
+        if (typeof renderizarBannerHitosPlan === 'function') renderizarBannerHitosPlan();
+        Swal.fire({ 
+          icon: 'success', 
+          title: 'Unidades Oficiales Cargadas', 
+          text: data.mensaje || 'Se cargaron las unidades y OAs con éxito.', 
+          timer: 2500, 
+          showConfirmButton: false 
+        });
       } catch (e) {
-        Swal.fire('Error', e.message, 'error');
+        console.error('Error al cargar unidades oficiales:', e);
+        Swal.fire({
+          icon: 'error',
+          title: 'No se pudo cargar unidades oficiales',
+          text: e.message || 'Error de conexión con el servidor',
+          showCancelButton: true,
+          confirmButtonText: '<i class="bi bi-plus-square me-1"></i>Crear 4 Unidades Estándar',
+          cancelButtonText: 'Cerrar'
+        }).then((res) => {
+          if (res.isConfirmed) {
+            estructurar4UnidadesEstandarLocales();
+          }
+        });
       }
+    }
+
+    function estructurar4UnidadesEstandarLocales() {
+      if (!planActivo) return;
+      const anio = planActivo.anio || 2026;
+      planActivo.unidades = [
+        {
+          numero_unidad: 1,
+          nombre_unidad: 'Unidad 1: Nivelación y Fundamentos',
+          semestre: 1,
+          fecha_inicio: `${anio}-03-02`,
+          fecha_fin: `${anio}-05-08`,
+          horas_estimadas: 38,
+          oas_seleccionados: [],
+          indicadores_evaluacion: '',
+          desglose_semanal: [],
+          orden: 1
+        },
+        {
+          numero_unidad: 2,
+          nombre_unidad: 'Unidad 2: Desarrollo Curricular Integrado',
+          semestre: 1,
+          fecha_inicio: `${anio}-05-11`,
+          fecha_fin: `${anio}-07-03`,
+          horas_estimadas: 38,
+          oas_seleccionados: [],
+          indicadores_evaluacion: '',
+          desglose_semanal: [],
+          orden: 2
+        },
+        {
+          numero_unidad: 3,
+          nombre_unidad: 'Unidad 3: Profundización y Aplicación',
+          semestre: 2,
+          fecha_inicio: `${anio}-07-20`,
+          fecha_fin: `${anio}-09-25`,
+          horas_estimadas: 38,
+          oas_seleccionados: [],
+          indicadores_evaluacion: '',
+          desglose_semanal: [],
+          orden: 3
+        },
+        {
+          numero_unidad: 4,
+          nombre_unidad: 'Unidad 4: Consolidación y Síntesis Final',
+          semestre: 2,
+          fecha_inicio: `${anio}-09-28`,
+          fecha_fin: `${anio}-12-04`,
+          horas_estimadas: 38,
+          oas_seleccionados: [],
+          indicadores_evaluacion: '',
+          desglose_semanal: [],
+          orden: 4
+        }
+      ];
+      renderizarUnidadesAcordeon();
+      guardarBorradorActual(false);
+      Swal.fire({
+        icon: 'success',
+        title: '4 Unidades Estructuradas',
+        text: 'Se han configurado las 4 unidades estándar con sus semestres y fechas del año escolar.',
+        timer: 2000,
+        showConfirmButton: false
+      });
     }
 
     function precargarOAsOficialesUnidad(uIdx) {

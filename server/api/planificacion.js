@@ -621,16 +621,21 @@ router.put('/curriculo/unidades-oficiales', async (req, res) => {
 // 7i. Cargar / Precargar Unidades y OAs Oficiales MINEDUC en una planificación existente
 router.post('/:id/cargar-unidades-oficiales', async (req, res) => {
     try {
-        const actualizado = await planificacion.cargarUnidadesOficialesEnPlan(req.params.id, req.body || {}, req.user);
+        const resultado = await planificacion.cargarUnidadesOficialesEnPlan(req.params.id, req.body || {}, req.user);
+        const plan = (resultado && resultado.plan) ? resultado.plan : resultado;
+        const msg = req.body && req.body.numero_unidad
+            ? `Unidad ${req.body.numero_unidad} actualizada con su título y OAs.`
+            : (resultado && resultado.tieneOasOficiales
+                ? 'Se cargaron las 4 Unidades y OAs oficiales del programa curricular.'
+                : 'Se estructuraron las 4 Unidades base para el año escolar.');
         res.json({
             success: true,
-            plan: actualizado,
-            mensaje: req.body && req.body.numero_unidad
-                ? `Unidad ${req.body.numero_unidad} actualizada con su título y OAs oficiales.`
-                : 'Se cargaron las 4 Unidades y OAs oficiales del programa curricular.'
+            plan: plan,
+            mensaje: msg
         });
     } catch (e) {
-        res.status(400).json({ error: e.message });
+        console.error('Error cargando unidades oficiales:', e);
+        res.status(500).json({ error: e.message || 'Error al cargar unidades' });
     }
 });
 

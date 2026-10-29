@@ -89,6 +89,14 @@ function normalizar(txt) {
         .replace(/\s+/g, ' ');
 }
 
+function normalizarClave(txt) {
+    if (!txt) return '';
+    return txt.toString().trim().toUpperCase()
+        .normalize("NFD").replace(/[\u0300-\u036f]/g, "")
+        .replace(/[°º]/g, "")
+        .replace(/\s+/g, ' ');
+}
+
 /**
  * Mapea el nombre del curso a un nivel educativo estándar MINEDUC
  * Ej: "3° BASICO A" -> "3° Básico", "4to A" -> "4° Básico", "II° MEDIO B" -> "II° Medio"
@@ -100,28 +108,28 @@ function inferirNivelDesdeCurso(curso) {
         .replace(/\s+/g, ' ').trim();
 
     // 1. Detección de Educación Media
-    if (c.includes('IV MEDIO') || c.includes('IV° MEDIO') || c.includes('CUARTO MEDIO') || /4(°|TO|RO)?\s*(MEDIO|MED)\b/.test(c)) return 'IV° Medio';
-    if (c.includes('III MEDIO') || c.includes('III° MEDIO') || c.includes('TERCERO MEDIO') || /3(°|RO|ERO)?\s*(MEDIO|MED)\b/.test(c)) return 'III° Medio';
-    if (c.includes('II MEDIO') || c.includes('II° MEDIO') || c.includes('SEGUNDO MEDIO') || /2(°|DO|NDO)?\s*(MEDIO|MED)\b/.test(c)) return 'II° Medio';
-    if (c.includes('I MEDIO') || c.includes('I° MEDIO') || c.includes('PRIMERO MEDIO') || /1(°|RO|ERO)?\s*(MEDIO|MED)\b/.test(c)) return 'I° Medio';
+    if (c.includes('IV MEDIO') || c.includes('CUARTO MEDIO') || /4(°|º|TO|RO)?\s*(MEDIO|MED)\b/.test(c)) return 'IV° Medio';
+    if (c.includes('III MEDIO') || c.includes('TERCERO MEDIO') || /3(°|º|RO|ERO)?\s*(MEDIO|MED)\b/.test(c)) return 'III° Medio';
+    if (c.includes('II MEDIO') || c.includes('SEGUNDO MEDIO') || /2(°|º|DO|NDO)?\s*(MEDIO|MED)\b/.test(c)) return 'II° Medio';
+    if (c.includes('I MEDIO') || c.includes('PRIMERO MEDIO') || /1(°|º|RO|ERO)?\s*(MEDIO|MED)\b/.test(c)) return 'I° Medio';
 
     // 2. Detección de Educación Parvularia
     if (c.includes('PRE-KINDER') || c.includes('PREKINDER') || c.includes('PK')) return 'Pre-Kinder';
     if (c.includes('KINDER') || c.includes('KND')) return 'Kinder';
 
     // 3. Detección de Educación Básica (1° a 8°)
-    if (c.includes('OCTAVO') || /8(°|VO|BA)?\s*(BASICO|BAS\b|[A-F]\b)/.test(c) || /^8[A-F]?$/.test(c)) return '8° Básico';
-    if (c.includes('SEPTIMO') || /7(°|MO|MA)?\s*(BASICO|BAS\b|[A-F]\b)/.test(c) || /^7[A-F]?$/.test(c)) return '7° Básico';
-    if (c.includes('SEXTO') || /6(°|TO|TA)?\s*(BASICO|BAS\b|[A-F]\b)/.test(c) || /^6[A-F]?$/.test(c)) return '6° Básico';
-    if (c.includes('QUINTO') || /5(°|TO|TA)?\s*(BASICO|BAS\b|[A-F]\b)/.test(c) || /^5[A-F]?$/.test(c)) return '5° Básico';
-    if (c.includes('CUARTO') || /4(°|TO|TA)?\s*(BASICO|BAS\b|[A-F]\b)/.test(c) || /^4[A-F]?$/.test(c)) return '4° Básico';
-    if (c.includes('TERCERO') || /3(°|RO|RA|ERO)?\s*(BASICO|BAS\b|[A-F]\b)/.test(c) || /^3[A-F]?$/.test(c)) return '3° Básico';
-    if (c.includes('SEGUNDO') || /2(°|DO|DA|NDO)?\s*(BASICO|BAS\b|[A-F]\b)/.test(c) || /^2[A-F]?$/.test(c)) return '2° Básico';
-    if (c.includes('PRIMERO') || /1(°|RO|RA|ERO)?\s*(BASICO|BAS\b|[A-F]\b)/.test(c) || /^1[A-F]?$/.test(c)) return '1° Básico';
+    if (c.includes('OCTAVO') || /8(°|º|VO|BA)?\s*(BASICO|BAS\b|[A-F]\b)/.test(c) || /^8[A-F]?$/.test(c)) return '8° Básico';
+    if (c.includes('SEPTIMO') || /7(°|º|MO|MA)?\s*(BASICO|BAS\b|[A-F]\b)/.test(c) || /^7[A-F]?$/.test(c)) return '7° Básico';
+    if (c.includes('SEXTO') || /6(°|º|TO|TA)?\s*(BASICO|BAS\b|[A-F]\b)/.test(c) || /^6[A-F]?$/.test(c)) return '6° Básico';
+    if (c.includes('QUINTO') || /5(°|º|TO|TA)?\s*(BASICO|BAS\b|[A-F]\b)/.test(c) || /^5[A-F]?$/.test(c)) return '5° Básico';
+    if (c.includes('CUARTO') || /4(°|º|TO|TA)?\s*(BASICO|BAS\b|[A-F]\b)/.test(c) || /^4[A-F]?$/.test(c)) return '4° Básico';
+    if (c.includes('TERCERO') || /3(°|º|RO|RA|ERO)?\s*(BASICO|BAS\b|[A-F]\b)/.test(c) || /^3[A-F]?$/.test(c)) return '3° Básico';
+    if (c.includes('SEGUNDO') || /2(°|º|DO|DA|NDO)?\s*(BASICO|BAS\b|[A-F]\b)/.test(c) || /^2[A-F]?$/.test(c)) return '2° Básico';
+    if (c.includes('PRIMERO') || /1(°|º|RO|RA|ERO)?\s*(BASICO|BAS\b|[A-F]\b)/.test(c) || /^1[A-F]?$/.test(c)) return '1° Básico';
 
     // Fallback general para números 1 a 8 seguidos o precedidos de marcas básicas
     for (let i = 1; i <= 8; i++) {
-        if (c.includes(`${i}`) && (c.includes('BAS') || c.includes('°') || c.includes('TO') || c.includes('RO') || c.includes('DO') || c.includes('VO') || c.includes('MO'))) {
+        if (c.includes(`${i}`) && (c.includes('BAS') || c.includes('°') || c.includes('º') || c.includes('TO') || c.includes('RO') || c.includes('DO') || c.includes('VO') || c.includes('MO'))) {
             return `${i}° Básico`;
         }
     }
@@ -136,7 +144,7 @@ function normalizarAsignaturaMineduc(asig, nivel = '') {
     if (!asig) return '';
     const clean = normalizar(asig);
     if (clean === 'LENGUAJE' || clean === 'LENGUAJE Y COMUNICACION') {
-        if (nivel.includes('Medio') || nivel.includes('7°') || nivel.includes('8°')) {
+        if (nivel.includes('Medio') || nivel.includes('7°') || nivel.includes('8°') || nivel.includes('7') || nivel.includes('8')) {
             return 'LENGUA Y LITERATURA';
         }
         return 'LENGUAJE Y COMUNICACION';
@@ -144,7 +152,7 @@ function normalizarAsignaturaMineduc(asig, nivel = '') {
     if (clean === 'LENGUA Y LITERATURA') return 'LENGUA Y LITERATURA';
     if (clean === 'MATEMATICAS' || clean === 'MATEMATICA') return 'MATEMATICA';
     if (clean === 'HISTORIA Y GEOGRAFIA' || clean === 'HISTORIA' || clean === 'HISTORIA, GEOGRAFIA Y CIENCIAS SOCIALES') {
-        if (nivel.includes('III°') || nivel.includes('IV°')) {
+        if (nivel.includes('III') || nivel.includes('IV')) {
             return 'EDUCACION CIUDADANA';
         }
         return 'HISTORIA, GEOGRAFIA Y CIENCIAS SOCIALES';
@@ -152,6 +160,126 @@ function normalizarAsignaturaMineduc(asig, nivel = '') {
     if (clean === 'EDUCACION FISICA' || clean === 'EDUCACION FISICA Y SALUD') return 'EDUCACION FISICA Y SALUD';
     if (clean === 'CIENCIAS' || clean === 'CIENCIAS NATURALES') return 'CIENCIAS NATURALES';
     return clean;
+}
+
+/**
+ * Compara dos cadenas de nivel curricular con tolerancia a formatos (tildes, °/º, números romanos/arábigos)
+ */
+function matchNivelCurricular(nivelPlan, nivelBuscado) {
+    if (!nivelPlan || !nivelBuscado) return false;
+    const nP = normalizarClave(nivelPlan);
+    const nB = normalizarClave(nivelBuscado);
+    if (nP === nB) return true;
+    if (nP === 'TODOS LOS NIVELES' || nB === 'TODOS LOS NIVELES') return true;
+    if (nP.includes(nB) || nB.includes(nP)) return true;
+
+    const extraerNum = (str) => {
+        const m = str.match(/(\d+)/);
+        if (m) return parseInt(m[1], 10);
+        if (str.includes('PRIMERO') || str.includes('I MEDIO') || str.includes('1 MEDIO')) return 1;
+        if (str.includes('SEGUNDO') || str.includes('II MEDIO') || str.includes('2 MEDIO')) return 2;
+        if (str.includes('TERCERO') || str.includes('III MEDIO') || str.includes('3 MEDIO')) return 3;
+        if (str.includes('CUARTO') || str.includes('IV MEDIO') || str.includes('4 MEDIO')) return 4;
+        if (str.includes('QUINTO')) return 5;
+        if (str.includes('SEXTO')) return 6;
+        if (str.includes('SEPTIMO')) return 7;
+        if (str.includes('OCTAVO')) return 8;
+        return null;
+    };
+    const esMediaP = nP.includes('MEDIO') || nP.includes('MEDIA');
+    const esMediaB = nB.includes('MEDIO') || nB.includes('MEDIA');
+    if (esMediaP !== esMediaB) return false;
+    const numP = extraerNum(nP);
+    const numB = extraerNum(nB);
+    return numP !== null && numB !== null && numP === numB;
+}
+
+/**
+ * Compara dos cadenas de asignaturas con equivalencias oficiales MINEDUC
+ */
+function matchAsignaturaCurricular(asigPlan, asigBuscada, nivel = '') {
+    if (!asigPlan || !asigBuscada) return false;
+    const aP = normalizarClave(asigPlan);
+    const aB = normalizarClave(asigBuscada);
+    if (aP === aB) return true;
+
+    const equivalencias = [
+        ['LENGUAJE', 'LENGUAJE Y COMUNICACION', 'LENGUA Y LITERATURA'],
+        ['MATEMATICA', 'MATEMATICAS'],
+        ['HISTORIA', 'HISTORIA Y GEOGRAFIA', 'HISTORIA, GEOGRAFIA Y CIENCIAS SOCIALES', 'EDUCACION CIUDADANA'],
+        ['CIENCIAS', 'CIENCIAS NATURALES', 'CIENCIAS PARA LA CIUDADANIA', 'BIOLOGIA', 'FISICA', 'QUIMICA'],
+        ['INGLES', 'IDIOMA EXTRANJERO: INGLES', 'IDIOMA EXTRANJERO INGLES'],
+        ['EDUCACION FISICA', 'EDUCACION FISICA Y SALUD'],
+        ['ARTES', 'ARTES VISUALES', 'ARTES PLASTICAS'],
+        ['TECNOLOGIA', 'EDUCACION TECNOLOGICA']
+    ];
+
+    for (const eq of equivalencias) {
+        const pEnEq = eq.some(e => aP === e || aP.includes(e));
+        const bEnEq = eq.some(e => aB === e || aB.includes(e));
+        if (pEnEq && bEnEq) return true;
+    }
+
+    if (aP.includes(aB) || aB.includes(aP)) return true;
+    return false;
+}
+
+/**
+ * Busca de forma flexible y tolerante a tildes/formatos un plan curricular coincidente en la base de datos
+ */
+async function buscarPlanCurricularCoincidente(curso, asignatura, anio = 2026) {
+    const anioNum = parseInt(anio, 10) || 2026;
+    const todosPlanes = await queryAll(`
+        SELECT * FROM curriculo_planes 
+        WHERE (anio = ? OR anio = 2026) AND activo = 1
+        ORDER BY 
+          (CASE WHEN anio = ? THEN 0 ELSE 1 END) ASC, 
+          (CASE WHEN tipo = 'PROPIO' AND excluir_oas_mineduc = 1 THEN 0 WHEN tipo = 'PROPIO' THEN 1 ELSE 2 END) ASC, 
+          id ASC
+    `, [anioNum, anioNum]);
+
+    if (!todosPlanes || todosPlanes.length === 0) return null;
+
+    const nivelInferido = inferirNivelDesdeCurso(curso);
+    const asigEstandar = normalizarAsignaturaMineduc(asignatura, nivelInferido);
+
+    // 1. Prioridad: Planes Propios institucionales que suplantan MINEDUC
+    const propioSuplantador = todosPlanes.find(p => 
+        p.tipo === 'PROPIO' && p.excluir_oas_mineduc === 1 &&
+        matchNivelCurricular(p.nivel, nivelInferido) &&
+        (normalizarClave(p.asignatura) === normalizarClave(asigEstandar) || matchAsignaturaCurricular(p.asignatura, asignatura, nivelInferido))
+    );
+    if (propioSuplantador) return propioSuplantador;
+
+    // 2. Coincidencia exacta de nivel y asignatura estándar
+    for (const p of todosPlanes) {
+        if (matchNivelCurricular(p.nivel, nivelInferido) && normalizarClave(p.asignatura) === normalizarClave(asigEstandar)) {
+            return p;
+        }
+    }
+
+    // 3. Coincidencia directa de nivel y asignatura original
+    for (const p of todosPlanes) {
+        if (matchNivelCurricular(p.nivel, nivelInferido) && normalizarClave(p.asignatura) === normalizarClave(asignatura)) {
+            return p;
+        }
+    }
+
+    // 4. Coincidencia flexible de nivel y asignatura
+    for (const p of todosPlanes) {
+        if (matchNivelCurricular(p.nivel, nivelInferido) && matchAsignaturaCurricular(p.asignatura, asignatura, nivelInferido)) {
+            return p;
+        }
+    }
+
+    // 5. Coincidencia si el plan abarca "Todos los niveles"
+    for (const p of todosPlanes) {
+        if (normalizarClave(p.nivel) === 'TODOS LOS NIVELES' && matchAsignaturaCurricular(p.asignatura, asignatura, nivelInferido)) {
+            return p;
+        }
+    }
+
+    return null;
 }
 
 // -------------------------------------------------------------
@@ -632,55 +760,13 @@ async function obtenerPlanificacionDetalle(id) {
     const nivel = inferirNivelDesdeCurso(plan.curso);
     const asigEstandar = normalizarAsignaturaMineduc(plan.asignatura, nivel);
 
-    // 1. Verificar si existe un Plan Propio institucional activo para esta asignatura y nivel que SUPLANTE al MINEDUC
-    const planPropioSuplantador = await queryGet(`
-        SELECT * FROM curriculo_planes 
-        WHERE (anio = ? OR anio = 2026) 
-          AND (nivel = ? OR nivel = 'Todos los niveles' OR nivel LIKE ? OR ? LIKE '%' || nivel || '%')
-          AND (
-            asignatura = ? 
-            OR asignatura = ?
-            OR LOWER(asignatura) LIKE '%' || LOWER(?) || '%' 
-            OR LOWER(?) LIKE '%' || LOWER(asignatura) || '%'
-          )
-          AND tipo = 'PROPIO'
-          AND excluir_oas_mineduc = 1
-          AND activo = 1
-        ORDER BY (CASE WHEN anio = ? THEN 0 ELSE 1 END) ASC, id DESC
-        LIMIT 1
-    `, [plan.anio, nivel, `%${nivel}%`, nivel, asigEstandar, plan.asignatura, plan.asignatura, plan.asignatura, plan.anio]);
-
     let planCurr = null;
-    if (planPropioSuplantador) {
-        // ¡El plan propio suplanta cualquier plan MINEDUC previo!
-        planCurr = planPropioSuplantador;
-        if (plan.plan_curricular_id !== planPropioSuplantador.id) {
-            await queryRun(`UPDATE planificaciones SET plan_curricular_id = ? WHERE id = ?`, [planPropioSuplantador.id, plan.id]);
-            plan.plan_curricular_id = planPropioSuplantador.id;
-        }
-    } else if (plan.plan_curricular_id) {
+    if (plan.plan_curricular_id) {
         planCurr = await queryGet(`SELECT * FROM curriculo_planes WHERE id = ? AND activo = 1`, [plan.plan_curricular_id]);
     }
 
     if (!planCurr) {
-        planCurr = await queryGet(`
-            SELECT * FROM curriculo_planes 
-            WHERE (anio = ? OR anio = 2026) 
-              AND (nivel = ? OR nivel = 'Todos los niveles' OR nivel LIKE ? OR ? LIKE '%' || nivel || '%')
-              AND (
-                asignatura = ? 
-                OR asignatura = ?
-                OR LOWER(asignatura) LIKE '%' || LOWER(?) || '%' 
-                OR LOWER(?) LIKE '%' || LOWER(asignatura) || '%'
-              )
-              AND activo = 1
-            ORDER BY 
-              (CASE WHEN anio = ? THEN 0 ELSE 1 END) ASC, 
-              (CASE WHEN tipo = 'PROPIO' AND excluir_oas_mineduc = 1 THEN 0 WHEN tipo = 'PROPIO' THEN 1 ELSE 2 END) ASC, 
-              id ASC
-            LIMIT 1
-        `, [plan.anio, nivel, `%${nivel}%`, nivel, asigEstandar, plan.asignatura, plan.asignatura, plan.asignatura, plan.anio]);
-
+        planCurr = await buscarPlanCurricularCoincidente(plan.curso, plan.asignatura, plan.anio);
         if (planCurr && !plan.plan_curricular_id) {
             await queryRun(`UPDATE planificaciones SET plan_curricular_id = ? WHERE id = ?`, [planCurr.id, plan.id]);
             plan.plan_curricular_id = planCurr.id;
@@ -713,57 +799,33 @@ async function obtenerPlanificacionDetalle(id) {
 
         // Si es un Plan Propio pero NO excluye al MINEDUC, se añaden también los OAs de MINEDUC para complementariedad
         if (planCurr.tipo === 'PROPIO' && !planCurr.excluir_oas_mineduc) {
-            const oasMineduc = await queryAll(`
-                SELECT o.id, o.plan_id, o.tipo_objetivo, o.eje_unidad, o.unidad_sugerida, o.nombre_unidad_oficial, o.codigo, o.descripcion, o.categoria, o.indicadores_sugeridos, o.orden, o.editado_manual
-                FROM curriculo_objetivos o
-                JOIN curriculo_planes cp ON cp.id = o.plan_id
-                WHERE (cp.anio = ? OR cp.anio = 2026)
-                  AND (cp.nivel = ? OR cp.nivel LIKE ?)
-                  AND (
-                    cp.asignatura = ? 
-                    OR cp.asignatura = ?
-                    OR LOWER(cp.asignatura) LIKE '%' || LOWER(?) || '%' 
-                    OR LOWER(?) LIKE '%' || LOWER(cp.asignatura) || '%'
-                  )
-                  AND cp.tipo = 'MINEDUC'
-                  AND cp.activo = 1
-                  AND o.activo = 1
-                ORDER BY o.orden ASC, o.codigo ASC
-            `, [plan.anio, nivel, `%${nivel}%`, asigEstandar, plan.asignatura, plan.asignatura, plan.asignatura]);
-            oasDisponibles = [...oasDisponibles, ...oasMineduc];
+            const todosPlanesM = await queryAll(`SELECT * FROM curriculo_planes WHERE (anio = ? OR anio = 2026) AND tipo = 'MINEDUC' AND activo = 1`, [plan.anio]);
+            const pm = todosPlanesM.find(p => matchNivelCurricular(p.nivel, nivel) && matchAsignaturaCurricular(p.asignatura, plan.asignatura, nivel));
+            if (pm) {
+                const oasMineduc = await queryAll(`
+                    SELECT id, plan_id, tipo_objetivo, eje_unidad, unidad_sugerida, nombre_unidad_oficial, codigo, descripcion, categoria, indicadores_sugeridos, orden, editado_manual
+                    FROM curriculo_objetivos 
+                    WHERE plan_id = ? AND activo = 1
+                    ORDER BY orden ASC, codigo ASC
+                `, [pm.id]);
+                oasDisponibles = [...oasDisponibles, ...oasMineduc];
+            }
         }
-    } else {
-        // Búsqueda flexible de OAs por nivel Y ASIGNATURA (respetando exclusión si existe plan propio)
-        oasDisponibles = await queryAll(`
-            SELECT o.id, o.plan_id, o.tipo_objetivo, o.eje_unidad, o.unidad_sugerida, o.nombre_unidad_oficial, o.codigo, o.descripcion, o.categoria, o.indicadores_sugeridos, o.orden, o.editado_manual, cp.asignatura as asignatura_programa
+    }
+
+    // Si aún no hay OAs por coincidencia directa de ID, búsqueda tolerante en memoria
+    if (oasDisponibles.length === 0) {
+        const todosObjetivos = await queryAll(`
+            SELECT o.id, o.plan_id, o.tipo_objetivo, o.eje_unidad, o.unidad_sugerida, o.nombre_unidad_oficial, o.codigo, o.descripcion, o.categoria, o.indicadores_sugeridos, o.orden, o.editado_manual, cp.asignatura as asignatura_programa, cp.nivel as nivel_programa
             FROM curriculo_objetivos o
             JOIN curriculo_planes cp ON cp.id = o.plan_id
-            WHERE (cp.anio = ? OR cp.anio = 2026) 
-              AND (cp.nivel = ? OR cp.nivel LIKE ?)
-              AND (
-                cp.asignatura = ? 
-                OR cp.asignatura = ?
-                OR LOWER(cp.asignatura) LIKE '%' || LOWER(?) || '%' 
-                OR LOWER(?) LIKE '%' || LOWER(cp.asignatura) || '%'
-              )
-              AND cp.activo = 1
-              AND o.activo = 1
-              AND NOT (
-                cp.tipo = 'MINEDUC' AND EXISTS (
-                    SELECT 1 FROM curriculo_planes cp_p 
-                    WHERE (cp_p.anio = cp.anio OR cp_p.anio = 2026)
-                      AND cp_p.tipo = 'PROPIO'
-                      AND cp_p.excluir_oas_mineduc = 1
-                      AND cp_p.activo = 1
-                      AND (cp_p.nivel = cp.nivel OR cp_p.nivel = 'Todos los niveles' OR cp.nivel LIKE '%' || cp_p.nivel || '%')
-                      AND (
-                        cp_p.asignatura = cp.asignatura 
-                        OR LOWER(cp_p.asignatura) = LOWER(cp.asignatura)
-                      )
-                )
-              )
-            ORDER BY o.orden ASC, o.eje_unidad ASC, o.codigo ASC
-        `, [plan.anio, nivel, `%${nivel}%`, asigEstandar, plan.asignatura, plan.asignatura, plan.asignatura]);
+            WHERE (cp.anio = ? OR cp.anio = 2026) AND cp.activo = 1 AND o.activo = 1
+            ORDER BY o.orden ASC, o.codigo ASC
+        `, [plan.anio]);
+        oasDisponibles = todosObjetivos.filter(o => 
+            matchNivelCurricular(o.nivel_programa, nivel) && 
+            matchAsignaturaCurricular(o.asignatura_programa, plan.asignatura, nivel)
+        );
     }
 
     // Parsear indicadores_sugeridos para cada OA y armar catálogo de unidades oficiales
@@ -877,27 +939,9 @@ async function crearPlanificacion(payload, usuario) {
     }
 
     // Vincular automáticamente con el plan curricular (priorizando Plan Propio institucional si existe)
-    const nivel = inferirNivelDesdeCurso(curso);
-    const asigEstandar = normalizarAsignaturaMineduc(asignatura, nivel);
     let planCurricularId = payload.plan_curricular_id || null;
     if (!planCurricularId) {
-        const pc = await queryGet(`
-            SELECT id FROM curriculo_planes 
-            WHERE (anio = ? OR anio = 2026) 
-              AND (nivel = ? OR nivel = 'Todos los niveles' OR nivel LIKE ? OR ? LIKE '%' || nivel || '%')
-              AND (
-                asignatura = ? 
-                OR asignatura = ?
-                OR LOWER(asignatura) LIKE '%' || LOWER(?) || '%' 
-                OR LOWER(?) LIKE '%' || LOWER(asignatura) || '%'
-              )
-              AND activo = 1
-            ORDER BY 
-              (CASE WHEN anio = ? THEN 0 ELSE 1 END) ASC, 
-              (CASE WHEN tipo = 'PROPIO' AND excluir_oas_mineduc = 1 THEN 0 WHEN tipo = 'PROPIO' THEN 1 ELSE 2 END) ASC, 
-              id ASC
-            LIMIT 1
-        `, [anio, nivel, `%${nivel}%`, nivel, asigEstandar, asignatura, asignatura, asignatura, anio]);
+        const pc = await buscarPlanCurricularCoincidente(curso, asignatura, anio);
         if (pc) planCurricularId = pc.id;
     }
 
@@ -974,12 +1018,13 @@ async function crearPlanificacion(payload, usuario) {
     return { id: planId, mensaje: "Planificación creada con éxito con sus unidades y OAs oficiales." };
 }
 
-function construirUnidadesInicialesDesdeCurriculo(planCurrRow, oasPlanCurr, anio, horasAnuales = 152) {
-    if (!oasPlanCurr || oasPlanCurr.length === 0) return [];
+function construirUnidadesInicialesDesdeCurriculo(planCurrRow, oasPlanCurr = [], anio = 2026, horasAnuales = 152) {
     let unidadesOficialesCat = [];
     if (planCurrRow && planCurrRow.unidades_oficiales) {
         try {
-            unidadesOficialesCat = JSON.parse(planCurrRow.unidades_oficiales || '[]');
+            unidadesOficialesCat = typeof planCurrRow.unidades_oficiales === 'string'
+                ? JSON.parse(planCurrRow.unidades_oficiales || '[]')
+                : (planCurrRow.unidades_oficiales || []);
         } catch (e) {
             unidadesOficialesCat = [];
         }
@@ -990,37 +1035,55 @@ function construirUnidadesInicialesDesdeCurriculo(planCurrRow, oasPlanCurr, anio
         if (u && u.numero) mapaNombres.set(Number(u.numero), u.nombre);
     });
 
-    const gruposPorUnidad = new Map();
-    for (const oa of oasPlanCurr) {
-        const m = String(oa.unidad_sugerida || 'Unidad 1').match(/(\d+)/);
-        const num = m ? parseInt(m[1], 10) : 1;
-        if (!gruposPorUnidad.has(num)) gruposPorUnidad.set(num, []);
-        gruposPorUnidad.get(num).push(oa);
-        if (oa.nombre_unidad_oficial && !mapaNombres.has(num)) {
-            mapaNombres.set(num, oa.nombre_unidad_oficial);
+    const oas = Array.isArray(oasPlanCurr) ? oasPlanCurr : [];
+    // Asegurar siempre las 4 unidades estándar del año escolar
+    const gruposPorUnidad = new Map([[1, []], [2, []], [3, []], [4, []]]);
+
+    // Si hay OAs disponibles, distribuirlos en sus unidades sugeridas o equitativamente
+    if (oas.length > 0) {
+        const oasSinUnidad = [];
+        for (const oa of oas) {
+            const m = String(oa.unidad_sugerida || '').match(/(\d+)/);
+            if (m) {
+                const num = parseInt(m[1], 10);
+                if (!gruposPorUnidad.has(num)) gruposPorUnidad.set(num, []);
+                gruposPorUnidad.get(num).push(oa);
+                if (oa.nombre_unidad_oficial && !mapaNombres.has(num)) {
+                    mapaNombres.set(num, oa.nombre_unidad_oficial);
+                }
+            } else {
+                oasSinUnidad.push(oa);
+            }
+        }
+
+        // Si hay OAs sin unidad explícita, distribuirlos entre las 4 unidades
+        if (oasSinUnidad.length > 0) {
+            oasSinUnidad.forEach((oa, idx) => {
+                const targetUnidad = (idx % 4) + 1;
+                gruposPorUnidad.get(targetUnidad).push(oa);
+            });
         }
     }
 
     const numeros = Array.from(gruposPorUnidad.keys()).sort((a, b) => a - b);
-    if (numeros.length === 0) return [];
-
     const rangosFechas = {
-        1: { semestre: 1, inicio: `${anio}-03-02`, fin: `${anio}-05-08` },
-        2: { semestre: 1, inicio: `${anio}-05-11`, fin: `${anio}-07-03` },
-        3: { semestre: 2, inicio: `${anio}-07-20`, fin: `${anio}-09-25` },
-        4: { semestre: 2, inicio: `${anio}-09-28`, fin: `${anio}-12-04` }
+        1: { semestre: 1, inicio: `${anio}-03-02`, fin: `${anio}-05-08`, defNombre: 'Unidad 1: Nivelación y Fundamentos' },
+        2: { semestre: 1, inicio: `${anio}-05-11`, fin: `${anio}-07-03`, defNombre: 'Unidad 2: Desarrollo Curricular Integrado' },
+        3: { semestre: 2, inicio: `${anio}-07-20`, fin: `${anio}-09-25`, defNombre: 'Unidad 3: Profundización y Aplicación' },
+        4: { semestre: 2, inicio: `${anio}-09-28`, fin: `${anio}-12-04`, defNombre: 'Unidad 4: Consolidación y Síntesis Final' }
     };
 
-    const horasPorUnidad = Math.max(10, Math.round((parseInt(horasAnuales, 10) || 152) / numeros.length));
+    const horasPorUnidad = Math.max(10, Math.round((parseInt(horasAnuales, 10) || 152) / Math.max(1, numeros.length)));
 
     return numeros.map((num, idx) => {
         const oasUnidad = gruposPorUnidad.get(num) || [];
-        const nombreOficial = mapaNombres.get(num) || `Unidad ${num}`;
         const rango = rangosFechas[num] || {
             semestre: num <= 2 ? 1 : 2,
             inicio: num <= 2 ? `${anio}-03-02` : `${anio}-07-20`,
-            fin: num <= 2 ? `${anio}-07-03` : `${anio}-12-04`
+            fin: num <= 2 ? `${anio}-07-03` : `${anio}-12-04`,
+            defNombre: `Unidad ${num}`
         };
+        const nombreOficial = mapaNombres.get(num) || rango.defNombre || `Unidad ${num}`;
 
         const oasSeleccionados = oasUnidad.map(o => ({
             id: o.id,
@@ -1058,6 +1121,23 @@ async function cargarUnidadesOficialesEnPlan(planId, opciones = {}, usuario) {
     const detalle = await obtenerPlanificacionDetalle(planId);
     if (!detalle) throw new Error("Planificación no encontrada.");
 
+    // Si plan_curricular no está vinculado o no tiene OAs, intentar resolverlo dinámicamente con tolerancia de caracteres
+    if (!detalle.plan_curricular || !detalle.oas_disponibles || detalle.oas_disponibles.length === 0) {
+        const pc = await buscarPlanCurricularCoincidente(detalle.curso, detalle.asignatura, detalle.anio);
+        if (pc) {
+            detalle.plan_curricular = pc;
+            detalle.oas_disponibles = await queryAll(`
+                SELECT id, plan_id, tipo_objetivo, eje_unidad, unidad_sugerida, nombre_unidad_oficial, codigo, descripcion, categoria, indicadores_sugeridos, orden, editado_manual
+                FROM curriculo_objetivos 
+                WHERE plan_id = ? AND activo = 1
+                ORDER BY orden ASC, codigo ASC
+            `, [pc.id]);
+            if (detalle.plan_curricular_id !== pc.id) {
+                await queryRun(`UPDATE planificaciones SET plan_curricular_id = ? WHERE id = ?`, [pc.id, planId]);
+            }
+        }
+    }
+
     const unidadesPropuestas = construirUnidadesInicialesDesdeCurriculo(
         detalle.plan_curricular,
         detalle.oas_disponibles,
@@ -1065,16 +1145,22 @@ async function cargarUnidadesOficialesEnPlan(planId, opciones = {}, usuario) {
         detalle.horas_anuales
     );
 
-    if (unidadesPropuestas.length === 0) {
-        throw new Error("No se encontraron unidades ni OAs oficiales en el catálogo curricular para este nivel y asignatura.");
-    }
-
     const numUnidadFiltro = opciones.numero_unidad ? parseInt(opciones.numero_unidad, 10) : null;
 
     if (numUnidadFiltro) {
-        const uOficial = unidadesPropuestas.find(u => u.numero_unidad === numUnidadFiltro);
+        let uOficial = unidadesPropuestas.find(u => u.numero_unidad === numUnidadFiltro);
         if (!uOficial) {
-            throw new Error(`No existen OAs oficiales asignados a la Unidad ${numUnidadFiltro} para este nivel y asignatura.`);
+            uOficial = {
+                numero_unidad: numUnidadFiltro,
+                nombre_unidad: `Unidad ${numUnidadFiltro}`,
+                semestre: numUnidadFiltro <= 2 ? 1 : 2,
+                fecha_inicio: numUnidadFiltro <= 2 ? `${detalle.anio}-03-02` : `${detalle.anio}-07-20`,
+                fecha_fin: numUnidadFiltro <= 2 ? `${detalle.anio}-07-03` : `${detalle.anio}-12-04`,
+                horas_estimadas: 38,
+                oas_seleccionados: [],
+                indicadores_evaluacion: '',
+                orden: numUnidadFiltro
+            };
         }
         const existente = await queryGet(
             `SELECT * FROM planificaciones_unidades WHERE planificacion_id = ? AND numero_unidad = ?`,
@@ -1149,7 +1235,13 @@ async function cargarUnidadesOficialesEnPlan(planId, opciones = {}, usuario) {
     }
 
     await queryRun(`UPDATE planificaciones SET actualizado_en = CURRENT_TIMESTAMP WHERE id = ?`, [planId]);
-    return await obtenerPlanificacionDetalle(planId);
+    const planActualizado = await obtenerPlanificacionDetalle(planId);
+    const tieneOas = Boolean(planActualizado.oas_disponibles && planActualizado.oas_disponibles.length > 0);
+    return {
+        plan: planActualizado,
+        tieneOasOficiales: tieneOas,
+        totalUnidades: unidadesPropuestas.length
+    };
 }
 
 // -------------------------------------------------------------
@@ -2892,6 +2984,8 @@ module.exports = {
     obtenerDashboardCoberturaColegio,
     inferirNivelDesdeCurso,
     normalizar,
+    construirUnidadesInicialesDesdeCurriculo,
+    buscarPlanCurricularCoincidente,
     // Hitos y Plantillas Masivas XLS
     listarHitos,
     obtenerHitosParaPlan,
