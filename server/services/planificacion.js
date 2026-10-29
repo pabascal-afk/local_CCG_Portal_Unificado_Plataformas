@@ -3178,17 +3178,62 @@ async function obtenerClasesPlanificadasDocente(usuario = {}, fechaStr, anio = 2
             let semanaRango = '';
             let clasesSemana = [];
 
+            const diaNorm = (diaSemana || '').toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '');
+
+            const tieneContenidoReal = (s) => {
+                if (!s) return false;
+                if (s.dividir_clases && Array.isArray(s.clases) && s.clases.length > 0) {
+                    const tieneClaseConDatos = s.clases.some(cl => 
+                        (cl.actividades && cl.actividades.trim()) ||
+                        (Array.isArray(cl.habilidades_tags) && cl.habilidades_tags.length > 0) ||
+                        (Array.isArray(cl.indicadores_tags) && cl.indicadores_tags.length > 0) ||
+                        (cl.recursos && cl.recursos.trim()) ||
+                        (cl.dua && cl.dua.trim())
+                    );
+                    if (tieneClaseConDatos) return true;
+                }
+                if (s.actividades && s.actividades.trim() && !/^OA\s*\d+/i.test(s.actividades.trim())) {
+                    return true;
+                }
+                if (s.recursos && s.recursos.trim()) return true;
+                if (s.dua_adecuaciones && s.dua_adecuaciones.trim()) return true;
+                return false;
+            };
+
             if (unidadActiva && Array.isArray(unidadActiva.desglose_semanal) && unidadActiva.desglose_semanal.length > 0) {
                 // Primero buscar por coincidencia de rango de fechas
                 const sMatch = unidadActiva.desglose_semanal.find(s => 
                     s.fecha_inicio && s.fecha_fin && s.fecha_inicio <= fechaIso && fechaIso <= s.fecha_fin
                 );
-                // Si no coincide por fecha exacta, buscar la primera semana que tenga actividades registradas, o la primera semana
-                const tieneContenidoSem = s => (s.actividades && s.actividades.trim()) || 
-                                               (s.clases && s.clases.some(c => c.actividades && c.actividades.trim()));
-                semanaActiva = sMatch || 
-                               unidadActiva.desglose_semanal.find(tieneContenidoSem) ||
-                               unidadActiva.desglose_semanal[0];
+
+                if (sMatch && tieneContenidoReal(sMatch)) {
+                    semanaActiva = sMatch;
+                } else {
+                    // Si la semana del calendario no tiene clases divididas o actividades detalladas por el docente,
+                    // buscar en la unidad semanas que sí tengan planificación real
+                    const semanasConContenido = unidadActiva.desglose_semanal.filter(s => tieneContenidoReal(s));
+
+                    // Priorizar semana que tenga sesión planificada específicamente para hoy (diaSemana)
+                    const semanaConDiaMatch = semanasConContenido.find(s => 
+                        Array.isArray(s.clases) && s.clases.some(cl => {
+                            const cDia = (cl.dia || '').toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '');
+                            const cLab = (cl.label || '').toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '');
+                            return (cDia && cDia.includes(diaNorm)) || (cLab && cLab.includes(diaNorm));
+                        })
+                    );
+
+                    if (semanaConDiaMatch) {
+                        semanaActiva = semanaConDiaMatch;
+                    } else if (semanasConContenido.length > 0) {
+                        // Ordenar por cercanía numérica a la semana del calendario
+                        const targetSemNum = sMatch ? sMatch.semana : 1;
+                        semanasConContenido.sort((a, b) => Math.abs(a.semana - targetSemNum) - Math.abs(b.semana - targetSemNum));
+                        semanaActiva = semanasConContenido[0];
+                    } else {
+                        semanaActiva = sMatch || unidadActiva.desglose_semanal[0];
+                    }
+                }
+
                 semanaNum = semanaActiva.semana || 1;
                 semanaRango = (semanaActiva.fecha_inicio && semanaActiva.fecha_fin) 
                     ? `${semanaActiva.fecha_inicio} al ${semanaActiva.fecha_fin}` 

@@ -4493,16 +4493,16 @@
                                               <!-- 3. ACTIVIDADES, RECURSOS Y DUA DE LA SESIÓN -->
                                               <div class="mb-1">
                                                 <label class="form-label text-muted fw-semibold mb-0" style="font-size: 0.7rem;">Actividades de la Sesión</label>
-                                                <textarea class="form-control form-control-sm" rows="2" placeholder="Experiencias de aprendizaje de la sesión..." onchange="actualizarCampoClase(${idx}, ${sIdx}, ${cIdx}, 'actividades', this.value)">${escapeHtml(clase.actividades || '')}</textarea>
+                                                <textarea class="form-control form-control-sm" rows="2" placeholder="Experiencias de aprendizaje de la sesión..." oninput="actualizarCampoClase(${idx}, ${sIdx}, ${cIdx}, 'actividades', this.value)" onchange="actualizarCampoClase(${idx}, ${sIdx}, ${cIdx}, 'actividades', this.value)">${escapeHtml(clase.actividades || '')}</textarea>
                                               </div>
                                               <div class="row g-1">
                                                 <div class="col-6">
                                                   <label class="form-label text-muted fw-semibold mb-0" style="font-size: 0.7rem;">Recursos</label>
-                                                  <input type="text" class="form-control form-control-sm" placeholder="Materiales..." value="${escapeHtml(clase.recursos || '')}" onchange="actualizarCampoClase(${idx}, ${sIdx}, ${cIdx}, 'recursos', this.value)">
+                                                  <input type="text" class="form-control form-control-sm" placeholder="Materiales..." value="${escapeHtml(clase.recursos || '')}" oninput="actualizarCampoClase(${idx}, ${sIdx}, ${cIdx}, 'recursos', this.value)" onchange="actualizarCampoClase(${idx}, ${sIdx}, ${cIdx}, 'recursos', this.value)">
                                                 </div>
                                                 <div class="col-6">
                                                   <label class="form-label text-muted fw-semibold mb-0" style="font-size: 0.7rem;">DUA & Adecuaciones</label>
-                                                  <input type="text" class="form-control form-control-sm" placeholder="Estrategias DUA..." value="${escapeHtml(clase.dua || '')}" onchange="actualizarCampoClase(${idx}, ${sIdx}, ${cIdx}, 'dua', this.value)">
+                                                  <input type="text" class="form-control form-control-sm" placeholder="Estrategias DUA..." value="${escapeHtml(clase.dua || '')}" oninput="actualizarCampoClase(${idx}, ${sIdx}, ${cIdx}, 'dua', this.value)" onchange="actualizarCampoClase(${idx}, ${sIdx}, ${cIdx}, 'dua', this.value)">
                                                 </div>
                                               </div>
                                             </div>
@@ -6643,6 +6643,14 @@
       guardarBorradorActual(false);
     }
 
+    let debounceGuardarBorradorTimer = null;
+    function programarAutoGuardadoBorrador() {
+      clearTimeout(debounceGuardarBorradorTimer);
+      debounceGuardarBorradorTimer = setTimeout(() => {
+        guardarBorradorActual(false);
+      }, 1200);
+    }
+
     function actualizarCampoClase(uIdx, sIdx, cIdx, campo, valor) {
       if (!planActivo || !planActivo.unidades[uIdx]) return;
       const s = planActivo.unidades[uIdx].desglose_semanal[sIdx];
@@ -6650,6 +6658,7 @@
       if (!s.clases) s.clases = [];
       if (!s.clases[cIdx]) s.clases[cIdx] = {};
       s.clases[cIdx][campo] = valor;
+      programarAutoGuardadoBorrador();
     }
 
     // -------------------------------------------------------------

@@ -77,11 +77,15 @@ router.get('/sesiones-semana', async (req, res) => {
 // 1d. Clases planificadas del docente para el día (Vista Dashboard & Libro Digital)
 router.get('/mis-clases-dia', async (req, res) => {
     try {
-        const usuario = req.user || (req.session && req.session.user) || {
+        let usuario = req.user || (req.session && req.session.user) || {
             email: 'dev@colegio.edu',
             nombre: 'Docente',
             rol: 'Profesor'
         };
+        if (req.query.docente) {
+            usuario = { ...usuario, nombre: req.query.docente };
+            if (req.query.email) usuario.email = req.query.email;
+        }
         const fecha = req.query.fecha || '';
         const anio = req.query.anio || 2026;
         const data = await planificacion.obtenerClasesPlanificadasDocente(usuario, fecha, anio);
