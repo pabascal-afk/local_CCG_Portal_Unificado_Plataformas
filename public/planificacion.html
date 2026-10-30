@@ -10390,6 +10390,57 @@
       `;
     }
 
+    
+    function sonMismasAsignaturasPlanificador(a1, a2) {
+      if (!a1 || !a2) return false;
+      const clean = s => String(s).toLowerCase()
+        .normalize('NFD').replace(/[\u0300-\u036f]/g, '')
+        .replace(/[^a-z0-9]/g, ' ')
+        .replace(/\s+/g, ' ')
+        .trim();
+      const s1 = clean(a1);
+      const s2 = clean(a2);
+      if (s1 === s2) return true;
+      if (s1.includes(s2) || s2.includes(s1)) return true;
+      const alias = [
+        ['lenguaje', 'lengua y literatura', 'lengua', 'simce lenguaje'],
+        ['matematica', 'matematicas', 'simce matematica'],
+        ['historia', 'historia geografia y ciencias sociales', 'ciencias sociales', 'cs sociales'],
+        ['ciencias naturales', 'ciencias', 'cs naturales', 'quimica', 'fisica', 'biologia'],
+        ['artes visuales', 'artes'],
+        ['educacion fisica', 'educacion fisica y salud', 'ed fisica'],
+        ['musica', 'artes musicales'],
+        ['tecnologia', 'educacion tecnologica'],
+        ['orientacion', 'consejo de curso y orientacion', 'consejo de curso']
+      ];
+      for (const grupo of alias) {
+        const in1 = grupo.some(g => s1 === g || s1.includes(g));
+        const in2 = grupo.some(g => s2 === g || s2.includes(g));
+        if (in1 && in2) return true;
+      }
+      return false;
+    }
+
+    function sonMismosCursosPlanificador(c1, c2) {
+      if (!c1 || !c2) return false;
+      const normalizarRomanos = s => {
+        let r = String(s).toUpperCase()
+          .replace(/VIII[°\s]/g, '8 ')
+          .replace(/VII[°\s]/g, '7 ')
+          .replace(/VI[°\s]/g, '6 ')
+          .replace(/IV[°\s]/g, '4 ')
+          .replace(/V[°\s]/g, '5 ')
+          .replace(/III[°\s]/g, '3 ')
+          .replace(/II[°\s]/g, '2 ')
+          .replace(/I[°\s]/g, '1 ');
+        return r.toLowerCase()
+          .normalize('NFD').replace(/[\u0300-\u036f]/g, '')
+          .replace(/[^a-z0-9]/g, '')
+          .trim();
+      };
+      return normalizarRomanos(c1) === normalizarRomanos(c2);
+    }
+
     function renderAlertasContextualesClaseSemanal(cursoObj, sesionObj) {
       // 1. Semáforo de Evaluaciones de la Semana
       const evals = Array.isArray(cursoObj.evaluacionesSemana) ? cursoObj.evaluacionesSemana : [];
@@ -10397,18 +10448,41 @@
       const esMismoDia = evals.some(ev => ev.fecha === sesionObj.fecha);
       const evalsHoy = evals.filter(ev => ev.fecha === sesionObj.fecha);
 
+      // ¿Esta clase específica es una evaluación de esta materia?
+      const evalsEstaClase = evals.filter(ev => 
+        ev.fecha === sesionObj.fecha &&
+        sonMismosCursosPlanificador(ev.curso, cursoObj.curso) &&
+        sonMismasAsignaturasPlanificador(ev.asignatura, cursoObj.asignatura)
+      );
+      const esClaseEvaluacion = evalsEstaClase.length > 0;
+
       let semaforoBtnHtml = '';
-      if (esMismoDia) {
-        // ROJO CRÍTICO: Hay evaluación registrada para el mismo día de esta clase
+      if (esClaseEvaluacion) {
+        // ROJO CRÍTICO DESTACADO: Esta clase específica es la evaluación agendada
+        semaforoBtnHtml = `
+          <button type="button" 
+                  class="btn btn-xs btn-outline-danger bg-danger text-white border-danger py-1 px-2 d-inline-flex align-items-center gap-1 fw-bold shadow-sm" 
+                  style="font-size: 0.72rem; border-radius: 6px;"
+                  onclick="abrirModalDetalleEvaluacionesSemana('${escapeHtml(cursoObj.key)}', '${sesionObj.fecha || ''}')"
+                  title="¡Esta clase corresponde a una evaluación agendada de ${escapeHtml(cursoObj.asignatura)}!">
+            <i class="bi bi-pencil-square me-1"></i>
+            <span>${numEvals} ${numEvals === 1 ? 'evaluación esta semana' : 'evaluaciones esta semana'}</span>
+            <span class="badge bg-white text-danger fw-bold ms-1" style="font-size: 0.65rem;">¡Evaluación de tu Asignatura Hoy!</span>
+            <i class="bi bi-eye ms-1"></i>
+          </button>
+        `;
+      } else if (esMismoDia) {
+        // ROJO: Hay evaluación hoy, pero en otra asignatura del curso
+        const asigsHoy = [...new Set(evalsHoy.map(e => e.asignatura))].join(', ');
         semaforoBtnHtml = `
           <button type="button" 
                   class="btn btn-xs btn-outline-danger bg-danger-subtle text-danger-emphasis border-danger py-1 px-2 d-inline-flex align-items-center gap-1 fw-bold shadow-none" 
                   style="font-size: 0.72rem; border-radius: 6px;"
                   onclick="abrirModalDetalleEvaluacionesSemana('${escapeHtml(cursoObj.key)}', '${sesionObj.fecha || ''}')"
-                  title="¡Atención! Hay evaluación programada para hoy. Haz clic para ver el detalle">
+                  title="Hoy hay evaluación en otra asignatura del curso (${escapeHtml(asigsHoy)}). Haz clic para ver el detalle">
             <i class="bi bi-circle-fill text-danger" style="font-size: 0.6rem;"></i>
             <span>${numEvals} ${numEvals === 1 ? 'evaluación esta semana' : 'evaluaciones esta semana'}</span>
-            <span class="badge bg-danger text-white ms-1" style="font-size: 0.62rem;">¡Hoy (${evalsHoy.length})!</span>
+            <span class="badge bg-danger text-white ms-1" style="font-size: 0.62rem;">¡Hoy en ${escapeHtml(asigsHoy)}!</span>
             <i class="bi bi-eye ms-1 opacity-75"></i>
           </button>
         `;
@@ -10601,16 +10675,50 @@
     }
 
     function renderTarjetaSesionPlanificador(cursoObj, sesionObj, mostrarCabeceraCurso = true) {
+      const evalsSemana = Array.isArray(cursoObj.evaluacionesSemana) ? cursoObj.evaluacionesSemana : [];
+      const evalsEstaClase = evalsSemana.filter(ev => 
+        ev.fecha === sesionObj.fecha &&
+        sonMismosCursosPlanificador(ev.curso, cursoObj.curso) &&
+        sonMismasAsignaturasPlanificador(ev.asignatura, cursoObj.asignatura)
+      );
+      const esClaseEvaluacion = evalsEstaClase.length > 0;
+      const evalClasePrincipal = esClaseEvaluacion ? evalsEstaClase[0] : null;
+
       if (!cursoObj.tienePlan) {
         return `
-          <div class="bg-white rounded border p-3 shadow-sm">
+          <div class="bg-white rounded border p-3 shadow-sm ${esClaseEvaluacion ? 'border-danger' : ''}" style="${esClaseEvaluacion ? 'border-left: 6px solid #dc3545 !important; box-shadow: 0 0 0 1px rgba(220, 53, 69, 0.25) !important;' : ''}">
             <div class="d-flex justify-content-between align-items-center mb-2 pb-1 border-bottom">
-              <div class="d-flex align-items-center gap-2">
-                <span class="badge bg-secondary-subtle text-dark border">${escapeHtml(sesionObj.horarioTexto)} (${escapeHtml(sesionObj.bloquesTexto)})</span>
+              <div class="d-flex align-items-center gap-2 flex-wrap">
+                <span class="badge ${esClaseEvaluacion ? 'bg-danger text-white' : 'bg-secondary-subtle text-dark border'}">${escapeHtml(sesionObj.horarioTexto)} (${escapeHtml(sesionObj.bloquesTexto)})</span>
                 <strong class="text-dark small">${escapeHtml(cursoObj.curso)} • ${escapeHtml(cursoObj.asignatura)}</strong>
+                ${esClaseEvaluacion ? `
+                  <span class="badge bg-danger text-white fw-bold d-inline-flex align-items-center gap-1 shadow-sm px-2 py-1" style="font-size: 0.72rem;">
+                    <i class="bi bi-file-earmark-check-fill"></i> EVALUACIÓN DE ESTA ASIGNATURA
+                  </span>
+                ` : ''}
               </div>
               <span class="badge bg-warning-subtle text-dark border border-warning" style="font-size: 0.7rem;">Sin Planificación Anual</span>
             </div>
+            ${esClaseEvaluacion ? `
+              <div class="alert alert-danger py-2 px-3 mb-2 d-flex align-items-center justify-content-between flex-wrap gap-2 shadow-sm rounded" style="font-size: 0.76rem; border-left: 4px solid #dc3545;">
+                <div class="d-flex align-items-start gap-2">
+                  <span class="badge bg-danger text-white mt-1 flex-shrink-0">
+                    <i class="bi bi-pencil-square me-1"></i>EVALUACIÓN AGENDADA
+                  </span>
+                  <div>
+                    <div class="fw-bold text-danger-emphasis" style="font-size: 0.84rem;">
+                      ${escapeHtml(evalClasePrincipal.tipo || 'Evaluación de Asignatura')}
+                    </div>
+                    <div class="text-dark">
+                      ${escapeHtml(evalClasePrincipal.detalles || 'Evaluación registrada en el calendario escolar para este día y materia.')}
+                    </div>
+                  </div>
+                </div>
+                <button type="button" class="btn btn-xs btn-outline-danger bg-white py-1 px-2 fw-semibold align-self-center" style="font-size: 0.7rem;" onclick="abrirModalDetalleEvaluacionesSemana('${escapeHtml(cursoObj.key)}', '${sesionObj.fecha}')">
+                  <i class="bi bi-calendar2-check me-1"></i>Ver en semáforo
+                </button>
+              </div>
+            ` : ''}
             ${renderAlertasContextualesClaseSemanal(cursoObj, sesionObj)}
             ${renderEstadoSinPlanCursoSemanal(cursoObj)}
           </div>
@@ -10640,12 +10748,12 @@
       const indDisponibles = poolIndicadores.filter(it => !indSeleccionados.includes(it.texto));
 
       return `
-        <div class="bg-white rounded border p-3 shadow-sm h-100">
+        <div class="bg-white rounded border p-3 shadow-sm h-100 ${esClaseEvaluacion ? 'border-danger' : ''}" style="${esClaseEvaluacion ? 'border-left: 6px solid #dc3545 !important; box-shadow: 0 0 0 1px rgba(220, 53, 69, 0.25) !important;' : ''}">
           <!-- Cabecera de la sesión -->
           <div class="d-flex justify-content-between align-items-start flex-wrap gap-2 mb-2 pb-2 border-bottom">
             <div>
               <div class="d-flex align-items-center gap-2 flex-wrap">
-                <span class="badge bg-primary text-white" style="font-size: 0.74rem;">
+                <span class="badge ${esClaseEvaluacion ? 'bg-danger text-white' : 'bg-primary text-white'}" style="font-size: 0.74rem;">
                   <i class="bi bi-clock me-1"></i>${escapeHtml(sesionObj.dia)} • ${escapeHtml(sesionObj.horarioTexto)}
                 </span>
                 <span class="badge bg-light text-secondary border" style="font-size: 0.71rem;">
@@ -10658,6 +10766,11 @@
                 ` : `
                   <span class="fw-bold text-dark small">${escapeHtml(sesionObj.label)}</span>
                 `}
+                ${esClaseEvaluacion ? `
+                  <span class="badge bg-danger text-white fw-bold d-inline-flex align-items-center gap-1 shadow-sm px-2 py-1" style="font-size: 0.73rem;">
+                    <i class="bi bi-file-earmark-check-fill"></i> EVALUACIÓN DE ESTA ASIGNATURA
+                  </span>
+                ` : ''}
               </div>
               <div class="text-muted mt-1" style="font-size: 0.72rem;">
                 <i class="bi bi-journal-bookmark text-primary me-1"></i>
@@ -10684,6 +10797,33 @@
               ` : ''}
             </div>
           </div>
+
+          ${esClaseEvaluacion ? `
+            <!-- BANNER DESTACADO: CLASE CORRESPONDE A UNA EVALUACIÓN DE ESTA MATERIA -->
+            <div class="alert alert-danger py-2 px-3 mb-2 d-flex align-items-center justify-content-between flex-wrap gap-2 shadow-sm rounded" style="font-size: 0.76rem; border-left: 4px solid #dc3545;">
+              <div class="d-flex align-items-start gap-2">
+                <span class="badge bg-danger text-white mt-1 flex-shrink-0">
+                  <i class="bi bi-pencil-square me-1"></i>EVALUACIÓN AGENDADA
+                </span>
+                <div>
+                  <div class="fw-bold text-danger-emphasis" style="font-size: 0.84rem;">
+                    ${escapeHtml(evalClasePrincipal.tipo || 'Evaluación de Asignatura')}
+                  </div>
+                  <div class="text-dark">
+                    ${escapeHtml(evalClasePrincipal.detalles || 'Evaluación agendada para este curso y asignatura en el calendario escolar.')}
+                  </div>
+                  ${evalClasePrincipal.profesor_nombre ? `
+                    <div class="text-muted" style="font-size: 0.71rem;">
+                      <i class="bi bi-person me-1"></i>Docente responsable: <strong>${escapeHtml(evalClasePrincipal.profesor_nombre)}</strong>
+                    </div>
+                  ` : ''}
+                </div>
+              </div>
+              <button type="button" class="btn btn-xs btn-outline-danger bg-white py-1 px-2 fw-semibold align-self-center" style="font-size: 0.7rem;" onclick="abrirModalDetalleEvaluacionesSemana('${escapeHtml(cKey)}', '${sesionObj.fecha}')">
+                <i class="bi bi-calendar2-check me-1"></i>Ver en semáforo
+              </button>
+            </div>
+          ` : ''}
 
           <!-- Alertas Contextuales: Evaluaciones y Hitos UTP -->
           ${renderAlertasContextualesClaseSemanal(cursoObj, sesionObj)}
