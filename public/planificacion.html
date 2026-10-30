@@ -537,7 +537,275 @@
       .no-print, .nav-tabs, .btn, .input-group, #filtroBusqueda, .modal {
         display: none !important;
       }
-      .print-only {
+  
+    /* ==========================================================================
+       MODAL PLANIFICADOR SEMANAL: WHITE SPACE, AGRUPAMIENTO, TIPOGRAFÍA Y WCAG 2.1
+       ========================================================================== */
+    #modalPlanificarSemana {
+      /* Paleta 60-30-10 con Contraste WCAG 2.1 AA/AAA (>= 4.5:1) */
+      --wk-bg-dominant:    #f8fafc; /* 60% Lienzo general */
+      --wk-bg-surface:     #ffffff; /* 60% Superficie de tarjetas */
+      --wk-bg-subtle:      #f1f5f9; /* 30% Agrupamiento secundario */
+      --wk-border-subtle:  #e2e8f0; /* 30% Bordes sutiles */
+      --wk-border-strong:  #cbd5e1; /* 30% Bordes activos/hover */
+
+      --wk-text-primary:   #0f172a; /* 30% Texto primario (Ratio 17.4:1 sobre #fff) */
+      --wk-text-secondary: #334155; /* 30% Texto secundario (Ratio 10.3:1 sobre #fff) */
+      --wk-text-metadata:  #475569; /* 30% Metadatos/fechas (Ratio 7.5:1 >= 4.5:1 WCAG AA) */
+
+      --wk-accent:         #1d4ed8; /* 10% Acento primario (Ratio 6.7:1 con #fff) */
+      --wk-accent-hover:   #1e40af; /* 10% Acento hover (Ratio 8.3:1 con #fff) */
+      --wk-accent-soft:    #eff6ff; /* Fondo suave de acento */
+
+      /* Escala de Espacio en Blanco (White Space) */
+      --ws-canvas:  1.5rem;   /* 24px */
+      --ws-card:    1.5rem;   /* 24px */
+      --ws-section: 1rem;     /* 16px */
+      --ws-box:     0.875rem; /* 14px */
+      --ws-chip:    0.5rem;   /* 8px */
+
+      font-family: var(--font-body, 'Inter', sans-serif);
+      color: var(--wk-text-primary);
+    }
+
+    /* Jerarquía Tipográfica Estricta (2 Familias, Line-Height 1.4-1.6, Max 75ch) */
+    #modalPlanificarSemana .wk-h1-title {
+      font-family: var(--font-heading, 'Plus Jakarta Sans', sans-serif);
+      font-size: 1.25rem;
+      font-weight: 700;
+      line-height: 1.4;
+      color: var(--wk-text-primary);
+      max-width: 65ch;
+      margin: 0;
+    }
+
+    #modalPlanificarSemana .wk-h2-group {
+      font-family: var(--font-heading, 'Plus Jakarta Sans', sans-serif);
+      font-size: 1.05rem;
+      font-weight: 700;
+      line-height: 1.45;
+      color: var(--wk-text-primary);
+      max-width: 70ch;
+      margin: 0;
+    }
+
+    #modalPlanificarSemana .wk-h3-session {
+      font-family: var(--font-heading, 'Plus Jakarta Sans', sans-serif);
+      font-size: 0.95rem;
+      font-weight: 600;
+      line-height: 1.45;
+      color: var(--wk-text-primary);
+      max-width: 75ch;
+      margin: 0;
+    }
+
+    #modalPlanificarSemana .wk-body-text,
+    #modalPlanificarSemana .wk-textarea,
+    #modalPlanificarSemana .wk-input {
+      font-family: var(--font-body, 'Inter', sans-serif);
+      font-size: 0.875rem;
+      font-weight: 400;
+      line-height: 1.55;
+      color: var(--wk-text-primary);
+      max-width: 75ch;
+    }
+
+    #modalPlanificarSemana .wk-meta-text {
+      font-family: var(--font-body, 'Inter', sans-serif);
+      font-size: 0.78rem;
+      font-weight: 500;
+      line-height: 1.45;
+      color: var(--wk-text-metadata);
+      max-width: 75ch;
+    }
+
+    /* Maquetación y Espaciado del Modal */
+    #modalPlanificarSemana .wk-modal-header {
+      background-color: var(--wk-bg-surface);
+      border-bottom: 1px solid var(--wk-border-subtle);
+      padding: 1.125rem var(--ws-canvas);
+    }
+
+    #modalPlanificarSemana .wk-toolbar {
+      background-color: var(--wk-bg-dominant);
+      border-bottom: 1px solid var(--wk-border-subtle);
+      padding: 0.875rem var(--ws-canvas);
+    }
+
+    #modalPlanificarSemana .wk-subnav {
+      background-color: var(--wk-bg-surface);
+      border-bottom: 1px solid var(--wk-border-subtle);
+      padding: 0.75rem var(--ws-canvas);
+      gap: var(--ws-chip);
+    }
+
+    #modalPlanificarSemana .wk-canvas-body {
+      background-color: var(--wk-bg-dominant);
+      padding: var(--ws-canvas) !important;
+    }
+
+    /* Card Layout de Sesión con Espacio en Blanco */
+    #modalPlanificarSemana .wk-session-card {
+      background-color: var(--wk-bg-surface);
+      border: 1px solid var(--wk-border-subtle);
+      border-radius: 12px;
+      padding: var(--ws-card);
+      box-shadow: 0 1px 3px rgba(15, 23, 42, 0.05), 0 1px 2px rgba(15, 23, 42, 0.03);
+      transition: border-color 0.2s ease, box-shadow 0.2s ease;
+    }
+
+    #modalPlanificarSemana .wk-session-card:hover {
+      border-color: var(--wk-border-strong);
+      box-shadow: 0 4px 12px rgba(15, 23, 42, 0.06);
+    }
+
+    #modalPlanificarSemana .wk-session-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: flex-start;
+      gap: var(--ws-section);
+      padding-bottom: var(--ws-box);
+      margin-bottom: var(--ws-section);
+      border-bottom: 1px solid var(--wk-border-subtle);
+      flex-wrap: wrap;
+    }
+
+    /* Agrupamiento Visual de Bloques Internos */
+    #modalPlanificarSemana .wk-group-box {
+      background-color: var(--wk-bg-dominant);
+      border: 1px solid var(--wk-border-subtle);
+      border-radius: 10px;
+      padding: var(--ws-box) var(--ws-section);
+      margin-bottom: var(--ws-section);
+    }
+
+    /* Pestañas de Soporte Pedagógico (Reducción de Carga Cognitiva) */
+    #modalPlanificarSemana .wk-support-panel {
+      border: 1px solid var(--wk-border-subtle);
+      border-radius: 10px;
+      background-color: var(--wk-bg-surface);
+      overflow: hidden;
+      margin-top: var(--ws-section);
+    }
+
+    #modalPlanificarSemana .wk-support-tabs {
+      display: flex;
+      background-color: var(--wk-bg-subtle);
+      border-bottom: 1px solid var(--wk-border-subtle);
+      padding: 0.35rem 0.5rem 0;
+      gap: 0.25rem;
+      flex-wrap: wrap;
+    }
+
+    #modalPlanificarSemana .wk-tab-btn {
+      font-family: var(--font-body, 'Inter', sans-serif);
+      font-size: 0.78rem;
+      font-weight: 600;
+      line-height: 1.4;
+      color: var(--wk-text-secondary);
+      background: transparent;
+      border: 1px solid transparent;
+      border-bottom: none;
+      border-radius: 8px 8px 0 0;
+      padding: 0.45rem 0.85rem;
+      display: inline-flex;
+      align-items: center;
+      gap: 0.4rem;
+      cursor: pointer;
+      transition: all 0.15s ease;
+    }
+
+    #modalPlanificarSemana .wk-tab-btn:hover {
+      color: var(--wk-text-primary);
+      background-color: rgba(255, 255, 255, 0.6);
+    }
+
+    #modalPlanificarSemana .wk-tab-btn.active {
+      color: var(--wk-accent);
+      background-color: var(--wk-bg-surface);
+      border-color: var(--wk-border-subtle);
+      box-shadow: 0 -1px 2px rgba(15, 23, 42, 0.03);
+    }
+
+    #modalPlanificarSemana .wk-support-body {
+      padding: var(--ws-box) var(--ws-section);
+      background-color: var(--wk-bg-surface);
+    }
+
+    /* Acordeón Sutil para Pools Secundarios */
+    #modalPlanificarSemana .wk-pool-drawer {
+      background-color: var(--wk-bg-dominant);
+      border: 1px dashed var(--wk-border-strong);
+      border-radius: 8px;
+      padding: 0.75rem;
+      margin-top: 0.65rem;
+    }
+
+    /* Botones de Acción con Contraste WCAG >= 4.5:1 */
+    #modalPlanificarSemana .wk-btn-accent {
+      background-color: var(--wk-accent);
+      color: #ffffff;
+      border: 1px solid var(--wk-accent);
+      font-weight: 600;
+      font-size: 0.82rem;
+      line-height: 1.4;
+    }
+
+    #modalPlanificarSemana .wk-btn-accent:hover {
+      background-color: var(--wk-accent-hover);
+      border-color: var(--wk-accent-hover);
+      color: #ffffff;
+    }
+
+    #modalPlanificarSemana .wk-btn-secondary {
+      background-color: var(--wk-bg-surface);
+      color: var(--wk-text-secondary);
+      border: 1px solid var(--wk-border-strong);
+      font-weight: 600;
+      font-size: 0.8rem;
+      line-height: 1.4;
+    }
+
+    #modalPlanificarSemana .wk-btn-secondary:hover {
+      background-color: var(--wk-bg-subtle);
+      color: var(--wk-text-primary);
+    }
+
+    /* Alertas Contextuales Accesibles (Ratio > 7:1) */
+    #modalPlanificarSemana .wk-alert-eval-critica {
+      background-color: #fef2f2;
+      color: #991b1b;
+      border: 1px solid #fca5a5;
+      border-left: 4px solid #dc2626;
+      border-radius: 8px;
+      padding: 0.6rem 0.9rem;
+      font-size: 0.8rem;
+      line-height: 1.45;
+    }
+
+    #modalPlanificarSemana .wk-alert-eval-semana {
+      background-color: #fffbeb;
+      color: #92400e;
+      border: 1px solid #fde68a;
+      border-left: 4px solid #d97706;
+      border-radius: 8px;
+      padding: 0.6rem 0.9rem;
+      font-size: 0.8rem;
+      line-height: 1.45;
+    }
+
+    #modalPlanificarSemana .wk-alert-hito {
+      background-color: #eff6ff;
+      color: #1e3a8a;
+      border: 1px solid #bfdbfe;
+      border-left: 4px solid #1d4ed8;
+      border-radius: 8px;
+      padding: 0.6rem 0.9rem;
+      font-size: 0.8rem;
+      line-height: 1.45;
+    }
+
+    .print-only {
         display: block !important;
       }
       .card-custom, .plan-section-card {
@@ -2275,77 +2543,79 @@
   <div class="modal fade" id="modalPlanificarSemana" tabindex="-1" aria-hidden="true">
     <div class="modal-dialog modal-xl modal-dialog-scrollable">
       <div class="modal-content border-0 shadow-lg">
-        <div class="modal-header bg-primary text-white py-2 px-3">
+        <!-- Cabecera limpia bajo regla 60-30-10 (Fondo dominante blanco, texto #0f172a, acento #1d4ed8) -->
+        <div class="wk-modal-header d-flex justify-content-between align-items-center flex-wrap gap-3">
           <div>
-            <h5 class="modal-title fw-bold mb-0 d-flex align-items-center gap-2" style="font-size: 1.05rem;">
-              <i class="bi bi-calendar2-week"></i>
+            <h1 class="wk-h1-title d-flex align-items-center gap-2">
+              <span class="d-inline-flex align-items-center justify-content-center rounded-2" style="width: 34px; height: 34px; background-color: #eff6ff; color: #1d4ed8;">
+                <i class="bi bi-calendar2-week"></i>
+              </span>
               <span>Planificar mis clases para esta semana</span>
-            </h5>
-            <small class="opacity-75" style="font-size: 0.76rem;">
-              Sincronizado directamente con tus Unidades Anuales y el visor de Clases del Dashboard (Libro Digital)
-            </small>
+            </h1>
+            <p class="wk-meta-text mb-0 mt-1">
+              Vinculado en tiempo real con tus Unidades Anuales y el visor de Clases del Dashboard (Libro Digital)
+            </p>
           </div>
-          <div class="d-flex align-items-center gap-2">
-            <span id="badgeEstadoGuardadoSemanal" class="badge bg-white text-primary fw-semibold px-2 py-1" style="font-size: 0.74rem;">
-              <i class="bi bi-cloud-check-fill me-1 text-success"></i>Sincronizado
+          <div class="d-flex align-items-center gap-3">
+            <span id="badgeEstadoGuardadoSemanal" class="badge rounded-pill px-3 py-2" style="background-color: #f0fdf4; color: #166534; border: 1px solid #bbf7d0; font-size: 0.76rem; font-weight: 600;">
+              <i class="bi bi-cloud-check-fill me-1"></i>Sincronizado
             </span>
-            <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Cerrar"></button>
+            <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Cerrar"></button>
           </div>
         </div>
 
-        <!-- Barra de herramientas: Selector de Semana y Selector de Vista (Por Día vs Por Curso) -->
-        <div class="bg-light border-bottom px-3 py-2 d-flex justify-content-between align-items-center flex-wrap gap-2">
-          <!-- Navegador de Semana -->
-          <div class="d-flex align-items-center gap-1 flex-wrap">
-            <button type="button" class="btn btn-sm btn-outline-secondary bg-white py-1 px-2" onclick="navegarSemanaPlanificador(-1)" title="Ir a la semana anterior">
-              <i class="bi bi-chevron-left"></i> Anterior
+        <!-- Barra de herramientas: Navegador de Semana y Conmutador de Vista -->
+        <div class="wk-toolbar d-flex justify-content-between align-items-center flex-wrap gap-3">
+          <div class="d-flex align-items-center gap-2 flex-wrap">
+            <button type="button" class="btn wk-btn-secondary py-1 px-3 rounded-2" onclick="navegarSemanaPlanificador(-1)" title="Ir a la semana anterior">
+              <i class="bi bi-chevron-left me-1"></i>Semana Anterior
             </button>
-            <div class="d-flex align-items-center bg-white border rounded px-2 py-1 gap-2">
-              <i class="bi bi-calendar-range text-primary"></i>
-              <span id="lblRangoSemanaPlanificador" class="fw-bold text-dark small">Cargando semana...</span>
-              <input type="date" id="inputFechaSemanaPlanificador" class="form-control form-control-sm border-0 p-0 text-muted" style="width: 24px; height: 20px; cursor: pointer;" title="Elegir fecha específica" onchange="cargarPlanificadorSemanal(this.value)">
+            <div class="d-flex align-items-center bg-white border rounded-2 px-3 py-1 gap-2" style="border-color: #cbd5e1 !important;">
+              <i class="bi bi-calendar-range" style="color: #1d4ed8;"></i>
+              <span id="lblRangoSemanaPlanificador" class="fw-bold" style="color: #0f172a; font-size: 0.86rem;">Cargando semana...</span>
+              <input type="date" id="inputFechaSemanaPlanificador" class="form-control form-control-sm border-0 p-0" style="width: 24px; height: 20px; cursor: pointer; color: #475569;" title="Elegir fecha específica" onchange="cargarPlanificadorSemanal(this.value)">
             </div>
-            <button type="button" class="btn btn-sm btn-outline-secondary bg-white py-1 px-2" onclick="navegarSemanaPlanificador(1)" title="Ir a la semana siguiente">
-              Siguiente <i class="bi bi-chevron-right"></i>
+            <button type="button" class="btn wk-btn-secondary py-1 px-3 rounded-2" onclick="navegarSemanaPlanificador(1)" title="Ir a la semana siguiente">
+              Semana Siguiente<i class="bi bi-chevron-right ms-1"></i>
             </button>
-            <button type="button" class="btn btn-sm btn-outline-primary py-1 px-2 ms-1" onclick="cargarPlanificadorSemanal('')" title="Volver a la semana actual">
-              <i class="bi bi-calendar-check me-1"></i>Esta Semana
+            <button type="button" class="btn wk-btn-secondary py-1 px-3 rounded-2" onclick="cargarPlanificadorSemanal('')" title="Volver a la semana actual">
+              <i class="bi bi-calendar-check me-1" style="color: #1d4ed8;"></i>Esta Semana
             </button>
           </div>
 
-          <!-- Selector de Modo de Organización: Por Día vs Por Curso/Asignatura -->
+          <!-- Selector de Modo de Organización -->
           <div class="d-flex align-items-center gap-2">
-            <span class="small text-muted fw-semibold d-none d-md-inline" style="font-size: 0.76rem;">Agrupar por:</span>
-            <div class="btn-group btn-group-sm" role="group" aria-label="Modo de agrupación">
-              <button type="button" id="btnModoSemanalDia" class="btn btn-primary fw-semibold" onclick="cambiarModoVistaPlanificadorSemanal('dia')">
+            <span class="wk-meta-text fw-semibold d-none d-md-inline">Agrupar por:</span>
+            <div class="btn-group" role="group" aria-label="Modo de agrupación">
+              <button type="button" id="btnModoSemanalDia" class="btn wk-btn-accent px-3 py-1" onclick="cambiarModoVistaPlanificadorSemanal('dia')">
                 <i class="bi bi-calendar-day me-1"></i>Por Día (Lun - Vie)
               </button>
-              <button type="button" id="btnModoSemanalCurso" class="btn btn-outline-primary bg-white fw-semibold" onclick="cambiarModoVistaPlanificadorSemanal('curso')">
+              <button type="button" id="btnModoSemanalCurso" class="btn wk-btn-secondary px-3 py-1" onclick="cambiarModoVistaPlanificadorSemanal('curso')">
                 <i class="bi bi-journal-bookmark me-1"></i>Por Curso / Asignatura
               </button>
             </div>
           </div>
         </div>
 
-        <!-- Sub-navegación dinámica (Píldoras de Días o Píldoras de Cursos) -->
-        <div id="subnavPlanificadorSemanal" class="px-3 py-2 bg-white border-bottom d-flex align-items-center gap-2 flex-wrap">
+        <!-- Sub-navegación dinámica (Píldoras de Días o Cursos con respiro visual) -->
+        <div id="subnavPlanificadorSemanal" class="wk-subnav d-flex align-items-center flex-wrap">
           <!-- Render dinámico -->
         </div>
 
-        <div class="modal-body p-3" id="cuerpoModalPlanificarSemana" style="background-color: #f8fafc;">
-          <div class="text-center py-5 text-muted">
-            <div class="spinner-border text-primary mb-2" role="status"></div>
+        <div class="modal-body wk-canvas-body" id="cuerpoModalPlanificarSemana">
+          <div class="text-center py-5 wk-meta-text">
+            <div class="spinner-border mb-2" style="color: #1d4ed8;" role="status"></div>
             <div>Cargando tus clases y unidades de la semana...</div>
           </div>
         </div>
 
-        <div class="modal-footer bg-white py-2 px-3 d-flex justify-content-between align-items-center">
-          <div class="small text-muted">
-            <i class="bi bi-info-circle text-primary me-1"></i>Los cambios se guardan automáticamente en el Plan de Unidades de cada curso.
+        <div class="modal-footer bg-white py-3 px-4 d-flex justify-content-between align-items-center border-top" style="border-color: #e2e8f0 !important;">
+          <div class="wk-meta-text">
+            <i class="bi bi-shield-check me-1" style="color: #1d4ed8;"></i>Autoguardado activo: cada cambio actualiza directamente el Plan de Unidades del curso.
           </div>
           <div class="d-flex gap-2">
-            <button type="button" class="btn btn-sm btn-secondary" data-bs-dismiss="modal">Cerrar</button>
-            <button type="button" class="btn btn-sm btn-primary fw-bold px-3" onclick="guardarTodoPlanificadorSemanal(true)">
+            <button type="button" class="btn wk-btn-secondary px-3 py-1 rounded-2" data-bs-dismiss="modal">Cerrar</button>
+            <button type="button" class="btn wk-btn-accent px-4 py-1 rounded-2 shadow-sm" onclick="guardarTodoPlanificadorSemanal(true)">
               <i class="bi bi-check2-circle me-1"></i>Guardar Todo Ahora
             </button>
           </div>
@@ -10039,12 +10309,15 @@
     }
 
     // =========================================================================
-    // MODAL: PLANIFICAR MIS CLASES PARA ESTA SEMANA
+    // MODAL: PLANIFICAR MIS CLASES PARA ESTA SEMANA (WCAG 2.1 + PROGRESSIVE DISCLOSURE)
     // =========================================================================
     let datosPlanificadorSemanal = null;
     let modoVistaPlanificadorSemanal = 'dia'; // 'dia' | 'curso'
-    let filtroActivoPlanificadorSemanal = 'todos'; // 'todos' o nombre de día ('Lunes'..) o key de curso
-    let drawersOtrosOAsAbiertos = {}; // { 'cursoKey___claseIdx': true/false }
+    let filtroActivoPlanificadorSemanal = 'todos';
+    let drawersPoolOAsAbiertos = {};       // { 'cursoKey___claseIdx': boolean }
+    let drawersOtrosOAsAbiertos = {};      // { 'cursoKey___claseIdx': boolean }
+    let drawersPoolIndAbiertos = {};       // { 'cursoKey___claseIdx': boolean }
+    let tabSoporteActivaPorSesion = {};    // { 'cursoKey___claseIdx': 'indicadores' | 'habilidades' | 'recursos' }
     let timersAutoGuardadoSemanal = {};
 
     async function abrirModalPlanificarSemana(fechaStr = '') {
@@ -10062,8 +10335,8 @@
       const inputFecha = document.getElementById('inputFechaSemanaPlanificador');
       if (cont) {
         cont.innerHTML = `
-          <div class="text-center py-5 text-muted">
-            <div class="spinner-border text-primary mb-2" role="status"></div>
+          <div class="text-center py-5 wk-meta-text">
+            <div class="spinner-border mb-2" style="color: #1d4ed8;" role="status"></div>
             <div>Cargando horario y unidades vinculadas para la semana...</div>
           </div>
         `;
@@ -10089,7 +10362,6 @@
           lblRango.textContent = `${dLun.labelLargo} al ${dVie.labelLargo} (${data.anio})`;
         }
 
-        // Mantener filtro coherente al cambiar de semana
         if (modoVistaPlanificadorSemanal === 'dia') {
           const diasValidos = ['todos', 'Lunes', 'Martes', 'Miércoles', 'Jueves', 'Viernes'];
           if (!diasValidos.includes(filtroActivoPlanificadorSemanal)) {
@@ -10106,7 +10378,7 @@
       } catch (err) {
         if (cont) {
           cont.innerHTML = `
-            <div class="alert alert-danger m-3">
+            <div class="wk-alert-eval-critica m-3">
               <i class="bi bi-exclamation-triangle-fill me-2"></i>${escapeHtml(err.message)}
             </div>
           `;
@@ -10130,11 +10402,11 @@
       const btnCurso = document.getElementById('btnModoSemanalCurso');
       if (btnDia && btnCurso) {
         if (modo === 'dia') {
-          btnDia.className = 'btn btn-primary fw-semibold';
-          btnCurso.className = 'btn btn-outline-primary bg-white fw-semibold';
+          btnDia.className = 'btn wk-btn-accent px-3 py-1';
+          btnCurso.className = 'btn wk-btn-secondary px-3 py-1';
         } else {
-          btnCurso.className = 'btn btn-primary fw-semibold';
-          btnDia.className = 'btn btn-outline-primary bg-white fw-semibold';
+          btnCurso.className = 'btn wk-btn-accent px-3 py-1';
+          btnDia.className = 'btn wk-btn-secondary px-3 py-1';
         }
       }
       renderizarModalPlanificadorSemanal();
@@ -10142,6 +10414,32 @@
 
     function seleccionarFiltroSubvistaPlanificador(valor) {
       filtroActivoPlanificadorSemanal = valor;
+      renderizarModalPlanificadorSemanal();
+    }
+
+    function cambiarTabSoporteSesionSemanal(cursoKey, claseIdx, tabName) {
+      tabSoporteActivaPorSesion[`${cursoKey}___${claseIdx}`] = tabName;
+      renderizarModalPlanificadorSemanal();
+    }
+
+    function togglePoolOAsSesionSemanal(cursoKey, claseIdx) {
+      const k = `${cursoKey}___${claseIdx}`;
+      drawersPoolOAsAbiertos[k] = !drawersPoolOAsAbiertos[k];
+      renderizarModalPlanificadorSemanal();
+    }
+
+    function togglePoolIndSesionSemanal(cursoKey, claseIdx) {
+      const k = `${cursoKey}___${claseIdx}`;
+      drawersPoolIndAbiertos[k] = !drawersPoolIndAbiertos[k];
+      renderizarModalPlanificadorSemanal();
+    }
+
+    function toggleDrawerOtrosOAsUnidadSemanal(cursoKey, claseIdx) {
+      const k = `${cursoKey}___${claseIdx}`;
+      drawersOtrosOAsAbiertos[k] = !drawersOtrosOAsAbiertos[k];
+      if (drawersOtrosOAsAbiertos[k]) {
+        drawersPoolOAsAbiertos[k] = true;
+      }
       renderizarModalPlanificadorSemanal();
     }
 
@@ -10174,16 +10472,15 @@
         if (subnav) subnav.innerHTML = '';
         cont.innerHTML = `
           <div class="text-center py-5">
-            <i class="bi bi-calendar-x text-muted" style="font-size: 2.5rem;"></i>
-            <h6 class="fw-bold text-dark mt-2">Sin clases registradas en tu horario</h6>
-            <p class="small text-muted mb-0">No se encontraron bloques horarios asignados a tu nombre para el año escolar ${datosPlanificadorSemanal.anio}.</p>
+            <i class="bi bi-calendar-x" style="font-size: 2.5rem; color: #475569;"></i>
+            <h2 class="wk-h2-group mt-3 mx-auto">Sin clases registradas en tu horario</h2>
+            <p class="wk-body-text mx-auto mt-1" style="color: #475569;">No se encontraron bloques horarios asignados a tu nombre para el año escolar ${datosPlanificadorSemanal.anio}.</p>
           </div>
         `;
         return;
       }
 
       if (modoVistaPlanificadorSemanal === 'dia') {
-        // Contabilizar clases por día
         const conteoPorDia = { 'Lunes': 0, 'Martes': 0, 'Miércoles': 0, 'Jueves': 0, 'Viernes': 0 };
         let totalSesiones = 0;
         cursos.forEach(c => {
@@ -10195,23 +10492,22 @@
 
         if (subnav) {
           subnav.innerHTML = `
-            <button type="button" class="btn btn-xs ${filtroActivoPlanificadorSemanal === 'todos' ? 'btn-dark' : 'btn-outline-secondary'} rounded-pill px-3 py-1 fw-semibold" onclick="seleccionarFiltroSubvistaPlanificador('todos')">
-              Todos los días <span class="badge bg-secondary ms-1">${totalSesiones}</span>
+            <button type="button" class="btn ${filtroActivoPlanificadorSemanal === 'todos' ? 'wk-btn-accent' : 'wk-btn-secondary'} rounded-pill px-3 py-1" onclick="seleccionarFiltroSubvistaPlanificador('todos')">
+              Todos los días <span class="badge ms-1" style="background: rgba(255,255,255,0.25); color: inherit;">${totalSesiones}</span>
             </button>
             ${(datosPlanificadorSemanal.diasSemana || []).map(d => {
               const cant = conteoPorDia[d.nombre] || 0;
               const activo = filtroActivoPlanificadorSemanal === d.nombre;
               return `
-                <button type="button" class="btn btn-xs ${activo ? 'btn-primary' : 'btn-outline-secondary bg-light'} rounded-pill px-3 py-1 fw-semibold" onclick="seleccionarFiltroSubvistaPlanificador('${d.nombre}')">
-                  ${escapeHtml(d.labelCorto)}
-                  <span class="badge ${activo ? 'bg-white text-primary' : (cant > 0 ? 'bg-primary-subtle text-primary' : 'bg-secondary-subtle text-muted')} ms-1">${cant}</span>
+                <button type="button" class="btn ${activo ? 'wk-btn-accent' : 'wk-btn-secondary'} rounded-pill px-3 py-1" onclick="seleccionarFiltroSubvistaPlanificador('${d.nombre}')">
+                  <span>${escapeHtml(d.labelCorto)}</span>
+                  <span class="badge ms-1" style="background-color: ${activo ? '#ffffff' : (cant > 0 ? '#dbeafe' : '#f1f5f9')}; color: ${activo ? '#1d4ed8' : (cant > 0 ? '#1e40af' : '#475569')};">${cant}</span>
                 </button>
               `;
             }).join('')}
           `;
         }
 
-        // Agrupar todas las sesiones por día y ordenarlas por horaInicio
         const diasRender = (datosPlanificadorSemanal.diasSemana || []).filter(d =>
           filtroActivoPlanificadorSemanal === 'todos' || d.nombre === filtroActivoPlanificadorSemanal
         );
@@ -10229,33 +10525,36 @@
           itemsDia.sort((a, b) => (a.sesionObj.horaInicio || '').localeCompare(b.sesionObj.horaInicio || ''));
 
           if (itemsDia.length === 0 && filtroActivoPlanificadorSemanal === 'todos') {
-            return; // En vista "Todos los días", omitir días sin clases para ahorrar espacio
+            return;
           }
 
           htmlDias += `
-            <div class="mb-4">
-              <div class="d-flex align-items-center gap-2 mb-2 pb-1 border-bottom">
-                <span class="badge bg-primary px-2 py-1" style="font-size: 0.78rem;">
-                  <i class="bi bi-calendar-event me-1"></i>${escapeHtml(d.labelLargo)}
-                </span>
-                <span class="text-muted small">${itemsDia.length} ${itemsDia.length === 1 ? 'clase programada' : 'clases programadas'}</span>
+            <section class="mb-4 pb-2">
+              <div class="d-flex align-items-center justify-content-between mb-3 pb-2 border-bottom" style="border-color: #cbd5e1 !important;">
+                <div class="d-flex align-items-center gap-2">
+                  <span class="d-inline-flex align-items-center justify-content-center rounded-2 px-2 py-1 fw-bold" style="background-color: #1d4ed8; color: #ffffff; font-size: 0.78rem;">
+                    <i class="bi bi-calendar-event me-1"></i>${escapeHtml(d.nombre)}
+                  </span>
+                  <h2 class="wk-h2-group">${escapeHtml(d.labelLargo)}</h2>
+                </div>
+                <span class="wk-meta-text fw-semibold">${itemsDia.length} ${itemsDia.length === 1 ? 'sesión programada' : 'sesiones programadas'}</span>
               </div>
               ${itemsDia.length === 0 ? `
-                <div class="p-3 bg-white rounded border text-center text-muted small">
-                  No tienes clases asignadas en el horario para el día ${escapeHtml(d.nombre)}.
+                <div class="wk-session-card text-center py-4">
+                  <p class="wk-meta-text mb-0 mx-auto">No tienes bloques asignados en el horario para el día ${escapeHtml(d.nombre)}.</p>
                 </div>
               ` : `
-                <div class="d-flex flex-column gap-3">
+                <div class="d-flex flex-column gap-4">
                   ${itemsDia.map(it => renderTarjetaSesionPlanificador(it.cursoObj, it.sesionObj, true)).join('')}
                 </div>
               `}
-            </div>
+            </section>
           `;
         });
 
         cont.innerHTML = htmlDias || `
-          <div class="p-4 bg-white rounded border text-center text-muted">
-            No hay clases programadas para el filtro seleccionado.
+          <div class="wk-session-card text-center py-5">
+            <p class="wk-body-text mb-0 mx-auto">No hay clases programadas para el filtro seleccionado.</p>
           </div>
         `;
 
@@ -10263,16 +10562,16 @@
         // MODO POR CURSO / ASIGNATURA
         if (subnav) {
           subnav.innerHTML = `
-            <button type="button" class="btn btn-xs ${filtroActivoPlanificadorSemanal === 'todos' ? 'btn-dark' : 'btn-outline-secondary'} rounded-pill px-3 py-1 fw-semibold" onclick="seleccionarFiltroSubvistaPlanificador('todos')">
+            <button type="button" class="btn ${filtroActivoPlanificadorSemanal === 'todos' ? 'wk-btn-accent' : 'wk-btn-secondary'} rounded-pill px-3 py-1" onclick="seleccionarFiltroSubvistaPlanificador('todos')">
               Todos mis cursos (${cursos.length})
             </button>
             ${cursos.map(c => {
               const activo = filtroActivoPlanificadorSemanal === c.key;
               return `
-                <button type="button" class="btn btn-xs ${activo ? 'btn-primary' : 'btn-outline-secondary bg-light'} rounded-pill px-3 py-1 fw-semibold d-inline-flex align-items-center gap-1" onclick="seleccionarFiltroSubvistaPlanificador('${escapeHtml(c.key)}')">
-                  <i class="bi ${c.tienePlan ? 'bi-check-circle-fill text-success' : 'bi-exclamation-circle-fill text-warning'}"></i>
+                <button type="button" class="btn ${activo ? 'wk-btn-accent' : 'wk-btn-secondary'} rounded-pill px-3 py-1 d-inline-flex align-items-center gap-2" onclick="seleccionarFiltroSubvistaPlanificador('${escapeHtml(c.key)}')">
+                  <i class="bi ${c.tienePlan ? 'bi-check-circle-fill' : 'bi-exclamation-circle-fill'}" style="color: ${activo ? '#ffffff' : (c.tienePlan ? '#15803d' : '#b45309')};"></i>
                   <span>${escapeHtml(c.curso)} • ${escapeHtml(c.asignatura)}</span>
-                  <span class="badge ${activo ? 'bg-white text-primary' : 'bg-secondary-subtle text-dark'}">${(c.sesiones || []).length}</span>
+                  <span class="badge" style="background-color: ${activo ? '#ffffff' : '#f1f5f9'}; color: ${activo ? '#1d4ed8' : '#334155'};">${(c.sesiones || []).length}</span>
                 </button>
               `;
             }).join('')}
@@ -10284,60 +10583,54 @@
         );
 
         cont.innerHTML = cursosRender.map(c => `
-          <div class="card border shadow-sm mb-4 overflow-hidden">
-            <div class="card-header bg-white py-2 px-3 d-flex justify-content-between align-items-center flex-wrap gap-2">
+          <section class="mb-4 pb-2">
+            <div class="d-flex justify-content-between align-items-center flex-wrap gap-2 mb-3 pb-2 border-bottom" style="border-color: #cbd5e1 !important;">
               <div class="d-flex align-items-center gap-2 flex-wrap">
-                <span class="badge bg-dark text-white px-2 py-1">${escapeHtml(c.curso)}</span>
-                <h6 class="fw-bold text-dark mb-0">${escapeHtml(c.asignatura)}</h6>
+                <span class="badge rounded-2 px-2 py-1" style="background-color: #0f172a; color: #ffffff; font-size: 0.78rem;">${escapeHtml(c.curso)}</span>
+                <h2 class="wk-h2-group">${escapeHtml(c.asignatura)}</h2>
                 ${c.tienePlan ? `
-                  <span class="badge bg-primary-subtle text-primary border border-primary-subtle">
+                  <span class="badge rounded-pill px-3 py-1" style="background-color: #eff6ff; color: #1e40af; border: 1px solid #bfdbfe; font-size: 0.76rem;">
                     ${escapeHtml(c.unidadNombre || ('Unidad ' + c.unidadNumero))} • Semana ${c.semanaNumero}
                   </span>
                 ` : `
-                  <span class="badge bg-warning-subtle text-dark border border-warning">
+                  <span class="badge rounded-pill px-3 py-1" style="background-color: #fffbeb; color: #92400e; border: 1px solid #fde68a; font-size: 0.76rem;">
                     Sin Planificación Anual
                   </span>
                 `}
               </div>
               ${c.tienePlan ? `
-                <button type="button" class="btn btn-xs btn-outline-primary py-0 px-2" onclick="abrirPlanCompletoDesdeModalSemanal(${c.planId}, ${c.unidadIndex})">
-                  <i class="bi bi-box-arrow-up-right me-1"></i>Ver en Plan de Unidades
+                <button type="button" class="btn wk-btn-secondary py-1 px-3 rounded-2" onclick="abrirPlanCompletoDesdeModalSemanal(${c.planId}, ${c.unidadIndex})">
+                  <i class="bi bi-box-arrow-up-right me-1" style="color: #1d4ed8;"></i>Abrir en Plan de Unidades
                 </button>
               ` : ''}
             </div>
-            <div class="card-body p-3 bg-light-subtle">
-              ${!c.tienePlan ? renderEstadoSinPlanCursoSemanal(c) : `
-                <div class="row g-3">
-                  ${(c.sesiones || []).map(s => `
-                    <div class="col-12 ${c.sesiones.length > 1 ? 'col-xl-6' : ''}">
-                      ${renderTarjetaSesionPlanificador(c, s, false)}
-                    </div>
-                  `).join('')}
-                </div>
-              `}
-            </div>
-          </div>
+            ${!c.tienePlan ? renderEstadoSinPlanCursoSemanal(c) : `
+              <div class="d-flex flex-column gap-4">
+                ${(c.sesiones || []).map(s => renderTarjetaSesionPlanificador(c, s, false)).join('')}
+              </div>
+            `}
+          </section>
         `).join('');
       }
     }
 
     function renderEstadoSinPlanCursoSemanal(cursoObj) {
       return `
-        <div class="p-3 bg-white rounded border border-warning-subtle d-flex justify-content-between align-items-center flex-wrap gap-3">
-          <div class="d-flex align-items-center gap-3">
-            <div class="rounded-circle bg-warning-subtle text-warning-emphasis d-flex align-items-center justify-content-center flex-shrink-0" style="width: 42px; height: 42px;">
+        <div class="wk-session-card d-flex justify-content-between align-items-center flex-wrap gap-3" style="border-left: 4px solid #d97706;">
+          <div class="d-flex align-items-start gap-3">
+            <div class="rounded-circle d-flex align-items-center justify-content-center flex-shrink-0" style="width: 44px; height: 44px; background-color: #fffbeb; color: #b45309; border: 1px solid #fde68a;">
               <i class="bi bi-journal-plus fs-5"></i>
             </div>
             <div>
-              <div class="fw-bold text-dark small">
+              <h3 class="wk-h3-session mb-1">
                 ${escapeHtml(cursoObj.curso)} • ${escapeHtml(cursoObj.asignatura)} aún no tiene Planificación Anual activa
-              </div>
-              <div class="text-muted" style="font-size: 0.78rem;">
-                Crea primero la Planificación Anual de este curso para habilitar sus Unidades, OAs y desglose semanal de clases.
-              </div>
+              </h3>
+              <p class="wk-body-text mb-0" style="color: #475569;">
+                Crea primero la Planificación Anual de este curso para habilitar sus Unidades Oficiales, Objetivos de Aprendizaje y desglose semanal de sesiones.
+              </p>
             </div>
           </div>
-          <button type="button" class="btn btn-sm btn-primary fw-semibold flex-shrink-0" onclick="irACrearPlanDesdeModalSemanal('${escapeHtml(cursoObj.curso)}', '${escapeHtml(cursoObj.asignatura)}')">
+          <button type="button" class="btn wk-btn-accent px-3 py-2 rounded-2 flex-shrink-0" onclick="irACrearPlanDesdeModalSemanal('${escapeHtml(cursoObj.curso)}', '${escapeHtml(cursoObj.asignatura)}')">
             <i class="bi bi-plus-circle me-1"></i>Ir a Nueva Planificación
           </button>
         </div>
@@ -10347,36 +10640,34 @@
     function renderAlertasContextualesClaseSemanal(cursoObj, sesionObj) {
       const alertasHtml = [];
 
-      // 1. Evaluaciones agendadas en la semana para este curso
       const evals = Array.isArray(cursoObj.evaluacionesSemana) ? cursoObj.evaluacionesSemana : [];
       if (evals.length > 0) {
         evals.forEach(ev => {
           const esMismoDia = (ev.fecha === sesionObj.fecha);
           alertasHtml.push(`
-            <div class="alert ${esMismoDia ? 'alert-danger border-danger' : 'alert-warning border-warning'} py-1 px-2 mb-1 d-flex align-items-center justify-content-between flex-wrap gap-1" style="font-size: 0.73rem;">
-              <div>
+            <div class="${esMismoDia ? 'wk-alert-eval-critica' : 'wk-alert-eval-semana'} mb-2 d-flex align-items-center justify-content-between flex-wrap gap-2">
+              <div class="wk-body-text" style="color: inherit;">
                 <i class="bi ${esMismoDia ? 'bi-exclamation-octagon-fill' : 'bi-calendar2-check-fill'} me-1"></i>
-                <strong>${esMismoDia ? '¡Evaluación este mismo día!' : 'Evaluación en la semana (' + ev.fecha + '):'}</strong>
+                <strong>${esMismoDia ? '¡Evaluación registrada este mismo día!' : 'Evaluación en la semana (' + ev.fecha + '):'}</strong>
                 ${escapeHtml(ev.asignatura)} — <span class="fw-semibold">${escapeHtml(ev.tipo || 'Evaluación')}</span>
-                ${ev.detalles ? `<span class="text-muted">(${escapeHtml(ev.detalles)})</span>` : ''}
+                ${ev.detalles ? `<span>(${escapeHtml(ev.detalles)})</span>` : ''}
               </div>
             </div>
           `);
         });
       }
 
-      // 2. Hitos UTP vigentes en la semana
       const hitos = Array.isArray(cursoObj.hitosSemana) ? cursoObj.hitosSemana : [];
       if (hitos.length > 0) {
         hitos.forEach(h => {
           alertasHtml.push(`
-            <div class="alert alert-info py-1 px-2 mb-1 d-flex align-items-center justify-content-between flex-wrap gap-1" style="font-size: 0.73rem; border-left: 4px solid ${escapeHtml(h.color || '#2563eb')};">
-              <div>
-                <span>${escapeHtml(h.icono || '🎭')}</span>
+            <div class="wk-alert-hito mb-2 d-flex align-items-center justify-content-between flex-wrap gap-2">
+              <div class="wk-body-text" style="color: inherit;">
+                <span class="me-1">${escapeHtml(h.icono || '🎭')}</span>
                 <strong>Hito UTP vigente (${escapeHtml(h.titulo)}):</strong>
                 <span>${escapeHtml(h.lineamientos || h.tipo || '')}</span>
               </div>
-              <button type="button" class="btn btn-xs btn-outline-primary py-0 px-1" style="font-size: 0.68rem;" onclick="abrirModalGuiaHito(${h.id})">
+              <button type="button" class="btn wk-btn-secondary py-0 px-2 rounded-2" style="font-size: 0.74rem;" onclick="abrirModalGuiaHito(${h.id})">
                 Ver Orientaciones
               </button>
             </div>
@@ -10385,19 +10676,21 @@
       }
 
       if (alertasHtml.length === 0) return '';
-      return `<div class="mb-2">${alertasHtml.join('')}</div>`;
+      return `<div class="mb-3">${alertasHtml.join('')}</div>`;
     }
 
     function renderTarjetaSesionPlanificador(cursoObj, sesionObj, mostrarCabeceraCurso = true) {
       if (!cursoObj.tienePlan) {
         return `
-          <div class="bg-white rounded border p-3 shadow-sm">
-            <div class="d-flex justify-content-between align-items-center mb-2 pb-1 border-bottom">
-              <div class="d-flex align-items-center gap-2">
-                <span class="badge bg-secondary-subtle text-dark border">${escapeHtml(sesionObj.horarioTexto)} (${escapeHtml(sesionObj.bloquesTexto)})</span>
-                <strong class="text-dark small">${escapeHtml(cursoObj.curso)} • ${escapeHtml(cursoObj.asignatura)}</strong>
+          <div class="wk-session-card">
+            <div class="wk-session-header">
+              <div class="d-flex align-items-center gap-2 flex-wrap">
+                <span class="badge rounded-2 px-2 py-1" style="background-color: #f1f5f9; color: #334155; border: 1px solid #cbd5e1; font-size: 0.76rem;">
+                  <i class="bi bi-clock me-1"></i>${escapeHtml(sesionObj.horarioTexto)} (${escapeHtml(sesionObj.bloquesTexto)})
+                </span>
+                <h3 class="wk-h3-session">${escapeHtml(cursoObj.curso)} • ${escapeHtml(cursoObj.asignatura)}</h3>
               </div>
-              <span class="badge bg-warning-subtle text-dark border border-warning" style="font-size: 0.7rem;">Sin Planificación Anual</span>
+              <span class="badge rounded-pill px-3 py-1" style="background-color: #fffbeb; color: #92400e; border: 1px solid #fde68a; font-size: 0.74rem;">Sin Planificación Anual</span>
             </div>
             ${renderAlertasContextualesClaseSemanal(cursoObj, sesionObj)}
             ${renderEstadoSinPlanCursoSemanal(cursoObj)}
@@ -10407,17 +10700,18 @@
 
       const cKey = cursoObj.key;
       const cIdx = sesionObj.claseIndex;
-      const drawerKey = `${cKey}___${cIdx}`;
-      const drawerAbierto = !!drawersOtrosOAsAbiertos[drawerKey];
+      const stateKey = `${cKey}___${cIdx}`;
 
       const oasUnidad = Array.isArray(cursoObj.oasUnidad) ? cursoObj.oasUnidad : [];
       const oasSemana = Array.isArray(cursoObj.oasSemana) ? cursoObj.oasSemana : [];
       const oasClase = Array.isArray(sesionObj.oas_tags) ? sesionObj.oas_tags : [];
 
-      // OAs de la semana disponibles para asignar con 1 clic
       const oasSemanaDisponibles = oasSemana.filter(cod => !oasClase.includes(cod));
-      // Otros OAs de la unidad que no están ni en la clase ni en la semana
       const otrosOAsUnidad = oasUnidad.filter(o => !oasClase.includes(o.codigo) && !oasSemana.includes(o.codigo));
+
+      // Revelación progresiva: si la sesión no tiene OAs asignados, mostrar el pool abierto; si ya tiene, ocultarlo bajo botón
+      const poolOAsAbierto = (oasClase.length === 0) ? true : !!drawersPoolOAsAbiertos[stateKey];
+      const drawerOtrosAbierto = !!drawersOtrosOAsAbiertos[stateKey];
 
       const habSeleccionadas = Array.isArray(sesionObj.habilidades_tags) ? sesionObj.habilidades_tags : [];
       const poolHabilidades = Array.isArray(cursoObj.poolHabilidades) ? cursoObj.poolHabilidades : [];
@@ -10426,274 +10720,330 @@
       const indSeleccionados = Array.isArray(sesionObj.indicadores_tags) ? sesionObj.indicadores_tags : [];
       const poolIndicadores = obtenerPoolIndicadoresParaSesionSemanal(cursoObj, sesionObj);
       const indDisponibles = poolIndicadores.filter(it => !indSeleccionados.includes(it.texto));
+      const poolIndAbierto = (indSeleccionados.length === 0) ? true : !!drawersPoolIndAbiertos[stateKey];
+
+      const tabActiva = tabSoporteActivaPorSesion[stateKey] || 'indicadores';
+      const tieneRecursosODua = Boolean((sesionObj.recursos && sesionObj.recursos.trim()) || (sesionObj.dua && sesionObj.dua.trim()));
 
       return `
-        <div class="bg-white rounded border p-3 shadow-sm h-100">
-          <!-- Cabecera de la sesión -->
-          <div class="d-flex justify-content-between align-items-start flex-wrap gap-2 mb-2 pb-2 border-bottom">
+        <article class="wk-session-card">
+          <!-- ZONA 1: CABECERA DE IDENTIDAD Y CONTEXTO DE LA SESIÓN -->
+          <div class="wk-session-header">
             <div>
-              <div class="d-flex align-items-center gap-2 flex-wrap">
-                <span class="badge bg-primary text-white" style="font-size: 0.74rem;">
+              <div class="d-flex align-items-center gap-2 flex-wrap mb-1">
+                <span class="badge rounded-2 px-2 py-1" style="background-color: #eff6ff; color: #1e40af; border: 1px solid #bfdbfe; font-size: 0.76rem; font-weight: 600;">
                   <i class="bi bi-clock me-1"></i>${escapeHtml(sesionObj.dia)} • ${escapeHtml(sesionObj.horarioTexto)}
                 </span>
-                <span class="badge bg-light text-secondary border" style="font-size: 0.71rem;">
+                <span class="wk-meta-text fw-semibold">
                   ${escapeHtml(sesionObj.bloquesTexto)} (${sesionObj.duracion} min)
                 </span>
                 ${mostrarCabeceraCurso ? `
-                  <span class="fw-bold text-dark" style="font-size: 0.92rem;">
+                  <h3 class="wk-h3-session ms-1">
                     ${escapeHtml(cursoObj.curso)} — ${escapeHtml(cursoObj.asignatura)}
-                  </span>
+                  </h3>
                 ` : `
-                  <span class="fw-bold text-dark small">${escapeHtml(sesionObj.label)}</span>
+                  <h3 class="wk-h3-session ms-1">${escapeHtml(sesionObj.label)}</h3>
                 `}
               </div>
-              <div class="text-muted mt-1" style="font-size: 0.72rem;">
-                <i class="bi bi-journal-bookmark text-primary me-1"></i>
-                <strong>${escapeHtml(cursoObj.unidadNombre || ('Unidad ' + cursoObj.unidadNumero))}</strong>
+              <div class="wk-meta-text">
+                <i class="bi bi-journal-bookmark me-1" style="color: #1d4ed8;"></i>
+                <strong style="color: #334155;">${escapeHtml(cursoObj.unidadNombre || ('Unidad ' + cursoObj.unidadNumero))}</strong>
                 • Semana ${cursoObj.semanaNumero} (${cursoObj.semanaFechaInicio} al ${cursoObj.semanaFechaFin})
               </div>
             </div>
 
-            <div class="d-flex align-items-center gap-1 flex-wrap">
+            <div class="d-flex align-items-center gap-2 flex-wrap">
               ${sesionObj.semanaAnterior ? `
                 <button type="button"
-                        class="btn btn-xs btn-outline-primary py-1 px-2 d-inline-flex align-items-center gap-1 fw-semibold"
-                        style="font-size: 0.72rem;"
+                        class="btn wk-btn-secondary py-1 px-3 rounded-2 d-inline-flex align-items-center gap-1"
                         onclick="continuarDeSemanaAnteriorPlanificador('${escapeHtml(cKey)}', ${cIdx})"
-                        title="Traer los OAs, habilidades, indicadores, recursos y DUA de la Semana ${sesionObj.semanaAnterior.semanaNumero}">
-                  <i class="bi bi-arrow-counterclockwise"></i>
+                        title="Copiar OAs, habilidades, indicadores, recursos y DUA de la Semana ${sesionObj.semanaAnterior.semanaNumero}">
+                  <i class="bi bi-arrow-counterclockwise" style="color: #1d4ed8;"></i>
                   <span>Continuar de la semana anterior</span>
                 </button>
               ` : ''}
               ${mostrarCabeceraCurso ? `
-                <button type="button" class="btn btn-xs btn-outline-secondary py-1 px-2" style="font-size: 0.72rem;" onclick="abrirPlanCompletoDesdeModalSemanal(${cursoObj.planId}, ${cursoObj.unidadIndex})" title="Abrir en el editor de Unidades">
+                <button type="button" class="btn wk-btn-secondary py-1 px-2 rounded-2" onclick="abrirPlanCompletoDesdeModalSemanal(${cursoObj.planId}, ${cursoObj.unidadIndex})" title="Abrir en el editor de Unidades">
                   <i class="bi bi-box-arrow-up-right"></i>
                 </button>
               ` : ''}
             </div>
           </div>
 
-          <!-- Alertas Contextuales: Evaluaciones y Hitos UTP -->
+          <!-- Alertas Contextuales de Evaluaciones y Hitos UTP -->
           ${renderAlertasContextualesClaseSemanal(cursoObj, sesionObj)}
 
-          <!-- 1. OAs DE LA SESIÓN (Con opción "+ Otros OAs de la Unidad") -->
-          <div class="mb-2 p-2 rounded bg-light-subtle border">
-            <div class="d-flex justify-content-between align-items-center flex-wrap gap-1 mb-1">
-              <label class="form-label fw-bold text-dark mb-0" style="font-size: 0.74rem;">
-                <i class="bi bi-bullseye text-primary me-1"></i>OAs de la Sesión
-              </label>
+          <!-- ZONA 2: NÚCLEO PEDAGÓGICO VISIBLE (OAs + ACTIVIDADES DE LA SESIÓN) -->
+          <div class="wk-group-box">
+            <div class="d-flex justify-content-between align-items-center flex-wrap gap-2 mb-2">
               <div class="d-flex align-items-center gap-2">
-                ${oasSemanaDisponibles.length > 1 ? `
-                  <button type="button" class="btn btn-link p-0 text-decoration-none fw-semibold" style="font-size: 0.68rem;" onclick="agregarTodosOAsSemanaASesionPlanificador('${escapeHtml(cKey)}', ${cIdx})">
-                    + Todos los de la semana
-                  </button>
-                ` : ''}
-                ${otrosOAsUnidad.length > 0 ? `
-                  <button type="button" class="btn btn-xs ${drawerAbierto ? 'btn-primary' : 'btn-outline-primary'} py-0 px-2" style="font-size: 0.68rem;" onclick="toggleDrawerOtrosOAsUnidadSemanal('${escapeHtml(cKey)}', ${cIdx})">
-                    <i class="bi bi-plus-circle me-1"></i>Otros OAs de la Unidad (${otrosOAsUnidad.length})
+                <h3 class="wk-h3-session">
+                  <i class="bi bi-bullseye me-1" style="color: #1d4ed8;"></i>Objetivos de Aprendizaje de la Sesión
+                </h3>
+                <span class="badge rounded-pill" style="background-color: #dbeafe; color: #1e40af; font-size: 0.72rem;">${oasClase.length}</span>
+              </div>
+              <div class="d-flex align-items-center gap-2">
+                ${(oasSemanaDisponibles.length > 0 || otrosOAsUnidad.length > 0) ? `
+                  <button type="button" class="btn wk-btn-secondary py-0 px-2 rounded-2" style="font-size: 0.75rem;" onclick="togglePoolOAsSesionSemanal('${escapeHtml(cKey)}', ${cIdx})">
+                    <i class="bi ${poolOAsAbierto ? 'bi-chevron-up' : 'bi-plus-lg'} me-1" style="color: #1d4ed8;"></i>
+                    ${poolOAsAbierto ? 'Ocultar selector de OAs' : `Agregar OA (${oasSemanaDisponibles.length + otrosOAsUnidad.length} disponibles)`}
                   </button>
                 ` : ''}
               </div>
             </div>
 
-            <!-- Badges de OAs seleccionados en la clase -->
+            <!-- OAs seleccionados con descripción legible (max 75ch) -->
             ${oasClase.length > 0 ? `
-              <div class="d-flex flex-wrap gap-1 mb-2">
+              <div class="d-flex flex-column gap-2">
                 ${oasClase.map(codOA => {
                   const oaInfo = oasUnidad.find(x => x.codigo === codOA) || { codigo: codOA, categoria: 'Basal', descripcion: '' };
                   return `
-                    <span class="badge ${oaInfo.categoria === 'Basal' ? 'badge-oa-basal' : 'badge-oa-comp'} d-inline-flex align-items-center gap-1 py-1 px-2"
-                          style="font-size: 0.72rem;"
-                          title="${escapeHtml(oaInfo.descripcion || codOA)}">
-                      <i class="bi bi-bullseye"></i>
-                      <span>${escapeHtml(codOA)}</span>
-                      <i class="bi bi-x-circle-fill text-danger cursor-pointer ms-1" onclick="quitarOASesionPlanificador('${escapeHtml(cKey)}', ${cIdx}, '${escapeHtml(codOA)}')" title="Quitar OA de esta sesión"></i>
-                    </span>
+                    <div class="d-flex align-items-start justify-content-between gap-3 p-2 rounded-2 bg-white border" style="border-color: #e2e8f0 !important;">
+                      <div class="d-flex align-items-start gap-2">
+                        <span class="badge ${oaInfo.categoria === 'Basal' ? 'badge-oa-basal' : 'badge-oa-comp'} px-2 py-1 flex-shrink-0" style="font-size: 0.75rem;">
+                          ${escapeHtml(codOA)}
+                        </span>
+                        <span class="wk-body-text" style="color: #334155;">
+                          ${escapeHtml(oaInfo.descripcion || 'Objetivo de aprendizaje asignado a la sesión.')}
+                        </span>
+                      </div>
+                      <button type="button" class="btn btn-sm p-0 px-1 text-danger flex-shrink-0" onclick="quitarOASesionPlanificador('${escapeHtml(cKey)}', ${cIdx}, '${escapeHtml(codOA)}')" title="Quitar OA de esta sesión">
+                        <i class="bi bi-x-circle-fill"></i>
+                      </button>
+                    </div>
                   `;
                 }).join('')}
               </div>
             ` : `
-              <div class="text-muted fst-italic mb-1" style="font-size: 0.71rem;">
-                Sin OAs seleccionados aún en esta sesión.
-              </div>
+              <p class="wk-meta-text mb-0">Sin OAs seleccionados aún en esta sesión. Selecciona uno del pool inferior.</p>
             `}
 
-            <!-- Pool de OAs sugeridos en la semana -->
-            ${oasSemanaDisponibles.length > 0 ? `
-              <div class="p-1 px-2 rounded bg-white border border-dashed mb-1">
-                <div class="text-secondary mb-1" style="font-size: 0.66rem;">
-                  <i class="bi bi-calendar-check me-1 text-primary"></i>OAs asignados a la semana (clic para agregar a esta clase):
-                </div>
-                <div class="d-flex flex-wrap gap-1">
-                  ${oasSemanaDisponibles.map(codOA => {
-                    const oaInfo = oasUnidad.find(x => x.codigo === codOA) || { codigo: codOA, descripcion: '' };
-                    return `
-                      <button type="button"
-                              class="btn btn-xs btn-outline-primary bg-white py-0 px-2 d-inline-flex align-items-center gap-1"
-                              style="font-size: 0.7rem; border-style: dashed;"
-                              onclick="agregarOASesionPlanificador('${escapeHtml(cKey)}', ${cIdx}, '${escapeHtml(codOA)}', false)"
-                              title="${escapeHtml(oaInfo.descripcion || codOA)}">
-                        <i class="bi bi-plus-lg"></i>
-                        <span>${escapeHtml(codOA)}</span>
+            <!-- Acordeón Colapsable: Pool de OAs de la Semana y de la Unidad -->
+            ${poolOAsAbierto && (oasSemanaDisponibles.length > 0 || otrosOAsUnidad.length > 0) ? `
+              <div class="wk-pool-drawer">
+                ${oasSemanaDisponibles.length > 0 ? `
+                  <div class="d-flex justify-content-between align-items-center mb-2">
+                    <span class="wk-meta-text fw-semibold">
+                      <i class="bi bi-calendar-check me-1" style="color: #1d4ed8;"></i>OAs asignados a esta semana (clic para incorporar):
+                    </span>
+                    ${oasSemanaDisponibles.length > 1 ? `
+                      <button type="button" class="btn btn-link p-0 text-decoration-none fw-semibold" style="font-size: 0.75rem; color: #1d4ed8;" onclick="agregarTodosOAsSemanaASesionPlanificador('${escapeHtml(cKey)}', ${cIdx})">
+                        + Incorporar todos los de la semana
                       </button>
-                    `;
-                  }).join('')}
-                </div>
-              </div>
-            ` : ''}
+                    ` : ''}
+                  </div>
+                  <div class="d-flex flex-wrap gap-2 mb-2">
+                    ${oasSemanaDisponibles.map(codOA => {
+                      const oaInfo = oasUnidad.find(x => x.codigo === codOA) || { codigo: codOA, descripcion: '' };
+                      return `
+                        <button type="button"
+                                class="btn wk-btn-secondary py-1 px-2 rounded-2 d-inline-flex align-items-center gap-1"
+                                onclick="agregarOASesionPlanificador('${escapeHtml(cKey)}', ${cIdx}, '${escapeHtml(codOA)}', false)"
+                                title="${escapeHtml(oaInfo.descripcion || codOA)}">
+                          <i class="bi bi-plus-lg" style="color: #1d4ed8;"></i>
+                          <span>${escapeHtml(codOA)}</span>
+                        </button>
+                      `;
+                    }).join('')}
+                  </div>
+                ` : ''}
 
-            <!-- Drawer desplegable: "+ Otros OAs de la Unidad" -->
-            ${drawerAbierto && otrosOAsUnidad.length > 0 ? `
-              <div class="p-2 rounded bg-primary-subtle border border-primary-subtle mt-1">
-                <div class="d-flex justify-content-between align-items-center mb-1">
-                  <span class="fw-bold text-primary" style="font-size: 0.68rem;">
-                    <i class="bi bi-collection me-1"></i>Otros OAs de la ${escapeHtml(cursoObj.unidadNombre || 'Unidad')} (al elegir uno se sincroniza también con la semana):
-                  </span>
-                  <button type="button" class="btn-close" style="font-size: 0.55rem;" onclick="toggleDrawerOtrosOAsUnidadSemanal('${escapeHtml(cKey)}', ${cIdx})"></button>
-                </div>
-                <div class="d-flex flex-column gap-1" style="max-height: 130px; overflow-y: auto;">
-                  ${otrosOAsUnidad.map(oa => `
-                    <button type="button"
-                            class="btn btn-xs btn-light border text-start py-1 px-2 d-flex align-items-start gap-2"
-                            style="font-size: 0.7rem;"
-                            onclick="agregarOASesionPlanificador('${escapeHtml(cKey)}', ${cIdx}, '${escapeHtml(oa.codigo)}', true)">
-                      <span class="badge bg-primary text-white flex-shrink-0">+ ${escapeHtml(oa.codigo)}</span>
-                      <span class="text-dark">${escapeHtml(oa.descripcion || oa.codigo)}</span>
+                ${otrosOAsUnidad.length > 0 ? `
+                  <div class="pt-1">
+                    <button type="button" class="btn wk-btn-secondary py-1 px-2 rounded-2" style="font-size: 0.75rem;" onclick="toggleDrawerOtrosOAsUnidadSemanal('${escapeHtml(cKey)}', ${cIdx})">
+                      <i class="bi ${drawerOtrosAbierto ? 'bi-chevron-up' : 'bi-plus-circle'} me-1" style="color: #1d4ed8;"></i>
+                      <span>${drawerOtrosAbierto ? 'Ocultar otros OAs de la Unidad' : `+ Otros OAs de la Unidad (${otrosOAsUnidad.length})`}</span>
                     </button>
-                  `).join('')}
-                </div>
+
+                    ${drawerOtrosAbierto ? `
+                      <div class="d-flex flex-column gap-2 mt-2" style="max-height: 180px; overflow-y: auto;">
+                        ${otrosOAsUnidad.map(oa => `
+                          <button type="button"
+                                  class="btn btn-light border text-start p-2 rounded-2 d-flex align-items-start gap-2"
+                                  onclick="agregarOASesionPlanificador('${escapeHtml(cKey)}', ${cIdx}, '${escapeHtml(oa.codigo)}', true)">
+                            <span class="badge px-2 py-1 flex-shrink-0" style="background-color: #1d4ed8; color: #ffffff;">+ ${escapeHtml(oa.codigo)}</span>
+                            <span class="wk-body-text" style="color: #0f172a;">${escapeHtml(oa.descripcion || oa.codigo)}</span>
+                          </button>
+                        `).join('')}
+                      </div>
+                    ` : ''}
+                  </div>
+                ` : ''}
               </div>
             ` : ''}
           </div>
 
-          <!-- 2. HABILIDADES E INDICADORES DE EVALUACIÓN -->
-          <div class="row g-2 mb-2">
-            <!-- Columna Habilidades -->
-            <div class="col-md-5">
-              <div class="p-2 rounded bg-light-subtle border h-100">
-                <div class="d-flex justify-content-between align-items-center mb-1">
-                  <label class="form-label fw-bold text-dark mb-0" style="font-size: 0.73rem;">
-                    <i class="bi bi-lightbulb-fill text-warning me-1"></i>Habilidades
-                  </label>
+          <!-- Campo Principal: Actividades de la Sesión (Respiro visual y límite 75ch) -->
+          <div class="mb-3">
+            <label class="wk-h3-session d-block mb-2">
+              <i class="bi bi-journal-text me-1" style="color: #1d4ed8;"></i>Actividades de la Sesión
+            </label>
+            <textarea class="form-control wk-textarea" rows="3"
+                      style="border-color: #cbd5e1; padding: 0.75rem 1rem;"
+                      placeholder="Describe las experiencias de aprendizaje y actividades clave de la clase..."
+                      oninput="actualizarCampoTextoSesionPlanificador('${escapeHtml(cKey)}', ${cIdx}, 'actividades', this.value)">${escapeHtml(sesionObj.actividades || '')}</textarea>
+          </div>
+
+          <!-- ZONA 3: PANEL DE SOPORTE EN PESTAÑAS (INDICADORES, HABILIDADES, RECURSOS & DUA) -->
+          <div class="wk-support-panel">
+            <div class="wk-support-tabs" role="tablist">
+              <button type="button" class="wk-tab-btn ${tabActiva === 'indicadores' ? 'active' : ''}" onclick="cambiarTabSoporteSesionSemanal('${escapeHtml(cKey)}', ${cIdx}, 'indicadores')">
+                <i class="bi bi-check2-circle"></i>
+                <span>Indicadores de Evaluación</span>
+                <span class="badge rounded-pill" style="background-color: ${indSeleccionados.length > 0 ? '#d1fae5' : '#e2e8f0'}; color: ${indSeleccionados.length > 0 ? '#065f46' : '#475569'}; font-size: 0.7rem;">${indSeleccionados.length}</span>
+              </button>
+              <button type="button" class="wk-tab-btn ${tabActiva === 'habilidades' ? 'active' : ''}" onclick="cambiarTabSoporteSesionSemanal('${escapeHtml(cKey)}', ${cIdx}, 'habilidades')">
+                <i class="bi bi-lightbulb"></i>
+                <span>Habilidades</span>
+                <span class="badge rounded-pill" style="background-color: ${habSeleccionadas.length > 0 ? '#dbeafe' : '#e2e8f0'}; color: ${habSeleccionadas.length > 0 ? '#1e40af' : '#475569'}; font-size: 0.7rem;">${habSeleccionadas.length}</span>
+              </button>
+              <button type="button" class="wk-tab-btn ${tabActiva === 'recursos' ? 'active' : ''}" onclick="cambiarTabSoporteSesionSemanal('${escapeHtml(cKey)}', ${cIdx}, 'recursos')">
+                <i class="bi bi-sliders"></i>
+                <span>Recursos & Adecuaciones DUA</span>
+                ${tieneRecursosODua ? `<span class="d-inline-block rounded-circle" style="width: 8px; height: 8px; background-color: #16a34a;" title="Contiene recursos o DUA registrados"></span>` : ''}
+              </button>
+            </div>
+
+            <div class="wk-support-body">
+              ${tabActiva === 'indicadores' ? `
+                <!-- Contenido Pestaña 1: Indicadores de Evaluación -->
+                <div class="d-flex justify-content-between align-items-center flex-wrap gap-2 mb-2">
+                  <span class="wk-meta-text">Indicadores vinculados a los OAs de esta sesión:</span>
+                  ${indDisponibles.length > 0 ? `
+                    <div class="d-flex align-items-center gap-2">
+                      ${indDisponibles.length > 1 ? `
+                        <button type="button" class="btn btn-link p-0 text-decoration-none fw-semibold" style="font-size: 0.75rem; color: #1d4ed8;" onclick="agregarTodosIndicadoresSesionPlanificador('${escapeHtml(cKey)}', ${cIdx})">
+                          + Agregar todos (${indDisponibles.length})
+                        </button>
+                      ` : ''}
+                      ${indSeleccionados.length > 0 ? `
+                        <button type="button" class="btn wk-btn-secondary py-0 px-2 rounded-2" style="font-size: 0.74rem;" onclick="togglePoolIndSesionSemanal('${escapeHtml(cKey)}', ${cIdx})">
+                          <i class="bi ${poolIndAbierto ? 'bi-chevron-up' : 'bi-plus-lg'} me-1"></i>
+                          ${poolIndAbierto ? 'Ocultar sugerencias' : `Ver sugerencias (${indDisponibles.length})`}
+                        </button>
+                      ` : ''}
+                    </div>
+                  ` : ''}
+                </div>
+
+                ${indSeleccionados.length > 0 ? `
+                  <div class="d-flex flex-column gap-2 mb-2">
+                    ${indSeleccionados.map((indTxt, iTagIdx) => `
+                      <div class="d-flex align-items-start justify-content-between gap-3 p-2 rounded-2" style="background-color: #f0fdf4; border: 1px solid #bbf7d0;">
+                        <div class="d-flex align-items-start gap-2">
+                          <i class="bi bi-check-circle-fill mt-1 flex-shrink-0" style="color: #15803d;"></i>
+                          <span class="wk-body-text" style="color: #064e3b;">${escapeHtml(indTxt)}</span>
+                        </div>
+                        <button type="button" class="btn btn-sm p-0 px-1 text-danger flex-shrink-0" onclick="quitarIndicadorSesionPlanificador('${escapeHtml(cKey)}', ${cIdx}, ${iTagIdx})" title="Quitar indicador">
+                          <i class="bi bi-x-circle-fill"></i>
+                        </button>
+                      </div>
+                    `).join('')}
+                  </div>
+                ` : `
+                  <p class="wk-meta-text mb-2">Aún no se han seleccionado indicadores para esta sesión.</p>
+                `}
+
+                ${poolIndAbierto && indDisponibles.length > 0 ? `
+                  <div class="wk-pool-drawer">
+                    <div class="wk-meta-text fw-semibold mb-2">
+                      <i class="bi bi-lightbulb me-1" style="color: #1d4ed8;"></i>Indicadores sugeridos según los OAs activos (clic para incorporar):
+                    </div>
+                    <div class="d-flex flex-column gap-2" style="max-height: 170px; overflow-y: auto;">
+                      ${indDisponibles.map(indItem => `
+                        <button type="button"
+                                class="btn btn-white bg-white border text-start p-2 rounded-2 d-flex align-items-start gap-2"
+                                style="border-color: #cbd5e1 !important;"
+                                onclick="agregarIndicadorSesionPlanificador('${escapeHtml(cKey)}', ${cIdx}, '${escapeHtml(indItem.texto).replace(/'/g, "\\'")}')">
+                          <i class="bi bi-plus-circle-fill mt-1 flex-shrink-0" style="color: #1d4ed8;"></i>
+                          <span class="wk-body-text">${escapeHtml(indItem.texto)}</span>
+                        </button>
+                      `).join('')}
+                    </div>
+                  </div>
+                ` : ''}
+              ` : (tabActiva === 'habilidades' ? `
+                <!-- Contenido Pestaña 2: Habilidades -->
+                <div class="d-flex justify-content-between align-items-center flex-wrap gap-2 mb-2">
+                  <span class="wk-meta-text">Habilidades curriculares trabajadas en la sesión:</span>
                   ${habDisponibles.length > 1 ? `
-                    <button type="button" class="btn btn-link p-0 text-decoration-none fw-semibold" style="font-size: 0.66rem;" onclick="agregarTodasHabilidadesSesionPlanificador('${escapeHtml(cKey)}', ${cIdx})">
-                      + Todas
+                    <button type="button" class="btn btn-link p-0 text-decoration-none fw-semibold" style="font-size: 0.75rem; color: #1d4ed8;" onclick="agregarTodasHabilidadesSesionPlanificador('${escapeHtml(cKey)}', ${cIdx})">
+                      + Incorporar todas las habilidades
                     </button>
                   ` : ''}
                 </div>
 
                 ${habSeleccionadas.length > 0 ? `
-                  <div class="d-flex flex-wrap gap-1 mb-1">
+                  <div class="d-flex flex-wrap gap-2 mb-3">
                     ${habSeleccionadas.map((hSel, hTagIdx) => {
                       const hLabel = typeof hSel === 'object' ? hSel.label : String(hSel);
                       const hFull = typeof hSel === 'object' ? (hSel.fullText || hSel.label) : String(hSel);
                       return `
-                        <span class="badge bg-info-subtle text-dark border border-info d-inline-flex align-items-center gap-1 py-1 px-2"
-                              style="font-size: 0.7rem;"
+                        <span class="badge rounded-2 d-inline-flex align-items-center gap-2 py-2 px-3"
+                              style="background-color: #eff6ff; color: #1e3a8a; border: 1px solid #bfdbfe; font-size: 0.8rem; font-weight: 600;"
                               title="${escapeHtml(hFull)}">
+                          <i class="bi bi-stars" style="color: #1d4ed8;"></i>
                           <span>${escapeHtml(hLabel)}</span>
                           <i class="bi bi-x-circle-fill text-danger cursor-pointer ms-1" onclick="quitarHabilidadSesionPlanificador('${escapeHtml(cKey)}', ${cIdx}, ${hTagIdx})"></i>
                         </span>
                       `;
                     }).join('')}
                   </div>
-                ` : ''}
+                ` : `
+                  <p class="wk-meta-text mb-2">Sin habilidades asignadas a esta sesión.</p>
+                `}
 
                 ${habDisponibles.length > 0 ? `
-                  <div class="d-flex flex-wrap gap-1 mt-1">
-                    ${poolHabilidades.map((hItem, hPoolIdx) => {
-                      const yaEsta = habSeleccionadas.some(hs => (typeof hs === 'object' ? hs.label : String(hs)) === hItem.label);
-                      if (yaEsta) return '';
-                      return `
-                        <button type="button"
-                                class="btn btn-xs btn-outline-secondary bg-white text-dark py-0 px-2 d-inline-flex align-items-center gap-1"
-                                style="font-size: 0.68rem; border-style: dashed;"
-                                onclick="agregarHabilidadSesionPlanificador('${escapeHtml(cKey)}', ${cIdx}, ${hPoolIdx})"
-                                title="${escapeHtml(hItem.fullText)}">
-                          <i class="bi bi-plus-lg text-primary"></i>
-                          <span>${escapeHtml(hItem.label)}</span>
-                        </button>
-                      `;
-                    }).join('')}
-                  </div>
-                ` : (habSeleccionadas.length === 0 ? `
-                  <div class="text-muted fst-italic" style="font-size: 0.69rem;">Sin habilidades definidas en la unidad.</div>
-                ` : '')}
-              </div>
-            </div>
-
-            <!-- Columna Indicadores de Evaluación -->
-            <div class="col-md-7">
-              <div class="p-2 rounded bg-light-subtle border h-100">
-                <div class="d-flex justify-content-between align-items-center mb-1">
-                  <label class="form-label fw-bold text-dark mb-0" style="font-size: 0.73rem;">
-                    <i class="bi bi-check2-circle text-success me-1"></i>Indicadores de Evaluación
-                  </label>
-                  ${indDisponibles.length > 1 ? `
-                    <button type="button" class="btn btn-link p-0 text-decoration-none fw-semibold text-success" style="font-size: 0.66rem;" onclick="agregarTodosIndicadoresSesionPlanificador('${escapeHtml(cKey)}', ${cIdx})">
-                      + Todos
-                    </button>
-                  ` : ''}
-                </div>
-
-                ${indSeleccionados.length > 0 ? `
-                  <div class="d-flex flex-column gap-1 mb-1">
-                    ${indSeleccionados.map((indTxt, iTagIdx) => `
-                      <div class="badge bg-success-subtle text-dark border border-success-subtle text-wrap text-start d-flex align-items-start justify-content-between gap-2 py-1 px-2" style="font-size: 0.69rem; font-weight: 500; line-height: 1.25;">
-                        <span><i class="bi bi-check-lg text-success me-1"></i>${escapeHtml(indTxt)}</span>
-                        <i class="bi bi-x-circle-fill text-danger cursor-pointer flex-shrink-0 mt-1" onclick="quitarIndicadorSesionPlanificador('${escapeHtml(cKey)}', ${cIdx}, ${iTagIdx})"></i>
-                      </div>
-                    `).join('')}
+                  <div class="wk-pool-drawer">
+                    <div class="wk-meta-text fw-semibold mb-2">Pool de habilidades de la Unidad (clic para agregar):</div>
+                    <div class="d-flex flex-wrap gap-2">
+                      ${poolHabilidades.map((hItem, hPoolIdx) => {
+                        const yaEsta = habSeleccionadas.some(hs => (typeof hs === 'object' ? hs.label : String(hs)) === hItem.label);
+                        if (yaEsta) return '';
+                        return `
+                          <button type="button"
+                                  class="btn wk-btn-secondary py-1 px-3 rounded-2 d-inline-flex align-items-center gap-1"
+                                  onclick="agregarHabilidadSesionPlanificador('${escapeHtml(cKey)}', ${cIdx}, ${hPoolIdx})"
+                                  title="${escapeHtml(hItem.fullText)}">
+                            <i class="bi bi-plus-lg" style="color: #1d4ed8;"></i>
+                            <span>${escapeHtml(hItem.label)}</span>
+                          </button>
+                        `;
+                      }).join('')}
+                    </div>
                   </div>
                 ` : ''}
-
-                ${indDisponibles.length > 0 ? `
-                  <div class="d-flex flex-column gap-1 mt-1" style="max-height: 110px; overflow-y: auto;">
-                    ${indDisponibles.map(indItem => `
-                      <button type="button"
-                              class="btn btn-xs btn-outline-success bg-white text-dark text-start py-1 px-2 d-flex align-items-start gap-1"
-                              style="font-size: 0.68rem; border-style: dashed; line-height: 1.2;"
-                              onclick="agregarIndicadorSesionPlanificador('${escapeHtml(cKey)}', ${cIdx}, '${escapeHtml(indItem.texto).replace(/'/g, "\\'")}')">
-                        <i class="bi bi-plus-circle-fill text-success flex-shrink-0 mt-1"></i>
-                        <span>${escapeHtml(indItem.texto)}</span>
-                      </button>
-                    `).join('')}
+              ` : `
+                <!-- Contenido Pestaña 3: Recursos & Adecuaciones DUA -->
+                <div class="row g-3">
+                  <div class="col-md-6">
+                    <label class="wk-h3-session d-block mb-1">
+                      <i class="bi bi-box-seam me-1" style="color: #475569;"></i>Recursos Pedagógicos
+                    </label>
+                    <p class="wk-meta-text mb-2">Materiales, soporte audiovisual o insumos para la sesión.</p>
+                    <input type="text" class="form-control wk-input"
+                           style="border-color: #cbd5e1; padding: 0.6rem 0.85rem;"
+                           placeholder="Ej: Cuaderno y lápiz, revista de convivencia, proyector..."
+                           value="${escapeHtml(sesionObj.recursos || '')}"
+                           oninput="actualizarCampoTextoSesionPlanificador('${escapeHtml(cKey)}', ${cIdx}, 'recursos', this.value)">
                   </div>
-                ` : (indSeleccionados.length === 0 ? `
-                  <div class="text-muted fst-italic" style="font-size: 0.69rem;">Selecciona un OA arriba para ver sus indicadores sugeridos.</div>
-                ` : '')}
-              </div>
+                  <div class="col-md-6">
+                    <label class="wk-h3-session d-block mb-1">
+                      <i class="bi bi-universal-access me-1" style="color: #1d4ed8;"></i>DUA & Adecuaciones Curriculares
+                    </label>
+                    <p class="wk-meta-text mb-2">Estrategias de diversificación (representación, expresión o compromiso).</p>
+                    <input type="text" class="form-control wk-input"
+                           style="border-color: #cbd5e1; padding: 0.6rem 0.85rem;"
+                           placeholder="Ej: Trabajo en pares, presentación multimodal (esquemas, textos)..."
+                           value="${escapeHtml(sesionObj.dua || '')}"
+                           oninput="actualizarCampoTextoSesionPlanificador('${escapeHtml(cKey)}', ${cIdx}, 'dua', this.value)">
+                  </div>
+                </div>
+              `)}
             </div>
           </div>
-
-          <!-- 3. ACTIVIDADES, RECURSOS Y DUA DE LA SESIÓN -->
-          <div class="mb-2">
-            <label class="form-label text-muted fw-semibold mb-0" style="font-size: 0.72rem;">Actividades de la Sesión</label>
-            <textarea class="form-control form-control-sm" rows="2" placeholder="Describe las experiencias de aprendizaje de esta sesión..."
-                      oninput="actualizarCampoTextoSesionPlanificador('${escapeHtml(cKey)}', ${cIdx}, 'actividades', this.value)">${escapeHtml(sesionObj.actividades || '')}</textarea>
-          </div>
-          <div class="row g-2">
-            <div class="col-sm-6">
-              <label class="form-label text-muted fw-semibold mb-0" style="font-size: 0.72rem;">Recursos</label>
-              <input type="text" class="form-control form-control-sm" placeholder="Ej: Cuaderno, guía, proyector..."
-                     value="${escapeHtml(sesionObj.recursos || '')}"
-                     oninput="actualizarCampoTextoSesionPlanificador('${escapeHtml(cKey)}', ${cIdx}, 'recursos', this.value)">
-            </div>
-            <div class="col-sm-6">
-              <label class="form-label text-muted fw-semibold mb-0" style="font-size: 0.72rem;">DUA & Adecuaciones</label>
-              <input type="text" class="form-control form-control-sm" placeholder="Ej: Trabajo en pares, apoyo visual..."
-                     value="${escapeHtml(sesionObj.dua || '')}"
-                     oninput="actualizarCampoTextoSesionPlanificador('${escapeHtml(cKey)}', ${cIdx}, 'dua', this.value)">
-            </div>
-          </div>
-        </div>
+        </article>
       `;
-    }
-
-    function toggleDrawerOtrosOAsUnidadSemanal(cursoKey, claseIdx) {
-      const k = `${cursoKey}___${claseIdx}`;
-      drawersOtrosOAsAbiertos[k] = !drawersOtrosOAsAbiertos[k];
-      renderizarModalPlanificadorSemanal();
     }
 
     function agregarOASesionPlanificador(cursoKey, claseIdx, codOA, esDeUnidad = false) {
@@ -10859,7 +11209,10 @@
     function programarAutoGuardadoCursoSemanal(cursoKey) {
       const badge = document.getElementById('badgeEstadoGuardadoSemanal');
       if (badge) {
-        badge.innerHTML = '<i class="bi bi-arrow-repeat me-1 text-warning"></i>Guardando...';
+        badge.style.backgroundColor = '#fffbeb';
+        badge.style.color = '#92400e';
+        badge.style.borderColor = '#fde68a';
+        badge.innerHTML = '<i class="bi bi-arrow-repeat me-1"></i>Guardando...';
       }
       clearTimeout(timersAutoGuardadoSemanal[cursoKey]);
       timersAutoGuardadoSemanal[cursoKey] = setTimeout(() => {
@@ -10888,7 +11241,10 @@
 
         const badge = document.getElementById('badgeEstadoGuardadoSemanal');
         if (badge) {
-          badge.innerHTML = '<i class="bi bi-cloud-check-fill me-1 text-success"></i>Sincronizado';
+          badge.style.backgroundColor = '#f0fdf4';
+          badge.style.color = '#166534';
+          badge.style.borderColor = '#bbf7d0';
+          badge.innerHTML = '<i class="bi bi-cloud-check-fill me-1"></i>Sincronizado';
         }
         if (mostrarToast) {
           Swal.fire({
@@ -10903,7 +11259,10 @@
       } catch (err) {
         const badge = document.getElementById('badgeEstadoGuardadoSemanal');
         if (badge) {
-          badge.innerHTML = '<i class="bi bi-exclamation-triangle-fill me-1 text-danger"></i>Error al guardar';
+          badge.style.backgroundColor = '#fef2f2';
+          badge.style.color = '#991b1b';
+          badge.style.borderColor = '#fca5a5';
+          badge.innerHTML = '<i class="bi bi-exclamation-triangle-fill me-1"></i>Error al guardar';
         }
       }
     }
@@ -10945,7 +11304,6 @@
         }
       }, 250);
     }
-
   </script>
 </body>
 </html>
