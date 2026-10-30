@@ -537,7 +537,13 @@
       .no-print, .nav-tabs, .btn, .input-group, #filtroBusqueda, .modal {
         display: none !important;
       }
-      .print-only {
+      
+    /* Modal de detalle de evaluaciones (Semáforo) sobre modal planificador */
+    #modalDetalleEvaluacionesSemana {
+      z-index: 1070 !important;
+    }
+
+    .print-only {
         display: block !important;
       }
       .card-custom, .plan-section-card {
@@ -2354,6 +2360,38 @@
     </div>
   </div>
 
+  
+  <!-- MODAL: DETALLE DE EVALUACIONES DE LA SEMANA (SEMÁFORO) -->
+  <div class="modal fade" id="modalDetalleEvaluacionesSemana" tabindex="-1" aria-hidden="true" style="z-index: 1070;">
+    <div class="modal-dialog modal-lg modal-dialog-centered modal-dialog-scrollable">
+      <div class="modal-content border-0 shadow-lg">
+        <div class="modal-header bg-dark text-white py-2 px-3">
+          <div class="d-flex align-items-center gap-2">
+            <span class="fs-4">🚦</span>
+            <div>
+              <h5 class="modal-title fw-bold mb-0 d-flex align-items-center gap-2" style="font-size: 1.05rem;" id="lblDetalleEvalCurso">
+                Evaluaciones de la Semana
+              </h5>
+              <small class="text-white-50" id="lblDetalleEvalRango" style="font-size: 0.74rem;">
+                Calendario escolar de evaluaciones
+              </small>
+            </div>
+          </div>
+          <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Cerrar"></button>
+        </div>
+        <div class="modal-body p-3" id="cuerpoModalDetalleEvaluaciones" style="background-color: #f8fafc;">
+          <!-- Contenido dinámico -->
+        </div>
+        <div class="modal-footer bg-white py-2 px-3 border-top d-flex justify-content-between align-items-center">
+          <span class="text-muted small" style="font-size: 0.73rem;">
+            <i class="bi bi-info-circle me-1 text-primary"></i>Datos sincronizados desde el Registro Oficial de Evaluaciones
+          </span>
+          <button type="button" class="btn btn-sm btn-secondary px-3" data-bs-dismiss="modal">Cerrar</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
   <!-- Scripts -->
   <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
   <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
@@ -2472,6 +2510,14 @@
       modalIncorporarHitoObj = new bootstrap.Modal(document.getElementById('modalIncorporarHito'));
       modalImportadorExcelObj = new bootstrap.Modal(document.getElementById('modalImportadorExcel'));
       modalCalendarioUnidadesObj = new bootstrap.Modal(document.getElementById('modalCalendarioUnidades'));
+      const elModalDetalleEval = document.getElementById('modalDetalleEvaluacionesSemana');
+      if (elModalDetalleEval) {
+        elModalDetalleEval.addEventListener('hidden.bs.modal', () => {
+          if (document.getElementById('modalPlanificarSemana')?.classList.contains('show')) {
+            document.body.classList.add('modal-open');
+          }
+        });
+      }
       const elModalSem = document.getElementById('modalPlanificarSemana');
       if (elModalSem) {
         modalPlanificarSemanaObj = new bootstrap.Modal(elModalSem);
@@ -10345,47 +10391,213 @@
     }
 
     function renderAlertasContextualesClaseSemanal(cursoObj, sesionObj) {
-      const alertasHtml = [];
-
-      // 1. Evaluaciones agendadas en la semana para este curso
+      // 1. Semáforo de Evaluaciones de la Semana
       const evals = Array.isArray(cursoObj.evaluacionesSemana) ? cursoObj.evaluacionesSemana : [];
-      if (evals.length > 0) {
-        evals.forEach(ev => {
-          const esMismoDia = (ev.fecha === sesionObj.fecha);
-          alertasHtml.push(`
-            <div class="alert ${esMismoDia ? 'alert-danger border-danger' : 'alert-warning border-warning'} py-1 px-2 mb-1 d-flex align-items-center justify-content-between flex-wrap gap-1" style="font-size: 0.73rem;">
-              <div>
-                <i class="bi ${esMismoDia ? 'bi-exclamation-octagon-fill' : 'bi-calendar2-check-fill'} me-1"></i>
-                <strong>${esMismoDia ? '¡Evaluación este mismo día!' : 'Evaluación en la semana (' + ev.fecha + '):'}</strong>
-                ${escapeHtml(ev.asignatura)} — <span class="fw-semibold">${escapeHtml(ev.tipo || 'Evaluación')}</span>
-                ${ev.detalles ? `<span class="text-muted">(${escapeHtml(ev.detalles)})</span>` : ''}
-              </div>
-            </div>
-          `);
-        });
+      const numEvals = evals.length;
+      const esMismoDia = evals.some(ev => ev.fecha === sesionObj.fecha);
+      const evalsHoy = evals.filter(ev => ev.fecha === sesionObj.fecha);
+
+      let semaforoBtnHtml = '';
+      if (esMismoDia) {
+        // ROJO CRÍTICO: Hay evaluación registrada para el mismo día de esta clase
+        semaforoBtnHtml = `
+          <button type="button" 
+                  class="btn btn-xs btn-outline-danger bg-danger-subtle text-danger-emphasis border-danger py-1 px-2 d-inline-flex align-items-center gap-1 fw-bold shadow-none" 
+                  style="font-size: 0.72rem; border-radius: 6px;"
+                  onclick="abrirModalDetalleEvaluacionesSemana('${escapeHtml(cursoObj.key)}', '${sesionObj.fecha || ''}')"
+                  title="¡Atención! Hay evaluación programada para hoy. Haz clic para ver el detalle">
+            <i class="bi bi-circle-fill text-danger" style="font-size: 0.6rem;"></i>
+            <span>${numEvals} ${numEvals === 1 ? 'evaluación esta semana' : 'evaluaciones esta semana'}</span>
+            <span class="badge bg-danger text-white ms-1" style="font-size: 0.62rem;">¡Hoy (${evalsHoy.length})!</span>
+            <i class="bi bi-eye ms-1 opacity-75"></i>
+          </button>
+        `;
+      } else if (numEvals >= 3) {
+        // ROJO: Sobrecarga semanal (3 o más evaluaciones en la semana)
+        semaforoBtnHtml = `
+          <button type="button" 
+                  class="btn btn-xs btn-outline-danger bg-danger-subtle text-danger-emphasis border-danger py-1 px-2 d-inline-flex align-items-center gap-1 fw-semibold shadow-none" 
+                  style="font-size: 0.72rem; border-radius: 6px;"
+                  onclick="abrirModalDetalleEvaluacionesSemana('${escapeHtml(cursoObj.key)}', '${sesionObj.fecha || ''}')"
+                  title="Sobrecarga: 3 o más evaluaciones agendadas en la semana. Haz clic para ver el detalle">
+            <i class="bi bi-circle-fill text-danger" style="font-size: 0.6rem;"></i>
+            <span>${numEvals} evaluaciones esta semana</span>
+            <span class="badge bg-danger-subtle text-danger border border-danger-subtle ms-1" style="font-size: 0.62rem;">Sobrecarga</span>
+            <i class="bi bi-eye ms-1 opacity-75"></i>
+          </button>
+        `;
+      } else if (numEvals > 0) {
+        // AMARILLO: 1 o 2 evaluaciones en la semana
+        semaforoBtnHtml = `
+          <button type="button" 
+                  class="btn btn-xs btn-outline-warning text-dark bg-warning-subtle border-warning py-1 px-2 d-inline-flex align-items-center gap-1 fw-semibold shadow-none" 
+                  style="font-size: 0.72rem; border-radius: 6px;"
+                  onclick="abrirModalDetalleEvaluacionesSemana('${escapeHtml(cursoObj.key)}', '${sesionObj.fecha || ''}')"
+                  title="Haz clic para ver el detalle de las evaluaciones de la semana">
+            <i class="bi bi-circle-fill text-warning" style="font-size: 0.6rem;"></i>
+            <span>${numEvals} ${numEvals === 1 ? 'evaluación esta semana' : 'evaluaciones esta semana'}</span>
+            <i class="bi bi-eye ms-1 text-muted"></i>
+          </button>
+        `;
+      } else {
+        // VERDE: 0 evaluaciones esta semana
+        semaforoBtnHtml = `
+          <button type="button" 
+                  class="btn btn-xs btn-outline-success text-success-emphasis bg-success-subtle border-success-subtle py-1 px-2 d-inline-flex align-items-center gap-1 shadow-none" 
+                  style="font-size: 0.72rem; border-radius: 6px;"
+                  onclick="abrirModalDetalleEvaluacionesSemana('${escapeHtml(cursoObj.key)}', '${sesionObj.fecha || ''}')"
+                  title="Sin evaluaciones registradas esta semana. Haz clic para ver el calendario">
+            <i class="bi bi-circle-fill text-success" style="font-size: 0.6rem;"></i>
+            <span>0 evaluaciones esta semana</span>
+          </button>
+        `;
       }
 
       // 2. Hitos UTP vigentes en la semana
       const hitos = Array.isArray(cursoObj.hitosSemana) ? cursoObj.hitosSemana : [];
-      if (hitos.length > 0) {
-        hitos.forEach(h => {
-          alertasHtml.push(`
-            <div class="alert alert-info py-1 px-2 mb-1 d-flex align-items-center justify-content-between flex-wrap gap-1" style="font-size: 0.73rem; border-left: 4px solid ${escapeHtml(h.color || '#2563eb')};">
-              <div>
-                <span>${escapeHtml(h.icono || '🎭')}</span>
-                <strong>Hito UTP vigente (${escapeHtml(h.titulo)}):</strong>
-                <span>${escapeHtml(h.lineamientos || h.tipo || '')}</span>
-              </div>
-              <button type="button" class="btn btn-xs btn-outline-primary py-0 px-1" style="font-size: 0.68rem;" onclick="abrirModalGuiaHito(${h.id})">
-                Ver Orientaciones
-              </button>
-            </div>
-          `);
-        });
+      const hitosHtml = hitos.map(h => `
+        <div class="alert alert-info py-0 px-2 mb-0 d-inline-flex align-items-center gap-2 shadow-none" style="font-size: 0.72rem; border-left: 3px solid ${escapeHtml(h.color || '#2563eb')}; line-height: 1.8;">
+          <span>${escapeHtml(h.icono || '🎭')}</span>
+          <strong>Hito UTP:</strong>
+          <span>${escapeHtml(h.titulo)}</span>
+          <button type="button" class="btn btn-xs btn-link p-0 text-decoration-none fw-semibold ms-1" style="font-size: 0.7rem;" onclick="abrirModalGuiaHito(${h.id})">
+            Ver Orientaciones
+          </button>
+        </div>
+      `).join('');
+
+      return `
+        <div class="d-flex align-items-center gap-2 mb-2 flex-wrap">
+          ${semaforoBtnHtml}
+          ${hitosHtml}
+        </div>
+      `;
+    }
+
+    function abrirModalDetalleEvaluacionesSemana(cursoKey, fechaReferencia = '') {
+      const c = encontrarCursoPlanificador(cursoKey);
+      if (!c) return;
+
+      const evals = Array.isArray(c.evaluacionesSemana) ? c.evaluacionesSemana : [];
+      const lblCurso = document.getElementById('lblDetalleEvalCurso');
+      const lblRango = document.getElementById('lblDetalleEvalRango');
+      const cont = document.getElementById('cuerpoModalDetalleEvaluaciones');
+
+      if (lblCurso) {
+        lblCurso.innerHTML = `<span class="badge bg-primary text-white me-2">${escapeHtml(c.curso)}</span> Evaluaciones de la Semana`;
+      }
+      if (lblRango && datosPlanificadorSemanal) {
+        lblRango.textContent = `Semana del ${datosPlanificadorSemanal.fechaLunes || ''} al ${datosPlanificadorSemanal.fechaViernes || ''} (${datosPlanificadorSemanal.anio || 2026})`;
       }
 
-      if (alertasHtml.length === 0) return '';
-      return `<div class="mb-2">${alertasHtml.join('')}</div>`;
+      if (!cont) return;
+
+      if (evals.length === 0) {
+        cont.innerHTML = `
+          <div class="text-center py-5 bg-white rounded border p-4">
+            <div class="d-inline-flex align-items-center justify-content-center rounded-circle bg-success-subtle text-success mb-3" style="width: 56px; height: 56px;">
+              <i class="bi bi-check2-circle fs-2"></i>
+            </div>
+            <h5 class="fw-bold text-dark mb-1">Sin evaluaciones esta semana</h5>
+            <p class="text-muted small mb-0 mx-auto" style="max-width: 480px;">
+              El curso <strong>${escapeHtml(c.curso)}</strong> no tiene pruebas, exámenes, disertaciones ni controles agendados entre el lunes y el viernes de esta semana.
+            </p>
+          </div>
+        `;
+      } else {
+        const evalsOrdenadas = [...evals].sort((a, b) => (a.fecha || '').localeCompare(b.fecha || ''));
+        const hayHoy = evalsOrdenadas.some(ev => ev.fecha === fechaReferencia);
+
+        let resumenHtml = '';
+        if (hayHoy) {
+          resumenHtml = `
+            <div class="alert alert-danger py-2 px-3 mb-3 d-flex align-items-center gap-2" style="font-size: 0.8rem;">
+              <i class="bi bi-exclamation-octagon-fill fs-5 text-danger flex-shrink-0"></i>
+              <div>
+                <strong>¡Atención pedagógica!</strong> Hay al menos una evaluación agendada para el mismo día de tu clase (${fechaReferencia}).
+              </div>
+            </div>
+          `;
+        } else if (evalsOrdenadas.length >= 3) {
+          resumenHtml = `
+            <div class="alert alert-warning py-2 px-3 mb-3 d-flex align-items-center gap-2" style="font-size: 0.8rem;">
+              <i class="bi bi-exclamation-triangle-fill fs-5 text-warning flex-shrink-0"></i>
+              <div>
+                <strong>Carga evaluativa alta:</strong> El curso tiene ${evalsOrdenadas.length} evaluaciones durante esta semana.
+              </div>
+            </div>
+          `;
+        }
+
+        const itemsHtml = evalsOrdenadas.map((ev) => {
+          const esHoy = (ev.fecha === fechaReferencia);
+          let fechaFormateada = ev.fecha || '';
+          try {
+            if (ev.fecha && ev.fecha.includes('-')) {
+              const [y, m, d] = ev.fecha.split('-').map(Number);
+              const dt = new Date(y, m - 1, d);
+              const dias = ['Domingo', 'Lunes', 'Martes', 'Miércoles', 'Jueves', 'Viernes', 'Sábado'];
+              const diaSemanaNombre = dias[dt.getDay()] || '';
+              fechaFormateada = `${diaSemanaNombre} ${String(d).padStart(2, '0')}/${String(m).padStart(2, '0')}`;
+            }
+          } catch(e) {}
+
+          return `
+            <div class="card border mb-2 shadow-sm ${esHoy ? 'border-danger' : ''}" style="${esHoy ? 'border-left: 4px solid #dc3545 !important;' : ''}">
+              <div class="card-body p-3">
+                <div class="d-flex justify-content-between align-items-start flex-wrap gap-2 mb-2 pb-1 border-bottom">
+                  <div class="d-flex align-items-center gap-2 flex-wrap">
+                    <span class="badge ${esHoy ? 'bg-danger text-white' : 'bg-secondary text-white'}" style="font-size: 0.75rem;">
+                      <i class="bi bi-calendar-event me-1"></i>${escapeHtml(fechaFormateada || ev.fecha)}
+                    </span>
+                    ${esHoy ? `
+                      <span class="badge bg-danger-subtle text-danger border border-danger fw-bold" style="font-size: 0.72rem;">
+                        <i class="bi bi-pin-angle-fill me-1"></i>¡Día de esta clase!
+                      </span>
+                    ` : ''}
+                    <strong class="text-dark" style="font-size: 0.92rem;">
+                      ${escapeHtml(ev.asignatura || 'Sin Asignatura')}
+                    </strong>
+                  </div>
+                  <span class="badge bg-primary-subtle text-primary border border-primary-subtle" style="font-size: 0.74rem;">
+                    ${escapeHtml(ev.tipo || 'Evaluación')}
+                  </span>
+                </div>
+
+                <div class="row g-2 small text-secondary">
+                  ${ev.detalles ? `
+                    <div class="col-12">
+                      <div class="p-2 rounded bg-light border text-dark" style="font-size: 0.8rem;">
+                        <strong class="text-primary d-block mb-1"><i class="bi bi-file-text me-1"></i>Detalles / Contenidos / Indicadores:</strong>
+                        <div style="white-space: pre-wrap;">${escapeHtml(ev.detalles)}</div>
+                      </div>
+                    </div>
+                  ` : ''}
+                  ${ev.profesor_nombre ? `
+                    <div class="col-md-6 text-muted" style="font-size: 0.75rem;">
+                      <i class="bi bi-person me-1"></i>Docente: <strong>${escapeHtml(ev.profesor_nombre)}</strong>
+                    </div>
+                  ` : ''}
+                </div>
+              </div>
+            </div>
+          `;
+        }).join('');
+
+        cont.innerHTML = `
+          ${resumenHtml}
+          <div class="d-flex flex-column">
+            ${itemsHtml}
+          </div>
+        `;
+      }
+
+      const modalEl = document.getElementById('modalDetalleEvaluacionesSemana');
+      if (modalEl) {
+        let mObj = bootstrap.Modal.getInstance(modalEl);
+        if (!mObj) mObj = new bootstrap.Modal(modalEl);
+        mObj.show();
+      }
     }
 
     function renderTarjetaSesionPlanificador(cursoObj, sesionObj, mostrarCabeceraCurso = true) {
