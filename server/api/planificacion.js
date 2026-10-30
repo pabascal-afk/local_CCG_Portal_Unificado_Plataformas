@@ -96,6 +96,44 @@ router.get('/mis-clases-dia', async (req, res) => {
     }
 });
 
+// 1e. Planificador semanal de clases del docente ("Planificar mis clases para esta semana")
+router.get('/mi-semana-planificador', async (req, res) => {
+    try {
+        let usuario = req.user || (req.session && req.session.user) || {
+            email: 'dev@colegio.edu',
+            nombre: 'Docente',
+            rol: 'Profesor'
+        };
+        if (req.query.docente) {
+            usuario = { ...usuario, nombre: req.query.docente };
+            if (req.query.email) usuario.email = req.query.email;
+        }
+        const fecha = req.query.fecha || '';
+        const anio = req.query.anio || 2026;
+        const data = await planificacion.obtenerPlanificadorSemanalDocente(usuario, fecha, anio);
+        res.json({ success: true, ...data });
+    } catch (e) {
+        console.error('Error al obtener planificador semanal:', e);
+        res.status(500).json({ error: e.message || 'Error al obtener planificador semanal' });
+    }
+});
+
+// 1f. Guardar sesiones desde el planificador semanal
+router.post('/mi-semana-planificador/guardar', async (req, res) => {
+    try {
+        const usuario = req.user || (req.session && req.session.user) || {
+            email: 'dev@colegio.edu',
+            nombre: 'Docente',
+            rol: 'Profesor'
+        };
+        const resultado = await planificacion.guardarSesionPlanificadorSemanal(usuario, req.body || {});
+        res.json(resultado);
+    } catch (e) {
+        console.error('Error al guardar sesión del planificador semanal:', e);
+        res.status(400).json({ error: e.message || 'Error al guardar sesión semanal' });
+    }
+});
+
 // 2. Listado de planificaciones con filtros
 router.get('/', async (req, res) => {
     try {

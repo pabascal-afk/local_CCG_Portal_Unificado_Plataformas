@@ -3500,8 +3500,627 @@ async function obtenerClasesPlanificadasDocente(usuario = {}, fechaStr, anio = 2
     };
 }
 
+/**
+ * Obtiene todas las clases de la semana para el docente (Lunes a Viernes),
+ * vinculadas con sus Planificaciones Anuales, Unidades, Semanas, Pools de OAs/Habilidades/Indicadores,
+ * Semana Anterior, Evaluaciones agendadas e Hitos UTP vigentes.
+ */
+async function obtenerPlanificadorSemanalDocente(usuario = {}, fechaStr = '', anio = 2026) {
+    let fechaObj;
+    if (fechaStr && /^\d{4}-\d{2}-\d{2}$/.test(fechaStr)) {
+        fechaObj = new Date(`${fechaStr}T12:00:00`);
+    } else {
+        fechaObj = new Date();
+    }
+
+    const pad = (n) => String(n).padStart(2, '0');
+    const formatIso = (d) => `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}`;
+
+    // Calcular Lunes y Viernes de la semana consultada
+    const dayOfWeek = fechaObj.getDay(); // 0=Dom, 1=Lun, ..., 6=Sab
+    const diffToMonday = dayOfWeek === 0 ? -6 : (1 - dayOfWeek);
+    const dLunes = new Date(fechaObj);
+    dLunes.setDate(fechaObj.getDate() + diffToMonday);
+
+    const dViernes = new Date(dLunes);
+    dViernes.setDate(dLunes.getDate() + 4);
+
+    const dSemAnt = new Date(dLunes);
+    dSemAnt.setDate(dLunes.getDate() - 7);
+
+    const dSemSig = new Date(dLunes);
+    dSemSig.setDate(dLunes.getDate() + 7);
+
+    const fechaLunes = formatIso(dLunes);
+    const fechaViernes = formatIso(dViernes);
+    const fechaSemanaAnterior = formatIso(dSemAnt);
+    const fechaSemanaSiguiente = formatIso(dSemSig);
+    const anioNum = dLunes.getFullYear() || parseInt(anio, 10) || 2026;
+    const mesNum = dLunes.getMonth() + 1;
+
+    const nombresDias = ['Lunes', 'Martes', 'Miércoles', 'Jueves', 'Viernes'];
+    const mesesCortos = ['Ene', 'Feb', 'Mar', 'Abr', 'May', 'Jun', 'Jul', 'Ago', 'Sep', 'Oct', 'Nov', 'Dic'];
+    const diasSemana = nombresDias.map((nombre, idx) => {
+        const d = new Date(dLunes);
+        d.setDate(dLunes.getDate() + idx);
+        const iso = formatIso(d);
+        return {
+            nombre,
+            diaNumero: idx + 1,
+            fecha: iso,
+            labelCorto: `${nombre.slice(0, 3)} ${pad(d.getDate())}/${pad(d.getMonth() + 1)}`,
+            labelLargo: `${nombre} ${d.getDate()} de ${mesesCortos[d.getMonth()]}`
+        };
+    });
+
+    const userEmail = (usuario.email || '').trim().toLowerCase();
+    const userNombre = (usuario.nombre || '').trim();
+
+    // 1. Obtener todos los bloques de horario del docente en la semana
+    let bloquesDocente = await queryAll(`
+        SELECT curso, asignatura, bloque, dia, profesor
+        FROM horarios
+        WHERE (anno = ? OR (anno IS NULL AND ? = 2026))
+          AND (
+            LOWER(profesor) LIKE '%' || LOWER(?) || '%' 
+            OR LOWER(?) LIKE '%' || LOWER(profesor) || '%'
+            OR LOWER(profesor) LIKE '%' || LOWER(?) || '%'
+            OR LOWER(?) LIKE '%' || LOWER(profesor) || '%'
+          )
+          AND curso IS NOT NULL AND TRIM(curso) != ''
+        ORDER BY bloque ASC
+    `, [
+        anioNum, anioNum,
+        userNombre || userEmail, userNombre || userEmail,
+        userEmail || userNombre, userEmail || userNombre
+    ]);
+
+    if (bloquesDocente.length === 0 && (usuario.rol === 'Administrador' || usuario.rol === 'ADMIN' || usuario.esAdminBase)) {
+        bloquesDocente = await queryAll(`
+            SELECT curso, asignatura, bloque, dia, profesor
+            FROM horarios
+            WHERE (anno = ? OR (anno IS NULL AND ? = 2026))
+              AND curso IS NOT NULL AND TRIM(curso) != ''
+            ORDER BY curso ASC, bloque ASC
+            LIMIT 20
+        `, [anioNum, anioNum]);
+    }
+
+    const normalizarDiaNombre = (dStr) => {
+        const s = (dStr || '').trim().toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '');
+        if (s.startsWith('lun')) return 'Lunes';
+        if (s.startsWith('mar')) return 'Martes';
+        if (s.startsWith('mie')) return 'Miércoles';
+        if (s.startsWith('jue')) return 'Jueves';
+        if (s.startsWith('vie')) return 'Viernes';
+        return 'Lunes';
+    };
+
+    const ordenDiaMap = { 'Lunes': 1, 'Martes': 2, 'Miércoles': 3, 'Jueves': 4, 'Viernes': 5 };
+
+    // 2. Agrupar bloques por Curso + Asignatura y por Día (uniendo bloques contiguos en sesiones de 45 o 90 min)
+    const mapaCursosAsig = {};
+    bloquesDocente.forEach(b => {
+        const cursoClean = (b.curso || '').trim();
+        const asigClean = (b.asignatura || '').trim();
+        const key = `${cursoClean}___${asigClean}`;
+        if (!mapaCursosAsig[key]) {
+            mapaCursosAsig[key] = {
+                key,
+                curso: cursoClean,
+                asignatura: asigClean,
+                profesor: b.profesor,
+                porDia: {}
+            };
+        }
+        const diaNombre = normalizarDiaNombre(b.dia);
+        if (!mapaCursosAsig[key].porDia[diaNombre]) {
+            mapaCursosAsig[key].porDia[diaNombre] = [];
+        }
+        const numBloque = parseInt(b.bloque, 10);
+        if (!mapaCursosAsig[key].porDia[diaNombre].includes(numBloque)) {
+            mapaCursosAsig[key].porDia[diaNombre].push(numBloque);
+        }
+    });
+
+    // Construir sesiones semanales por cada curso/asignatura
+    const listaCursosAsig = Object.values(mapaCursosAsig);
+    listaCursosAsig.forEach(grupo => {
+        const diasOrdenados = Object.keys(grupo.porDia).sort((a, b) => (ordenDiaMap[a] || 9) - (ordenDiaMap[b] || 9));
+        const sesionesHorario = [];
+        let numSesion = 1;
+
+        diasOrdenados.forEach(dia => {
+            const bloques = grupo.porDia[dia].sort((a, b) => a - b);
+            const diaInfo = diasSemana.find(d => d.nombre === dia) || diasSemana[0];
+            let i = 0;
+            while (i < bloques.length) {
+                const b1 = bloques[i];
+                if (i + 1 < bloques.length && bloques[i + 1] === b1 + 1) {
+                    const b2 = bloques[i + 1];
+                    const info1 = HORARIOS_BLOQUES_OFICIALES[b1] || { inicio: '08:00', fin: '08:45' };
+                    const info2 = HORARIOS_BLOQUES_OFICIALES[b2] || { inicio: '08:45', fin: '09:30' };
+                    sesionesHorario.push({
+                        numero: numSesion++,
+                        dia,
+                        diaOrden: ordenDiaMap[dia] || 1,
+                        fecha: diaInfo.fecha,
+                        bloques: [b1, b2],
+                        bloquesTexto: `Bloques ${b1} y ${b2}`,
+                        horaInicio: info1.inicio,
+                        horaFin: info2.fin,
+                        horarioTexto: `${info1.inicio} - ${info2.fin}`,
+                        duracion: 90,
+                        label: `Clase ${numSesion - 1} (${dia} - 90 min)`
+                    });
+                    i += 2;
+                } else {
+                    const info = HORARIOS_BLOQUES_OFICIALES[b1] || { inicio: '08:00', fin: '08:45' };
+                    sesionesHorario.push({
+                        numero: numSesion++,
+                        dia,
+                        diaOrden: ordenDiaMap[dia] || 1,
+                        fecha: diaInfo.fecha,
+                        bloques: [b1],
+                        bloquesTexto: `Bloque ${b1}`,
+                        horaInicio: info.inicio,
+                        horaFin: info.fin,
+                        horarioTexto: `${info.inicio} - ${info.fin}`,
+                        duracion: 45,
+                        label: `Clase ${numSesion - 1} (${dia} - 45 min)`
+                    });
+                    i += 1;
+                }
+            }
+        });
+
+        grupo.sesionesHorario = sesionesHorario;
+    });
+
+    // 3. Cargar planificaciones del año para vincular
+    const planesAnio = await queryAll(`
+        SELECT p.id, p.titulo, p.curso, p.cursos_vinculados, p.asignatura, p.anio,
+               p.docente_responsable, p.docentes_colaboradores
+        FROM planificaciones p
+        WHERE (p.anio = ? OR p.anio = 2026)
+    `, [anioNum]);
+
+    const cursosPlanificador = [];
+
+    for (const grupo of listaCursosAsig) {
+        const nivelC = inferirNivelDesdeCurso(grupo.curso);
+
+        // Evaluaciones de la semana para este curso
+        let evaluacionesSemana = [];
+        try {
+            evaluacionesSemana = await queryAll(`
+                SELECT id, fecha, curso, asignatura, tipo, detalles, profesor_nombre
+                FROM evaluaciones
+                WHERE LOWER(TRIM(curso)) = LOWER(TRIM(?))
+                  AND fecha >= ? AND fecha <= ?
+                ORDER BY fecha ASC
+            `, [grupo.curso, fechaLunes, fechaViernes]);
+        } catch (errEv) {
+            evaluacionesSemana = [];
+        }
+
+        // Hitos UTP vigentes en esta semana para este curso y asignatura
+        let hitosSemana = [];
+        try {
+            const todosHitosCurso = await obtenerHitosParaPlan(anioNum, grupo.curso, grupo.asignatura);
+            hitosSemana = (todosHitosCurso || []).filter(h => {
+                if (!h.fecha_inicio || !h.fecha_fin) return false;
+                return !(h.fecha_fin < fechaLunes || h.fecha_inicio > fechaViernes);
+            });
+        } catch (errH) {
+            hitosSemana = [];
+        }
+
+        // Buscar planificación coincidente (primero curso exacto o vinculado + docente, luego nivel + asignatura)
+        const coincideCursoExactoOVinculado = (p) => {
+            if (normalizar(p.curso) === normalizar(grupo.curso)) return true;
+            try {
+                const vinc = JSON.parse(p.cursos_vinculados || '[]');
+                if (Array.isArray(vinc) && vinc.some(cv => normalizar(cv) === normalizar(grupo.curso))) return true;
+            } catch (e) {}
+            return false;
+        };
+
+        const coincideDocente = (p) => {
+            const resp = (p.docente_responsable || '').toLowerCase();
+            const colab = (p.docentes_colaboradores || '').toLowerCase();
+            return (userEmail && (resp.includes(userEmail) || colab.includes(userEmail))) ||
+                   (userNombre && (resp.includes(userNombre.toLowerCase()) || colab.includes(userNombre.toLowerCase())));
+        };
+
+        let planMatch = planesAnio.find(p =>
+            coincideDocente(p) &&
+            coincideCursoExactoOVinculado(p) &&
+            matchAsignaturaCurricular(p.asignatura, grupo.asignatura, nivelC)
+        );
+
+        if (!planMatch) {
+            planMatch = planesAnio.find(p =>
+                coincideDocente(p) &&
+                matchNivelCurricular(inferirNivelDesdeCurso(p.curso), nivelC) &&
+                matchAsignaturaCurricular(p.asignatura, grupo.asignatura, nivelC)
+            );
+        }
+
+        if (!planMatch) {
+            planMatch = planesAnio.find(p =>
+                coincideCursoExactoOVinculado(p) &&
+                matchAsignaturaCurricular(p.asignatura, grupo.asignatura, nivelC)
+            );
+        }
+
+        if (!planMatch) {
+            cursosPlanificador.push({
+                key: grupo.key,
+                curso: grupo.curso,
+                asignatura: grupo.asignatura,
+                profesor: grupo.profesor,
+                tienePlan: false,
+                evaluacionesSemana,
+                hitosSemana,
+                sesiones: grupo.sesionesHorario.map(sh => ({
+                    ...sh,
+                    tienePlan: false
+                }))
+            });
+            continue;
+        }
+
+        // Obtener detalle completo del plan
+        const planDet = await obtenerPlanificacionDetalle(planMatch.id);
+        const unidades = Array.isArray(planDet.unidades) ? planDet.unidades : [];
+
+        if (unidades.length === 0) {
+            cursosPlanificador.push({
+                key: grupo.key,
+                curso: grupo.curso,
+                asignatura: grupo.asignatura,
+                profesor: grupo.profesor,
+                tienePlan: false,
+                planId: planDet.id,
+                planSinUnidades: true,
+                evaluacionesSemana,
+                hitosSemana,
+                sesiones: grupo.sesionesHorario.map(sh => ({
+                    ...sh,
+                    tienePlan: false
+                }))
+            });
+            continue;
+        }
+
+        // Localizar Unidad y Semana correspondiente al rango [fechaLunes, fechaViernes]
+        let uIdx = unidades.findIndex(u =>
+            Array.isArray(u.desglose_semanal) &&
+            u.desglose_semanal.some(s => s.fecha_inicio && s.fecha_fin && !(s.fecha_fin < fechaLunes || s.fecha_inicio > fechaViernes))
+        );
+
+        if (uIdx < 0) {
+            uIdx = unidades.findIndex(u =>
+                u.fecha_inicio && u.fecha_fin && !(u.fecha_fin < fechaLunes || u.fecha_inicio > fechaViernes)
+            );
+        }
+
+        if (uIdx < 0) {
+            const esSegundoSem = (mesNum >= 7);
+            uIdx = unidades.findIndex(u => esSegundoSem ? Number(u.semestre) === 2 : Number(u.semestre) === 1);
+            if (uIdx < 0) uIdx = 0;
+        }
+
+        const unidadActiva = unidades[uIdx];
+        if (!Array.isArray(unidadActiva.desglose_semanal) || unidadActiva.desglose_semanal.length === 0) {
+            unidadActiva.desglose_semanal = [{
+                semana: 1,
+                fecha_inicio: fechaLunes,
+                fecha_fin: fechaViernes,
+                tema: '',
+                oas_semana: [],
+                actividades_formativas: '',
+                recursos: '',
+                dua_adecuaciones: '',
+                tags: [],
+                dividir_clases: true,
+                clases: []
+            }];
+        }
+
+        let sIdx = unidadActiva.desglose_semanal.findIndex(s =>
+            s.fecha_inicio && s.fecha_fin && !(s.fecha_fin < fechaLunes || s.fecha_inicio > fechaViernes)
+        );
+        if (sIdx < 0) sIdx = 0;
+
+        const semanaActiva = unidadActiva.desglose_semanal[sIdx];
+
+        // Buscar semana inmediatamente anterior para el botón "Continuar de la semana anterior"
+        let semanaAnterior = null;
+        if (sIdx > 0) {
+            semanaAnterior = unidadActiva.desglose_semanal[sIdx - 1];
+        } else if (uIdx > 0 && Array.isArray(unidades[uIdx - 1].desglose_semanal) && unidades[uIdx - 1].desglose_semanal.length > 0) {
+            const desgloseAnt = unidades[uIdx - 1].desglose_semanal;
+            semanaAnterior = desgloseAnt[desgloseAnt.length - 1];
+        }
+
+        // Construir Pool de OAs de la Unidad enriquecidos con descripción e indicadores_sugeridos
+        const catalogoOAs = Array.isArray(planDet.oas_disponibles) ? planDet.oas_disponibles : [];
+        const oasSelRaw = Array.isArray(unidadActiva.oas_seleccionados) ? unidadActiva.oas_seleccionados : [];
+        const oasUnidad = oasSelRaw.map(o => {
+            const cod = (typeof o === 'object' ? o.codigo : String(o)).trim();
+            const delCat = catalogoOAs.find(c => c.codigo && c.codigo.trim().toUpperCase() === cod.toUpperCase());
+            return {
+                codigo: cod,
+                categoria: (typeof o === 'object' && o.categoria) ? o.categoria : (delCat?.categoria || 'Basal'),
+                descripcion: (typeof o === 'object' && o.descripcion) ? o.descripcion : (delCat?.descripcion || ''),
+                indicadores_sugeridos: (delCat && Array.isArray(delCat.indicadores_sugeridos))
+                    ? delCat.indicadores_sugeridos
+                    : ((typeof o === 'object' && Array.isArray(o.indicadores_sugeridos)) ? o.indicadores_sugeridos : [])
+            };
+        });
+
+        // OAs asignados a la semana actual
+        const oasSemanaSet = new Set();
+        if (Array.isArray(semanaActiva.oas_semana)) {
+            semanaActiva.oas_semana.forEach(c => { if (c) oasSemanaSet.add(String(c).trim()); });
+        }
+        if (oasSemanaSet.size === 0 && semanaActiva.actividades_formativas) {
+            const matches = String(semanaActiva.actividades_formativas).match(/OA\s*\d+/gi) || [];
+            matches.forEach(m => oasSemanaSet.add(m.trim().toUpperCase()));
+        }
+        const oasSemana = Array.from(oasSemanaSet);
+
+        // Pool de Habilidades de la Unidad
+        const poolHabilidades = [];
+        const habVistos = new Set();
+        if (unidadActiva.habilidades && typeof unidadActiva.habilidades === 'string' && unidadActiva.habilidades.trim()) {
+            unidadActiva.habilidades.split(/\r?\n/).map(l => l.replace(/^[•\-\*]\s*/, '').trim()).filter(Boolean).forEach(linea => {
+                const idxDosPuntos = linea.indexOf(':');
+                let label = linea;
+                if (idxDosPuntos > 0 && idxDosPuntos < 60) {
+                    label = linea.slice(0, idxDosPuntos).trim();
+                } else if (linea.length > 55) {
+                    label = linea.slice(0, 52).trim() + '...';
+                }
+                const k = label.toLowerCase();
+                if (!habVistos.has(k)) {
+                    habVistos.add(k);
+                    poolHabilidades.push({ label, fullText: linea });
+                }
+            });
+        }
+        if (planDet.plan_curricular && Array.isArray(planDet.plan_curricular.habilidades_sugeridas)) {
+            planDet.plan_curricular.habilidades_sugeridas.forEach(h => {
+                if (!h || !h.nombre) return;
+                const label = h.nombre.trim();
+                const fullText = h.descripcion ? `${label}: ${h.descripcion.trim()}` : label;
+                const k = label.toLowerCase();
+                if (!habVistos.has(k)) {
+                    habVistos.add(k);
+                    poolHabilidades.push({ label, fullText });
+                }
+            });
+        }
+
+        // Pool de Indicadores de la Unidad (con su código de OA para filtrado reactivo en el cliente)
+        const poolIndicadoresUnidad = [];
+        const indVistos = new Set();
+        if (unidadActiva.indicadores_evaluacion && typeof unidadActiva.indicadores_evaluacion === 'string' && unidadActiva.indicadores_evaluacion.trim()) {
+            unidadActiva.indicadores_evaluacion.split(/\r?\n/).map(l => l.replace(/^[•\-\*]\s*/, '').trim()).filter(Boolean).forEach(linea => {
+                const m = linea.match(/^\[([^\]]+)\]\s*(.*)$/);
+                const oaCodigo = m ? m[1].trim().toUpperCase() : 'UNIDAD';
+                const k = linea.toLowerCase();
+                if (!indVistos.has(k)) {
+                    indVistos.add(k);
+                    poolIndicadoresUnidad.push({ oaCodigo, texto: linea });
+                }
+            });
+        }
+        oasUnidad.forEach(oa => {
+            if (Array.isArray(oa.indicadores_sugeridos)) {
+                oa.indicadores_sugeridos.forEach(ind => {
+                    const texto = `[${oa.codigo}] ${String(ind).trim()}`;
+                    const k = texto.toLowerCase();
+                    if (!indVistos.has(k)) {
+                        indVistos.add(k);
+                        poolIndicadoresUnidad.push({ oaCodigo: oa.codigo.trim().toUpperCase(), texto });
+                    }
+                });
+            }
+        });
+
+        // Emparejar las sesiones del horario con semanaActiva.clases
+        const clasesGuardadas = Array.isArray(semanaActiva.clases) ? semanaActiva.clases : [];
+        const clasesSemanaAnterior = (semanaAnterior && Array.isArray(semanaAnterior.clases)) ? semanaAnterior.clases : [];
+        const oasSemanaAnterior = (semanaAnterior && Array.isArray(semanaAnterior.oas_semana)) ? semanaAnterior.oas_semana : [];
+
+        const sesionesVinculadas = grupo.sesionesHorario.map((sh, idx) => {
+            const diaNorm = sh.dia.toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '');
+            let cMatch = clasesGuardadas.find(cg => {
+                const cgDia = (cg.dia || '').toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '');
+                return cgDia === diaNorm && Number(cg.numero) === sh.numero;
+            });
+            if (!cMatch) {
+                cMatch = clasesGuardadas.find(cg => {
+                    const cgDia = (cg.dia || '').toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '');
+                    const cgLab = (cg.label || '').toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '');
+                    return (cgDia && cgDia.includes(diaNorm)) || (cgLab && cgLab.includes(diaNorm));
+                });
+            }
+            if (!cMatch) {
+                cMatch = clasesGuardadas[idx] || null;
+            }
+
+            // Buscar clase homóloga de la semana anterior
+            let cAntMatch = clasesSemanaAnterior.find(ca => {
+                const caDia = (ca.dia || '').toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '');
+                return (caDia && caDia.includes(diaNorm)) || Number(ca.numero) === sh.numero;
+            }) || clasesSemanaAnterior[idx] || null;
+
+            const datosSemanaAnterior = semanaAnterior ? {
+                semanaNumero: semanaAnterior.semana || (sIdx),
+                oas_tags: (cAntMatch && Array.isArray(cAntMatch.oas_tags) && cAntMatch.oas_tags.length > 0)
+                    ? cAntMatch.oas_tags
+                    : oasSemanaAnterior,
+                habilidades_tags: (cAntMatch && Array.isArray(cAntMatch.habilidades_tags)) ? cAntMatch.habilidades_tags : [],
+                indicadores_tags: (cAntMatch && Array.isArray(cAntMatch.indicadores_tags)) ? cAntMatch.indicadores_tags : [],
+                actividades: (cAntMatch && cAntMatch.actividades) ? cAntMatch.actividades : (semanaAnterior.actividades || ''),
+                recursos: (cAntMatch && cAntMatch.recursos) ? cAntMatch.recursos : (semanaAnterior.recursos || ''),
+                dua: (cAntMatch && cAntMatch.dua) ? cAntMatch.dua : (semanaAnterior.dua_adecuaciones || '')
+            } : null;
+
+            return {
+                ...sh,
+                claseIndex: idx,
+                tienePlan: true,
+                oas_tags: (cMatch && Array.isArray(cMatch.oas_tags)) ? cMatch.oas_tags : [...oasSemana],
+                habilidades_tags: (cMatch && Array.isArray(cMatch.habilidades_tags)) ? cMatch.habilidades_tags : [],
+                indicadores_tags: (cMatch && Array.isArray(cMatch.indicadores_tags)) ? cMatch.indicadores_tags : [],
+                actividades: (cMatch && typeof cMatch.actividades === 'string') ? cMatch.actividades : '',
+                recursos: (cMatch && typeof cMatch.recursos === 'string' && cMatch.recursos) ? cMatch.recursos : (semanaActiva.recursos || ''),
+                dua: (cMatch && typeof cMatch.dua === 'string' && cMatch.dua) ? cMatch.dua : (semanaActiva.dua_adecuaciones || ''),
+                semanaAnterior: datosSemanaAnterior
+            };
+        });
+
+        cursosPlanificador.push({
+            key: grupo.key,
+            curso: grupo.curso,
+            asignatura: grupo.asignatura,
+            profesor: grupo.profesor,
+            tienePlan: true,
+            planId: planDet.id,
+            planTitulo: planDet.titulo,
+            unidadId: unidadActiva.id,
+            unidadIndex: uIdx,
+            unidadNumero: unidadActiva.numero_unidad,
+            unidadNombre: unidadActiva.nombre_unidad,
+            semanaIndex: sIdx,
+            semanaNumero: semanaActiva.semana || (sIdx + 1),
+            semanaFechaInicio: semanaActiva.fecha_inicio || fechaLunes,
+            semanaFechaFin: semanaActiva.fecha_fin || fechaViernes,
+            semanaTema: semanaActiva.tema || '',
+            oasSemana,
+            oasUnidad,
+            poolHabilidades,
+            poolIndicadoresUnidad,
+            evaluacionesSemana,
+            hitosSemana,
+            sesiones: sesionesVinculadas
+        });
+    }
+
+    return {
+        anio: anioNum,
+        fechaLunes,
+        fechaViernes,
+        fechaSemanaAnterior,
+        fechaSemanaSiguiente,
+        diasSemana,
+        cursos: cursosPlanificador
+    };
+}
+
+/**
+ * Guarda los cambios de una semana/sesiones desde el modal "Planificar mis clases para esta semana"
+ * sincronizándolos directamente en planificaciones_unidades.desglose_semanal
+ */
+async function guardarSesionPlanificadorSemanal(usuario = {}, payload = {}) {
+    const { planId, unidadId, semanaIndex, oas_semana, sesiones } = payload;
+    if (!planId || !unidadId) {
+        throw new Error('Faltan identificadores de planificación o unidad (planId, unidadId).');
+    }
+
+    const rowUnidad = await queryGet(`
+        SELECT id, planificacion_id, desglose_semanal
+        FROM planificaciones_unidades
+        WHERE id = ? AND planificacion_id = ?
+    `, [unidadId, planId]);
+
+    if (!rowUnidad) {
+        throw new Error('No se encontró la unidad especificada en la planificación.');
+    }
+
+    let desglose = [];
+    try {
+        desglose = JSON.parse(rowUnidad.desglose_semanal || '[]');
+    } catch (e) {
+        desglose = [];
+    }
+
+    const sIdx = (typeof semanaIndex === 'number' && semanaIndex >= 0 && semanaIndex < desglose.length)
+        ? semanaIndex
+        : 0;
+
+    if (!desglose[sIdx]) {
+        desglose[sIdx] = {
+            semana: sIdx + 1,
+            oas_semana: [],
+            dividir_clases: true,
+            clases: []
+        };
+    }
+
+    const sem = desglose[sIdx];
+    sem.dividir_clases = true;
+
+    // Sincronizar oas_semana incluyendo cualquier OA asignado en las sesiones individuales
+    const oasSet = new Set(Array.isArray(oas_semana) ? oas_semana.map(c => String(c).trim()).filter(Boolean) : (sem.oas_semana || []));
+    if (Array.isArray(sesiones)) {
+        sesiones.forEach(ses => {
+            if (Array.isArray(ses.oas_tags)) {
+                ses.oas_tags.forEach(c => {
+                    if (c) oasSet.add(String(c).trim());
+                });
+            }
+        });
+    }
+    sem.oas_semana = Array.from(oasSet);
+    sem.actividades_formativas = sem.oas_semana.join(', ');
+
+    if (Array.isArray(sesiones)) {
+        sem.clases = sesiones.map((ses, i) => ({
+            numero: ses.numero || (i + 1),
+            dia: ses.dia || 'Lunes',
+            duracion: ses.duracion || 45,
+            label: ses.label || `Clase ${ses.numero || (i + 1)}`,
+            oas_tags: Array.isArray(ses.oas_tags) ? ses.oas_tags : [],
+            habilidades_tags: Array.isArray(ses.habilidades_tags) ? ses.habilidades_tags : [],
+            indicadores_tags: Array.isArray(ses.indicadores_tags) ? ses.indicadores_tags : [],
+            actividades: typeof ses.actividades === 'string' ? ses.actividades : '',
+            recursos: typeof ses.recursos === 'string' ? ses.recursos : '',
+            dua: typeof ses.dua === 'string' ? ses.dua : ''
+        }));
+    }
+
+    await queryRun(`
+        UPDATE planificaciones_unidades
+        SET desglose_semanal = ?
+        WHERE id = ? AND planificacion_id = ?
+    `, [JSON.stringify(desglose), unidadId, planId]);
+
+    await queryRun(`
+        UPDATE planificaciones
+        SET actualizado_en = CURRENT_TIMESTAMP
+        WHERE id = ?
+    `, [planId]);
+
+    return {
+        success: true,
+        planId,
+        unidadId,
+        semanaIndex: sIdx,
+        oas_semana: sem.oas_semana,
+        clases: sem.clases
+    };
+}
+
 module.exports = {
     obtenerClasesPlanificadasDocente,
+    obtenerPlanificadorSemanalDocente,
+    guardarSesionPlanificadorSemanal,
     obtenerCursosDocente,
     obtenerPoolDocentes,
     obtenerSesionesClasesSemana,
