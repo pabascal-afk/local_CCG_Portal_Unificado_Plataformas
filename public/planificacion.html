@@ -10365,6 +10365,11 @@
           </div>
         `).join('');
       }
+
+      try {
+        const tooltipTriggerList = cont.querySelectorAll('[data-bs-toggle="tooltip"]');
+        tooltipTriggerList.forEach(el => new bootstrap.Tooltip(el));
+      } catch(e) {}
     }
 
     function renderEstadoSinPlanCursoSemanal(cursoObj) {
@@ -10441,94 +10446,58 @@
       return normalizarRomanos(c1) === normalizarRomanos(c2);
     }
 
-    function renderAlertasContextualesClaseSemanal(cursoObj, sesionObj) {
-      // 1. Semáforo de Evaluaciones de la Semana
+    function renderPuntoEvaluacionesSemana(cursoObj, sesionObj) {
       const evals = Array.isArray(cursoObj.evaluacionesSemana) ? cursoObj.evaluacionesSemana : [];
       const numEvals = evals.length;
       const esMismoDia = evals.some(ev => ev.fecha === sesionObj.fecha);
       const evalsHoy = evals.filter(ev => ev.fecha === sesionObj.fecha);
+      const asigsHoy = [...new Set(evalsHoy.map(e => e.asignatura))].join(', ');
 
-      // ¿Esta clase específica es una evaluación de esta materia?
-      const evalsEstaClase = evals.filter(ev => 
-        ev.fecha === sesionObj.fecha &&
-        sonMismosCursosPlanificador(ev.curso, cursoObj.curso) &&
-        sonMismasAsignaturasPlanificador(ev.asignatura, cursoObj.asignatura)
-      );
-      const esClaseEvaluacion = evalsEstaClase.length > 0;
+      // Regla de color:
+      // Verde: no hay evaluaciones o hasta 4 esta semana
+      // Amarillo: más de 4 y menos de 8 (5 a 7)
+      // Rojo: más de 8 evaluaciones (>= 8)
+      let dotColor = '#16a34a'; // Verde
+      let dotEstado = 'baja / normal';
 
-      let semaforoBtnHtml = '';
-      if (esClaseEvaluacion) {
-        // ROJO CRÍTICO DESTACADO: Esta clase específica es la evaluación agendada
-        semaforoBtnHtml = `
-          <button type="button" 
-                  class="btn btn-xs btn-outline-danger bg-danger text-white border-danger py-1 px-2 d-inline-flex align-items-center gap-1 fw-bold shadow-sm" 
-                  style="font-size: 0.72rem; border-radius: 6px;"
-                  onclick="abrirModalDetalleEvaluacionesSemana('${escapeHtml(cursoObj.key)}', '${sesionObj.fecha || ''}')"
-                  title="¡Esta clase corresponde a una evaluación agendada de ${escapeHtml(cursoObj.asignatura)}!">
-            <i class="bi bi-pencil-square me-1"></i>
-            <span>${numEvals} ${numEvals === 1 ? 'evaluación esta semana' : 'evaluaciones esta semana'}</span>
-            <span class="badge bg-white text-danger fw-bold ms-1" style="font-size: 0.65rem;">¡Evaluación de tu Asignatura Hoy!</span>
-            <i class="bi bi-eye ms-1"></i>
-          </button>
-        `;
-      } else if (esMismoDia) {
-        // ROJO: Hay evaluación hoy, pero en otra asignatura del curso
-        const asigsHoy = [...new Set(evalsHoy.map(e => e.asignatura))].join(', ');
-        semaforoBtnHtml = `
-          <button type="button" 
-                  class="btn btn-xs btn-outline-danger bg-danger-subtle text-danger-emphasis border-danger py-1 px-2 d-inline-flex align-items-center gap-1 fw-bold shadow-none" 
-                  style="font-size: 0.72rem; border-radius: 6px;"
-                  onclick="abrirModalDetalleEvaluacionesSemana('${escapeHtml(cursoObj.key)}', '${sesionObj.fecha || ''}')"
-                  title="Hoy hay evaluación en otra asignatura del curso (${escapeHtml(asigsHoy)}). Haz clic para ver el detalle">
-            <i class="bi bi-circle-fill text-danger" style="font-size: 0.6rem;"></i>
-            <span>${numEvals} ${numEvals === 1 ? 'evaluación esta semana' : 'evaluaciones esta semana'}</span>
-            <span class="badge bg-danger text-white ms-1" style="font-size: 0.62rem;">¡Hoy en ${escapeHtml(asigsHoy)}!</span>
-            <i class="bi bi-eye ms-1 opacity-75"></i>
-          </button>
-        `;
-      } else if (numEvals >= 3) {
-        // ROJO: Sobrecarga semanal (3 o más evaluaciones en la semana)
-        semaforoBtnHtml = `
-          <button type="button" 
-                  class="btn btn-xs btn-outline-danger bg-danger-subtle text-danger-emphasis border-danger py-1 px-2 d-inline-flex align-items-center gap-1 fw-semibold shadow-none" 
-                  style="font-size: 0.72rem; border-radius: 6px;"
-                  onclick="abrirModalDetalleEvaluacionesSemana('${escapeHtml(cursoObj.key)}', '${sesionObj.fecha || ''}')"
-                  title="Sobrecarga: 3 o más evaluaciones agendadas en la semana. Haz clic para ver el detalle">
-            <i class="bi bi-circle-fill text-danger" style="font-size: 0.6rem;"></i>
-            <span>${numEvals} evaluaciones esta semana</span>
-            <span class="badge bg-danger-subtle text-danger border border-danger-subtle ms-1" style="font-size: 0.62rem;">Sobrecarga</span>
-            <i class="bi bi-eye ms-1 opacity-75"></i>
-          </button>
-        `;
-      } else if (numEvals > 0) {
-        // AMARILLO: 1 o 2 evaluaciones en la semana
-        semaforoBtnHtml = `
-          <button type="button" 
-                  class="btn btn-xs btn-outline-warning text-dark bg-warning-subtle border-warning py-1 px-2 d-inline-flex align-items-center gap-1 fw-semibold shadow-none" 
-                  style="font-size: 0.72rem; border-radius: 6px;"
-                  onclick="abrirModalDetalleEvaluacionesSemana('${escapeHtml(cursoObj.key)}', '${sesionObj.fecha || ''}')"
-                  title="Haz clic para ver el detalle de las evaluaciones de la semana">
-            <i class="bi bi-circle-fill text-warning" style="font-size: 0.6rem;"></i>
-            <span>${numEvals} ${numEvals === 1 ? 'evaluación esta semana' : 'evaluaciones esta semana'}</span>
-            <i class="bi bi-eye ms-1 text-muted"></i>
-          </button>
-        `;
+      if (numEvals <= 4) {
+        dotColor = '#16a34a'; // Verde
+        dotEstado = (numEvals === 0) ? 'Sin evaluaciones esta semana' : `${numEvals} ${numEvals === 1 ? 'evaluación agendada' : 'evaluaciones agendadas'} en la semana (carga normal)`;
+      } else if (numEvals < 8) {
+        dotColor = '#eab308'; // Amarillo
+        dotEstado = `${numEvals} evaluaciones agendadas en la semana (carga moderada)`;
       } else {
-        // VERDE: 0 evaluaciones esta semana
-        semaforoBtnHtml = `
-          <button type="button" 
-                  class="btn btn-xs btn-outline-success text-success-emphasis bg-success-subtle border-success-subtle py-1 px-2 d-inline-flex align-items-center gap-1 shadow-none" 
-                  style="font-size: 0.72rem; border-radius: 6px;"
-                  onclick="abrirModalDetalleEvaluacionesSemana('${escapeHtml(cursoObj.key)}', '${sesionObj.fecha || ''}')"
-                  title="Sin evaluaciones registradas esta semana. Haz clic para ver el calendario">
-            <i class="bi bi-circle-fill text-success" style="font-size: 0.6rem;"></i>
-            <span>0 evaluaciones esta semana</span>
-          </button>
-        `;
+        dotColor = '#dc2626'; // Rojo
+        dotEstado = `${numEvals} evaluaciones agendadas en la semana (carga alta)`;
       }
 
-      // 2. Hitos UTP vigentes en la semana
+      let tooltipTexto = `${dotEstado} para ${cursoObj.curso}.`;
+      if (esMismoDia && asigsHoy) {
+        tooltipTexto += ` ¡Hoy hay evaluación en ${asigsHoy}!`;
+      }
+      tooltipTexto += ' Haz clic para ver el calendario completo.';
+
+      return `
+        <button type="button" 
+                class="btn p-0 border-0 bg-transparent d-inline-flex align-items-center justify-content-center shadow-none align-middle" 
+                style="cursor: pointer; line-height: 1; vertical-align: middle; margin-left: 2px;"
+                onclick="abrirModalDetalleEvaluacionesSemana('${escapeHtml(cursoObj.key)}', '${sesionObj.fecha || ''}')"
+                title="${escapeHtml(tooltipTexto)}"
+                data-bs-toggle="tooltip"
+                data-bs-placement="top">
+          <span class="rounded-circle d-inline-block shadow-sm" 
+                style="width: 10px; height: 10px; background-color: ${dotColor}; border: 1.5px solid #ffffff; transition: transform 0.15s ease;"
+                onmouseover="this.style.transform='scale(1.45)'"
+                onmouseout="this.style.transform='scale(1)'"></span>
+        </button>
+      `;
+    }
+
+    function renderAlertasContextualesClaseSemanal(cursoObj, sesionObj) {
+      // Hitos UTP vigentes en la semana (las evaluaciones de otras asignaturas ahora se muestran solo como punto discreto)
       const hitos = Array.isArray(cursoObj.hitosSemana) ? cursoObj.hitosSemana : [];
+      if (hitos.length === 0) return '';
+
       const hitosHtml = hitos.map(h => `
         <div class="alert alert-info py-0 px-2 mb-0 d-inline-flex align-items-center gap-2 shadow-none" style="font-size: 0.72rem; border-left: 3px solid ${escapeHtml(h.color || '#2563eb')}; line-height: 1.8;">
           <span>${escapeHtml(h.icono || '🎭')}</span>
@@ -10542,7 +10511,6 @@
 
       return `
         <div class="d-flex align-items-center gap-2 mb-2 flex-wrap">
-          ${semaforoBtnHtml}
           ${hitosHtml}
         </div>
       `;
@@ -10691,6 +10659,7 @@
               <div class="d-flex align-items-center gap-2 flex-wrap">
                 <span class="badge ${esClaseEvaluacion ? 'bg-danger text-white' : 'bg-secondary-subtle text-dark border'}">${escapeHtml(sesionObj.horarioTexto)} (${escapeHtml(sesionObj.bloquesTexto)})</span>
                 <strong class="text-dark small">${escapeHtml(cursoObj.curso)} • ${escapeHtml(cursoObj.asignatura)}</strong>
+                ${renderPuntoEvaluacionesSemana(cursoObj, sesionObj)}
                 ${esClaseEvaluacion ? `
                   <span class="badge bg-danger text-white fw-bold d-inline-flex align-items-center gap-1 shadow-sm px-2 py-1" style="font-size: 0.72rem;">
                     <i class="bi bi-file-earmark-check-fill"></i> EVALUACIÓN DE ESTA ASIGNATURA
@@ -10766,6 +10735,7 @@
                 ` : `
                   <span class="fw-bold text-dark small">${escapeHtml(sesionObj.label)}</span>
                 `}
+                ${renderPuntoEvaluacionesSemana(cursoObj, sesionObj)}
                 ${esClaseEvaluacion ? `
                   <span class="badge bg-danger text-white fw-bold d-inline-flex align-items-center gap-1 shadow-sm px-2 py-1" style="font-size: 0.73rem;">
                     <i class="bi bi-file-earmark-check-fill"></i> EVALUACIÓN DE ESTA ASIGNATURA
