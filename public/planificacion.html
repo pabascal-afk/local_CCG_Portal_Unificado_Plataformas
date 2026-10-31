@@ -10335,6 +10335,11 @@
               <div class="d-flex align-items-center gap-2 flex-wrap">
                 <span class="badge bg-dark text-white px-2 py-1">${escapeHtml(c.curso)}</span>
                 <h6 class="fw-bold text-dark mb-0">${escapeHtml(c.asignatura)}</h6>
+                ${Array.isArray(c.cursosVinculados) && c.cursosVinculados.length > 0 ? `
+                  <span class="badge bg-info-subtle text-dark border border-info-subtle" title="Plan compartido con: ${escapeHtml(c.cursosVinculados.join(', '))}">
+                    <i class="bi bi-link-45deg text-primary me-1"></i>Vinculado con ${escapeHtml(c.cursosVinculados.join(', '))}
+                  </span>
+                ` : ''}
                 ${c.tienePlan ? `
                   <span class="badge bg-primary-subtle text-primary border border-primary-subtle">
                     ${escapeHtml(c.unidadNombre || ('Unidad ' + c.unidadNumero))} • Semana ${c.semanaNumero}
@@ -10346,6 +10351,7 @@
                 `}
               </div>
               ${c.tienePlan ? `
+                ${renderBotonCopiarSemanaCompletaVinculada(c)}
                 <button type="button" class="btn btn-xs btn-outline-primary py-0 px-2" onclick="abrirPlanCompletoDesdeModalSemanal(${c.planId}, ${c.unidadIndex})">
                   <i class="bi bi-box-arrow-up-right me-1"></i>Ver en Plan de Unidades
                 </button>
@@ -10750,6 +10756,7 @@
             </div>
 
             <div class="d-flex align-items-center gap-1 flex-wrap">
+              ${renderBotonCopiarClaseVinculada(cursoObj, sesionObj)}
               ${sesionObj.semanaAnterior ? `
                 <button type="button"
                         class="btn btn-xs btn-outline-primary py-1 px-2 d-inline-flex align-items-center gap-1 fw-semibold"
@@ -11136,6 +11143,263 @@
       programarAutoGuardadoCursoSemanal(cursoKey);
     }
 
+    
+    function obtenerClasesVinculadasDisponibles(cursoObj, sesionObj) {
+      const res = [];
+      const vistos = new Set();
+      const cCursoNorm = (cursoObj.curso || '').trim().toUpperCase();
+
+      // 1. Clases de cursos cargados en memoria en el modal planificador
+      if (datosPlanificadorSemanal && Array.isArray(datosPlanificadorSemanal.cursos)) {
+        const cursosVincs = Array.isArray(cursoObj.cursosVinculados) ? cursoObj.cursosVinculados : [];
+        datosPlanificadorSemanal.cursos.forEach(otroC => {
+          if (otroC.key === cursoObj.key) return;
+          const otroCursoNorm = (otroC.curso || '').trim().toUpperCase();
+          if (otroCursoNorm === cCursoNorm) return;
+
+          const sonVinculados = cursosVincs.some(cv => sonMismosCursosPlanificador(cv, otroC.curso)) ||
+                                (otroC.planId && cursoObj.planId && otroC.planId === cursoObj.planId) ||
+                                (Array.isArray(otroC.cursosVinculados) && otroC.cursosVinculados.some(cv => sonMismosCursosPlanificador(cv, cursoObj.curso))) ||
+                                (sonMismasAsignaturasPlanificador(otroC.asignatura, cursoObj.asignatura) && sonMismosCursosPlanificador(otroC.curso, cursoObj.curso));
+
+          if (sonVinculados && Array.isArray(otroC.sesiones)) {
+            otroC.sesiones.forEach(s => {
+              const tieneContenido = (s.actividades && s.actividades.trim()) ||
+                                     (Array.isArray(s.oas_tags) && s.oas_tags.length > 0) ||
+                                     (Array.isArray(s.indicadores_tags) && s.indicadores_tags.length > 0) ||
+                                     (s.recursos && s.recursos.trim()) ||
+                                     (s.dua && s.dua.trim());
+              if (tieneContenido) {
+                const k = `${otroCursoNorm}___${s.numero}___${s.dia}`;
+                if (!vistos.has(k)) {
+                  vistos.add(k);
+                  res.push({
+                    origenCursoKey: otroC.key,
+                    origenCurso: otroC.curso,
+                    origenClaseIdx: s.claseIndex,
+                    numero: s.numero,
+                    dia: s.dia,
+                    label: s.label || `Clase ${s.numero}${s.dia ? ' (' + s.dia + ')' : ''}`,
+                    actividades: s.actividades || '',
+                    oas_tags: Array.isArray(s.oas_tags) ? [...s.oas_tags] : [],
+                    habilidades_tags: Array.isArray(s.habilidades_tags) ? JSON.parse(JSON.stringify(s.habilidades_tags)) : [],
+                    indicadores_tags: Array.isArray(s.indicadores_tags) ? [...s.indicadores_tags] : [],
+                    recursos: s.recursos || '',
+                    dua: s.dua || ''
+                  });
+                }
+              }
+            });
+          }
+        });
+      }
+
+      // 2. Clases enviadas por el backend en sesionObj.clasesVinculadas
+      const vincsBackend = Array.isArray(sesionObj.clasesVinculadas) ? sesionObj.clasesVinculadas :
+                           (Array.isArray(cursoObj.clasesCursosVinculados) ? cursoObj.clasesCursosVinculados : []);
+      vincsBackend.forEach(cv => {
+        const cvCursoNorm = (cv.curso || '').trim().toUpperCase();
+        if (cvCursoNorm === cCursoNorm) return;
+        const k = `${cvCursoNorm}___${cv.numero}___${cv.dia}`;
+        if (!vistos.has(k)) {
+          vistos.add(k);
+          res.push({
+            origenCursoKey: null,
+            origenCurso: cv.curso,
+            origenClaseIdx: null,
+            numero: cv.numero,
+            dia: cv.dia,
+            label: cv.label || `Clase ${cv.numero}${cv.dia ? ' (' + cv.dia + ')' : ''}`,
+            actividades: cv.actividades || '',
+            oas_tags: Array.isArray(cv.oas_tags) ? [...cv.oas_tags] : [],
+            habilidades_tags: Array.isArray(cv.habilidades_tags) ? JSON.parse(JSON.stringify(cv.habilidades_tags)) : [],
+            indicadores_tags: Array.isArray(cv.indicadores_tags) ? [...cv.indicadores_tags] : [],
+            recursos: cv.recursos || '',
+            dua: cv.dua || ''
+          });
+        }
+      });
+
+      return res;
+    }
+
+    function renderBotonCopiarClaseVinculada(cursoObj, sesionObj) {
+      const clasesVincs = obtenerClasesVinculadasDisponibles(cursoObj, sesionObj);
+      if (clasesVincs.length === 0) return '';
+
+      const cKey = cursoObj.key;
+      const cIdx = sesionObj.claseIndex;
+
+      // Sugerir clase con mismo número si existe
+      const sugeridaIdx = clasesVincs.findIndex(cv => cv.numero === sesionObj.numero);
+      const claseSugerida = sugeridaIdx >= 0 ? clasesVincs[sugeridaIdx] : clasesVincs[0];
+      const idxParaCopiar = sugeridaIdx >= 0 ? sugeridaIdx : 0;
+
+      if (clasesVincs.length === 1) {
+        const cv = clasesVincs[0];
+        return `
+          <button type="button"
+                  class="btn btn-xs btn-outline-success py-1 px-2 d-inline-flex align-items-center gap-1 fw-semibold"
+                  style="font-size: 0.72rem;"
+                  onclick="copiarClaseVinculadaPlanificador('${escapeHtml(cKey)}', ${cIdx}, 0)"
+                  title="Copiar OAs, actividades, indicadores, recursos y DUA desde ${escapeHtml(cv.origenCurso)} (${escapeHtml(cv.label)})">
+            <i class="bi bi-link-45deg"></i>
+            <span>Copiar de ${escapeHtml(cv.origenCurso)}</span>
+          </button>
+        `;
+      }
+
+      return `
+        <div class="btn-group btn-group-sm" role="group">
+          <button type="button"
+                  class="btn btn-xs btn-outline-success py-1 px-2 d-inline-flex align-items-center gap-1 fw-semibold"
+                  style="font-size: 0.72rem;"
+                  onclick="copiarClaseVinculadaPlanificador('${escapeHtml(cKey)}', ${cIdx}, ${idxParaCopiar})"
+                  title="Copiar OAs, actividades, indicadores y DUA desde ${escapeHtml(claseSugerida.origenCurso)} (${escapeHtml(claseSugerida.label)})">
+            <i class="bi bi-link-45deg"></i>
+            <span>Copiar de ${escapeHtml(claseSugerida.origenCurso)} (${escapeHtml(claseSugerida.label)})</span>
+          </button>
+          <button type="button" 
+                  class="btn btn-xs btn-outline-success dropdown-toggle dropdown-toggle-split py-1 px-2"
+                  data-bs-toggle="dropdown" 
+                  aria-expanded="false" 
+                  title="Elegir otra clase de curso vinculado para copiar">
+            <span class="visually-hidden">Opciones de copia</span>
+          </button>
+          <ul class="dropdown-menu dropdown-menu-end shadow-sm" style="font-size: 0.74rem;">
+            <li class="dropdown-header text-muted py-1">Clases disponibles de paralelos vinculados:</li>
+            ${clasesVincs.map((cv, vIdx) => `
+              <li>
+                <button class="dropdown-item py-1 px-3 d-flex align-items-center justify-content-between gap-3 ${vIdx === idxParaCopiar ? 'bg-light fw-bold' : ''}"
+                        type="button"
+                        onclick="copiarClaseVinculadaPlanificador('${escapeHtml(cKey)}', ${cIdx}, ${vIdx})">
+                  <div>
+                    <strong class="text-dark">${escapeHtml(cv.origenCurso)}</strong>
+                    <span class="text-secondary ms-1">${escapeHtml(cv.label)}</span>
+                    ${cv.actividades ? `<div class="text-muted text-truncate" style="max-width: 200px; font-size: 0.68rem;">${escapeHtml(cv.actividades)}</div>` : ''}
+                  </div>
+                  <span class="badge bg-success-subtle text-success border border-success-subtle flex-shrink-0">Copiar</span>
+                </button>
+              </li>
+            `).join('')}
+          </ul>
+        </div>
+      `;
+    }
+
+    function renderBotonCopiarSemanaCompletaVinculada(cursoObj) {
+      if (!cursoObj || !Array.isArray(cursoObj.sesiones)) return '';
+      const todasVincs = [];
+      cursoObj.sesiones.forEach(s => {
+        obtenerClasesVinculadasDisponibles(cursoObj, s).forEach(cv => {
+          if (!todasVincs.some(x => x.origenCurso === cv.origenCurso && x.numero === cv.numero)) {
+            todasVincs.push(cv);
+          }
+        });
+      });
+      if (todasVincs.length === 0) return '';
+      const primerCurso = todasVincs[0].origenCurso;
+      return `
+        <button type="button" class="btn btn-xs btn-outline-success py-0 px-2 fw-semibold" style="font-size: 0.72rem;" onclick="copiarSemanaCompletaVinculadaPlanificador('${escapeHtml(cursoObj.key)}')">
+          <i class="bi bi-link-45deg me-1"></i>Copiar semana de ${escapeHtml(primerCurso)}
+        </button>
+      `;
+    }
+
+    function copiarClaseVinculadaPlanificador(cursoKey, claseIdx, vIdx) {
+      const c = encontrarCursoPlanificador(cursoKey);
+      if (!c || !c.sesiones[claseIdx]) return;
+      const ses = c.sesiones[claseIdx];
+
+      const clasesVincs = obtenerClasesVinculadasDisponibles(c, ses);
+      const origen = clasesVincs[vIdx];
+      if (!origen) return;
+
+      if (Array.isArray(origen.oas_tags) && origen.oas_tags.length > 0) {
+        ses.oas_tags = [...origen.oas_tags];
+        origen.oas_tags.forEach(cod => {
+          if (!c.oasSemana.includes(cod)) c.oasSemana.push(cod);
+        });
+      }
+      if (Array.isArray(origen.habilidades_tags)) {
+        ses.habilidades_tags = JSON.parse(JSON.stringify(origen.habilidades_tags));
+      }
+      if (Array.isArray(origen.indicadores_tags)) {
+        ses.indicadores_tags = [...origen.indicadores_tags];
+      }
+      if (typeof origen.actividades === 'string') {
+        ses.actividades = origen.actividades;
+      }
+      if (typeof origen.recursos === 'string') {
+        ses.recursos = origen.recursos;
+      }
+      if (typeof origen.dua === 'string') {
+        ses.dua = origen.dua;
+      }
+
+      renderizarModalPlanificadorSemanal();
+      programarAutoGuardadoCursoSemanal(cursoKey);
+
+      Swal.fire({
+        toast: true,
+        position: 'top-end',
+        icon: 'success',
+        title: `Clase copiada desde ${origen.origenCurso} (${origen.label})`,
+        showConfirmButton: false,
+        timer: 2200
+      });
+    }
+
+    function copiarSemanaCompletaVinculadaPlanificador(cursoKey) {
+      const c = encontrarCursoPlanificador(cursoKey);
+      if (!c || !Array.isArray(c.sesiones)) return;
+
+      const todasVincs = [];
+      c.sesiones.forEach(s => {
+        obtenerClasesVinculadasDisponibles(c, s).forEach(cv => {
+          if (!todasVincs.some(x => x.origenCurso === cv.origenCurso && x.numero === cv.numero)) {
+            todasVincs.push(cv);
+          }
+        });
+      });
+
+      if (todasVincs.length === 0) {
+        Swal.fire('Atención', 'No hay clases planificadas en cursos vinculados para copiar.', 'info');
+        return;
+      }
+
+      const cursoOrigenNombre = todasVincs[0].origenCurso;
+
+      c.sesiones.forEach((ses, i) => {
+        const match = todasVincs.find(cv => cv.numero === ses.numero) || todasVincs[i] || todasVincs[0];
+        if (match) {
+          if (Array.isArray(match.oas_tags) && match.oas_tags.length > 0) {
+            ses.oas_tags = [...match.oas_tags];
+            match.oas_tags.forEach(cod => {
+              if (!c.oasSemana.includes(cod)) c.oasSemana.push(cod);
+            });
+          }
+          if (Array.isArray(match.habilidades_tags)) ses.habilidades_tags = JSON.parse(JSON.stringify(match.habilidades_tags));
+          if (Array.isArray(match.indicadores_tags)) ses.indicadores_tags = [...match.indicadores_tags];
+          if (typeof match.actividades === 'string') ses.actividades = match.actividades;
+          if (typeof match.recursos === 'string') ses.recursos = match.recursos;
+          if (typeof match.dua === 'string') ses.dua = match.dua;
+        }
+      });
+
+      renderizarModalPlanificadorSemanal();
+      programarAutoGuardadoCursoSemanal(cursoKey);
+
+      Swal.fire({
+        toast: true,
+        position: 'top-end',
+        icon: 'success',
+        title: `Semana completa copiada desde ${cursoOrigenNombre}`,
+        showConfirmButton: false,
+        timer: 2200
+      });
+    }
+
     function continuarDeSemanaAnteriorPlanificador(cursoKey, claseIdx) {
       const c = encontrarCursoPlanificador(cursoKey);
       if (!c || !c.sesiones[claseIdx]) return;
@@ -11201,6 +11465,7 @@
             planId: c.planId,
             unidadId: c.unidadId,
             semanaIndex: c.semanaIndex,
+            curso: c.curso,
             oas_semana: c.oasSemana,
             sesiones: c.sesiones
           })

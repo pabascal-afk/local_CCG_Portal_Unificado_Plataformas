@@ -3238,7 +3238,15 @@ async function obtenerClasesPlanificadasDocente(usuario = {}, fechaStr, anio = 2
                 semanaRango = (semanaActiva.fecha_inicio && semanaActiva.fecha_fin) 
                     ? `${semanaActiva.fecha_inicio} al ${semanaActiva.fecha_fin}` 
                     : '';
-                clasesSemana = Array.isArray(semanaActiva.clases) ? semanaActiva.clases : [];
+                const cCurNorm = (c.curso || '').trim().toUpperCase();
+                if (semanaActiva.clases_por_curso && Array.isArray(semanaActiva.clases_por_curso[cCurNorm])) {
+                    clasesSemana = semanaActiva.clases_por_curso[cCurNorm];
+                } else if (Array.isArray(semanaActiva.clases)) {
+                    const clasesCurso = semanaActiva.clases.filter(cl => (cl.curso || '').trim().toUpperCase() === cCurNorm);
+                    clasesSemana = (clasesCurso.length > 0) ? clasesCurso : semanaActiva.clases;
+                } else {
+                    clasesSemana = [];
+                }
             }
 
             // 3. Determinar el orden de sesión de esta clase en la semana (para correlativo con clasesSemana)
@@ -3931,10 +3939,92 @@ async function obtenerPlanificadorSemanalDocente(usuario = {}, fechaStr = '', an
             }
         });
 
-        // Emparejar las sesiones del horario con semanaActiva.clases
-        const clasesGuardadas = Array.isArray(semanaActiva.clases) ? semanaActiva.clases : [];
-        const clasesSemanaAnterior = (semanaAnterior && Array.isArray(semanaAnterior.clases)) ? semanaAnterior.clases : [];
+        // Resolver cursos vinculados al plan
+        let vincsArr = [];
+        try { vincsArr = JSON.parse(planDet.cursos_vinculados || '[]'); } catch (e) { vincsArr = []; }
+        const todosCursosPlan = [planDet.curso, ...vincsArr];
+        const cursosVinculados = todosCursosPlan.filter(c => normalizar(c) !== normalizar(grupo.curso));
+
+        // Emparejar las sesiones del horario con semanaActiva.clases (soportando clases_por_curso)
+        const grupoCursoNorm = (grupo.curso || '').trim().toUpperCase();
+        let clasesGuardadas = [];
+        if (semanaActiva.clases_por_curso && Array.isArray(semanaActiva.clases_por_curso[grupoCursoNorm])) {
+            clasesGuardadas = semanaActiva.clases_por_curso[grupoCursoNorm];
+        } else if (Array.isArray(semanaActiva.clases)) {
+            const deEsteCurso = semanaActiva.clases.filter(cl => (cl.curso || '').trim().toUpperCase() === grupoCursoNorm);
+            if (deEsteCurso.length > 0) {
+                clasesGuardadas = deEsteCurso;
+            } else {
+                clasesGuardadas = semanaActiva.clases;
+            }
+        }
+
+        // Buscar clases de la semana inmediatamente anterior para este curso
+        let clasesSemanaAnterior = [];
+        if (semanaAnterior) {
+            if (semanaAnterior.clases_por_curso && Array.isArray(semanaAnterior.clases_por_curso[grupoCursoNorm])) {
+                clasesSemanaAnterior = semanaAnterior.clases_por_curso[grupoCursoNorm];
+            } else if (Array.isArray(semanaAnterior.clases)) {
+                const deEsteAnt = semanaAnterior.clases.filter(cl => (cl.curso || '').trim().toUpperCase() === grupoCursoNorm);
+                clasesSemanaAnterior = (deEsteAnt.length > 0) ? deEsteAnt : semanaAnterior.clases;
+            }
+        }
         const oasSemanaAnterior = (semanaAnterior && Array.isArray(semanaAnterior.oas_semana)) ? semanaAnterior.oas_semana : [];
+
+        // Obtener clases planificadas en cursos vinculados para esta semana (para permitir copiar clases entre paralelos)
+        const clasesCursosVinculados = [];
+        for (const cVinc of cursosVinculados) {
+            const cVincNorm = cVinc.trim().toUpperCase();
+            let clasesVinc = [];
+            if (semanaActiva.clases_por_curso && Array.isArray(semanaActiva.clases_por_curso[cVincNorm])) {
+                clasesVinc = semanaActiva.clases_por_curso[cVincNorm];
+            } else if (Array.isArray(semanaActiva.clases)) {
+                const deVinc = semanaActiva.clases.filter(cl => (cl.curso || '').trim().toUpperCase() === cVincNorm);
+                if (deVinc.length > 0) {
+                    clasesVinc = deVinc;
+                } else if (normalizar(cVinc) === normalizar(planDet.curso)) {
+                    clasesVinc = semanaActiva.clases;
+                }
+            }
+
+            // También buscar en otros planes del año si cVinc tuviera su propia planificación
+            if (clasesVinc.length === 0) {
+                const otroPlanVinc = planesAnio.find(p => p.id !== planDet.id && normalizar(p.curso) === normalizar(cVinc) && matchAsignaturaCurricular(p.asignatura, grupo.asignatura, nivelC));
+                if (otroPlanVinc) {
+                    try {
+                        const otroDet = await obtenerPlanificacionDetalle(otroPlanVinc.id);
+                        if (otroDet && Array.isArray(otroDet.unidades) && otroDet.unidades[uIdx]) {
+                            const otraSem = (otroDet.unidades[uIdx].desglose_semanal || [])[sIdx];
+                            if (otraSem && Array.isArray(otraSem.clases)) {
+                                clasesVinc = otraSem.clases;
+                            }
+                        }
+                    } catch(e) {}
+                }
+            }
+
+            clasesVinc.forEach((cl, i) => {
+                const tieneContenido = (cl.actividades && cl.actividades.trim()) ||
+                                       (Array.isArray(cl.oas_tags) && cl.oas_tags.length > 0) ||
+                                       (Array.isArray(cl.indicadores_tags) && cl.indicadores_tags.length > 0) ||
+                                       (cl.recursos && cl.recursos.trim()) ||
+                                       (cl.dua && cl.dua.trim());
+                if (tieneContenido) {
+                    clasesCursosVinculados.push({
+                        curso: cVinc,
+                        numero: cl.numero || (i + 1),
+                        dia: cl.dia || '',
+                        label: cl.label || `Clase ${cl.numero || (i + 1)}${cl.dia ? ' (' + cl.dia + ')' : ''}`,
+                        actividades: cl.actividades || '',
+                        oas_tags: Array.isArray(cl.oas_tags) ? cl.oas_tags : [],
+                        habilidades_tags: Array.isArray(cl.habilidades_tags) ? cl.habilidades_tags : [],
+                        indicadores_tags: Array.isArray(cl.indicadores_tags) ? cl.indicadores_tags : [],
+                        recursos: cl.recursos || '',
+                        dua: cl.dua || ''
+                    });
+                }
+            });
+        }
 
         const sesionesVinculadas = grupo.sesionesHorario.map((sh, idx) => {
             const diaNorm = sh.dia.toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '');
@@ -3981,7 +4071,11 @@ async function obtenerPlanificadorSemanalDocente(usuario = {}, fechaStr = '', an
                 actividades: (cMatch && typeof cMatch.actividades === 'string') ? cMatch.actividades : '',
                 recursos: (cMatch && typeof cMatch.recursos === 'string' && cMatch.recursos) ? cMatch.recursos : (semanaActiva.recursos || ''),
                 dua: (cMatch && typeof cMatch.dua === 'string' && cMatch.dua) ? cMatch.dua : (semanaActiva.dua_adecuaciones || ''),
-                semanaAnterior: datosSemanaAnterior
+                semanaAnterior: datosSemanaAnterior,
+                clasesVinculadas: clasesCursosVinculados,
+                claseVinculadaSugerida: clasesCursosVinculados.find(cv => cv.numero === sh.numero) ||
+                                        clasesCursosVinculados[idx] ||
+                                        (clasesCursosVinculados.length === 1 ? clasesCursosVinculados[0] : null)
             };
         });
 
@@ -4008,6 +4102,10 @@ async function obtenerPlanificadorSemanalDocente(usuario = {}, fechaStr = '', an
             poolIndicadoresUnidad,
             evaluacionesSemana,
             hitosSemana,
+            cursosVinculados,
+            esCursoVinculado: normalizar(planDet.curso) !== normalizar(grupo.curso),
+            cursoPrincipalPlan: planDet.curso,
+            clasesCursosVinculados,
             sesiones: sesionesVinculadas
         });
     }
@@ -4028,7 +4126,7 @@ async function obtenerPlanificadorSemanalDocente(usuario = {}, fechaStr = '', an
  * sincronizándolos directamente en planificaciones_unidades.desglose_semanal
  */
 async function guardarSesionPlanificadorSemanal(usuario = {}, payload = {}) {
-    const { planId, unidadId, semanaIndex, oas_semana, sesiones } = payload;
+    const { planId, unidadId, semanaIndex, oas_semana, sesiones, curso } = payload;
     if (!planId || !unidadId) {
         throw new Error('Faltan identificadores de planificación o unidad (planId, unidadId).');
     }
@@ -4080,9 +4178,12 @@ async function guardarSesionPlanificadorSemanal(usuario = {}, payload = {}) {
     sem.oas_semana = Array.from(oasSet);
     sem.actividades_formativas = sem.oas_semana.join(', ');
 
+    sem.clases_por_curso = sem.clases_por_curso || {};
     if (Array.isArray(sesiones)) {
-        sem.clases = sesiones.map((ses, i) => ({
+        const cursoNorm = (curso || '').trim().toUpperCase();
+        const nuevasClases = sesiones.map((ses, i) => ({
             numero: ses.numero || (i + 1),
+            curso: cursoNorm || ses.curso || '',
             dia: ses.dia || 'Lunes',
             duracion: ses.duracion || 45,
             label: ses.label || `Clase ${ses.numero || (i + 1)}`,
@@ -4093,6 +4194,21 @@ async function guardarSesionPlanificadorSemanal(usuario = {}, payload = {}) {
             recursos: typeof ses.recursos === 'string' ? ses.recursos : '',
             dua: typeof ses.dua === 'string' ? ses.dua : ''
         }));
+
+        if (cursoNorm) {
+            sem.clases_por_curso[cursoNorm] = nuevasClases;
+        }
+
+        let clasesExistentes = Array.isArray(sem.clases) ? sem.clases : [];
+        if (cursoNorm) {
+            clasesExistentes = clasesExistentes.filter(c => {
+                const cCur = (c.curso || '').trim().toUpperCase();
+                return cCur && cCur !== cursoNorm;
+            });
+            sem.clases = [...clasesExistentes, ...nuevasClases];
+        } else {
+            sem.clases = nuevasClases;
+        }
     }
 
     await queryRun(`
