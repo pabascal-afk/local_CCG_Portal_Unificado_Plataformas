@@ -28,8 +28,19 @@ IF EXIST ".git" (
     echo [INFO] Detectado como repositorio existente.
     echo [INFO] Deteniendo servidor actual en puerto 9000 si estaba encendido...
     powershell -NoProfile -Command "Get-NetTCPConnection -LocalPort 9000 -ErrorAction SilentlyContinue | Select-Object -ExpandProperty OwningProcess | ForEach-Object { Stop-Process -Id $_ -Force -ErrorAction SilentlyContinue }" >nul 2>&1
+    del /F /Q "Gestor_Servidores_CCG.exe.old*" >nul 2>&1
+    del /F /Q "ccg.exe.old*" >nul 2>&1
+    del /F /Q "Lanzador_Plataforma.exe.old*" >nul 2>&1
+    if exist "Gestor_Servidores_CCG.exe" move /Y "Gestor_Servidores_CCG.exe" "Gestor_Servidores_CCG.exe.old" >nul 2>&1
+    if exist "ccg.exe" move /Y "ccg.exe" "ccg.exe.old" >nul 2>&1
+    if exist "Lanzador_Plataforma.exe" move /Y "Lanzador_Plataforma.exe" "Lanzador_Plataforma.exe.old" >nul 2>&1
     echo [INFO] Obteniendo actualizaciones de GitHub...
-    git pull origin main
+    git config --global http.sslVerify false >nul 2>&1
+    git remote set-url origin https://github.com/pabascal-afk/local_CCG_Portal_Unificado_Plataformas.git >nul 2>&1
+    git config remote.origin.fetch "+refs/heads/*:refs/remotes/origin/*" >nul 2>&1
+    git fetch origin +refs/heads/main:refs/remotes/origin/main
+    git checkout -B main origin/main
+    git reset --hard origin/main
 ) ELSE (
     echo [INFO] Iniciando instalacion por primera vez...
     echo [INFO] Clonando repositorio desde GitHub...
@@ -64,6 +75,7 @@ IF EXIST "ServerManager.cs" (
     IF EXIST "C:\Windows\Microsoft.NET\Framework64\v4.0.30319\csc.exe" (
         echo [EXTRA] Actualizando ejecutable Gestor_Servidores_CCG.exe...
         "C:\Windows\Microsoft.NET\Framework64\v4.0.30319\csc.exe" /nologo /target:winexe /out:"Gestor_Servidores_CCG.exe" /win32icon:"app.ico" /r:System.dll /r:System.Drawing.dll /r:System.Windows.Forms.dll /r:System.Net.Http.dll /r:System.Core.dll ServerManager.cs >nul 2>&1
+        copy /y "Gestor_Servidores_CCG.exe" "ccg.exe" >nul 2>&1
     )
 )
 

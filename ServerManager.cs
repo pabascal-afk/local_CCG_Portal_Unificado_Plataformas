@@ -61,6 +61,7 @@ namespace CCGServerManager
         public int MainPort;
         public int BackendPort;
         public string RepoUrl;
+        public string GitBranch;
         public bool IsNextJs;
         public string EntryScript;
         public string FolderPath;
@@ -163,6 +164,7 @@ namespace CCGServerManager
                 MainPort = 3300,
                 BackendPort = 3001,
                 RepoUrl = "https://github.com/pabascal-afk/local_CCG_Plataforma_Ensayos.git",
+                GitBranch = "main",
                 IsNextJs = true,
                 EntryScript = "server.js",
                 FolderPath = defaultSimce,
@@ -179,6 +181,7 @@ namespace CCGServerManager
                 MainPort = 3600,
                 BackendPort = 3601,
                 RepoUrl = "https://github.com/pabascal-afk/local_CCG_Plataforma_Ensayos.git",
+                GitBranch = "pruebas-ccg",
                 IsNextJs = true,
                 EntryScript = "server.js",
                 FolderPath = defaultPruebas,
@@ -195,6 +198,7 @@ namespace CCGServerManager
                 MainPort = 9000,
                 BackendPort = 0,
                 RepoUrl = "https://github.com/pabascal-afk/local_CCG_Portal_Unificado_Plataformas.git",
+                GitBranch = "main",
                 IsNextJs = false,
                 EntryScript = "server\\index.js",
                 FolderPath = defaultUnified,
@@ -211,6 +215,7 @@ namespace CCGServerManager
                 MainPort = 3000,
                 BackendPort = 0,
                 RepoUrl = "https://github.com/pabascal-afk/labdeskUbuntu.git",
+                GitBranch = "main",
                 IsNextJs = false,
                 EntryScript = "server\\src\\index.js",
                 FolderPath = defaultLabdesk,
@@ -242,7 +247,7 @@ namespace CCGServerManager
                 }
             }
 
-            // 3. Check Desktop, Documents\antigravity, Documents, Documents\New folder, parentDir\New folder
+            // 3. Check Desktop, Documents\GitHub, Documents\antigravity, Documents, Documents\New folder, parentDir\New folder
             string desktop = Environment.GetFolderPath(Environment.SpecialFolder.Desktop);
             string myDocs = Environment.GetFolderPath(Environment.SpecialFolder.MyDocuments);
             string userProfile = Environment.GetFolderPath(Environment.SpecialFolder.UserProfile);
@@ -251,6 +256,7 @@ namespace CCGServerManager
             if (!string.IsNullOrEmpty(desktop)) candidateRoots.Add(desktop);
             if (!string.IsNullOrEmpty(myDocs))
             {
+                candidateRoots.Add(Path.Combine(myDocs, "GitHub"));
                 candidateRoots.Add(Path.Combine(myDocs, "antigravity"));
                 candidateRoots.Add(myDocs);
                 candidateRoots.Add(Path.Combine(myDocs, "New folder"));
@@ -270,6 +276,7 @@ namespace CCGServerManager
             }
             if (!string.IsNullOrEmpty(userProfile))
             {
+                candidateRoots.Add(Path.Combine(userProfile, "Documents", "GitHub"));
                 candidateRoots.Add(Path.Combine(userProfile, "Documents", "New folder"));
                 candidateRoots.Add(Path.Combine(userProfile, "New folder"));
             }
@@ -314,7 +321,10 @@ namespace CCGServerManager
                     {
                         if (string.Equals(key, s.Id + "_PATH", StringComparison.OrdinalIgnoreCase))
                         {
-                            s.FolderPath = val;
+                            if (Directory.Exists(val) || !Directory.Exists(s.FolderPath))
+                            {
+                                s.FolderPath = val;
+                            }
                         }
                     }
                 }
@@ -1199,6 +1209,10 @@ namespace CCGServerManager
                     };
 
                     psi.EnvironmentVariables["PORT"] = srv.MainPort.ToString();
+                    if (srv.Id == "PRUEBAS")
+                    {
+                        psi.EnvironmentVariables["APP_MODE"] = "PRUEBAS";
+                    }
                     if (srv.BackendPort > 0)
                     {
                         psi.EnvironmentVariables["BACKEND_PORT"] = srv.BackendPort.ToString();
@@ -1369,6 +1383,10 @@ namespace CCGServerManager
             AppendLog(generalLogBox, string.Format("   Carpeta destino: {0}", srv.FolderPath));
             AppendLog(generalLogBox, "----------------------------------------------------------------------");
 
+            bool gitOk = true;
+            bool buildOk = true;
+            string syncedBranch = !string.IsNullOrEmpty(srv.GitBranch) ? srv.GitBranch : (srv.Id == "PRUEBAS" ? "pruebas-ccg" : "main");
+
             await Task.Run(() =>
             {
                 try
@@ -1384,7 +1402,7 @@ namespace CCGServerManager
                     srv.BusyText = "DESCARGANDO GITHUB (GIT PULL)...";
                     this.BeginInvoke((Action)UpdateAllStatuses);
 
-                    string targetBranch = srv.Id == "PRUEBAS" ? "pruebas-ccg" : "main";
+                    string targetBranch = syncedBranch;
                     string gitBin = ResolveGitExecutable();
                     if (gitBin != "git")
                     {
@@ -1395,11 +1413,44 @@ namespace CCGServerManager
                     {
                         if (!string.IsNullOrEmpty(srv.RepoUrl))
                         {
-                            AppendLog(generalLogBox, string.Format("[2/4] Carpeta no inicializada con Git. Clonando repositorio (rama {0})...", targetBranch));
-                            Directory.CreateDirectory(srv.FolderPath);
-                            RunCommandWithLogs(gitBin, "config --global http.sslVerify false", srv.FolderPath, generalLogBox);
-                            string cloneArgs = string.Format("clone -b {0} {1} \"{2}\"", targetBranch, srv.RepoUrl, srv.FolderPath);
-                            RunCommandWithLogs(gitBin, cloneArgs, Path.GetDirectoryName(srv.FolderPath), generalLogBox);
+                            bool hasExistingFiles = Directory.Exists(srv.FolderPath) && Directory.GetFileSystemEntries(srv.FolderPath).Length > 0;
+                            RunCommandWithLogs(gitBin, "config --global http.sslVerify false", AppDomain.CurrentDomain.BaseDirectory, generalLogBox);
+
+                            if (hasExistingFiles)
+                            {
+                                AppendLog(generalLogBox, string.Format("[2/4] Carpeta existente sin .git detectada. Vinculando con GitHub (rama {0})...", targetBranch));
+                                RunCommandWithLogs(gitBin, "init", srv.FolderPath, generalLogBox);
+                                int setUrlCode = RunCommandWithLogs(gitBin, string.Format("remote set-url origin \"{0}\"", srv.RepoUrl), srv.FolderPath, generalLogBox);
+                                if (setUrlCode != 0)
+                                {
+                                    RunCommandWithLogs(gitBin, string.Format("remote add origin \"{0}\"", srv.RepoUrl), srv.FolderPath, generalLogBox);
+                                }
+                                RunCommandWithLogs(gitBin, "config http.sslVerify false", srv.FolderPath, generalLogBox);
+                                RunCommandWithLogs(gitBin, "config remote.origin.fetch \"+refs/heads/*:refs/remotes/origin/*\"", srv.FolderPath, generalLogBox);
+                                string fetchRefspec = string.Format("fetch origin +refs/heads/{0}:refs/remotes/origin/{0}", targetBranch);
+                                int fetchCode = RunCommandWithLogs(gitBin, fetchRefspec, srv.FolderPath, generalLogBox);
+                                if (fetchCode == 0)
+                                {
+                                    UnlockManagerExeBeforeGit(srv.FolderPath);
+                                    int checkoutCode = RunCommandWithLogs(gitBin, string.Format("checkout -B {0} -f origin/{0}", targetBranch), srv.FolderPath, generalLogBox);
+                                    int resetCode = RunCommandWithLogs(gitBin, string.Format("reset --hard origin/{0}", targetBranch), srv.FolderPath, generalLogBox);
+                                    gitOk = (checkoutCode == 0 && resetCode == 0);
+                                }
+                                else
+                                {
+                                    gitOk = false;
+                                }
+                            }
+                            else
+                            {
+                                AppendLog(generalLogBox, string.Format("[2/4] Carpeta no inicializada con Git. Clonando repositorio (rama {0})...", targetBranch));
+                                string parentDir = Path.GetDirectoryName(srv.FolderPath);
+                                if (string.IsNullOrEmpty(parentDir)) parentDir = AppDomain.CurrentDomain.BaseDirectory;
+                                Directory.CreateDirectory(parentDir);
+                                string cloneArgs = string.Format("clone -b {0} \"{1}\" \"{2}\"", targetBranch, srv.RepoUrl, srv.FolderPath);
+                                int cloneCode = RunCommandWithLogs(gitBin, cloneArgs, parentDir, generalLogBox);
+                                gitOk = (cloneCode == 0);
+                            }
                         }
                         else
                         {
@@ -1411,13 +1462,37 @@ namespace CCGServerManager
                         AppendLog(generalLogBox, string.Format("[2/4] Descargando últimos cambios desde GitHub (origin/{0})...", targetBranch));
                         UnlockManagerExeBeforeGit(srv.FolderPath);
                         RunCommandWithLogs(gitBin, "config http.sslVerify false", srv.FolderPath, generalLogBox);
-                        RunCommandWithLogs(gitBin, "fetch origin " + targetBranch, srv.FolderPath, generalLogBox);
-                        RunCommandWithLogs(gitBin, "checkout -B " + targetBranch + " origin/" + targetBranch, srv.FolderPath, generalLogBox);
-                        int resetCode = RunCommandWithLogs(gitBin, "reset --hard origin/" + targetBranch, srv.FolderPath, generalLogBox);
-                        if (resetCode != 0)
+                        if (!string.IsNullOrEmpty(srv.RepoUrl))
                         {
-                            UnlockManagerExeBeforeGit(srv.FolderPath);
-                            RunCommandWithLogs(gitBin, "checkout -f origin/" + targetBranch, srv.FolderPath, generalLogBox);
+                            int setUrlCode = RunCommandWithLogs(gitBin, string.Format("remote set-url origin \"{0}\"", srv.RepoUrl), srv.FolderPath, generalLogBox);
+                            if (setUrlCode != 0)
+                            {
+                                RunCommandWithLogs(gitBin, string.Format("remote add origin \"{0}\"", srv.RepoUrl), srv.FolderPath, generalLogBox);
+                            }
+                        }
+                        RunCommandWithLogs(gitBin, "config remote.origin.fetch \"+refs/heads/*:refs/remotes/origin/*\"", srv.FolderPath, generalLogBox);
+                        string fetchRefspec = string.Format("fetch origin +refs/heads/{0}:refs/remotes/origin/{0}", targetBranch);
+                        int fetchCode = RunCommandWithLogs(gitBin, fetchRefspec, srv.FolderPath, generalLogBox);
+                        if (fetchCode != 0)
+                        {
+                            AppendLog(generalLogBox, string.Format("❌ [ERROR GIT FETCH] No se pudo descargar origin/{0} (código {1}).", targetBranch, fetchCode));
+                            gitOk = false;
+                        }
+                        else
+                        {
+                            int checkoutCode = RunCommandWithLogs(gitBin, string.Format("checkout -B {0} origin/{0}", targetBranch), srv.FolderPath, generalLogBox);
+                            int resetCode = RunCommandWithLogs(gitBin, string.Format("reset --hard origin/{0}", targetBranch), srv.FolderPath, generalLogBox);
+                            if (checkoutCode != 0 || resetCode != 0)
+                            {
+                                UnlockManagerExeBeforeGit(srv.FolderPath);
+                                checkoutCode = RunCommandWithLogs(gitBin, string.Format("checkout -B {0} -f origin/{0}", targetBranch), srv.FolderPath, generalLogBox);
+                                resetCode = RunCommandWithLogs(gitBin, string.Format("reset --hard origin/{0}", targetBranch), srv.FolderPath, generalLogBox);
+                            }
+                            if (checkoutCode != 0 || resetCode != 0)
+                            {
+                                AppendLog(generalLogBox, string.Format("❌ [ERROR GIT RESET] No se pudo sincronizar con origin/{0}.", targetBranch));
+                                gitOk = false;
+                            }
                         }
                     }
 
@@ -1481,14 +1556,19 @@ namespace CCGServerManager
                             { "API_INTERNAL_URL", "http://127.0.0.1:" + srv.BackendPort.ToString() },
                             { "NEXT_TELEMETRY_DISABLED", "1" }
                         };
+                        if (srv.Id == "PRUEBAS")
+                        {
+                            buildEnv["APP_MODE"] = "PRUEBAS";
+                        }
 
                         int buildCode = RunCommandWithLogs("node", "\"" + nextBin + "\" build", frontendDir, generalLogBox, buildEnv);
                         if (buildCode != 0)
                         {
                             AppendLog(generalLogBox, "[AVISO] Reintentando tras verificar npm install...");
                             RunCommandWithLogs("cmd.exe", "/c npm install --no-audit", frontendDir, generalLogBox);
-                            RunCommandWithLogs("node", "\"" + nextBin + "\" build", frontendDir, generalLogBox, buildEnv);
+                            buildCode = RunCommandWithLogs("node", "\"" + nextBin + "\" build", frontendDir, generalLogBox, buildEnv);
                         }
+                        buildOk = (buildCode == 0);
                     }
                     else
                     {
@@ -1515,6 +1595,7 @@ namespace CCGServerManager
                 }
                 catch (Exception ex)
                 {
+                    gitOk = false;
                     AppendLog(generalLogBox, "❌ [ERROR EN ACTUALIZACIÓN]: " + ex.Message);
                 }
             });
@@ -1529,7 +1610,14 @@ namespace CCGServerManager
             if (Directory.Exists(srv.FolderPath) && ResolveServiceExecution(srv, out postWorkingDir, out postEntryFull))
             {
                 await StartServiceAsync(srv);
-                AppendLog(generalLogBox, string.Format("✅ [ÉXITO] {0} actualizado y en línea en http://{1}:{2}", srv.Title, localIpAddress, srv.MainPort));
+                if (gitOk && buildOk)
+                {
+                    AppendLog(generalLogBox, string.Format("✅ [ÉXITO] {0} actualizado (rama {1}) y en línea en http://{2}:{3}", srv.Title, syncedBranch, localIpAddress, srv.MainPort));
+                }
+                else
+                {
+                    AppendLog(generalLogBox, string.Format("❌ [ACTUALIZACIÓN INCOMPLETA] {0} tuvo errores durante {1}. Revisa el registro arriba.", srv.Title, !gitOk ? "la descarga de GitHub" : "la compilación Next.js"));
+                }
             }
             else
             {
@@ -1541,19 +1629,27 @@ namespace CCGServerManager
         {
             try
             {
-                string[] exeNames = new string[] { "Gestor_Servidores_CCG.exe", "ccg.exe" };
+                foreach (string staleOld in Directory.GetFiles(folderPath, "*.exe.old*"))
+                {
+                    try { File.Delete(staleOld); } catch { }
+                }
+
+                string[] exeNames = new string[] { "Gestor_Servidores_CCG.exe", "ccg.exe", "Lanzador_Plataforma.exe" };
                 foreach (string exeName in exeNames)
                 {
                     string exePath = Path.Combine(folderPath, exeName);
+                    if (!File.Exists(exePath)) continue;
+
                     string oldPath = Path.Combine(folderPath, exeName + ".old");
                     if (File.Exists(oldPath))
                     {
                         try { File.Delete(oldPath); } catch { }
                     }
-                    if (File.Exists(exePath))
+                    if (File.Exists(oldPath))
                     {
-                        try { File.Move(exePath, oldPath); } catch { }
+                        oldPath = Path.Combine(folderPath, exeName + ".old." + DateTime.Now.Ticks);
                     }
+                    try { File.Move(exePath, oldPath); } catch { }
                 }
             }
             catch { }
@@ -1771,6 +1867,27 @@ namespace CCGServerManager
                         try
                         {
                             string gitBin = ResolveGitExecutable();
+                            string branchName = "";
+                            try
+                            {
+                                ProcessStartInfo psiBranch = new ProcessStartInfo
+                                {
+                                    FileName = gitBin,
+                                    Arguments = "rev-parse --abbrev-ref HEAD",
+                                    WorkingDirectory = srv.FolderPath,
+                                    UseShellExecute = false,
+                                    CreateNoWindow = true,
+                                    RedirectStandardOutput = true,
+                                    StandardOutputEncoding = Encoding.UTF8
+                                };
+                                using (Process pb = Process.Start(psiBranch))
+                                {
+                                    branchName = pb.StandardOutput.ReadToEnd().Trim();
+                                    pb.WaitForExit(1500);
+                                }
+                            }
+                            catch { }
+
                             ProcessStartInfo psi = new ProcessStartInfo
                             {
                                 FileName = gitBin,
@@ -1786,7 +1903,7 @@ namespace CCGServerManager
                                 string output = p.StandardOutput.ReadToEnd().Trim();
                                 p.WaitForExit(2500);
                                 if (!string.IsNullOrEmpty(output))
-                                    info = output;
+                                    info = (!string.IsNullOrEmpty(branchName) ? "[" + branchName + "] " : "") + output;
                                 else
                                     info = "Repositorio Git listo";
                             }
