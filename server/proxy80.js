@@ -5,10 +5,10 @@ const path = require('path');
 const { exec } = require('child_process');
 
 const DEFAULT_HOSTS = {
-  PRUEBAS: ['pruebasccg', 'pruebas-ccg', 'pruebas', 'prueba', 'puebasccg', 'evaluaciones', 'certamen', 'certamenes'],
-  SIMCE: ['simce', 'simceccg', 'simce-ccg', 'ensayos', 'ensayo', 'ensayossimce', 'ensayos-simce'],
-  LABDESK: ['labdesk', 'labdeskccg', 'labdesk-ccg', 'aula', 'botonera', 'laboratorio'],
-  UNIFIED: ['portal', 'portalccg', 'portal-ccg', 'unificado', 'unified', 'ccg', 'inicio', 'plataforma'],
+  PRUEBAS: ['pruebas', 'pruebas.ccg', 'pruebasccg', 'pruebas-ccg', 'prueba', 'puebasccg', 'evaluaciones', 'certamen', 'certamenes'],
+  SIMCE: ['simce', 'simce.ccg', 'simceccg', 'simce-ccg', 'ensayos', 'ensayo', 'ensayossimce', 'ensayos-simce'],
+  LABDESK: ['labdesk', 'labdesk.ccg', 'labdeskccg', 'labdesk-ccg', 'aula', 'botonera', 'laboratorio'],
+  UNIFIED: ['portal', 'portal.ccg', 'portalccg', 'portal-ccg', 'unificado', 'unified', 'ccg', 'inicio', 'plataforma'],
 };
 
 const SERVICE_META = {

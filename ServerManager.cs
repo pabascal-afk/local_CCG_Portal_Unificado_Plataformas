@@ -132,7 +132,7 @@ namespace CCGServerManager
                 AppendLog(generalLogBox, "======================================================================");
                 AppendLog(generalLogBox, "  CENTRO DE CONTROL DE SERVIDORES - COLEGIO CERRO GRANDE");
                 AppendLog(generalLogBox, "  IP Red Local Detectada: " + localIpAddress);
-                AppendLog(generalLogBox, "  Proxy Web Nombres LAN (:80): http://pruebasccg | simce | portal | labdesk");
+                AppendLog(generalLogBox, "  Proxy Web Nombres LAN (:80): http://pruebas.ccg | simce.ccg | portal.ccg | labdesk.ccg");
                 AppendLog(generalLogBox, "======================================================================");
 
                 RefreshAllGitCommits();
@@ -1117,7 +1117,7 @@ namespace CCGServerManager
                     bool proxyUp = IsPortListening(80);
                     if (proxyUp)
                     {
-                        lblProxyStatus.Text = "🟢 Proxy Nombres LAN (:80) ACTIVO   •   http://pruebasccg   |   http://simce   |   http://portal   |   http://labdesk";
+                        lblProxyStatus.Text = "🟢 Proxy Nombres LAN (:80) ACTIVO   •   http://pruebas.ccg   |   http://simce.ccg   |   http://portal.ccg   |   http://labdesk.ccg";
                         lblProxyStatus.ForeColor = Color.FromArgb(6, 95, 70);
                         btnToggleProxy.Text = "⏹ Detener Proxy :80";
                         btnToggleProxy.BackColor = Color.FromArgb(220, 38, 38);
@@ -1368,15 +1368,15 @@ namespace CCGServerManager
             string dnsBlock = string.Format(
                 "IP Servidor (Fixed IP en UniFi): {0}\r\n" +
                 "Registros DNS en UniFi UDM Pro (Settings > Policy Table / Routing > DNS):\r\n" +
-                "  • pruebasccg.<tu-sufijo>  ->  {0}   (Pruebas CCG :3600)\r\n" +
-                "  • simce.<tu-sufijo>       ->  {0}   (Ensayos SIMCE :3300)\r\n" +
-                "  • portal.<tu-sufijo>      ->  {0}   (Portal Unificado :9000)\r\n" +
-                "  • labdesk.<tu-sufijo>     ->  {0}   (LabDesk :3000)\r\n\r\n" +
+                "  • pruebas.<tu-sufijo>  ->  {0}   (Pruebas CCG :3600)\r\n" +
+                "  • simce.<tu-sufijo>    ->  {0}   (Ensayos SIMCE :3300)\r\n" +
+                "  • portal.<tu-sufijo>   ->  {0}   (Portal Unificado :9000)\r\n" +
+                "  • labdesk.<tu-sufijo>  ->  {0}   (LabDesk :3000)\r\n\r\n" +
                 "Ejemplo si pones Domain Name = 'ccg' en DHCP de tu red UniFi:\r\n" +
-                "  pruebasccg.ccg  -> {0}  (y los PCs resuelven 'http://pruebasccg' directo)\r\n" +
-                "  simce.ccg       -> {0}  (y los PCs resuelven 'http://simce' directo)\r\n" +
-                "  portal.ccg      -> {0}  (y los PCs resuelven 'http://portal' directo)\r\n" +
-                "  labdesk.ccg     -> {0}  (y los PCs resuelven 'http://labdesk' directo)",
+                "  pruebas.ccg  -> {0}  (también resuelve 'http://pruebas')\r\n" +
+                "  simce.ccg    -> {0}  (también resuelve 'http://simce')\r\n" +
+                "  portal.ccg   -> {0}  (también resuelve 'http://portal')\r\n" +
+                "  labdesk.ccg  -> {0}  (también resuelve 'http://labdesk')",
                 localIpAddress
             );
 
@@ -1417,7 +1417,7 @@ namespace CCGServerManager
                        "3. Settings > Routing / Policy Table > DNS > Create DNS Record (Tipo A) para cada nombre.\r\n" +
                        "   (Nota: asegúrate que DHCP DNS Server de la red esté en Auto apuntando al UDM Pro).\r\n" +
                        "4. Si quieres agregar nombres personalizados extra, agrégalos en ccg_servers_config.ini:\r\n" +
-                       "   PROXY_PRUEBAS_HOSTS=pruebasccg,evaluaciones"
+                       "   PROXY_PRUEBAS_HOSTS=pruebas.ccg,pruebas,evaluaciones"
             };
 
             Button btnCopy = CreateStyledButton("📋 Copiar datos DNS", Color.FromArgb(37, 99, 235), Color.White, 160, 32);
