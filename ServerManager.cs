@@ -101,6 +101,13 @@ namespace CCGServerManager
         private bool allowExit = false;
         private bool initialAutoStart = false;
 
+        private Process proxyProcess = null;
+        private bool proxyEnabled = true;
+        private bool proxyBusy = false;
+        private Dictionary<string, string> extraIniSettings = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase);
+        private Label lblProxyStatus;
+        private Button btnToggleProxy;
+
         private CheckBox chkStartup;
         private TabControl tabLogs;
         private RichTextBox generalLogBox;
@@ -125,6 +132,7 @@ namespace CCGServerManager
                 AppendLog(generalLogBox, "======================================================================");
                 AppendLog(generalLogBox, "  CENTRO DE CONTROL DE SERVIDORES - COLEGIO CERRO GRANDE");
                 AppendLog(generalLogBox, "  IP Red Local Detectada: " + localIpAddress);
+                AppendLog(generalLogBox, "  Proxy Web Nombres LAN (:80): http://pruebasccg | simce | portal | labdesk");
                 AppendLog(generalLogBox, "======================================================================");
 
                 RefreshAllGitCommits();
@@ -140,6 +148,10 @@ namespace CCGServerManager
                 {
                     AppendLog(generalLogBox, "[AUTOSTART] Inicio automático con Windows activado. Verificando y arrancando los 4 servidores...");
                     await StartAllServicesAsync();
+                }
+                else if (proxyEnabled && AnyServiceRunning() && !IsPortListening(80))
+                {
+                    await EnsureProxyStartedAsync();
                 }
             };
 
@@ -317,15 +329,28 @@ namespace CCGServerManager
                     string val = line.Substring(eq + 1).Trim();
                     if (string.IsNullOrEmpty(val)) continue;
 
+                    if (string.Equals(key, "PROXY_ENABLED", StringComparison.OrdinalIgnoreCase))
+                    {
+                        proxyEnabled = !string.Equals(val, "false", StringComparison.OrdinalIgnoreCase) && val != "0";
+                        continue;
+                    }
+
+                    bool matchedService = false;
                     foreach (ManagedService s in services)
                     {
                         if (string.Equals(key, s.Id + "_PATH", StringComparison.OrdinalIgnoreCase))
                         {
+                            matchedService = true;
                             if (Directory.Exists(val) || !Directory.Exists(s.FolderPath))
                             {
                                 s.FolderPath = val;
                             }
                         }
+                    }
+
+                    if (!matchedService)
+                    {
+                        extraIniSettings[key] = val;
                     }
                 }
             }
@@ -342,6 +367,11 @@ namespace CCGServerManager
                 {
                     sb.AppendLine(s.Id + "_PATH=" + s.FolderPath);
                 }
+                sb.AppendLine("PROXY_ENABLED=" + (proxyEnabled ? "true" : "false"));
+                foreach (KeyValuePair<string, string> kv in extraIniSettings)
+                {
+                    sb.AppendLine(kv.Key + "=" + kv.Value);
+                }
                 File.WriteAllText(configFilePath, sb.ToString(), Encoding.UTF8);
             }
             catch { }
@@ -350,8 +380,8 @@ namespace CCGServerManager
         private void BuildUserInterface()
         {
             this.Text = "Gestor Unificado de Servidores CCG • Colegio Cerro Grande";
-            this.Size = new Size(1360, 760);
-            this.MinimumSize = new Size(1180, 680);
+            this.Size = new Size(1360, 795);
+            this.MinimumSize = new Size(1180, 715);
             this.StartPosition = FormStartPosition.CenterScreen;
             this.BackColor = Color.FromArgb(241, 245, 249);
             this.Font = new Font("Segoe UI", 9F, FontStyle.Regular);
@@ -390,7 +420,7 @@ namespace CCGServerManager
 
             lblHeaderIp = new Label
             {
-                Text = string.Format("IP Servidor LAN: {0}   |   SIMCE (:3300) • PRUEBAS (:3600) • UNIFIED (:9000 + Túnel) • LABDESK (:3000)", localIpAddress),
+                Text = string.Format("IP Servidor LAN: {0}   |   SIMCE (:3300) • PRUEBAS (:3600) • UNIFIED (:9000 + Túnel) • LABDESK (:3000) • PROXY (:80)", localIpAddress),
                 ForeColor = Color.FromArgb(148, 163, 184),
                 Font = new Font("Segoe UI", 8.8F, FontStyle.Regular),
                 AutoSize = true,
@@ -457,6 +487,47 @@ namespace CCGServerManager
             subHeader.Controls.Add(lblTrayHint);
             subHeader.Controls.Add(chkStartup);
 
+            // 2.5 BAR FOR PORT 80 FRIENDLY DNS REVERSE PROXY (UDM PRO / LAN)
+            Panel proxyBar = new Panel
+            {
+                Dock = DockStyle.Top,
+                Height = 36,
+                BackColor = Color.FromArgb(238, 242, 255),
+                Padding = new Padding(18, 4, 18, 4)
+            };
+
+            lblProxyStatus = new Label
+            {
+                Text = "⚪ Proxy Web (:80): VERIFICANDO...",
+                Font = new Font("Segoe UI", 8.6F, FontStyle.Bold),
+                ForeColor = Color.FromArgb(30, 41, 59),
+                AutoSize = true,
+                Location = new Point(18, 9)
+            };
+
+            FlowLayoutPanel proxyActions = new FlowLayoutPanel
+            {
+                Dock = DockStyle.Right,
+                AutoSize = true,
+                FlowDirection = FlowDirection.LeftToRight,
+                WrapContents = false,
+                Padding = new Padding(0, 2, 0, 0),
+                BackColor = Color.Transparent
+            };
+
+            btnToggleProxy = CreateStyledButton("▶ Activar Proxy :80", Color.FromArgb(79, 70, 229), Color.White, 138, 25);
+            btnToggleProxy.Font = new Font("Segoe UI", 7.8F, FontStyle.Bold);
+            btnToggleProxy.Click += async (s, e) => await ToggleProxyAsync();
+
+            Button btnUnifiGuide = CreateStyledButton("🧭 Guía UDM Pro / Nombres", Color.FromArgb(51, 65, 85), Color.White, 170, 25);
+            btnUnifiGuide.Font = new Font("Segoe UI", 7.8F, FontStyle.Bold);
+            btnUnifiGuide.Click += (s, e) => ShowUniFiGuideDialog();
+
+            proxyActions.Controls.Add(btnToggleProxy);
+            proxyActions.Controls.Add(btnUnifiGuide);
+            proxyBar.Controls.Add(proxyActions);
+            proxyBar.Controls.Add(lblProxyStatus);
+
             // 3. CARDS CONTAINER (4 COLUMNS)
             TableLayoutPanel cardsGrid = new TableLayoutPanel
             {
@@ -511,6 +582,7 @@ namespace CCGServerManager
             // Add in docking order
             this.Controls.Add(logsContainer);
             this.Controls.Add(cardsGrid);
+            this.Controls.Add(proxyBar);
             this.Controls.Add(subHeader);
             this.Controls.Add(headerPanel);
         }
@@ -886,6 +958,7 @@ namespace CCGServerManager
             {
                 allowExit = true;
                 await StopAllServicesAsync();
+                await StopProxyAsync();
                 trayIcon.Visible = false;
                 Application.Exit();
             });
@@ -1029,6 +1102,35 @@ namespace CCGServerManager
                     srv.StatusBadge.ForeColor = Color.FromArgb(153, 27, 27);
                 }
             }
+
+            if (lblProxyStatus != null && btnToggleProxy != null)
+            {
+                if (proxyBusy)
+                {
+                    lblProxyStatus.Text = "🟡 Proxy Nombres LAN (:80): PROCESANDO...";
+                    lblProxyStatus.ForeColor = Color.FromArgb(180, 83, 9);
+                    btnToggleProxy.Enabled = false;
+                }
+                else
+                {
+                    btnToggleProxy.Enabled = true;
+                    bool proxyUp = IsPortListening(80);
+                    if (proxyUp)
+                    {
+                        lblProxyStatus.Text = "🟢 Proxy Nombres LAN (:80) ACTIVO   •   http://pruebasccg   |   http://simce   |   http://portal   |   http://labdesk";
+                        lblProxyStatus.ForeColor = Color.FromArgb(6, 95, 70);
+                        btnToggleProxy.Text = "⏹ Detener Proxy :80";
+                        btnToggleProxy.BackColor = Color.FromArgb(220, 38, 38);
+                    }
+                    else
+                    {
+                        lblProxyStatus.Text = "⚪ Proxy Nombres LAN (:80) DETENIDO   •   Entra sin puertos (:3600/:3300) al activarlo";
+                        lblProxyStatus.ForeColor = Color.FromArgb(71, 85, 105);
+                        btnToggleProxy.Text = "▶ Activar Proxy :80";
+                        btnToggleProxy.BackColor = Color.FromArgb(79, 70, 229);
+                    }
+                }
+            }
         }
 
         private async Task FetchExistingTunnelUrlAsync()
@@ -1065,6 +1167,10 @@ namespace CCGServerManager
 
         private async Task StartAllServicesAsync()
         {
+            if (proxyEnabled)
+            {
+                await EnsureProxyStartedAsync();
+            }
             foreach (ManagedService srv in services)
             {
                 if (!IsPortListening(srv.MainPort) && !srv.IsBusy)
@@ -1076,10 +1182,261 @@ namespace CCGServerManager
 
         private async Task StopAllServicesAsync()
         {
+            await StopProxyAsync();
             foreach (ManagedService srv in services)
             {
                 await StopServiceAsync(srv);
             }
+        }
+
+        private bool AnyServiceRunning()
+        {
+            foreach (ManagedService srv in services)
+            {
+                if (IsPortListening(srv.MainPort)) return true;
+            }
+            return false;
+        }
+
+        private string ResolveProxyScriptPath()
+        {
+            ManagedService unified = services.Find(s => s.Id == "UNIFIED");
+            if (unified != null && !string.IsNullOrEmpty(unified.FolderPath))
+            {
+                string cand1 = Path.Combine(unified.FolderPath, "server", "proxy80.js");
+                if (File.Exists(cand1)) return cand1;
+            }
+            string cand2 = Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "server", "proxy80.js");
+            if (File.Exists(cand2)) return cand2;
+            return null;
+        }
+
+        private bool IsCcgProxyHealthy()
+        {
+            try
+            {
+                HttpWebRequest req = (HttpWebRequest)WebRequest.Create("http://127.0.0.1/__ccg_proxy_health");
+                req.Method = "GET";
+                req.Timeout = 700;
+                using (HttpWebResponse resp = (HttpWebResponse)req.GetResponse())
+                using (StreamReader sr = new StreamReader(resp.GetResponseStream(), Encoding.UTF8))
+                {
+                    string body = sr.ReadToEnd();
+                    return body.IndexOf("ccg-proxy", StringComparison.OrdinalIgnoreCase) >= 0;
+                }
+            }
+            catch
+            {
+                return false;
+            }
+        }
+
+        private void StopProxySync()
+        {
+            if (proxyProcess != null)
+            {
+                try
+                {
+                    if (!proxyProcess.HasExited)
+                    {
+                        RunSilentCommand("taskkill", "/F /T /PID " + proxyProcess.Id);
+                    }
+                }
+                catch { }
+                proxyProcess = null;
+            }
+
+            if (IsPortListening(80) && IsCcgProxyHealthy())
+            {
+                KillProcessByPort(80);
+            }
+        }
+
+        private async Task StopProxyAsync()
+        {
+            if (proxyBusy) return;
+            proxyBusy = true;
+            UpdateAllStatuses();
+
+            await Task.Run(() =>
+            {
+                StopProxySync();
+                Thread.Sleep(300);
+            });
+
+            proxyBusy = false;
+            UpdateAllStatuses();
+            AppendLog(generalLogBox, "⏹ [PROXY :80] Proxy inverso de nombres LAN detenido.");
+        }
+
+        private async Task EnsureProxyStartedAsync()
+        {
+            if (proxyBusy) return;
+
+            string scriptPath = ResolveProxyScriptPath();
+            if (string.IsNullOrEmpty(scriptPath))
+            {
+                AppendLog(generalLogBox, "⚠️ [PROXY :80] No se encontró server\\proxy80.js. Actualiza Portal Unificado (UNIFIED) para habilitar nombres sin puerto.");
+                return;
+            }
+
+            if (IsPortListening(80))
+            {
+                if (IsCcgProxyHealthy())
+                {
+                    return;
+                }
+                AppendLog(generalLogBox, "⚠️ [PROXY :80] El puerto 80 ya está ocupado por otro programa en este PC. Las apps seguirán accesibles por su puerto (:3600, :3300, :9000, :3000).");
+                return;
+            }
+
+            proxyBusy = true;
+            UpdateAllStatuses();
+
+            await Task.Run(() =>
+            {
+                try
+                {
+                    ProcessStartInfo psi = new ProcessStartInfo
+                    {
+                        FileName = "node",
+                        Arguments = "\"" + scriptPath + "\"",
+                        WorkingDirectory = Path.GetDirectoryName(scriptPath),
+                        UseShellExecute = false,
+                        CreateNoWindow = true,
+                        RedirectStandardOutput = true,
+                        RedirectStandardError = true,
+                        StandardOutputEncoding = Encoding.UTF8,
+                        StandardErrorEncoding = Encoding.UTF8
+                    };
+                    psi.EnvironmentVariables["CCG_CONFIG_PATH"] = configFilePath;
+
+                    Process proc = new Process { StartInfo = psi, EnableRaisingEvents = true };
+                    proc.OutputDataReceived += (s, e) => { if (e.Data != null) AppendLog(generalLogBox, e.Data); };
+                    proc.ErrorDataReceived += (s, e) => { if (e.Data != null) AppendLog(generalLogBox, e.Data); };
+
+                    proc.Start();
+                    proc.BeginOutputReadLine();
+                    proc.BeginErrorReadLine();
+                    proxyProcess = proc;
+
+                    for (int i = 0; i < 10; i++)
+                    {
+                        Thread.Sleep(300);
+                        if (IsPortListening(80) || proc.HasExited) break;
+                    }
+                }
+                catch (Exception ex)
+                {
+                    AppendLog(generalLogBox, "❌ [PROXY :80] No se pudo iniciar: " + ex.Message);
+                }
+            });
+
+            proxyBusy = false;
+            UpdateAllStatuses();
+        }
+
+        private async Task ToggleProxyAsync()
+        {
+            if (proxyBusy) return;
+            if (IsPortListening(80))
+            {
+                if (!IsCcgProxyHealthy())
+                {
+                    MessageBox.Show(
+                        "El puerto 80 está siendo usado por otro programa externo a CCG en este equipo.\nCiérralo antes de activar el Proxy de Nombres CCG.",
+                        "Puerto 80 ocupado",
+                        MessageBoxButtons.OK,
+                        MessageBoxIcon.Warning
+                    );
+                    return;
+                }
+                proxyEnabled = false;
+                SaveConfig();
+                await StopProxyAsync();
+            }
+            else
+            {
+                proxyEnabled = true;
+                SaveConfig();
+                await EnsureProxyStartedAsync();
+            }
+        }
+
+        private void ShowUniFiGuideDialog()
+        {
+            string dnsBlock = string.Format(
+                "IP Servidor (Fixed IP en UniFi): {0}\r\n" +
+                "Registros DNS en UniFi UDM Pro (Settings > Policy Table / Routing > DNS):\r\n" +
+                "  • pruebasccg.<tu-sufijo>  ->  {0}   (Pruebas CCG :3600)\r\n" +
+                "  • simce.<tu-sufijo>       ->  {0}   (Ensayos SIMCE :3300)\r\n" +
+                "  • portal.<tu-sufijo>      ->  {0}   (Portal Unificado :9000)\r\n" +
+                "  • labdesk.<tu-sufijo>     ->  {0}   (LabDesk :3000)\r\n\r\n" +
+                "Ejemplo si pones Domain Name = 'ccg' en DHCP de tu red UniFi:\r\n" +
+                "  pruebasccg.ccg  -> {0}  (y los PCs resuelven 'http://pruebasccg' directo)\r\n" +
+                "  simce.ccg       -> {0}  (y los PCs resuelven 'http://simce' directo)\r\n" +
+                "  portal.ccg      -> {0}  (y los PCs resuelven 'http://portal' directo)\r\n" +
+                "  labdesk.ccg     -> {0}  (y los PCs resuelven 'http://labdesk' directo)",
+                localIpAddress
+            );
+
+            Form dlg = new Form
+            {
+                Text = "Guía Rápida UniFi UDM Pro + Nombres sin Puerto (:80)",
+                Size = new Size(650, 440),
+                StartPosition = FormStartPosition.CenterParent,
+                FormBorderStyle = FormBorderStyle.FixedDialog,
+                MaximizeBox = false,
+                MinimizeBox = false,
+                BackColor = Color.White,
+                Font = new Font("Segoe UI", 9F, FontStyle.Regular)
+            };
+
+            Label lblIntro = new Label
+            {
+                Text = "El Proxy Web (:80) enruta automáticamente cada nombre a su plataforma interna sin tener que escribir puertos (:3600, :3300, etc.).\n" +
+                       "Configura estos pasos 1 sola vez en tu UniFi UDM Pro para que toda la red resuelva los nombres:",
+                Location = new Point(16, 14),
+                Size = new Size(602, 42),
+                ForeColor = Color.FromArgb(30, 41, 59)
+            };
+
+            TextBox txtInfo = new TextBox
+            {
+                Multiline = true,
+                ReadOnly = true,
+                ScrollBars = ScrollBars.Vertical,
+                Font = new Font("Consolas", 9F, FontStyle.Regular),
+                BackColor = Color.FromArgb(248, 250, 252),
+                Location = new Point(16, 62),
+                Size = new Size(602, 260),
+                Text = dnsBlock + "\r\n\r\n" +
+                       "Pasos en UniFi Network (UDM Pro):\r\n" +
+                       "1. Client Devices > Selecciona este servidor > Settings > Fixed IP: " + localIpAddress + "\r\n" +
+                       "2. Settings > Networks > [Tu Red] > Manual > DHCP > Domain Name: ccg  (evita usar .local)\r\n" +
+                       "3. Settings > Routing / Policy Table > DNS > Create DNS Record (Tipo A) para cada nombre.\r\n" +
+                       "   (Nota: asegúrate que DHCP DNS Server de la red esté en Auto apuntando al UDM Pro).\r\n" +
+                       "4. Si quieres agregar nombres personalizados extra, agrégalos en ccg_servers_config.ini:\r\n" +
+                       "   PROXY_PRUEBAS_HOSTS=pruebasccg,evaluaciones"
+            };
+
+            Button btnCopy = CreateStyledButton("📋 Copiar datos DNS", Color.FromArgb(37, 99, 235), Color.White, 160, 32);
+            btnCopy.Location = new Point(16, 336);
+            btnCopy.Click += (s, e) =>
+            {
+                Clipboard.SetText(dnsBlock);
+                MessageBox.Show("Resumen DNS copiado al portapapeles.", "Copiado", MessageBoxButtons.OK, MessageBoxIcon.Information);
+            };
+
+            Button btnClose = CreateStyledButton("Cerrar", Color.FromArgb(71, 85, 105), Color.White, 100, 32);
+            btnClose.Location = new Point(518, 336);
+            btnClose.Click += (s, e) => dlg.Close();
+
+            dlg.Controls.Add(lblIntro);
+            dlg.Controls.Add(txtInfo);
+            dlg.Controls.Add(btnCopy);
+            dlg.Controls.Add(btnClose);
+            dlg.ShowDialog(this);
         }
 
         private async Task UpdateAllServicesAsync()
@@ -1257,6 +1614,11 @@ namespace CCGServerManager
 
             srv.IsBusy = false;
             UpdateAllStatuses();
+
+            if (proxyEnabled && !IsPortListening(80))
+            {
+                await EnsureProxyStartedAsync();
+            }
         }
 
         private void CheckForTunnelUrl(ManagedService srv, string line)
@@ -1396,6 +1758,10 @@ namespace CCGServerManager
                     this.BeginInvoke((Action)UpdateAllStatuses);
                     AppendLog(generalLogBox, string.Format("[1/4] Deteniendo procesos previos en puerto :{0}...", srv.MainPort));
                     KillServiceProcesses(srv);
+                    if (srv.Id == "UNIFIED")
+                    {
+                        StopProxySync();
+                    }
                     Thread.Sleep(500);
 
                     // 2. Clone or Pull Git Repository
