@@ -1,0 +1,876 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Asistencia Diaria - Colegio Cerro Grande</title>
+  
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.1/font/bootstrap-icons.css">
+  <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+
+  <style>
+    :root {
+      --primary-color: #0284c7;
+      --primary-dark: #0369a1;
+      --bg-color: #f8fafc;
+      --card-bg: #ffffff;
+      --border-color: #e2e8f0;
+      --text-main: #1e293b;
+      --text-muted: #64748b;
+    }
+
+    body {
+      background-color: var(--bg-color);
+      color: var(--text-main);
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+      margin: 0;
+      padding: 0;
+    }
+
+    .card-custom {
+      background: var(--card-bg);
+      border: 1px solid var(--border-color);
+      border-radius: 12px;
+      box-shadow: 0 1px 3px rgba(0,0,0,0.02), 0 2px 6px rgba(0,0,0,0.03);
+    }
+
+    .kpi-card {
+      background: white;
+      border: 1px solid var(--border-color);
+      border-radius: 12px;
+      padding: 18px 20px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      transition: transform 0.15s ease, box-shadow 0.15s ease;
+    }
+    .kpi-card:hover {
+      transform: translateY(-2px);
+      box-shadow: 0 4px 12px rgba(0,0,0,0.05);
+    }
+    .kpi-icon {
+      width: 48px;
+      height: 48px;
+      border-radius: 10px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 1.4rem;
+    }
+    .kpi-num {
+      font-size: 1.65rem;
+      font-weight: 700;
+      line-height: 1.2;
+      color: var(--text-main);
+    }
+    .kpi-label {
+      font-size: 0.8rem;
+      color: var(--text-muted);
+      text-transform: uppercase;
+      font-weight: 600;
+      letter-spacing: 0.5px;
+    }
+
+    .progress-bar-custom {
+      height: 8px;
+      border-radius: 4px;
+      background-color: #e2e8f0;
+      overflow: hidden;
+    }
+    .progress-bar-fill {
+      height: 100%;
+      border-radius: 4px;
+      transition: width 0.4s ease;
+    }
+
+    .badge-pct-green { background-color: #dcfce7; color: #15803d; border: 1px solid #bbf7d0; font-weight: 700; }
+    .badge-pct-yellow { background-color: #fef9c3; color: #a16207; border: 1px solid #fef08a; font-weight: 700; }
+    .badge-pct-red { background-color: #fee2e2; color: #b91c1c; border: 1px solid #fecaca; font-weight: 700; }
+
+    .tag-ausente {
+      display: inline-block;
+      background-color: #f1f5f9;
+      color: #334155;
+      border: 1px solid #cbd5e1;
+      padding: 2px 7px;
+      border-radius: 4px;
+      font-size: 0.75rem;
+      margin-right: 4px;
+      margin-bottom: 4px;
+    }
+
+    .card-docente-bloque1 {
+      border: 2px solid #38bdf8;
+      background: linear-gradient(180deg, #f0f9ff 0%, #ffffff 100%);
+      border-radius: 12px;
+      padding: 20px;
+      margin-bottom: 24px;
+    }
+  </style>
+</head>
+<body>
+
+  <div class="container-fluid px-4 py-4">
+
+    <!-- CABECERA -->
+    <div class="d-flex flex-wrap justify-content-between align-items-center mb-4 pb-2 border-bottom">
+      <div>
+        <h3 class="fw-bold mb-1 d-flex align-items-center">
+          <i class="bi bi-person-check-fill text-primary me-2"></i> Asistencia Diaria del Establecimiento
+          <span class="badge bg-primary-subtle text-primary border border-primary-subtle fs-6 ms-3">
+            Sincronización Sheets
+          </span>
+        </h3>
+        <p class="text-secondary small mb-0">
+          Supervisión de asistencia por curso en tiempo real y resumen automático de las 12:00 PM para docentes de primer bloque.
+        </p>
+      </div>
+
+      <div class="d-flex flex-wrap gap-2 mt-3 mt-md-0 align-items-center">
+        <!-- Selector de Fecha -->
+        <div class="input-group input-group-sm" style="width: 170px;">
+          <span class="input-group-text bg-white"><i class="bi bi-calendar3"></i></span>
+          <input type="date" id="inputFecha" class="form-control" onchange="cargarAsistencia()">
+        </div>
+
+        <button class="btn btn-outline-secondary btn-sm" onclick="setFechaHoy()" title="Ir a hoy">
+          Hoy
+        </button>
+
+        <button class="btn btn-primary btn-sm fw-semibold shadow-sm" onclick="sincronizarGoogleSheets()" id="btnSincronizar" title="Descargar datos frescos de Google Sheets">
+          <i class="bi bi-cloud-arrow-down-fill me-1"></i> Sincronizar Sheets
+        </button>
+
+        <!-- Botones de Gestión (Admin) -->
+        <div class="dropdown d-none" id="dropdownAdmin">
+          <button class="btn btn-outline-dark btn-sm dropdown-toggle" type="button" data-bs-toggle="dropdown">
+            <i class="bi bi-gear-fill me-1"></i> Acciones
+          </button>
+          <ul class="dropdown-menu dropdown-menu-end shadow-sm">
+            <li>
+              <a class="dropdown-item" href="#" onclick="probarEnvioCorreos(false); return false;">
+                <i class="bi bi-envelope-check text-primary me-2"></i> Enviar Correos Bloque 1 (Pendientes)
+              </a>
+            </li>
+            <li>
+              <a class="dropdown-item" href="#" onclick="probarEnvioCorreos(true); return false;">
+                <i class="bi bi-envelope-paper-heart text-warning me-2"></i> Forzar Reenvío a Todos (Prueba)
+              </a>
+            </li>
+            <li>
+              <a class="dropdown-item" href="#" onclick="abrirModalLogs(); return false;">
+                <i class="bi bi-clock-history text-secondary me-2"></i> Ver Historial de Envíos
+              </a>
+            </li>
+            <li><hr class="dropdown-divider"></li>
+            <li>
+              <a class="dropdown-item" href="#" onclick="abrirModalSubirArchivo(); return false;">
+                <i class="bi bi-file-earmark-excel text-success me-2"></i> Subir Archivo Excel/CSV Manual
+              </a>
+            </li>
+            <li>
+              <a class="dropdown-item" href="#" onclick="abrirModalConfig(); return false;">
+                <i class="bi bi-sliders text-dark me-2"></i> Configuración Hoja de Cálculo
+              </a>
+            </li>
+          </ul>
+        </div>
+      </div>
+    </div>
+
+    <!-- TARJETAS DE INDICADORES (KPIS) -->
+    <div class="row g-3 mb-4">
+      <div class="col-sm-6 col-lg-3">
+        <div class="kpi-card">
+          <div>
+            <div class="kpi-label">Asistencia Promedio</div>
+            <div class="kpi-num text-primary" id="kpiPorcentaje">0.0%</div>
+            <small class="text-muted" id="kpiFechaText">Cargando fecha...</small>
+          </div>
+          <div class="kpi-icon bg-primary-subtle text-primary">
+            <i class="bi bi-percent"></i>
+          </div>
+        </div>
+      </div>
+
+      <div class="col-sm-6 col-lg-3">
+        <div class="kpi-card">
+          <div>
+            <div class="kpi-label">Alumnos Presentes</div>
+            <div class="kpi-num text-success" id="kpiPresentes">0</div>
+            <small class="text-muted" id="kpiMatriculaTotal">de 0 matriculados</small>
+          </div>
+          <div class="kpi-icon bg-success-subtle text-success">
+            <i class="bi bi-person-check"></i>
+          </div>
+        </div>
+      </div>
+
+      <div class="col-sm-6 col-lg-3">
+        <div class="kpi-card">
+          <div>
+            <div class="kpi-label">Alumnos Ausentes</div>
+            <div class="kpi-num text-danger" id="kpiAusentes">0</div>
+            <small class="text-muted">Inasistencias hoy</small>
+          </div>
+          <div class="kpi-icon bg-danger-subtle text-danger">
+            <i class="bi bi-person-x"></i>
+          </div>
+        </div>
+      </div>
+
+      <div class="col-sm-6 col-lg-3">
+        <div class="kpi-card">
+          <div>
+            <div class="kpi-label">Cursos Reportados</div>
+            <div class="kpi-num text-dark" id="kpiCursos">0</div>
+            <small class="text-muted" id="kpiOrigenText">Fuente: Google Sheets</small>
+          </div>
+          <div class="kpi-icon bg-info-subtle text-info">
+            <i class="bi bi-mortarboard"></i>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- SECCIÓN PERSONALIZADA PARA DOCENTE DE PRIMER BLOQUE -->
+    <div id="seccionDocenteBloque1" class="d-none">
+      <div class="card-docente-bloque1">
+        <div class="d-flex flex-wrap justify-content-between align-items-center mb-3">
+          <div class="d-flex align-items-center gap-2">
+            <span class="badge bg-primary fs-6"><i class="bi bi-alarm-fill me-1"></i> Primer Bloque (08:00 - 09:30)</span>
+            <h5 class="fw-bold text-dark mb-0">Tus Cursos Asignados Hoy</h5>
+          </div>
+          <span class="badge bg-info-subtle text-info border border-info-subtle" style="font-size: 0.8rem;">
+            <i class="bi bi-envelope-paper me-1"></i> Recibirás este resumen a las 12:00 PM a tu correo
+          </span>
+        </div>
+
+        <div class="row g-3" id="contenedorCursosDocente">
+          <!-- Tarjetas dinámicas inyectadas vía JS -->
+        </div>
+      </div>
+    </div>
+
+    <!-- TABLA GENERAL DE ASISTENCIA POR CURSO -->
+    <div class="card-custom overflow-hidden mb-4">
+      <div class="p-3 border-bottom bg-white d-flex flex-wrap justify-content-between align-items-center gap-3">
+        <div class="d-flex align-items-center gap-2">
+          <span class="fw-bold text-dark"><i class="bi bi-table text-primary me-1"></i> Detalle de Asistencia por Curso</span>
+          <span class="badge bg-light text-secondary border" id="badgeTotalTabla">0 cursos</span>
+        </div>
+
+        <div class="d-flex flex-wrap align-items-center gap-2">
+          <!-- Filtro rápido por texto -->
+          <div class="input-group input-group-sm" style="width: 220px;">
+            <span class="input-group-text bg-white"><i class="bi bi-search text-muted"></i></span>
+            <input type="text" id="filtroCurso" class="form-control" placeholder="Buscar curso..." oninput="filtrarTabla()">
+          </div>
+
+          <!-- Filtro por Nivel -->
+          <select id="filtroNivel" class="form-select form-select-sm" style="width: 160px;" onchange="filtrarTabla()">
+            <option value="todos">Todos los niveles</option>
+            <option value="basica">Enseñanza Básica</option>
+            <option value="media">Enseñanza Media</option>
+            <option value="critico">⚠️ Asistencia &lt; 85%</option>
+          </select>
+        </div>
+      </div>
+
+      <div class="table-responsive">
+        <table class="table table-hover align-middle mb-0" style="font-size: 0.9rem;">
+          <thead class="table-light text-secondary" style="font-size: 0.78rem; text-transform: uppercase; letter-spacing: 0.5px;">
+            <tr>
+              <th style="width: 220px;">Curso</th>
+              <th style="width: 110px;" class="text-center">Matrícula</th>
+              <th style="width: 110px;" class="text-center">Presentes</th>
+              <th style="width: 110px;" class="text-center">Ausentes</th>
+              <th style="width: 200px;">% Asistencia</th>
+              <th>Alumnos Ausentes (Detalle)</th>
+              <th style="width: 130px;" class="text-center">Actualizado</th>
+            </tr>
+          </thead>
+          <tbody id="tablaCursosBody">
+            <tr>
+              <td colspan="7" class="text-center py-5 text-secondary">
+                <div class="spinner-border text-primary spinner-border-sm me-2" role="status"></div>
+                Cargando datos de asistencia...
+              </td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+
+  </div>
+
+  <!-- MODAL CONFIGURACIÓN GOOGLE SHEETS -->
+  <div class="modal fade" id="modalConfig" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-lg">
+      <div class="modal-content card-custom">
+        <div class="modal-header border-bottom py-3">
+          <h5 class="modal-title fw-bold text-dark d-flex align-items-center">
+            <i class="bi bi-file-earmark-spreadsheet-fill text-success me-2"></i> Configuración de Hoja Google Sheets y Envíos
+          </h5>
+          <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+        </div>
+        <div class="modal-body p-4">
+          <div class="alert alert-info d-flex align-items-start gap-2 mb-3" style="font-size: 0.88rem;">
+            <i class="bi bi-info-circle-fill fs-5 mt-1"></i>
+            <div>
+              <strong>Requisito de acceso en Google Sheets:</strong><br>
+              Para que la plataforma pueda descargar la asistencia sin credenciales externas, en Google Sheets haz clic en <strong>Compartir</strong> > <strong>Acceso general</strong> y cámbialo a <strong>"Cualquier persona que tenga el vínculo (Lector)"</strong> o selecciona <em>Archivo > Compartir > Publicar en la web</em>.
+            </div>
+          </div>
+
+          <form id="formConfig" onsubmit="guardarConfig(event)">
+            <div class="mb-3">
+              <label class="form-label fw-semibold small">URL Completa de Google Sheets</label>
+              <input type="url" id="cfgUrl" class="form-control" required placeholder="https://docs.google.com/spreadsheets/d/.../edit#gid=...">
+              <small class="text-muted">Pega el link directo a la hoja de cálculo que usan diariamente.</small>
+            </div>
+
+            <div class="row g-3 mb-3">
+              <div class="col-md-6">
+                <label class="form-label fw-semibold small">GID de la Pestaña (Opcional)</label>
+                <input type="text" id="cfgGid" class="form-control" placeholder="1052336650">
+                <small class="text-muted">Si la URL ya incluye #gid=, se detectará automáticamente.</small>
+              </div>
+
+              <div class="col-md-6">
+                <label class="form-label fw-semibold small">Hora Programada de Envío de Resúmenes</label>
+                <input type="time" id="cfgHora" class="form-control" value="12:00">
+                <small class="text-muted">Hora local en Chile (por defecto 12:00 PM).</small>
+              </div>
+            </div>
+
+            <div class="form-check form-switch mb-4">
+              <input class="form-check-input" type="checkbox" id="cfgAuto" checked>
+              <label class="form-check-label fw-semibold" for="cfgAuto">
+                Activar envío automático diario a las 12:00 PM (Lunes a Viernes)
+              </label>
+            </div>
+
+            <div class="d-flex justify-content-end gap-2">
+              <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">Cancelar</button>
+              <button type="submit" class="btn btn-primary" id="btnGuardarConfig">
+                <i class="bi bi-check2-circle me-1"></i> Guardar y Sincronizar
+              </button>
+            </div>
+          </form>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- MODAL SUBIR ARCHIVO LOCAL MANUAL -->
+  <div class="modal fade" id="modalSubirArchivo" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog">
+      <div class="modal-content card-custom">
+        <div class="modal-header border-bottom py-3">
+          <h5 class="modal-title fw-bold text-dark d-flex align-items-center">
+            <i class="bi bi-upload text-primary me-2"></i> Carga Manual de Asistencia (Excel / CSV)
+          </h5>
+          <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+        </div>
+        <div class="modal-body p-4">
+          <form id="formSubir" onsubmit="subirArchivoManual(event)">
+            <div class="mb-3">
+              <label class="form-label fw-semibold small">Fecha a la que corresponde la asistencia</label>
+              <input type="date" id="subirFecha" class="form-control" required>
+            </div>
+
+            <div class="mb-4">
+              <label class="form-label fw-semibold small">Selecciona el archivo (.xlsx o .csv)</label>
+              <input type="file" id="subirInputFile" class="form-control" accept=".xlsx, .xls, .csv" required>
+              <small class="text-muted">Admite formatos consolidados por curso o listas individuales.</small>
+            </div>
+
+            <div class="d-flex justify-content-end gap-2">
+              <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">Cancelar</button>
+              <button type="submit" class="btn btn-success" id="btnSubirArchivo">
+                <i class="bi bi-file-earmark-arrow-up me-1"></i> Cargar Datos
+              </button>
+            </div>
+          </form>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- MODAL HISTORIAL DE ENVÍOS -->
+  <div class="modal fade" id="modalLogs" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-lg">
+      <div class="modal-content card-custom">
+        <div class="modal-header border-bottom py-3">
+          <h5 class="modal-title fw-bold text-dark d-flex align-items-center">
+            <i class="bi bi-clock-history text-secondary me-2"></i> Historial de Envíos de Resumen (12:00 PM)
+          </h5>
+          <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+        </div>
+        <div class="modal-body p-4">
+          <div class="table-responsive">
+            <table class="table table-sm table-hover align-middle mb-0" style="font-size: 0.85rem;">
+              <thead class="table-light text-secondary">
+                <tr>
+                  <th>Fecha</th>
+                  <th>Docente</th>
+                  <th>Correo</th>
+                  <th>Cursos</th>
+                  <th class="text-center">Estado</th>
+                  <th>Hora Envío</th>
+                </tr>
+              </thead>
+              <tbody id="tablaLogsEnviosBody">
+                <tr>
+                  <td colspan="6" class="text-center py-3 text-muted">Cargando registros...</td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Scripts -->
+  <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+
+  <script>
+    let asistenciaActual = null;
+    let modalConfigObj = null;
+    let modalSubirObj = null;
+    let modalLogsObj = null;
+
+    document.addEventListener('DOMContentLoaded', () => {
+      modalConfigObj = new bootstrap.Modal(document.getElementById('modalConfig'));
+      modalSubirObj = new bootstrap.Modal(document.getElementById('modalSubirArchivo'));
+      modalLogsObj = new bootstrap.Modal(document.getElementById('modalLogs'));
+
+      setFechaHoy();
+    });
+
+    function setFechaHoy() {
+      const hoy = new Date();
+      // Formato YYYY-MM-DD
+      const yyyy = hoy.getFullYear();
+      const mm = String(hoy.getMonth() + 1).padStart(2, '0');
+      const dd = String(hoy.getDate()).padStart(2, '0');
+      const fechaStr = `${yyyy}-${mm}-${dd}`;
+      document.getElementById('inputFecha').value = fechaStr;
+      cargarAsistencia();
+    }
+
+    async function cargarAsistencia() {
+      const fecha = document.getElementById('inputFecha').value;
+      if (!fecha) return;
+
+      const tbody = document.getElementById('tablaCursosBody');
+      tbody.innerHTML = `
+        <tr>
+          <td colspan="7" class="text-center py-4 text-secondary">
+            <div class="spinner-border text-primary spinner-border-sm me-2" role="status"></div>
+            Cargando asistencia para el ${fecha}...
+          </td>
+        </tr>
+      `;
+
+      try {
+        const res = await fetch(`/api/asistencia/hoy?fecha=${fecha}`);
+        if (!res.ok) throw new Error('Error al obtener datos de asistencia.');
+        const data = await res.json();
+        asistenciaActual = data;
+
+        // Mostrar controles de admin si corresponde
+        if (data.usuario_actual && data.usuario_actual.esAdmin) {
+          document.getElementById('dropdownAdmin').classList.remove('d-none');
+        }
+
+        renderizarKpis(data);
+        renderizarSeccionDocente(data);
+        renderizarTabla(data.cursos || []);
+      } catch (err) {
+        console.error(err);
+        tbody.innerHTML = `
+          <tr>
+            <td colspan="7" class="text-center py-4 text-danger">
+              <i class="bi bi-exclamation-triangle-fill fs-5 d-block mb-1"></i>
+              ${err.message}
+            </td>
+          </tr>
+        `;
+      }
+    }
+
+    function renderizarKpis(data) {
+      document.getElementById('kpiPorcentaje').innerText = `${data.porcentaje_global || 0}%`;
+      document.getElementById('kpiPresentes').innerText = Number(data.total_presentes || 0).toLocaleString('es-CL');
+      document.getElementById('kpiMatriculaTotal').innerText = `de ${Number(data.total_matricula || 0).toLocaleString('es-CL')} matriculados`;
+      document.getElementById('kpiAusentes').innerText = Number(data.total_ausentes || 0).toLocaleString('es-CL');
+      document.getElementById('kpiCursos').innerText = data.total_cursos || 0;
+      document.getElementById('kpiFechaText').innerText = `Fecha: ${data.fecha} (${data.dia_semana || ''})`;
+      document.getElementById('badgeTotalTabla').innerText = `${data.total_cursos || 0} cursos`;
+    }
+
+    function renderizarSeccionDocente(data) {
+      const cont = document.getElementById('seccionDocenteBloque1');
+      const inner = document.getElementById('contenedorCursosDocente');
+
+      if (!data.mis_cursos_bloque1 || data.mis_cursos_bloque1.length === 0) {
+        cont.classList.add('d-none');
+        return;
+      }
+
+      cont.classList.remove('d-none');
+      let html = '';
+      data.mis_cursos_bloque1.forEach(c => {
+        const pct = c.porcentaje || 0;
+        const colorClase = pct >= 90 ? 'bg-success' : (pct >= 80 ? 'bg-warning text-dark' : 'bg-danger');
+        
+        let ausentesHtml = '';
+        if (c.alumnos_ausentes && c.alumnos_ausentes.length > 0) {
+          ausentesHtml = `
+            <div class="mt-2">
+              <span class="small text-danger fw-semibold d-block mb-1">
+                <i class="bi bi-person-x-fill me-1"></i>Ausentes (${c.alumnos_ausentes.length}):
+              </span>
+              <div>
+                ${c.alumnos_ausentes.map(a => `<span class="tag-ausente">${a}</span>`).join('')}
+              </div>
+            </div>
+          `;
+        } else {
+          ausentesHtml = `
+            <div class="mt-2 small text-success fw-semibold">
+              <i class="bi bi-check-circle-fill me-1"></i>Sin alumnos ausentes reportados
+            </div>
+          `;
+        }
+
+        html += `
+          <div class="col-md-6 col-lg-4">
+            <div class="bg-white border rounded p-3 h-100 shadow-sm">
+              <div class="d-flex justify-content-between align-items-center mb-2">
+                <strong class="text-primary fs-6">${c.curso}</strong>
+                <span class="badge ${colorClase}">${pct}% Asist.</span>
+              </div>
+              <div class="small text-secondary mb-2">${c.asignatura || 'Primer Bloque'}</div>
+              <div class="d-flex justify-content-between small text-muted border-top pt-2">
+                <span>Matrícula: <strong>${c.matricula_total || 0}</strong></span>
+                <span class="text-success">Presentes: <strong>${c.presentes || 0}</strong></span>
+                <span class="text-danger">Ausentes: <strong>${c.ausentes || 0}</strong></span>
+              </div>
+              ${ausentesHtml}
+            </div>
+          </div>
+        `;
+      });
+      inner.innerHTML = html;
+    }
+
+    function renderizarTabla(cursos) {
+      const tbody = document.getElementById('tablaCursosBody');
+      if (!cursos || cursos.length === 0) {
+        tbody.innerHTML = `
+          <tr>
+            <td colspan="7" class="text-center py-5 text-secondary">
+              <i class="bi bi-folder-x fs-2 text-muted d-block mb-2"></i>
+              No se han registrado datos de asistencia para esta fecha.<br>
+              <small class="text-muted">Haz clic en <strong>Sincronizar Sheets</strong> o sube un archivo.</small>
+            </td>
+          </tr>
+        `;
+        return;
+      }
+
+      let html = '';
+      cursos.forEach(c => {
+        const pct = c.porcentaje || 0;
+        let badgeClase = 'badge-pct-green';
+        let barColor = '#16a34a';
+        if (pct < 80) { badgeClase = 'badge-pct-red'; barColor = '#dc2626'; }
+        else if (pct < 90) { badgeClase = 'badge-pct-yellow'; barColor = '#ca8a04'; }
+
+        // Renderizado de ausentes
+        let ausentesStr = '<span class="text-muted small">Ninguno</span>';
+        if (c.alumnos_ausentes && c.alumnos_ausentes.length > 0) {
+          const maxShow = 3;
+          const primeros = c.alumnos_ausentes.slice(0, maxShow).map(a => `<span class="tag-ausente">${a}</span>`).join('');
+          const resto = c.alumnos_ausentes.length > maxShow 
+            ? `<span class="badge bg-secondary-subtle text-secondary" title="${c.alumnos_ausentes.join(', ')}">+${c.alumnos_ausentes.length - maxShow} más</span>`
+            : '';
+          ausentesStr = `${primeros} ${resto}`;
+        }
+
+        const horaAct = c.actualizado_en ? c.actualizado_en.split(' ')[1] || '' : '';
+
+        html += `
+          <tr>
+            <td>
+              <strong class="text-dark">${c.curso}</strong>
+            </td>
+            <td class="text-center fw-semibold text-secondary">${c.matricula_total || 0}</td>
+            <td class="text-center fw-bold text-success">${c.presentes || 0}</td>
+            <td class="text-center fw-bold text-danger">${c.ausentes || 0}</td>
+            <td>
+              <div class="d-flex align-items-center gap-2">
+                <span class="badge ${badgeClase}" style="min-width: 48px;">${pct}%</span>
+                <div class="progress-bar-custom flex-grow-1">
+                  <div class="progress-bar-fill" style="width: ${pct}%; background-color: ${barColor};"></div>
+                </div>
+              </div>
+            </td>
+            <td>${ausentesStr}</td>
+            <td class="text-center small text-muted font-monospace">${horaAct}</td>
+          </tr>
+        `;
+      });
+
+      tbody.innerHTML = html;
+    }
+
+    function filtrarTabla() {
+      if (!asistenciaActual || !asistenciaActual.cursos) return;
+      const texto = document.getElementById('filtroCurso').value.toLowerCase().trim();
+      const nivel = document.getElementById('filtroNivel').value;
+
+      const filtrados = asistenciaActual.cursos.filter(c => {
+        const matchTexto = c.curso.toLowerCase().includes(texto);
+        if (!matchTexto) return false;
+
+        if (nivel === 'basica') return c.curso.toLowerCase().includes('básico') || c.curso.toLowerCase().includes('basico') || c.curso.toLowerCase().includes('kinder');
+        if (nivel === 'media') return c.curso.toLowerCase().includes('medio');
+        if (nivel === 'critico') return (c.porcentaje || 0) < 85;
+        return true;
+      });
+
+      renderizarTabla(filtrados);
+      document.getElementById('badgeTotalTabla').innerText = `${filtrados.length} cursos`;
+    }
+
+    // -------------------------------------------------------------
+    // Sincronización en Vivo desde Google Sheets
+    // -------------------------------------------------------------
+    async function sincronizarGoogleSheets() {
+      const btn = document.getElementById('btnSincronizar');
+      btn.disabled = true;
+      btn.innerHTML = '<span class="spinner-border spinner-border-sm me-1"></span> Sincronizando...';
+
+      const fecha = document.getElementById('inputFecha').value;
+
+      try {
+        const res = await fetch('/api/asistencia/sincronizar', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ fecha })
+        });
+        const data = await res.json();
+
+        if (!res.ok) {
+          throw new Error(data.error || 'Fallo al sincronizar con Google Sheets.');
+        }
+
+        Swal.fire({
+          icon: 'success',
+          title: 'Sincronización Exitosa',
+          text: `Se descargaron y actualizaron los datos de ${data.cursos_procesados} cursos desde Google Sheets.`,
+          timer: 2500,
+          showConfirmButton: false
+        });
+
+        cargarAsistencia();
+      } catch (err) {
+        Swal.fire({
+          icon: 'error',
+          title: 'No se pudo sincronizar',
+          html: `<div style="text-align: left; font-size: 0.9rem;">
+                  <p>${err.message}</p>
+                  <p class="text-muted small mb-0">Verifica que la hoja esté configurada en Google Drive como <strong>"Cualquiera con el enlace puede ver"</strong> o publicada en la web.</p>
+                 </div>`
+        });
+      } finally {
+        btn.disabled = false;
+        btn.innerHTML = '<i class="bi bi-cloud-arrow-down-fill me-1"></i> Sincronizar Sheets';
+      }
+    }
+
+    // -------------------------------------------------------------
+    // Envíos y Pruebas a Docentes de Bloque 1 (12:00 PM)
+    // -------------------------------------------------------------
+    async function probarEnvioCorreos(forzar = false) {
+      const fecha = document.getElementById('inputFecha').value;
+
+      const confirm = await Swal.fire({
+        title: forzar ? '¿Forzar reenvío de correos?' : '¿Enviar resumen a docentes de Bloque 1?',
+        html: `Esta acción enviará a los correos de los docentes que tuvieron clases en el primer bloque un reporte con la asistencia consolidada.<br><br><strong>Fecha de reporte:</strong> ${fecha}`,
+        icon: 'question',
+        showCancelButton: true,
+        confirmButtonText: 'Sí, enviar ahora',
+        cancelButtonText: 'Cancelar'
+      });
+
+      if (!confirm.isConfirmed) return;
+
+      Swal.fire({
+        title: 'Enviando correos...',
+        text: 'Generando reportes personalizados por docente...',
+        allowOutsideClick: false,
+        didOpen: () => Swal.showLoading()
+      });
+
+      try {
+        const res = await fetch('/api/asistencia/enviar-bloque1', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ fecha, forzar })
+        });
+        const data = await res.json();
+
+        if (!res.ok) throw new Error(data.error || 'Error al procesar el envío.');
+
+        Swal.fire({
+          icon: 'success',
+          title: 'Envíos Completados',
+          html: `<div style="font-size: 0.95rem;">
+                   <p><strong>${data.enviados}</strong> correos enviados exitosamente.</p>
+                   ${data.omitidos > 0 ? `<p class="text-muted small">${data.omitidos} omitidos (ya enviados o sin correo).</p>` : ''}
+                   ${data.errores > 0 ? `<p class="text-danger small">${data.errores} fallidos.</p>` : ''}
+                 </div>`
+        });
+      } catch (e) {
+        Swal.fire('Error', e.message, 'error');
+      }
+    }
+
+    // -------------------------------------------------------------
+    // Configuración de Hoja y Hora
+    // -------------------------------------------------------------
+    async function abrirModalConfig() {
+      try {
+        const res = await fetch('/api/asistencia/config');
+        const cfg = await res.json();
+
+        document.getElementById('cfgUrl').value = cfg.sheet_url || '';
+        document.getElementById('cfgGid').value = cfg.sheet_gid || '';
+        document.getElementById('cfgHora').value = cfg.hora_envio || '12:00';
+        document.getElementById('cfgAuto').checked = !!cfg.envio_automatico_activo;
+
+        modalConfigObj.show();
+      } catch (e) {
+        Swal.fire('Error', 'No se pudo cargar la configuración', 'error');
+      }
+    }
+
+    async function guardarConfig(e) {
+      e.preventDefault();
+      const btn = document.getElementById('btnGuardarConfig');
+      btn.disabled = true;
+
+      const payload = {
+        sheet_url: document.getElementById('cfgUrl').value.trim(),
+        sheet_gid: document.getElementById('cfgGid').value.trim(),
+        hora_envio: document.getElementById('cfgHora').value,
+        envio_automatico_activo: document.getElementById('cfgAuto').checked
+      };
+
+      try {
+        const res = await fetch('/api/asistencia/config', {
+          method: 'PUT',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(payload)
+        });
+        const data = await res.json();
+        if (!res.ok) throw new Error(data.error || 'Error al guardar.');
+
+        modalConfigObj.hide();
+        Swal.fire('Configuración Guardada', 'Se actualizó la configuración. Procediendo a sincronizar...', 'success');
+        sincronizarGoogleSheets();
+      } catch (err) {
+        Swal.fire('Error', err.message, 'error');
+      } finally {
+        btn.disabled = false;
+      }
+    }
+
+    // -------------------------------------------------------------
+    // Subir Archivo Manual
+    // -------------------------------------------------------------
+    function abrirModalSubirArchivo() {
+      document.getElementById('subirFecha').value = document.getElementById('inputFecha').value;
+      modalSubirObj.show();
+    }
+
+    async function subirArchivoManual(e) {
+      e.preventDefault();
+      const fileInput = document.getElementById('subirInputFile');
+      if (!fileInput.files || fileInput.files.length === 0) return;
+
+      const formData = new FormData();
+      formData.append('archivo', fileInput.files[0]);
+      formData.append('fecha', document.getElementById('subirFecha').value);
+
+      const btn = document.getElementById('btnSubirArchivo');
+      btn.disabled = true;
+      btn.innerHTML = '<span class="spinner-border spinner-border-sm me-1"></span> Procesando...';
+
+      try {
+        const res = await fetch('/api/asistencia/subir', {
+          method: 'POST',
+          body: formData
+        });
+        const data = await res.json();
+        if (!res.ok) throw new Error(data.error || 'Error al procesar el archivo.');
+
+        modalSubirObj.hide();
+        Swal.fire('Carga Exitosa', `Se procesaron ${data.cursos_procesados} cursos correctamente.`, 'success');
+        cargarAsistencia();
+      } catch (err) {
+        Swal.fire('Error', err.message, 'error');
+      } finally {
+        btn.disabled = false;
+        btn.innerHTML = '<i class="bi bi-file-earmark-arrow-up me-1"></i> Cargar Datos';
+      }
+    }
+
+    // -------------------------------------------------------------
+    // Logs de Envíos
+    // -------------------------------------------------------------
+    async function abrirModalLogs() {
+      modalLogsObj.show();
+      const tbody = document.getElementById('tablaLogsEnviosBody');
+      tbody.innerHTML = `<tr><td colspan="6" class="text-center py-3">Cargando historial...</td></tr>`;
+
+      try {
+        const res = await fetch('/api/asistencia/logs-envios');
+        const logs = await res.json();
+
+        if (!logs || logs.length === 0) {
+          tbody.innerHTML = `<tr><td colspan="6" class="text-center py-3 text-muted">Aún no hay registros de envíos.</td></tr>`;
+          return;
+        }
+
+        let html = '';
+        logs.forEach(l => {
+          const badge = l.estado === 'Enviado' 
+            ? '<span class="badge bg-success-subtle text-success">✓ Enviado</span>' 
+            : '<span class="badge bg-danger-subtle text-danger">✕ Fallido</span>';
+          html += `
+            <tr>
+              <td><strong>${l.fecha}</strong></td>
+              <td>${l.profesor_nombre || '-'}</td>
+              <td class="text-muted small">${l.profesor_email}</td>
+              <td class="small">${l.cursos || '-'}</td>
+              <td class="text-center">${badge}</td>
+              <td class="font-monospace small text-muted">${l.enviado_en || ''}</td>
+            </tr>
+          `;
+        });
+        tbody.innerHTML = html;
+      } catch (e) {
+        tbody.innerHTML = `<tr><td colspan="6" class="text-center py-3 text-danger">Error: ${e.message}</td></tr>`;
+      }
+    }
+  </script>
+</body>
+</html>

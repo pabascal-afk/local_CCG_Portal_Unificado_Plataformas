@@ -322,6 +322,10 @@
               <div><span class="badge bg-secondary" id="detRol">-</span></div>
             </div>
             <div class="col-md-6">
+              <label class="text-muted small fw-semibold">Desencadenado Por</label>
+              <div class="fw-semibold text-dark" id="detDesencadenado">-</div>
+            </div>
+            <div class="col-md-6">
               <label class="text-muted small fw-semibold">Dirección IP</label>
               <div class="font-monospace text-dark" id="detIp">-</div>
             </div>
@@ -474,6 +478,44 @@
         const badgeModulo = obtenerBadgeModulo(log.modulo);
         const badgeNivel = obtenerBadgeNivel(log.nivel);
         const nombreUsuario = log.usuario_nombre || (log.usuario_email ? log.usuario_email.split('@')[0] : 'Sistema');
+        const desencadenado = log.desencadenado_por || '';
+        const esSistema = (log.usuario_email === 'sistema@colegiocerrogrande.cl' || (log.usuario_nombre || '').toLowerCase().includes('sistema'));
+        const tieneTrigger = desencadenado && desencadenado !== 'Sistema (Automático)' && !desencadenado.toLowerCase().includes('sistema (auto');
+
+        let usuarioColHtml = '';
+        if (esSistema && tieneTrigger) {
+          usuarioColHtml = `
+            <div class="d-flex align-items-center">
+              <div class="avatar-sm rounded-circle bg-light border text-secondary fw-bold me-2 d-flex align-items-center justify-content-center" style="width: 32px; height: 32px; font-size: 0.85rem; flex-shrink: 0;" title="Ejecutado por la plataforma">
+                <i class="bi bi-cpu text-secondary"></i>
+              </div>
+              <div class="overflow-hidden">
+                <div class="fw-semibold text-dark text-truncate" title="${nombreUsuario}">${nombreUsuario}</div>
+                <div class="badge bg-primary-subtle text-primary border border-primary-subtle mt-0.5 text-truncate" style="font-size: 0.72rem; max-width: 190px;" title="Desencadenado por: ${desencadenado}">
+                  <i class="bi bi-person-fill me-1"></i>Por: ${desencadenado}
+                </div>
+              </div>
+            </div>
+          `;
+        } else {
+          usuarioColHtml = `
+            <div class="d-flex align-items-center">
+              <div class="avatar-sm rounded-circle bg-light border text-primary fw-bold me-2 d-flex align-items-center justify-content-center" style="width: 32px; height: 32px; font-size: 0.8rem; flex-shrink: 0;">
+                ${obtenerIniciales(nombreUsuario)}
+              </div>
+              <div class="overflow-hidden">
+                <div class="fw-semibold text-dark text-truncate" title="${nombreUsuario}">${nombreUsuario}</div>
+                <div class="text-muted small text-truncate" style="font-size: 0.75rem;" title="${log.usuario_email || 'sistema'}">
+                  ${log.usuario_email || 'sistema'}
+                </div>
+                ${(tieneTrigger && !desencadenado.includes(nombreUsuario)) ? `
+                  <div class="text-secondary small mt-0.5 text-truncate" style="font-size: 0.7rem;" title="Desencadenado por: ${desencadenado}">
+                    <i class="bi bi-play-circle me-1"></i>Por: ${desencadenado}
+                  </div>` : ''}
+              </div>
+            </div>
+          `;
+        }
 
         html += `
           <tr>
@@ -482,17 +524,7 @@
               <small class="text-muted font-monospace">${fechaFormateada.hora}</small>
             </td>
             <td>
-              <div class="d-flex align-items-center">
-                <div class="avatar-sm rounded-circle bg-light border text-primary fw-bold me-2 d-flex align-items-center justify-content-center" style="width: 32px; height: 32px; font-size: 0.8rem; flex-shrink: 0;">
-                  ${obtenerIniciales(nombreUsuario)}
-                </div>
-                <div class="overflow-hidden">
-                  <div class="fw-semibold text-dark text-truncate" title="${nombreUsuario}">${nombreUsuario}</div>
-                  <div class="text-muted small text-truncate" style="font-size: 0.75rem;" title="${log.usuario_email || 'sistema'}">
-                    ${log.usuario_email || 'sistema'}
-                  </div>
-                </div>
-              </div>
+              ${usuarioColHtml}
             </td>
             <td>${badgeModulo}</td>
             <td>
@@ -692,6 +724,7 @@
       document.getElementById('detUsuario').innerText = log.usuario_nombre || (log.usuario_email ? log.usuario_email.split('@')[0] : 'Sistema');
       document.getElementById('detEmail').innerText = log.usuario_email || 'Sin correo asociado';
       document.getElementById('detRol').innerText = log.usuario_rol || 'General';
+      document.getElementById('detDesencadenado').innerText = log.desencadenado_por || (log.usuario_email !== 'sistema@colegiocerrogrande.cl' ? `${log.usuario_nombre || ''} (${log.usuario_email || ''})`.trim() : 'Sistema (Automático)');
       document.getElementById('detIp').innerText = log.ip || '127.0.0.1 (Local)';
       document.getElementById('detEntidad').innerText = log.entidad ? `${log.entidad} (ID: ${log.entidad_id || '-'})` : 'N/A';
       document.getElementById('detDescripcion').innerText = log.descripcion || '-';

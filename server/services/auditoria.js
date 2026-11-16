@@ -4,6 +4,7 @@ const xlsx = require('xlsx');
 
 const dbPath = path.join(__dirname, '..', 'db', 'colegio.db');
 let db = null;
+const userCache = new Map();
 
 function getDb() {
     if (!db) {
@@ -33,61 +34,184 @@ function inicializarTablaAuditoria(callback) {
             descripcion TEXT NOT NULL,
             detalles TEXT,
             ip TEXT,
-            user_agent TEXT
+            user_agent TEXT,
+            desencadenado_por TEXT
         )`);
+
+        // Auto-healing para instalaciones o tablas existentes
+        database.run(`ALTER TABLE logs_auditoria ADD COLUMN desencadenado_por TEXT`, () => {});
 
         database.run(`CREATE INDEX IF NOT EXISTS idx_audit_fecha ON logs_auditoria(fecha_hora)`);
         database.run(`CREATE INDEX IF NOT EXISTS idx_audit_modulo ON logs_auditoria(modulo)`);
         database.run(`CREATE INDEX IF NOT EXISTS idx_audit_usuario ON logs_auditoria(usuario_email)`);
         database.run(`CREATE INDEX IF NOT EXISTS idx_audit_accion ON logs_auditoria(accion)`);
         database.run(`CREATE INDEX IF NOT EXISTS idx_audit_nivel ON logs_auditoria(nivel)`);
+        database.run(`CREATE INDEX IF NOT EXISTS idx_audit_desencadenado ON logs_auditoria(desencadenado_por)`);
 
         if (typeof callback === 'function') callback();
     });
 }
 
 // -------------------------------------------------------------
+// Resolución Inteligente de Usuario desde DB (con caché)
+// -------------------------------------------------------------
+function resolverUsuarioDB(id, email, callback) {
+    const cleanEmail = (typeof email === 'string') ? email.trim().toLowerCase() : '';
+    const cleanId = id ? parseInt(id, 10) : null;
+
+    if (!cleanId && (!cleanEmail || cleanEmail === 'sistema@colegiocerrogrande.cl')) {
+        return callback(null, null);
+    }
+
+    const cacheKey = cleanId ? `id:${cleanId}` : `email:${cleanEmail}`;
+    if (userCache.has(cacheKey)) {
+        return callback(null, userCache.get(cacheKey));
+    }
+
+    const database = getDb();
+    let sql = '';
+    let params = [];
+
+    if (cleanId && cleanEmail) {
+        sql = 'SELECT id, email, nombre, rol FROM usuarios WHERE id = ? OR LOWER(email) = ? LIMIT 1';
+        params = [cleanId, cleanEmail];
+    } else if (cleanId) {
+        sql = 'SELECT id, email, nombre, rol FROM usuarios WHERE id = ? LIMIT 1';
+        params = [cleanId];
+    } else {
+        sql = 'SELECT id, email, nombre, rol FROM usuarios WHERE LOWER(email) = ? LIMIT 1';
+        params = [cleanEmail];
+    }
+
+    database.get(sql, params, (err, row) => {
+        if (err || !row) {
+            return callback(null, null);
+        }
+        userCache.set(`id:${row.id}`, row);
+        if (row.email) userCache.set(`email:${row.email.toLowerCase()}`, row);
+        callback(null, row);
+    });
+}
+
+function formatearNombreDesdeEmail(email) {
+    if (!email || typeof email !== 'string') return '';
+    const prefix = email.split('@')[0].replace(/[._-]/g, ' ');
+    return prefix
+        .split(' ')
+        .filter(Boolean)
+        .map(w => w.charAt(0).toUpperCase() + w.slice(1).toLowerCase())
+        .join(' ');
+}
+
+// -------------------------------------------------------------
 // Registro Centralizado y Semántico de Acciones (No bloqueante)
 // -------------------------------------------------------------
-function registrarAuditoria({
-    req = null,
-    usuario = null,
-    modulo = 'General',
-    accion = 'Acción',
-    nivel = 'info', // 'info', 'success', 'warning', 'danger'
-    entidad = null,
-    entidad_id = null,
-    descripcion,
-    detalles = null
-}) {
-    // Si no viene descripción, armamos una por defecto
-    const descFinal = descripcion || `${accion} en ${modulo}${entidad ? ` (${entidad})` : ''}`;
+function registrarAuditoria(params = {}) {
+    const {
+        req = null,
+        usuario = null,
+        user = null,
+        usuario_email = null,
+        user_email = null,
+        email = null,
+        usuario_nombre = null,
+        user_nombre = null,
+        nombre = null,
+        usuario_rol = null,
+        user_rol = null,
+        rol = null,
+        usuario_id = null,
+        user_id = null,
+        id = null,
+        desencadenado_por = null,
+        iniciado_por = null,
+        trigger_por = null,
+        autor = null,
+        es_sistema = false,
+        modulo = 'General',
+        accion = 'Acción',
+        nivel = 'info', // 'info', 'success', 'warning', 'danger'
+        entidad = null,
+        entidad_id = null,
+        descripcion,
+        detalles = null
+    } = params;
 
-    let uEmail = 'sistema@colegiocerrogrande.cl';
-    let uNombre = 'Sistema Automático';
-    let uRol = 'Sistema';
-    let uId = null;
+    let uEmail = usuario_email || user_email || email || null;
+    let uNombre = usuario_nombre || user_nombre || nombre || null;
+    let uRol = usuario_rol || user_rol || rol || null;
+    let uId = usuario_id || user_id || id || null;
+    let triggerPor = desencadenado_por || iniciado_por || trigger_por || autor || null;
+
     let ip = '127.0.0.1';
     let userAgent = 'Node.js / Local';
 
+    // 1. Extraer de objeto usuario o user
+    const userObj = (usuario && typeof usuario === 'object') ? usuario : ((user && typeof user === 'object') ? user : null);
+    if (userObj) {
+        uEmail = userObj.email || uEmail;
+        uNombre = userObj.nombre || uNombre;
+        uRol = userObj.rol || uRol;
+        uId = userObj.id || uId;
+    }
+
+    // 2. Extraer de contexto HTTP (req)
     if (req) {
         if (req.user) {
             uEmail = req.user.email || uEmail;
             uNombre = req.user.nombre || uNombre;
             uRol = req.user.rol || (req.session && req.session.rolActivo) || uRol;
-            uId = req.user.id || null;
-        } else if (req.session && req.session.passport && req.session.passport.user) {
-            const sessUser = req.session.passport.user;
-            if (typeof sessUser === 'object') {
-                uEmail = sessUser.email || uEmail;
-                uNombre = sessUser.nombre || uNombre;
-                uRol = sessUser.rol || uRol;
-                uId = sessUser.id || null;
+            uId = req.user.id || uId;
+        } else if (req.session) {
+            if (req.session.passport && req.session.passport.user) {
+                const sessUser = req.session.passport.user;
+                if (typeof sessUser === 'object') {
+                    uEmail = sessUser.email || uEmail;
+                    uNombre = sessUser.nombre || uNombre;
+                    uRol = sessUser.rol || uRol;
+                    uId = sessUser.id || uId;
+                } else if (typeof sessUser === 'number' || typeof sessUser === 'string') {
+                    uId = sessUser;
+                }
+            }
+            if (req.session.user && typeof req.session.user === 'object') {
+                uEmail = req.session.user.email || uEmail;
+                uNombre = req.session.user.nombre || uNombre;
+                uRol = req.session.user.rol || uRol;
+                uId = req.session.user.id || uId;
+            }
+            if (req.session.usuario && typeof req.session.usuario === 'object') {
+                uEmail = req.session.usuario.email || uEmail;
+                uNombre = req.session.usuario.nombre || uNombre;
+                uRol = req.session.usuario.rol || uRol;
+                uId = req.session.usuario.id || uId;
+            }
+            if (!uRol && req.session.rolActivo) {
+                uRol = req.session.rolActivo;
+            }
+        }
+
+        // Headers o Body si existen
+        if (!uEmail && req.headers) {
+            uEmail = req.headers['x-user-email'] || req.headers['x-usuario-email'] || null;
+        }
+        if (!uNombre && req.headers) {
+            uNombre = req.headers['x-user-nombre'] || req.headers['x-usuario-nombre'] || null;
+        }
+        if (!uEmail && req.body && typeof req.body === 'object') {
+            const bUser = req.body.usuario || req.body.user;
+            if (bUser && typeof bUser === 'object') {
+                uEmail = bUser.email || uEmail;
+                uNombre = bUser.nombre || uNombre;
+                uRol = bUser.rol || uRol;
+                uId = bUser.id || uId;
+            } else if (req.body.profesor_email) {
+                uEmail = req.body.profesor_email || uEmail;
             }
         }
 
         // Extracción confiable de IP
-        const xForwarded = req.headers['x-forwarded-for'];
+        const xForwarded = req.headers ? req.headers['x-forwarded-for'] : null;
         if (xForwarded) {
             ip = xForwarded.split(',')[0].trim();
         } else {
@@ -95,55 +219,105 @@ function registrarAuditoria({
         }
         if (ip.includes('::ffff:')) ip = ip.replace('::ffff:', '');
 
-        userAgent = req.headers['user-agent'] || 'Desconocido';
+        userAgent = (req.headers && req.headers['user-agent']) || 'Desconocido';
     }
 
-    if (usuario) {
-        uEmail = usuario.email || uEmail;
-        uNombre = usuario.nombre || uNombre;
-        uRol = usuario.rol || uRol;
-        uId = usuario.id || uId;
-    }
-
-    let detallesJson = null;
-    if (detalles) {
-        if (typeof detalles === 'string') {
-            detallesJson = detalles;
-        } else {
-            try {
-                detallesJson = JSON.stringify(detalles);
-            } catch (e) {
-                detallesJson = JSON.stringify({ error_serializacion: String(detalles) });
-            }
-        }
-    }
-
-    // Ejecución asíncrona segura (fire-and-forget)
+    // 3. Ejecución asíncrona segura (fire-and-forget) con resolución de DB
     setImmediate(() => {
         try {
-            const database = getDb();
-            const sql = `INSERT INTO logs_auditoria 
-                (usuario_id, usuario_email, usuario_nombre, usuario_rol, modulo, accion, nivel, entidad, entidad_id, descripcion, detalles, ip, user_agent, fecha_hora)
-                VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, CURRENT_TIMESTAMP)`;
-
-            database.run(sql, [
-                uId,
-                uEmail,
-                uNombre,
-                uRol,
-                modulo,
-                accion,
-                nivel,
-                entidad,
-                entidad_id ? String(entidad_id) : null,
-                descFinal,
-                detallesJson,
-                ip,
-                userAgent
-            ], (err) => {
-                if (err) {
-                    console.error('[AUDITORIA] Error registrando log:', err.message);
+            resolverUsuarioDB(uId, uEmail, (errResolv, dbUser) => {
+                if (dbUser) {
+                    uId = dbUser.id || uId;
+                    uEmail = dbUser.email || uEmail;
+                    uNombre = (!uNombre || uNombre === 'Sistema Automático' || uNombre === 'Sistema') ? dbUser.nombre : uNombre;
+                    uRol = (!uRol || uRol === 'Sistema') ? dbUser.rol : uRol;
                 }
+
+                // Si viene correo institucional o de docente y el nombre sigue vacío o genérico
+                if (uEmail && (!uNombre || uNombre === 'Sistema Automático' || uNombre === 'Sistema') && uEmail !== 'sistema@colegiocerrogrande.cl') {
+                    uNombre = formatearNombreDesdeEmail(uEmail);
+                }
+
+                if (triggerPor && typeof triggerPor === 'object') {
+                    triggerPor = triggerPor.nombre ? `${triggerPor.nombre} (${triggerPor.email || ''})`.trim() : (triggerPor.email || 'Usuario');
+                }
+
+                // Determinar quién desencadenó la acción
+                if (!triggerPor) {
+                    if (uEmail && uEmail !== 'sistema@colegiocerrogrande.cl') {
+                        triggerPor = `${uNombre || uEmail}${uEmail && uNombre ? ` (${uEmail})` : ''}`;
+                    } else {
+                        triggerPor = 'Sistema (Automático)';
+                    }
+                }
+
+                // Valores finales de autor
+                let actorId = uId;
+                let actorEmail = uEmail || 'sistema@colegiocerrogrande.cl';
+                let actorNombre = uNombre || (actorEmail !== 'sistema@colegiocerrogrande.cl' ? formatearNombreDesdeEmail(actorEmail) : 'Sistema Automático');
+                let actorRol = uRol || (actorEmail !== 'sistema@colegiocerrogrande.cl' ? 'Usuario' : 'Sistema');
+
+                // Si la acción es estrictamente ejecutada por el motor de la plataforma, pero desencadenada por un usuario:
+                if (es_sistema) {
+                    actorEmail = 'sistema@colegiocerrogrande.cl';
+                    actorNombre = 'Sistema Automático';
+                    actorRol = 'Sistema';
+                }
+
+                // Construcción de detalles enriquecidos
+                let parsedDetalles = null;
+                if (detalles) {
+                    if (typeof detalles === 'object') {
+                        parsedDetalles = { ...detalles };
+                    } else if (typeof detalles === 'string') {
+                        try {
+                            parsedDetalles = JSON.parse(detalles);
+                        } catch (e) {
+                            parsedDetalles = { info: detalles };
+                        }
+                    }
+                }
+                if (!parsedDetalles) parsedDetalles = {};
+
+                // Registrar metadatos de quién desencadenó la acción
+                if (triggerPor && triggerPor !== 'Sistema (Automático)') {
+                    parsedDetalles.desencadenado_por = {
+                        identificador: triggerPor,
+                        usuario_id: uId,
+                        email: uEmail,
+                        nombre: uNombre,
+                        rol: uRol
+                    };
+                }
+
+                const detallesJson = JSON.stringify(parsedDetalles);
+                const descFinal = descripcion || `${accion} en ${modulo}${entidad ? ` (${entidad})` : ''}`;
+
+                const database = getDb();
+                const sql = `INSERT INTO logs_auditoria 
+                    (usuario_id, usuario_email, usuario_nombre, usuario_rol, modulo, accion, nivel, entidad, entidad_id, descripcion, detalles, ip, user_agent, desencadenado_por, fecha_hora)
+                    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, CURRENT_TIMESTAMP)`;
+
+                database.run(sql, [
+                    actorId,
+                    actorEmail,
+                    actorNombre,
+                    actorRol,
+                    modulo,
+                    accion,
+                    nivel,
+                    entidad,
+                    entidad_id ? String(entidad_id) : null,
+                    descFinal,
+                    detallesJson,
+                    ip,
+                    userAgent,
+                    triggerPor
+                ], (errInsert) => {
+                    if (errInsert) {
+                        console.error('[AUDITORIA] Error registrando log:', errInsert.message);
+                    }
+                });
             });
         } catch (e) {
             console.error('[AUDITORIA] Excepción en servicio:', e.message);
@@ -209,8 +383,8 @@ function consultarLogs(query = {}) {
         }
 
         if (usuario && usuario.trim()) {
-            whereClauses.push("(LOWER(usuario_email) LIKE ? OR LOWER(usuario_nombre) LIKE ?)");
-            params.push(`%${usuario.trim().toLowerCase()}%`, `%${usuario.trim().toLowerCase()}%`);
+            whereClauses.push("(LOWER(usuario_email) LIKE ? OR LOWER(usuario_nombre) LIKE ? OR LOWER(desencadenado_por) LIKE ?)");
+            params.push(`%${usuario.trim().toLowerCase()}%`, `%${usuario.trim().toLowerCase()}%`, `%${usuario.trim().toLowerCase()}%`);
         }
 
         if (textoBusqueda) {
@@ -221,9 +395,10 @@ function consultarLogs(query = {}) {
                 OR LOWER(entidad_id) LIKE ? 
                 OR LOWER(usuario_nombre) LIKE ? 
                 OR LOWER(usuario_email) LIKE ? 
+                OR LOWER(desencadenado_por) LIKE ?
                 OR LOWER(detalles) LIKE ?
             )`);
-            params.push(qParam, qParam, qParam, qParam, qParam, qParam);
+            params.push(qParam, qParam, qParam, qParam, qParam, qParam, qParam);
         }
 
         const whereSql = whereClauses.length > 0 ? `WHERE ${whereClauses.join(' AND ')}` : '';
@@ -237,7 +412,7 @@ function consultarLogs(query = {}) {
             const totalPages = Math.ceil(total / l) || 1;
 
             const dataSql = `SELECT id, fecha_hora, usuario_id, usuario_email, usuario_nombre, usuario_rol, 
-                             modulo, accion, nivel, entidad, entidad_id, descripcion, detalles, ip, user_agent
+                             desencadenado_por, modulo, accion, nivel, entidad, entidad_id, descripcion, detalles, ip, user_agent
                              FROM logs_auditoria ${whereSql} 
                              ORDER BY id DESC LIMIT ? OFFSET ?`;
 
@@ -348,8 +523,8 @@ function exportarLogs(query = {}) {
             params.push(nivel);
         }
         if (usuario && usuario.trim()) {
-            whereClauses.push("(LOWER(usuario_email) LIKE ? OR LOWER(usuario_nombre) LIKE ?)");
-            params.push(`%${usuario.trim().toLowerCase()}%`, `%${usuario.trim().toLowerCase()}%`);
+            whereClauses.push("(LOWER(usuario_email) LIKE ? OR LOWER(usuario_nombre) LIKE ? OR LOWER(desencadenado_por) LIKE ?)");
+            params.push(`%${usuario.trim().toLowerCase()}%`, `%${usuario.trim().toLowerCase()}%`, `%${usuario.trim().toLowerCase()}%`);
         }
         if (textoBusqueda) {
             const qParam = `%${textoBusqueda.toLowerCase()}%`;
@@ -359,14 +534,15 @@ function exportarLogs(query = {}) {
                 OR LOWER(entidad_id) LIKE ? 
                 OR LOWER(usuario_nombre) LIKE ? 
                 OR LOWER(usuario_email) LIKE ? 
+                OR LOWER(desencadenado_por) LIKE ?
                 OR LOWER(detalles) LIKE ?
             )`);
-            params.push(qParam, qParam, qParam, qParam, qParam, qParam);
+            params.push(qParam, qParam, qParam, qParam, qParam, qParam, qParam);
         }
 
         const whereSql = whereClauses.length > 0 ? `WHERE ${whereClauses.join(' AND ')}` : '';
         const dataSql = `SELECT id, datetime(fecha_hora, 'localtime') as fecha_local, usuario_nombre, usuario_email, usuario_rol,
-                         modulo, accion, nivel, entidad, entidad_id, descripcion, detalles, ip
+                         desencadenado_por, modulo, accion, nivel, entidad, entidad_id, descripcion, detalles, ip
                          FROM logs_auditoria ${whereSql} 
                          ORDER BY id DESC LIMIT 50000`;
 
@@ -379,6 +555,7 @@ function exportarLogs(query = {}) {
                 "Usuario": r.usuario_nombre || '',
                 "Correo Electrónico": r.usuario_email || '',
                 "Rol": r.usuario_rol || '',
+                "Desencadenado Por": r.desencadenado_por || r.usuario_nombre || '',
                 "Módulo": r.modulo || '',
                 "Acción": r.accion || '',
                 "Nivel": (r.nivel || '').toUpperCase(),
@@ -409,6 +586,7 @@ function exportarLogs(query = {}) {
                 { wch: 25 }, // Usuario
                 { wch: 30 }, // Correo
                 { wch: 15 }, // Rol
+                { wch: 30 }, // Desencadenado Por
                 { wch: 16 }, // Módulo
                 { wch: 16 }, // Acción
                 { wch: 10 }, // Nivel

@@ -356,6 +356,11 @@
                 <i class="bi bi-journal-bookmark"></i> <span>Planificación Curricular</span>
               </a>
             </li>
+            <li class="nav-item" id="nav-asistencia-container">
+              <a href="#" class="nav-link" onclick="loadApp('asistencia', this)" id="nav-asistencia" data-nav-title="Asistencia Diaria">
+                <i class="bi bi-person-check-fill text-success"></i> <span>Asistencia Diaria</span>
+              </a>
+            </li>
             <li class="nav-item d-none" id="nav-horarios-container">
               <a href="#" class="nav-link" onclick="loadApp('horarios', this)" id="nav-horarios" data-nav-title="Visor de Horarios">
                 <i class="bi bi-clock-history"></i> <span>Visor de Horarios</span>
@@ -450,6 +455,7 @@
       correos: "/correos.html",
       auditoria: "/auditoria.html",
       planificacion: "/planificacion.html",
+      asistencia: "/asistencia.html",
       annos: "/annos.html"
     };
     let contexto = {};
@@ -770,6 +776,7 @@
                  <option value="horarios" id="opt-pref-horarios">Visor de Horarios</option>
                  <option value="recursos">Reserva de Recursos</option>
                  <option value="planificacion">Planificación Curricular</option>
+                 <option value="asistencia">Asistencia Diaria</option>
                  <option value="auditoria" id="opt-pref-auditoria" class="d-none">Auditoría y Logs</option>
                  <option value="annos" id="opt-pref-annos" class="d-none">Años Escolares</option>
               </select>

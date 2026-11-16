@@ -17,6 +17,7 @@ const fs = require('fs');
 const nodemailer = require('nodemailer');
 const mailer = require('./services/mailer');
 const auditoria = require('./services/auditoria');
+const asistenciaService = require('./services/asistencia');
 const transporter = mailer.crearTransporter();
 
 async function enviarCorreoConfirmacion(reserva, profesorEmail) {
@@ -120,6 +121,8 @@ db.serialize(() => {
     (2026, 'Año Escolar 2026', 'Activo', '2026-03-02', '2026-12-18', '2026-07-03', '2026-07-27', 'Año escolar en curso')`, () => {});
   mailer.inicializarTablasCorreo();
   auditoria.inicializarTablaAuditoria();
+  asistenciaService.inicializarTablasAsistencia();
+  asistenciaService.iniciarCronAsistencia();
   try {
     const curriculoSeed = require('./services/curriculo_seed');
     curriculoSeed.inicializarCurriculo(db, () => {});
@@ -1345,6 +1348,9 @@ app.use('/api/planificacion', planificacionRouter);
 const annosRouter = require('./api/annos');
 app.use('/api/annos', annosRouter);
 app.use('/api/anos', annosRouter);
+
+const asistenciaRouter = require('./api/asistencia');
+app.use('/api/asistencia', asistenciaRouter);
 
 
 // --- Roles Config ---
