@@ -47,6 +47,30 @@ function normalizarTexto(str) {
         .replace(/\s+/g, ' ');
 }
 
+// Normalización estricta de nombres de cursos para asegurar match perfecto
+function normalizarCurso(str) {
+    if (!str) return '';
+    let s = normalizarTexto(str);
+    s = s.replace(/º/g, '°');
+    // Normalizar números a romanos en Enseñanza Media
+    s = s.replace(/\b1(?:°|º)?\s*MEDIO\b/g, 'I° MEDIO')
+         .replace(/\b2(?:°|º)?\s*MEDIO\b/g, 'II° MEDIO')
+         .replace(/\b3(?:°|º)?\s*MEDIO\b/g, 'III° MEDIO')
+         .replace(/\b4(?:°|º)?\s*MEDIO\b/g, 'IV° MEDIO');
+    // Normalizar Enseñanza Básica
+    s = s.replace(/\b([1-8])(?:°|º)?\s*BASICO\b/g, '$1° BASICO');
+    return s.replace(/\s+/g, ' ').trim();
+}
+
+// Detecta si una celda corresponde al título de un curso del colegio
+function detectarCursoEncabezado(valor) {
+    if (!valor) return null;
+    const norm = normalizarCurso(valor);
+    const patronCurso = /^(KINDER\s+[AB]|[1-8]°\s+BASICO\s+[AB]|I{1,3}°\s+MEDIO\s+[AB]|IV°\s+MEDIO\s+[AB])$/i;
+    if (patronCurso.test(norm)) return norm;
+    return null;
+}
+
 // Cálculo de fecha y hora local exacta en Chile (Santiago UTC-3 / UTC-4)
 function obtenerFechaHoraChile() {
     const now = new Date();
@@ -278,7 +302,7 @@ function construirUrlCsvGoogle(url, gidManual = null) {
 }
 
 /**
- * Parser inteligente de filas de asistencia (admite formatos de consolidado por curso o de lista de alumnos)
+ * Parser inteligente de filas de asistencia (admite formatos de consolidado por curso, lista de alumnos o bloques matriciales por día)
  */
 function procesarMatrizAsistencia(datosMatriz, fechaReferencia) {
     if (!Array.isArray(datosMatriz) || datosMatriz.length < 2) {
@@ -287,8 +311,128 @@ function procesarMatrizAsistencia(datosMatriz, fechaReferencia) {
 
     const { fecha: hoyChile } = obtenerFechaHoraChile();
     const fechaFinal = fechaReferencia || hoyChile;
+    const diaDelMes = parseInt(fechaFinal.split('-')[2], 10);
 
-    // Buscar fila de encabezados (suele ser fila 0, 1 o 2)
+    const cursosConsolidados = new Map();
+
+    // ------------------------------------------------------------------
+    // ESTRATEGIA 1: DETECCIÓN DE BLOQUES MATRICIALES POR CURSO (Formato Google Sheets Colegio Cerro Grande)
+    // Cada curso tiene su bloque: encabezado [Curso], fila de días [N°, Nombre, 2, 3, 4, ...],
+    // lista de alumnos (True/False por día), y filas de TOTAL MATRÍCULA / Total Ausentes / Total Asistentes.
+    // ------------------------------------------------------------------
+    const indicesBloques = [];
+    for (let r = 0; r < datosMatriz.length; r++) {
+        const c = detectarCursoEncabezado(datosMatriz[r] ? datosMatriz[r][0] : null);
+        if (c) {
+            indicesBloques.push({ fila: r, curso: c });
+        }
+    }
+
+    if (indicesBloques.length > 0) {
+        for (let b = 0; b < indicesBloques.length; b++) {
+            const bloque = indicesBloques[b];
+            const filaInicio = bloque.fila;
+            const filaFin = (b + 1 < indicesBloques.length) ? indicesBloques[b + 1].fila : datosMatriz.length;
+            const cursoNombre = bloque.curso;
+
+            // Fila siguiente suele ser N°, Nombre del Estudiante, 2, 3, 4, ... (días)
+            const filaDias = datosMatriz[filaInicio + 1] || [];
+            
+            // Buscar la columna correspondiente al día
+            let colDia = -1;
+            for (let c = 2; c < filaDias.length; c++) {
+                const val = (filaDias[c] || '').toString().trim();
+                if (parseInt(val, 10) === diaDelMes) {
+                    colDia = c;
+                    break;
+                }
+            }
+
+            // Si no encuentra el día exacto (por ser fin de semana, etc.), tomar la última columna de día disponible
+            if (colDia === -1) {
+                for (let c = filaDias.length - 1; c >= 2; c--) {
+                    const num = parseInt((filaDias[c] || '').toString().trim(), 10);
+                    if (!isNaN(num) && num > 0) {
+                        colDia = c;
+                        break;
+                    }
+                }
+            }
+
+            let matriculaTotal = 0;
+            let ausentesCount = 0;
+            let presentesCount = 0;
+            const alumnosAusentes = [];
+
+            // Recorrer los alumnos y totales del bloque
+            for (let r = filaInicio + 2; r < filaFin; r++) {
+                const row = datosMatriz[r] || [];
+                const col0 = normalizarTexto(row[0] || '');
+                const col1 = (row[1] || '').toString().trim();
+                const col1Norm = normalizarTexto(col1);
+
+                if (col1Norm.startsWith('TOTAL MATRICULA') || col0.startsWith('TOTAL MATRICULA')) {
+                    if (colDia !== -1 && row[colDia]) matriculaTotal = parseInt(row[colDia], 10) || matriculaTotal;
+                    continue;
+                }
+                if (col1Norm.startsWith('TOTAL AUSENTES') || col0.startsWith('TOTAL AUSENTES')) {
+                    if (colDia !== -1 && row[colDia]) ausentesCount = parseInt(row[colDia], 10) || ausentesCount;
+                    continue;
+                }
+                if (col1Norm.startsWith('TOTAL ASISTENTES') || col0.startsWith('TOTAL ASISTENTES')) {
+                    if (colDia !== -1 && row[colDia]) presentesCount = parseInt(row[colDia], 10) || presentesCount;
+                    continue;
+                }
+                if (col1Norm.startsWith('ASISTENCIA COMPLETA') || col1Norm.startsWith('HTTP')) {
+                    continue;
+                }
+
+                // Es una fila de estudiante
+                if (col1 && !col1Norm.includes('RETIRADO') && !col1Norm.startsWith('TOTAL')) {
+                    const nombreEstudiante = col1.replace(/\(retirado\)/i, '').trim();
+                    const estadoDia = colDia !== -1 ? (row[colDia] || '').toString().trim().toUpperCase() : '';
+                    
+                    // True = inasistencia registrada
+                    const esAusente = estadoDia === 'TRUE' || estadoDia === 'VERDADERO' || estadoDia.startsWith('VERDADERO');
+                    if (esAusente) {
+                        alumnosAusentes.push(nombreEstudiante);
+                    }
+                }
+            }
+
+            if (!matriculaTotal) {
+                matriculaTotal = presentesCount + ausentesCount;
+            }
+            if (ausentesCount === 0 && alumnosAusentes.length > 0) {
+                ausentesCount = alumnosAusentes.length;
+            }
+            if (presentesCount === 0 && matriculaTotal > 0) {
+                presentesCount = Math.max(0, matriculaTotal - ausentesCount);
+            }
+
+            const porcentaje = matriculaTotal > 0 ? Math.round((presentesCount / matriculaTotal) * 1000) / 10 : 0;
+
+            cursosConsolidados.set(cursoNombre, {
+                fecha: fechaFinal,
+                curso: cursoNombre,
+                curso_normalizado: cursoNombre,
+                matricula_total: matriculaTotal,
+                presentes: presentesCount,
+                ausentes: ausentesCount,
+                porcentaje,
+                alumnos_ausentes: alumnosAusentes,
+                observaciones: `Registro diario (Día ${colDia !== -1 ? filaDias[colDia] : diaDelMes})`
+            });
+        }
+
+        if (cursosConsolidados.size > 0) {
+            return Array.from(cursosConsolidados.values());
+        }
+    }
+
+    // ------------------------------------------------------------------
+    // ESTRATEGIA 2: TABLA CONSOLIDADA O LISTA DE ESTUDIANTES POR COLUMNAS
+    // ------------------------------------------------------------------
     let headerRowIdx = -1;
     let headers = [];
 
@@ -305,7 +449,6 @@ function procesarMatrizAsistencia(datosMatriz, fechaReferencia) {
     }
 
     if (headerRowIdx === -1) {
-        // Tomar la primera fila por defecto
         headerRowIdx = 0;
         headers = (datosMatriz[0] || []).map(c => normalizarTexto(c));
     }
@@ -340,8 +483,6 @@ function procesarMatrizAsistencia(datosMatriz, fechaReferencia) {
         }
     });
 
-    const cursosConsolidados = new Map();
-
     // FORMATO A: Una fila por curso (Consolidado)
     if (colCurso !== -1 && (colPresentes !== -1 || colAusentes !== -1 || colMatricula !== -1 || colPorcentaje !== -1)) {
         for (let r = headerRowIdx + 1; r < datosMatriz.length; r++) {
@@ -351,7 +492,7 @@ function procesarMatrizAsistencia(datosMatriz, fechaReferencia) {
                 continue;
             }
 
-            const cursoNorm = normalizarTexto(rawCurso);
+            const cursoNorm = normalizarCurso(rawCurso);
             const matricula = colMatricula !== -1 ? parseInt(row[colMatricula], 10) || 0 : 0;
             const presentes = colPresentes !== -1 ? parseInt(row[colPresentes], 10) || 0 : 0;
             const ausentes = colAusentes !== -1 ? parseInt(row[colAusentes], 10) || 0 : (matricula > presentes ? matricula - presentes : 0);
@@ -365,7 +506,6 @@ function procesarMatrizAsistencia(datosMatriz, fechaReferencia) {
                 porcentaje = Math.round((presentes / matricula) * 1000) / 10;
             }
 
-            // Alumnos ausentes desglosados si vienen en una celda
             let ausentesList = [];
             if (colNombresAusentes !== -1 && row[colNombresAusentes]) {
                 const rawAus = row[colNombresAusentes].toString();
@@ -394,7 +534,7 @@ function procesarMatrizAsistencia(datosMatriz, fechaReferencia) {
             const rawEstado = colEstado !== -1 ? normalizarTexto(row[colEstado]) : 'PRESENTE';
 
             if (!rawCurso || !rawAlumno) continue;
-            const cursoNorm = normalizarTexto(rawCurso);
+            const cursoNorm = normalizarCurso(rawCurso);
 
             if (!cursosConsolidados.has(cursoNorm)) {
                 cursosConsolidados.set(cursoNorm, {
@@ -412,7 +552,7 @@ function procesarMatrizAsistencia(datosMatriz, fechaReferencia) {
 
             const item = cursosConsolidados.get(cursoNorm);
             item.matricula_total++;
-            const esAusente = rawEstado.includes('AUSENTE') || rawEstado === 'A' || rawEstado.includes('INASIST');
+            const esAusente = rawEstado.includes('AUSENTE') || rawEstado === 'A' || rawEstado.includes('INASIST') || rawEstado === 'TRUE';
             if (esAusente) {
                 item.ausentes++;
                 item.alumnos_ausentes.push(rawAlumno);
@@ -421,7 +561,6 @@ function procesarMatrizAsistencia(datosMatriz, fechaReferencia) {
             }
         }
 
-        // Calcular porcentajes en base al conteo
         for (const item of cursosConsolidados.values()) {
             if (item.matricula_total > 0) {
                 item.porcentaje = Math.round((item.presentes / item.matricula_total) * 1000) / 10;
@@ -659,7 +798,7 @@ async function obtenerCursosPrimerBloque(diaSemanaCustom = null, anno = 2026) {
 
         docentesMap.get(key).cursos.push({
             curso: h.curso,
-            curso_normalizado: normalizarTexto(h.curso),
+            curso_normalizado: normalizarCurso(h.curso),
             asignatura: h.asignatura
         });
     });
@@ -920,6 +1059,7 @@ module.exports = {
     extraerIdsGoogleSheet,
     construirUrlCsvGoogle,
     procesarMatrizAsistencia,
+    guardarRegistrosAsistencia,
     descargarYProcesarGoogleSheet,
     procesarArchivoLocal,
     obtenerAsistenciaFecha,
