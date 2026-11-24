@@ -65,6 +65,15 @@ function requireGestorAsistencia(req, res, next) {
     next();
 }
 
+function requireAdminAsistencia(req, res, next) {
+    if (!req.permisosAsistencia || !req.permisosAsistencia.esAdmin) {
+        return res.status(403).json({
+            error: 'Acceso denegado: Solo administradores pueden gestionar matrícula y configuración de asistencia.'
+        });
+    }
+    next();
+}
+
 function parseAnioMesQuery(mesStr) {
     const { fecha } = asistenciaService.obtenerFechaHoraChile();
     const fallbackY = parseInt(fecha.slice(0, 4), 10);
@@ -352,7 +361,7 @@ router.post('/enviar-mensual', requireGestorAsistencia, async (req, res) => {
 // 4. MATRÍCULA, ESTUDIANTES Y MIGRACIÓN DESDE GOOGLE SHEETS
 // =============================================================
 
-router.get('/estudiantes', requireGestorAsistencia, async (req, res) => {
+router.get('/estudiantes', requireAdminAsistencia, async (req, res) => {
     try {
         const { curso, retirados, q, anno } = req.query;
         const incluirRetirados = retirados === undefined ? true : (retirados === '1' || retirados === 'true');
@@ -368,7 +377,7 @@ router.get('/estudiantes', requireGestorAsistencia, async (req, res) => {
     }
 });
 
-router.post('/estudiantes', requireGestorAsistencia, async (req, res) => {
+router.post('/estudiantes', requireAdminAsistencia, async (req, res) => {
     try {
         const creado = await asistenciaService.crearEstudiante(req.body || {}, req.user);
         res.json({ success: true, estudiante: creado });
@@ -377,7 +386,7 @@ router.post('/estudiantes', requireGestorAsistencia, async (req, res) => {
     }
 });
 
-router.put('/estudiantes/:id', requireGestorAsistencia, async (req, res) => {
+router.put('/estudiantes/:id', requireAdminAsistencia, async (req, res) => {
     try {
         const actualizado = await asistenciaService.actualizarEstudiante(
             parseInt(req.params.id, 10),
@@ -390,7 +399,7 @@ router.put('/estudiantes/:id', requireGestorAsistencia, async (req, res) => {
     }
 });
 
-router.patch('/estudiantes/:id/retirar', requireGestorAsistencia, async (req, res) => {
+router.patch('/estudiantes/:id/retirar', requireAdminAsistencia, async (req, res) => {
     try {
         const retirado = Boolean(req.body && req.body.retirado);
         const fechaRetiro = req.body ? req.body.fecha_retiro : undefined;
@@ -405,7 +414,7 @@ router.patch('/estudiantes/:id/retirar', requireGestorAsistencia, async (req, re
     }
 });
 
-router.post('/importar-migracion', requireGestorAsistencia, upload.single('archivo'), async (req, res) => {
+router.post('/importar-migracion', requireAdminAsistencia, upload.single('archivo'), async (req, res) => {
     try {
         if (!req.file) {
             return res.status(400).json({ error: 'Debe seleccionar un archivo Excel (.xlsx) o CSV.' });
@@ -439,7 +448,7 @@ router.get('/dias-especiales', async (req, res) => {
     }
 });
 
-router.post('/dias-especiales', requireGestorAsistencia, async (req, res) => {
+router.post('/dias-especiales', requireAdminAsistencia, async (req, res) => {
     try {
         const row = await asistenciaService.agregarDiaEspecial(req.body || {}, req.user);
         res.json({ success: true, dia: row });
@@ -448,7 +457,7 @@ router.post('/dias-especiales', requireGestorAsistencia, async (req, res) => {
     }
 });
 
-router.delete('/dias-especiales/:id', requireGestorAsistencia, async (req, res) => {
+router.delete('/dias-especiales/:id', requireAdminAsistencia, async (req, res) => {
     try {
         const ok = await asistenciaService.eliminarDiaEspecial(parseInt(req.params.id, 10), req.user);
         if (!ok) return res.status(404).json({ error: 'Registro no encontrado.' });
@@ -458,7 +467,7 @@ router.delete('/dias-especiales/:id', requireGestorAsistencia, async (req, res) 
     }
 });
 
-router.post('/dias-especiales/importar-calendario', requireGestorAsistencia, async (req, res) => {
+router.post('/dias-especiales/importar-calendario', requireAdminAsistencia, async (req, res) => {
     try {
         const anio = parseInt((req.body && req.body.anio) || asistenciaService.obtenerFechaHoraChile().anno, 10);
         const r = await asistenciaService.importarFeriadosDesdeEventos(anio, req.user);
@@ -483,7 +492,7 @@ router.get('/bloque1-hoy', async (req, res) => {
     }
 });
 
-router.post('/enviar-bloque1', requireGestorAsistencia, async (req, res) => {
+router.post('/enviar-bloque1', requireAdminAsistencia, async (req, res) => {
     try {
         const { fecha, forzar } = req.body || {};
         const resultado = await asistenciaService.enviarResumenesBloque1({
@@ -497,7 +506,7 @@ router.post('/enviar-bloque1', requireGestorAsistencia, async (req, res) => {
     }
 });
 
-router.get('/logs-envios', requireGestorAsistencia, async (req, res) => {
+router.get('/logs-envios', requireAdminAsistencia, async (req, res) => {
     try {
         const { fecha, limit = 50 } = req.query;
         const db = asistenciaService.getDb();
@@ -519,7 +528,7 @@ router.get('/logs-envios', requireGestorAsistencia, async (req, res) => {
     }
 });
 
-router.get('/config', requireGestorAsistencia, async (req, res) => {
+router.get('/config', requireAdminAsistencia, async (req, res) => {
     try {
         const config = await asistenciaService.obtenerConfiguracion();
         res.json(config);
@@ -528,7 +537,7 @@ router.get('/config', requireGestorAsistencia, async (req, res) => {
     }
 });
 
-router.put('/config', requireGestorAsistencia, async (req, res) => {
+router.put('/config', requireAdminAsistencia, async (req, res) => {
     try {
         const config = await asistenciaService.guardarConfiguracion(req.body || {}, req.user);
         res.json({ success: true, config });

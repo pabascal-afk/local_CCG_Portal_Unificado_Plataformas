@@ -969,7 +969,7 @@
 
   <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
   <script>
-    let permisosActuales = { esGestorAsistencia: false, puedeTomarAsistencia: false, puedeEditarPasado: false };
+    let permisosActuales = { esAdmin: false, esGestorAsistencia: false, puedeTomarAsistencia: false, puedeEditarPasado: false };
     let cursosOficiales = [];
     let cursoTomaActual = 'Kinder A';
     let estadoCursosDia = [];
@@ -1049,14 +1049,15 @@
     function aplicarPermisosUI() {
       const puedeTomar = !!permisosActuales.puedeTomarAsistencia;
       const esGestor = !!permisosActuales.esGestorAsistencia;
+      const esAdmin = !!permisosActuales.esAdmin;
 
       document.getElementById('liTabToma').classList.toggle('d-none', !puedeTomar);
       document.getElementById('btnModoMovil').classList.toggle('d-none', !puedeTomar);
       document.getElementById('tomaFechaInput').disabled = !permisosActuales.puedeEditarPasado;
 
-      document.getElementById('liTabMatricula').classList.toggle('d-none', !esGestor);
-      document.getElementById('liTabConfig').classList.toggle('d-none', !esGestor);
-      document.getElementById('dropdownAccionesRapidas').classList.toggle('d-none', !esGestor);
+      document.getElementById('liTabMatricula').classList.toggle('d-none', !esAdmin);
+      document.getElementById('liTabConfig').classList.toggle('d-none', !esAdmin);
+      document.getElementById('dropdownAccionesRapidas').classList.toggle('d-none', !esAdmin);
       document.getElementById('mensualExportBtns').classList.toggle('d-none', !esGestor);
       document.getElementById('mensualEditHint').classList.toggle('d-none', !esGestor);
     }

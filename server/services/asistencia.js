@@ -484,8 +484,14 @@ async function evaluarPermisosAsistencia(user) {
         (puedeTomarAsistencia && cfg.permitir_editar_pasado_docentes)
     );
 
+    const esAdminFinal = !esVisitante && Boolean(
+        esAdmin ||
+        esCoordinacion ||
+        permisosRol.esAdminGeneral
+    );
+
     return {
-        esAdmin: esAdmin || esCoordinacion,
+        esAdmin: esAdminFinal,
         esCoordinacion,
         esInspectoria: esInspectoriaRol,
         esEncargado,
