@@ -291,6 +291,102 @@ const PLANTILLAS_DEFAULT = {
             { var: 'fecha', desc: 'Fecha del evento' },
             { var: 'lista_externos_html', desc: 'Lista HTML con los datos de las visitas' }
         ])
+    },
+
+    asistencia_resumen_bloque1: {
+        clave: 'asistencia_resumen_bloque1',
+        modulo: 'Asistencia',
+        nombre: 'Resumen Diario de Asistencia - Bloque 1',
+        descripcion: 'Enviado automáticamente cada día hábil a las 12:00 PM a los docentes que tienen clases en el bloque 1.',
+        asunto: '📋 Resumen de Asistencia - {{fecha}} - Primer Bloque ({{cursos}})',
+        saludo_tipo: 'Estimado(a) {{profesor_nombre}},',
+        cuerpo_html: `<p>A continuación te compartimos el resumen consolidado de asistencia correspondiente al <strong>primer bloque</strong> de hoy <strong>{{dia_semana}} {{fecha}}</strong> para los cursos en los que impartes clases:</p>
+<div style="margin: 18px 0;">
+  {{cursos_tabla_html}}
+</div>
+<div style="background-color: #f8fafc; border: 1px solid #e2e8f0; border-radius: 8px; padding: 14px 16px; margin-top: 16px;">
+  <table role="presentation" width="100%" cellspacing="0" cellpadding="0">
+    <tr>
+      <td>
+        <span style="font-size: 11px; color: #64748b; text-transform: uppercase; font-weight: 700; display: block;">Promedio Tus Cursos</span>
+        <span style="font-size: 18px; font-weight: 700; color: #1e293b;">{{porcentaje_promedio}}% de Asistencia</span>
+      </td>
+      <td align="right" style="font-size: 13px;">
+        <span style="color: #16a34a; font-weight: 700;">Presentes: {{total_presentes}}</span> &nbsp;|&nbsp;
+        <span style="color: #dc2626; font-weight: 700;">Ausentes: {{total_ausentes}}</span>
+      </td>
+    </tr>
+  </table>
+</div>
+<div style="text-align: center; margin: 24px 0 8px;">
+  <a href="{{enlace_plataforma}}" style="background-color: #0284c7; color: #ffffff; text-decoration: none; padding: 11px 22px; border-radius: 8px; font-weight: 600; font-size: 14px; display: inline-block;">
+    Ver Asistencia Completa en la Plataforma
+  </a>
+</div>`,
+        pie_tipo: 'Reporte automático de las 12:00 PM · Asistencia Nativa Colegio Cerro Grande',
+        variables_disponibles: JSON.stringify([
+            { var: 'profesor_nombre', desc: 'Nombre del docente asignado al primer bloque' },
+            { var: 'fecha', desc: 'Fecha del reporte (AAAA-MM-DD)' },
+            { var: 'dia_semana', desc: 'Día de la semana (LUNES, MARTES, etc.)' },
+            { var: 'cursos', desc: 'Nombres de los cursos impartidos en bloque 1' },
+            { var: 'cursos_tabla_html', desc: 'Tarjetas HTML con el desglose de asistencia por curso' },
+            { var: 'total_presentes', desc: 'Suma de alumnos presentes en sus cursos' },
+            { var: 'total_ausentes', desc: 'Suma de alumnos ausentes en sus cursos' },
+            { var: 'porcentaje_promedio', desc: 'Porcentaje promedio de asistencia' },
+            { var: 'enlace_plataforma', desc: 'Enlace directo a la vista de asistencia' }
+        ])
+    },
+
+    asistencia_reporte_novedad: {
+        clave: 'asistencia_reporte_novedad',
+        modulo: 'Asistencia',
+        nombre: 'Reporte de Novedad en Toma de Asistencia',
+        descripcion: 'Enviado a Inspectoría y Dirección cuando se presiona el botón Reportar desde el formulario de asistencia.',
+        asunto: '💬 Novedad de Asistencia - {{curso}} ({{fecha}})',
+        saludo_tipo: 'Estimado Equipo de Inspectoría y Dirección,',
+        cuerpo_html: `<p>Se ha registrado una novedad u observación durante la toma de asistencia:</p>
+<div style="background: #fef2f2; border: 1px solid #fecaca; border-radius: 8px; padding: 15px; margin: 15px 0;">
+  <p style="margin: 4px 0;"><b>Curso:</b> {{curso}}</p>
+  <p style="margin: 4px 0;"><b>Fecha:</b> {{fecha}}</p>
+  <p style="margin: 4px 0;"><b>Reportado por:</b> {{reportado_por}} ({{reportado_email}})</p>
+  <hr style="border: 0; border-top: 1px solid #fecaca; margin: 10px 0;">
+  <p style="margin: 4px 0; white-space: pre-line; color: #7f1d1d;">{{mensaje}}</p>
+</div>
+<p style="font-size: 13px; color: #64748b;">Puedes marcar este reporte como revisado en el módulo de Asistencia Diaria de la plataforma.</p>`,
+        pie_tipo: 'Colegio Cerro Grande - Sistema Nativo de Asistencia',
+        variables_disponibles: JSON.stringify([
+            { var: 'curso', desc: 'Nombre del curso reportado' },
+            { var: 'fecha', desc: 'Fecha del reporte' },
+            { var: 'reportado_por', desc: 'Nombre del usuario que envía el reporte' },
+            { var: 'reportado_email', desc: 'Correo del usuario que envía el reporte' },
+            { var: 'mensaje', desc: 'Contenido de la observación o novedad' }
+        ])
+    },
+
+    asistencia_reporte_mensual: {
+        clave: 'asistencia_reporte_mensual',
+        modulo: 'Asistencia',
+        nombre: 'Reporte Consolidado Mensual de Asistencia',
+        descripcion: 'Enviado con el libro Excel (.xlsx) y resumen PDF mensual de asistencia a los destinatarios configurados.',
+        asunto: '📊 Reporte Mensual de Asistencia - {{mes_nombre}} {{anio}}',
+        saludo_tipo: 'Estimado Equipo Directivo e Inspectoría,',
+        cuerpo_html: `<p>Adjuntamos los reportes oficiales (<strong>Excel .xlsx</strong> y <strong>PDF</strong>) correspondientes al consolidado mensual de asistencia de <strong>{{mes_nombre}} {{anio}}</strong>.</p>
+<div style="background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 8px; padding: 15px; margin: 15px 0;">
+  <p style="margin: 4px 0;"><b>Cursos incluidos:</b> {{total_cursos}}</p>
+  <p style="margin: 4px 0;"><b>Días hábiles del periodo:</b> {{dias_habiles}}</p>
+  <p style="margin: 4px 0;"><b>Total inasistencias registradas:</b> {{total_inasistencias}}</p>
+  <p style="margin: 4px 0;"><b>Asistencia promedio general:</b> <span style="color: #0284c7; font-weight: bold;">{{porcentaje_mensual}}%</span></p>
+</div>
+<p style="font-size: 13px; color: #64748b;">Todo el historial diario y las planillas mensuales permanecen respaldados de forma permanente en el módulo de Asistencia de la Plataforma Unificada para su consulta en cualquier momento.</p>`,
+        pie_tipo: 'Colegio Cerro Grande - Reporte Histórico de Asistencia',
+        variables_disponibles: JSON.stringify([
+            { var: 'mes_nombre', desc: 'Nombre del mes del reporte (ej. Noviembre)' },
+            { var: 'anio', desc: 'Año del reporte (ej. 2026)' },
+            { var: 'total_cursos', desc: 'Cantidad de cursos incluidos en el reporte' },
+            { var: 'dias_habiles', desc: 'Días hábiles considerados en el mes' },
+            { var: 'total_inasistencias', desc: 'Total acumulado de ausencias del mes' },
+            { var: 'porcentaje_mensual', desc: 'Porcentaje promedio de asistencia del establecimiento' }
+        ])
     }
 };
 

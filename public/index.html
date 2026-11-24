@@ -716,7 +716,8 @@
           actualizarVistaRol(ctx);
 
           fetch('/api/perfil/preferencias').then(r=>r.json()).then(pref => {
-               const defaultTab = pref.default_tab || 'dashboard';
+               const rolNorm = (ctx.rol || '').toLowerCase();
+               const defaultTab = pref.default_tab || (rolNorm.includes('inspect') ? 'asistencia' : 'dashboard');
                const navBtn = document.getElementById('nav-' + defaultTab);
                if (navBtn) navBtn.click();
                else document.getElementById('nav-dashboard').click();

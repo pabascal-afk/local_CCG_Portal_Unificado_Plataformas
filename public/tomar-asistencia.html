@@ -1,0 +1,522 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+  <title>SGE - Toma Rápida de Asistencia</title>
+  <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+  <style>
+    * { box-sizing: border-box; }
+
+    body {
+      max-width: 100%;
+      width: 100%;
+      margin: 0 auto;
+      background-color: #f0f2f5;
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Arial, sans-serif;
+      text-align: center;
+      color: #1e293b;
+    }
+
+    .header {
+      background: #ffffff;
+      border-radius: 0 0 16px 16px;
+      box-shadow: 0 2px 10px rgba(0, 0, 0, 0.08);
+      padding: 12px 14px 10px;
+      position: sticky;
+      top: 0;
+      z-index: 200;
+    }
+
+    .top-bar {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 10px;
+      gap: 8px;
+    }
+
+    .btn-portal {
+      text-decoration: none;
+      background: #f1f5f9;
+      color: #334155;
+      border: 1px solid #cbd5e1;
+      border-radius: 8px;
+      padding: 5px 10px;
+      font-size: 12px;
+      font-weight: 700;
+    }
+
+    .font-size-controls {
+      display: flex;
+      gap: 5px;
+      align-items: center;
+      flex-wrap: wrap;
+      justify-content: flex-end;
+    }
+
+    .font-size-controls button {
+      background: #ffffff;
+      border: 1px solid #d1d5db;
+      border-radius: 6px;
+      padding: 5px 10px;
+      font-size: 13px;
+      cursor: pointer;
+      color: #475569;
+      font-weight: 600;
+    }
+
+    .font-size-controls button.active {
+      background: #2563eb;
+      color: #ffffff;
+      border-color: #2563eb;
+    }
+
+    .btn-reportar {
+      background: #ea4335 !important;
+      color: #ffffff !important;
+      border-color: #ea4335 !important;
+    }
+
+    .chips-container {
+      display: flex;
+      overflow-x: auto;
+      gap: 8px;
+      padding: 4px 0 8px;
+      justify-content: flex-start;
+      scrollbar-width: none;
+    }
+    .chips-container::-webkit-scrollbar { display: none; }
+
+    .chip {
+      padding: 9px 16px;
+      border-radius: 20px;
+      background-color: #e2e8f0;
+      color: #334155;
+      font-weight: 700;
+      font-size: 14px;
+      white-space: nowrap;
+      cursor: pointer;
+      border: 2px solid transparent;
+      box-shadow: 0 1px 4px rgba(0, 0, 0, 0.08);
+      transition: transform 0.1s, background-color 0.2s, color 0.2s;
+    }
+    .chip:active { transform: scale(0.95); }
+    .chip.tomada {
+      background-color: #dcfce7;
+      color: #166534;
+      border-color: #86efac;
+    }
+    .chip.active {
+      background-color: #188038 !important;
+      color: #ffffff !important;
+      border-color: #136a2e !important;
+    }
+
+    .subtitulo {
+      font-size: 11px;
+      color: #64748b;
+      text-transform: uppercase;
+      letter-spacing: 1px;
+      margin-top: 2px;
+    }
+
+    #fecha-hoy {
+      color: #1e293b;
+      margin-top: 3px;
+      font-size: 18px;
+      font-weight: 800;
+      line-height: 1.2;
+    }
+
+    .stats-mini {
+      display: flex;
+      justify-content: center;
+      gap: 16px;
+      font-size: 13px;
+      margin-top: 6px;
+      color: #475569;
+    }
+
+    .aviso-ausentes {
+      background: #fce8e6;
+      color: #c5221f;
+      padding: 10px 12px;
+      border-radius: 6px;
+      font-size: 13px;
+      margin: 12px;
+      border: 1px solid #fad2cf;
+    }
+
+    #lista-estudiantes {
+      border-top: 1px solid #e2e8f0;
+      padding-bottom: 110px;
+    }
+
+    .student-row {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      padding: 22px 16px;
+      border-bottom: 1px solid #eee;
+      background: #ffffff;
+      cursor: pointer;
+      user-select: none;
+      transition: background-color 0.18s, color 0.18s;
+    }
+
+    .student-row label {
+      font-weight: 600;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      pointer-events: none;
+      transition: font-size 0.25s ease;
+    }
+
+    body.font-small .student-row label { font-size: 1.08rem; }
+    body.font-medium .student-row label { font-size: 1.4rem; }
+    body.font-large .student-row label { font-size: 1.9rem; }
+
+    .student-row.ausente {
+      background-color: #fce8e6;
+      color: #c5221f;
+    }
+    .student-row.ausente label { color: #c5221f; }
+
+    .icon-ausente {
+      display: none;
+      font-size: 1.2rem;
+      margin-right: 10px;
+      pointer-events: none;
+    }
+    .student-row.ausente .icon-ausente { display: inline-block; }
+
+    .btn-guardar {
+      position: fixed;
+      bottom: 24px;
+      right: 24px;
+      width: 82px;
+      height: 82px;
+      border-radius: 50%;
+      background-color: #188038;
+      color: #ffffff;
+      border: none;
+      box-shadow: 0 6px 16px rgba(0, 0, 0, 0.3);
+      cursor: pointer;
+      z-index: 1000;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      font-size: 11px;
+      font-weight: bold;
+      text-transform: uppercase;
+      transition: transform 0.2s, background-color 0.2s;
+    }
+    .btn-guardar:active { transform: scale(0.9); background-color: #136a2e; }
+    .btn-guardar:disabled { background-color: #94a3b8 !important; cursor: not-allowed; transform: none; }
+
+    .loading { text-align: center; color: #64748b; margin-top: 50px; font-size: 15px; }
+    .hidden { display: none !important; }
+  </style>
+</head>
+<body class="font-medium">
+
+  <div class="header">
+    <div class="top-bar">
+      <a href="/" class="btn-portal">← Portal</a>
+      <div class="font-size-controls">
+        <button type="button" class="btn-reportar" onclick="abrirModalReporte()" title="Reportar Novedad">💬 Reportar</button>
+        <button type="button" onclick="setFontSize('small')" data-size="small">A-</button>
+        <button type="button" onclick="setFontSize('medium')" data-size="medium" class="active">A</button>
+        <button type="button" onclick="setFontSize('large')" data-size="large">A+</button>
+      </div>
+    </div>
+
+    <div id="chips-cursos" class="chips-container">
+      <div class="chip">Cargando...</div>
+    </div>
+
+    <div class="subtitulo">Asistencia del día · SGE Nativo</div>
+    <div id="fecha-hoy">Cargando...</div>
+    <div class="stats-mini">
+      <span>Matrícula: <strong id="cnt-mat">0</strong></span>
+      <span style="color:#16a34a;">Presentes: <strong id="cnt-pres">0</strong></span>
+      <span style="color:#c5221f;">Ausentes: <strong id="cnt-aus">0</strong></span>
+    </div>
+  </div>
+
+  <div id="loader" class="loading">
+    <div style="font-size: 28px; margin-bottom: 10px;">⏳</div>
+    Cargando estudiantes...
+  </div>
+
+  <div id="sin-permiso" class="hidden" style="padding: 40px 20px; max-width: 480px; margin: 30px auto; background: #fff; border-radius: 14px; box-shadow: 0 4px 12px rgba(0,0,0,0.08);">
+    <div style="font-size: 36px; margin-bottom: 10px;">🔒</div>
+    <h3 style="margin-top: 0;">Acceso Restringido</h3>
+    <p style="color: #475569; font-size: 14px; line-height: 1.5;">
+      La toma de asistencia diaria está habilitada exclusivamente para el personal de <strong>Inspectoría</strong> o encargados autorizados.
+    </p>
+    <a href="/" style="display: inline-block; margin-top: 12px; padding: 10px 20px; background: #2563eb; color: #fff; text-decoration: none; border-radius: 8px; font-weight: bold;">
+      Volver al Portal Unificado
+    </a>
+  </div>
+
+  <div id="main-content" class="hidden">
+    <div class="aviso-ausentes">
+      ⚠️ Selecciona <strong>SOLO</strong> a los ausentes (<span id="aviso-curso-actual"></span>)
+    </div>
+
+    <div id="lista-estudiantes"></div>
+
+    <button class="btn-guardar" id="btn-guardar" onclick="guardarAusentes()">
+      <span style="font-size: 24px; line-height: 1.1;">💾</span>
+      <span id="btn-guardar-txt">Guardar</span>
+    </button>
+  </div>
+
+  <script>
+    let cursoActual = 'Kinder A';
+    let fechaActual = '';
+    let estadosCursos = [];
+    let alumnosActuales = [];
+    let ausentesSet = new Set();
+    let cambiosSinGuardar = false;
+
+    function escapeHtml(str) {
+      return String(str || '').replace(/[&<>"']/g, s => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[s]));
+    }
+
+    function setFontSize(size) {
+      document.body.classList.remove('font-small', 'font-medium', 'font-large');
+      document.body.classList.add('font-' + size);
+      document.querySelectorAll('.font-size-controls button[data-size]').forEach(btn => {
+        btn.classList.toggle('active', btn.getAttribute('data-size') === size);
+      });
+      try { localStorage.setItem('preferencia-fuente', size); } catch (e) {}
+    }
+
+    function loadFontSize() {
+      let savedSize = 'medium';
+      try { savedSize = localStorage.getItem('preferencia-fuente') || 'medium'; } catch (e) {}
+      setFontSize(savedSize);
+    }
+
+    window.onload = async function() {
+      loadFontSize();
+      try {
+        const res = await fetch('/api/asistencia/cursos-estado');
+        if (res.status === 401) {
+          window.location.href = '/login.html';
+          return;
+        }
+        const data = await res.json();
+        fechaActual = data.fecha;
+        estadosCursos = data.cursos || [];
+
+        if (!data.permisos || !data.permisos.puedeTomarAsistencia) {
+          document.getElementById('loader').classList.add('hidden');
+          document.getElementById('sin-permiso').classList.remove('hidden');
+          return;
+        }
+
+        if (estadosCursos.length > 0) {
+          cursoActual = estadosCursos[0].curso;
+        }
+        renderChips();
+        await cargarCurso(cursoActual);
+      } catch (e) {
+        document.getElementById('loader').innerHTML = `<div style="color:#c5221f;">Error de conexión: ${escapeHtml(e.message)}</div>`;
+      }
+    };
+
+    function renderChips() {
+      const cont = document.getElementById('chips-cursos');
+      cont.innerHTML = estadosCursos.map(c => {
+        const activeClass = c.curso === cursoActual ? 'active' : '';
+        const tomadaClass = c.tomada ? 'tomada' : '';
+        const checkTxt = c.tomada ? '✓ ' : '';
+        return `<button type="button" class="chip ${tomadaClass} ${activeClass}" onclick="cambiarCurso('${escapeHtml(c.curso)}')">${checkTxt}${escapeHtml(c.curso)}</button>`;
+      }).join('');
+    }
+
+    async function cambiarCurso(nuevoCurso) {
+      if (nuevoCurso === cursoActual) return;
+      if (cambiosSinGuardar) {
+        const r = await Swal.fire({
+          title: 'Cambios sin guardar',
+          text: `¿Guardar asistencia de ${cursoActual} antes de cambiar?`,
+          icon: 'warning',
+          showDenyButton: true,
+          showCancelButton: true,
+          confirmButtonText: 'Guardar y seguir',
+          denyButtonText: 'Descartar',
+          cancelButtonText: 'Cancelar'
+        });
+        if (r.isDismissed) return;
+        if (r.isConfirmed) {
+          const ok = await guardarAusentes(true);
+          if (!ok) return;
+        }
+      }
+      cursoActual = nuevoCurso;
+      renderChips();
+      await cargarCurso(nuevoCurso);
+    }
+
+    async function cargarCurso(nombre) {
+      document.getElementById('loader').classList.remove('hidden');
+      document.getElementById('main-content').classList.add('hidden');
+
+      try {
+        const res = await fetch(`/api/asistencia/curso/${encodeURIComponent(nombre)}/lista?fecha=${encodeURIComponent(fechaActual)}`);
+        const datos = await res.json();
+        if (!res.ok) throw new Error(datos.error || 'No se pudo cargar el curso');
+
+        document.getElementById('loader').classList.add('hidden');
+        document.getElementById('main-content').classList.remove('hidden');
+
+        cursoActual = datos.curso;
+        document.getElementById('aviso-curso-actual').innerText = datos.curso;
+        document.getElementById('fecha-hoy').textContent = datos.dia_info ? datos.dia_info.fechaLegible : datos.fecha;
+
+        alumnosActuales = datos.alumnos || [];
+        ausentesSet = new Set(alumnosActuales.filter(a => a.ausente).map(a => a.id));
+        cambiosSinGuardar = false;
+        actualizarContadores();
+
+        const lista = document.getElementById('lista-estudiantes');
+        const btn = document.getElementById('btn-guardar');
+
+        if (!datos.habil) {
+          lista.innerHTML = `<div style="padding:40px 20px;color:#64748b;"><h3>Hoy es ${escapeHtml(datos.motivoBloqueo || 'Feriado')}</h3><p>No se puede tomar asistencia.</p></div>`;
+          btn.style.display = 'none';
+          return;
+        }
+
+        if (alumnosActuales.length === 0) {
+          lista.innerHTML = `<div style="padding:40px 20px;color:#64748b;"><h3>Sin matrícula cargada</h3><p>No hay estudiantes activos en ${escapeHtml(datos.curso)}.</p></div>`;
+          btn.style.display = 'none';
+          return;
+        }
+
+        btn.style.display = 'flex';
+        lista.innerHTML = alumnosActuales.map(a => {
+          const cls = a.ausente ? 'ausente' : '';
+          return `
+            <div class="student-row ${cls}" data-id="${a.id}" onclick="toggleAusente(this, ${a.id})">
+              <span class="icon-ausente">🚫</span>
+              <label>${escapeHtml(a.nombre)}</label>
+            </div>
+          `;
+        }).join('');
+      } catch (e) {
+        document.getElementById('loader').classList.add('hidden');
+        Swal.fire('Error', e.message, 'error');
+      }
+    }
+
+    function toggleAusente(el, id) {
+      if (ausentesSet.has(id)) {
+        ausentesSet.delete(id);
+        el.classList.remove('ausente');
+      } else {
+        ausentesSet.add(id);
+        el.classList.add('ausente');
+      }
+      cambiosSinGuardar = true;
+      actualizarContadores();
+    }
+
+    function actualizarContadores() {
+      const total = alumnosActuales.length;
+      const aus = ausentesSet.size;
+      const pres = Math.max(0, total - aus);
+      document.getElementById('cnt-mat').textContent = total;
+      document.getElementById('cnt-pres').textContent = pres;
+      document.getElementById('cnt-aus').textContent = aus;
+    }
+
+    async function guardarAusentes(silencioso = false) {
+      const btn = document.getElementById('btn-guardar');
+      const txt = document.getElementById('btn-guardar-txt');
+      btn.disabled = true;
+      txt.textContent = '...';
+
+      try {
+        const res = await fetch(`/api/asistencia/curso/${encodeURIComponent(cursoActual)}/guardar`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            fecha: fechaActual,
+            ausentesIds: Array.from(ausentesSet)
+          })
+        });
+        const data = await res.json();
+        if (!res.ok) throw new Error(data.error || 'Error guardando');
+
+        cambiosSinGuardar = false;
+        const cObj = estadosCursos.find(c => c.curso === cursoActual);
+        if (cObj) cObj.tomada = true;
+        renderChips();
+
+        txt.textContent = '¡LISTO! ✅';
+        btn.style.backgroundColor = '#4285F4';
+        btn.style.transform = 'scale(1.15)';
+        setTimeout(() => {
+          txt.textContent = 'Guardar';
+          btn.style.backgroundColor = '#188038';
+          btn.style.transform = 'scale(1)';
+          btn.disabled = false;
+        }, 1600);
+        return true;
+      } catch (e) {
+        txt.textContent = 'ERROR ❌';
+        btn.style.backgroundColor = '#EA4335';
+        if (!silencioso) Swal.fire('Hubo un problema', e.message, 'error');
+        setTimeout(() => {
+          txt.textContent = 'Guardar';
+          btn.style.backgroundColor = '#188038';
+          btn.disabled = false;
+        }, 3000);
+        return false;
+      }
+    }
+
+    async function abrirModalReporte() {
+      const { value: mensaje } = await Swal.fire({
+        title: `Reportar Novedad · ${cursoActual}`,
+        input: 'textarea',
+        inputPlaceholder: 'Escribe aquí tu observación o reporte para Inspectoría y Dirección...',
+        showCancelButton: true,
+        confirmButtonText: 'Enviar Reporte',
+        cancelButtonText: 'Cancelar',
+        confirmButtonColor: '#EA4335',
+        inputValidator: (v) => {
+          if (!v || !v.trim()) return 'Debes escribir un mensaje antes de enviar.';
+        }
+      });
+
+      if (!mensaje) return;
+
+      try {
+        const res = await fetch('/api/asistencia/novedad', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            curso: cursoActual,
+            fecha: fechaActual,
+            mensaje: mensaje.trim()
+          })
+        });
+        const data = await res.json();
+        if (!res.ok) throw new Error(data.error || 'Error enviando reporte');
+        Swal.fire('✅ Enviado', 'Reporte enviado con éxito a Inspectoría y Dirección.', 'success');
+      } catch (e) {
+        Swal.fire('Error', e.message, 'error');
+      }
+    }
+  </script>
+</body>
+</html>

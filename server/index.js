@@ -119,6 +119,9 @@ db.serialize(() => {
     (anno, nombre, estado, fecha_inicio, fecha_fin, fecha_termino_primer_semestre, fecha_inicio_segundo_semestre, descripcion)
     VALUES 
     (2026, 'Año Escolar 2026', 'Activo', '2026-03-02', '2026-12-18', '2026-07-03', '2026-07-27', 'Año escolar en curso')`, () => {});
+  db.run(`INSERT OR IGNORE INTO roles_config (nombre, permisos) VALUES ('Inspectoría', ?)`, [
+    JSON.stringify({ esAdminGeneral: false, puedeAgendarSinRestricciones: false, tomarAsistencia: true, gestionarAsistencia: true })
+  ], () => {});
   mailer.inicializarTablasCorreo();
   auditoria.inicializarTablaAuditoria();
   asistenciaService.inicializarTablasAsistencia();
@@ -171,6 +174,14 @@ app.use((req, res, next) => {
   }
   if (req.user && req.user.esVisitanteInstitucional) {
     return res.redirect('/calendario-curso.html');
+  }
+  next();
+});
+
+app.get('/tomar-asistencia.html', (req, res, next) => {
+  if (!req.isAuthenticated() && (process.env.GOOGLE_CLIENT_ID || process.env.GAS_WEB_APP_URL)) {
+    if (req.session) req.session.returnTo = '/tomar-asistencia.html';
+    return res.redirect('/login.html');
   }
   next();
 });
@@ -306,6 +317,15 @@ app.get('/auth/google', (req, res, next) => {
   passport.authenticate('google', { scope: ['profile', 'email'] })(req, res, next);
 });
 
+function obtenerRedirectSeguro(req, fallback = '/') {
+  const rt = req.session && req.session.returnTo;
+  if (req.session && req.session.returnTo) delete req.session.returnTo;
+  if (typeof rt === 'string' && rt.startsWith('/') && !rt.startsWith('//')) {
+    return rt;
+  }
+  return fallback;
+}
+
 app.get('/auth/google/callback', (req, res, next) => {
   const isPopup = req.session && req.session.oauthPopup;
   passport.authenticate('google', { 
@@ -318,7 +338,7 @@ app.get('/auth/google/callback', (req, res, next) => {
     if (req.user && req.user.esVisitanteInstitucional) {
       return res.redirect('/calendario-curso.html');
     }
-    res.redirect('/');
+    res.redirect(obtenerRedirectSeguro(req, '/'));
   });
 });
 
@@ -480,7 +500,7 @@ app.post('/api/auth/local', (req, res) => {
                 nivel: 'info',
                 descripcion: `Inicio de sesión exitoso por PIN local de emergencia (${row.nombre} - ${row.email})`
             });
-            return res.json({ success: true, redirect: '/' });
+            return res.json({ success: true, redirect: obtenerRedirectSeguro(req, '/') });
         });
     });
 });
@@ -538,7 +558,7 @@ app.get('/api/auth/gas', (req, res) => {
                 delete req.session.oauthPopup;
                 return res.redirect('/auth/popup-callback?status=success');
             }
-            res.redirect('/');
+            res.redirect(obtenerRedirectSeguro(req, '/'));
         });
     });
 });

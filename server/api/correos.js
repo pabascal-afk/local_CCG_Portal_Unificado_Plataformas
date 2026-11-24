@@ -106,6 +106,32 @@ const MOCK_DATA = {
         evento_texto: 'Charla Vocacional Universidades Regionales',
         fecha: '2026-11-05',
         lista_externos_html: '<ul style="margin: 0; padding-left: 20px;"><li><b>Nombre:</b> Rodrigo Castillo | <b>RUT:</b> 15.342.112-9 | <b>Motivo:</b> Expositor UCN</li><li><b>Nombre:</b> Daniela Morales | <b>RUT:</b> 17.892.451-3 | <b>Motivo:</b> Coordinadora Admisión UST</li></ul>'
+    },
+    asistencia_resumen_bloque1: {
+        profesor_nombre: 'Prof. Paola Pizarro',
+        fecha: '2026-11-24',
+        dia_semana: 'MARTES',
+        cursos: '1° Básico A, 2° Básico B',
+        cursos_tabla_html: '<div style="border: 1px solid #e2e8f0; border-radius: 8px; padding: 12px; margin-bottom: 10px;"><strong style="color: #1e3a8a;">1° Básico A</strong> · Matemática<br><span style="font-size: 13px;">Matrícula: <b>30</b> | Presentes: <b style="color:#16a34a;">28</b> | Ausentes: <b style="color:#dc2626;">2</b> (<b>93.3%</b>)</span><div style="font-size:12px;color:#64748b;margin-top:4px;">Ausentes: AGUILAR SANTINO, PEREIRA ROMÁN</div></div>',
+        total_presentes: '57',
+        total_ausentes: '3',
+        porcentaje_promedio: '95.0',
+        enlace_plataforma: 'http://localhost:9000/asistencia.html'
+    },
+    asistencia_reporte_novedad: {
+        curso: '3° Básico A',
+        fecha: '2026-11-24',
+        reportado_por: 'Marisol Guerrero',
+        reportado_email: 'mguerrero@colegiocerrogrande.cl',
+        mensaje: 'Dos estudiantes llegaron con justificativo médico posterior a la toma inicial del primer bloque.'
+    },
+    asistencia_reporte_mensual: {
+        mes_nombre: 'Noviembre',
+        anio: '2026',
+        total_cursos: '26',
+        dias_habiles: '21',
+        total_inasistencias: '482',
+        porcentaje_mensual: '92.4'
     }
 };
 

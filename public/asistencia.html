@@ -3,16 +3,13 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Asistencia Diaria - Colegio Cerro Grande</title>
-  
+  <title>Asistencia Escolar Nativa - Colegio Cerro Grande</title>
   <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
   <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.1/font/bootstrap-icons.css">
   <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
-
   <style>
     :root {
       --primary-color: #0284c7;
-      --primary-dark: #0369a1;
       --bg-color: #f8fafc;
       --card-bg: #ffffff;
       --border-color: #e2e8f0;
@@ -23,7 +20,7 @@
     body {
       background-color: var(--bg-color);
       color: var(--text-main);
-      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Arial, sans-serif;
       margin: 0;
       padding: 0;
     }
@@ -35,41 +32,186 @@
       box-shadow: 0 1px 3px rgba(0,0,0,0.02), 0 2px 6px rgba(0,0,0,0.03);
     }
 
+    .nav-tabs-custom {
+      border-bottom: 2px solid #e2e8f0;
+      gap: 6px;
+    }
+    .nav-tabs-custom .nav-link {
+      border: none;
+      color: #64748b;
+      font-weight: 600;
+      padding: 10px 16px;
+      border-radius: 8px 8px 0 0;
+      transition: all 0.15s ease;
+    }
+    .nav-tabs-custom .nav-link:hover {
+      color: #0284c7;
+      background-color: #f1f5f9;
+    }
+    .nav-tabs-custom .nav-link.active {
+      color: #0284c7;
+      background-color: #ffffff;
+      border-bottom: 3px solid #0284c7;
+    }
+
+    /* Chips de cursos estilo táctil rápido */
+    .chips-container {
+      display: flex;
+      overflow-x: auto;
+      gap: 8px;
+      padding: 6px 2px 10px;
+      scrollbar-width: thin;
+    }
+    .chip-curso {
+      padding: 8px 16px;
+      border-radius: 999px;
+      background-color: #e2e8f0;
+      color: #334155;
+      font-weight: 600;
+      font-size: 0.85rem;
+      white-space: nowrap;
+      border: 2px solid transparent;
+      cursor: pointer;
+      transition: all 0.15s ease;
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+    }
+    .chip-curso:hover {
+      background-color: #cbd5e1;
+    }
+    .chip-curso.tomada {
+      background-color: #dcfce7;
+      color: #166534;
+      border-color: #86efac;
+    }
+    .chip-curso.active {
+      background-color: #188038 !important;
+      color: #ffffff !important;
+      border-color: #136a2e !important;
+      box-shadow: 0 3px 8px rgba(24, 128, 56, 0.25);
+    }
+
+    /* Lista táctil de alumnos en Toma de Asistencia */
+    #listaTomaAlumnos {
+      border: 1px solid #e2e8f0;
+      border-radius: 12px;
+      overflow: hidden;
+      background: #ffffff;
+      margin-bottom: 100px;
+    }
+    .student-row {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 18px 20px;
+      border-bottom: 1px solid #f1f5f9;
+      background: #ffffff;
+      cursor: pointer;
+      user-select: none;
+      transition: background-color 0.15s ease, color 0.15s ease;
+    }
+    .student-row:hover {
+      background-color: #f8fafc;
+    }
+    .student-row:last-child {
+      border-bottom: none;
+    }
+    .student-row-main {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      flex: 1;
+      gap: 10px;
+      pointer-events: none;
+    }
+    .student-row label {
+      font-weight: 500;
+      margin: 0;
+      pointer-events: none;
+      transition: font-size 0.2s ease;
+    }
+    .student-row.ausente {
+      background-color: #fce8e6 !important;
+      color: #c5221f !important;
+    }
+    .student-row.ausente label {
+      color: #c5221f;
+      font-weight: 700;
+    }
+    .icon-ausente {
+      display: none;
+      font-size: 1.15rem;
+    }
+    .student-row.ausente .icon-ausente {
+      display: inline-block;
+    }
+    body.font-small .student-row label { font-size: 1rem; }
+    body.font-medium .student-row label { font-size: 1.25rem; }
+    body.font-large .student-row label { font-size: 1.65rem; }
+
+    /* Botón flotante circular Guardar */
+    .btn-guardar-flotante {
+      position: fixed;
+      bottom: 26px;
+      right: 28px;
+      width: 78px;
+      height: 78px;
+      border-radius: 50%;
+      background-color: #188038;
+      color: #ffffff;
+      border: none;
+      box-shadow: 0 6px 18px rgba(0, 0, 0, 0.28);
+      cursor: pointer;
+      z-index: 1030;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      font-size: 11px;
+      font-weight: 700;
+      text-transform: uppercase;
+      transition: transform 0.2s, background-color 0.2s;
+    }
+    .btn-guardar-flotante:active {
+      transform: scale(0.92);
+    }
+    .btn-guardar-flotante:disabled {
+      background-color: #94a3b8 !important;
+      cursor: not-allowed;
+      transform: none;
+    }
+
+    /* KPIs Resumen Diario */
     .kpi-card {
       background: white;
       border: 1px solid var(--border-color);
       border-radius: 12px;
-      padding: 18px 20px;
+      padding: 16px 18px;
       display: flex;
       align-items: center;
       justify-content: space-between;
-      transition: transform 0.15s ease, box-shadow 0.15s ease;
-    }
-    .kpi-card:hover {
-      transform: translateY(-2px);
-      box-shadow: 0 4px 12px rgba(0,0,0,0.05);
     }
     .kpi-icon {
-      width: 48px;
-      height: 48px;
+      width: 46px;
+      height: 46px;
       border-radius: 10px;
       display: flex;
       align-items: center;
       justify-content: center;
-      font-size: 1.4rem;
+      font-size: 1.35rem;
     }
     .kpi-num {
-      font-size: 1.65rem;
+      font-size: 1.6rem;
       font-weight: 700;
-      line-height: 1.2;
-      color: var(--text-main);
+      line-height: 1.15;
     }
     .kpi-label {
-      font-size: 0.8rem;
+      font-size: 0.76rem;
       color: var(--text-muted);
       text-transform: uppercase;
-      font-weight: 600;
-      letter-spacing: 0.5px;
+      font-weight: 700;
+      letter-spacing: 0.4px;
     }
 
     .progress-bar-custom {
@@ -81,9 +223,8 @@
     .progress-bar-fill {
       height: 100%;
       border-radius: 4px;
-      transition: width 0.4s ease;
+      transition: width 0.35s ease;
     }
-
     .badge-pct-green { background-color: #dcfce7; color: #15803d; border: 1px solid #bbf7d0; font-weight: 700; }
     .badge-pct-yellow { background-color: #fef9c3; color: #a16207; border: 1px solid #fef08a; font-weight: 700; }
     .badge-pct-red { background-color: #fee2e2; color: #b91c1c; border: 1px solid #fecaca; font-weight: 700; }
@@ -96,82 +237,140 @@
       padding: 2px 7px;
       border-radius: 4px;
       font-size: 0.75rem;
-      margin-right: 4px;
-      margin-bottom: 4px;
+      margin: 0 4px 4px 0;
     }
 
     .card-docente-bloque1 {
       border: 2px solid #38bdf8;
       background: linear-gradient(180deg, #f0f9ff 0%, #ffffff 100%);
       border-radius: 12px;
-      padding: 20px;
-      margin-bottom: 24px;
+      padding: 18px;
+      margin-bottom: 20px;
+    }
+
+    /* Planilla Mensual tipo Libro de Clases */
+    .libro-table-wrap {
+      overflow: auto;
+      max-height: 70vh;
+      border: 1px solid #cbd5e1;
+      border-radius: 8px;
+      background: #ffffff;
+    }
+    .libro-table {
+      border-collapse: separate;
+      border-spacing: 0;
+      font-size: 0.78rem;
+      width: 100%;
+    }
+    .libro-table th, .libro-table td {
+      border-right: 1px solid #e2e8f0;
+      border-bottom: 1px solid #e2e8f0;
+      padding: 4px 5px;
+      white-space: nowrap;
+    }
+    .libro-table thead th {
+      position: sticky;
+      top: 0;
+      background: #f1f5f9;
+      z-index: 3;
+      text-align: center;
+      font-weight: 700;
+    }
+    .libro-table thead tr:nth-child(2) th {
+      top: 26px;
+      background: #1e293b;
+      color: #ffffff;
+    }
+    .libro-sticky-num {
+      position: sticky;
+      left: 0;
+      background: #ffffff;
+      z-index: 2;
+      min-width: 34px;
+      text-align: center;
+    }
+    .libro-sticky-nom {
+      position: sticky;
+      left: 34px;
+      background: #ffffff;
+      z-index: 2;
+      min-width: 220px;
+      max-width: 260px;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+    .libro-table thead .libro-sticky-num,
+    .libro-table thead .libro-sticky-nom {
+      z-index: 5;
+      background: #0f172a;
+      color: #ffffff;
+    }
+    .celda-dia {
+      min-width: 30px;
+      text-align: center;
+      font-weight: 700;
+    }
+    .celda-dia.editable {
+      cursor: pointer;
+    }
+    .celda-dia.editable:hover {
+      outline: 2px solid #0284c7;
+      outline-offset: -2px;
+    }
+    .celda-ausente {
+      background-color: #fce8e6 !important;
+      color: #c5221f;
+    }
+    .celda-feriado {
+      background-color: #e2e8f0 !important;
+      color: #64748b;
+    }
+    .celda-presente {
+      color: #16a34a;
     }
   </style>
 </head>
-<body>
+<body class="font-medium">
 
-  <div class="container-fluid px-4 py-4">
+  <div class="container-fluid px-3 px-md-4 py-3">
 
     <!-- CABECERA -->
-    <div class="d-flex flex-wrap justify-content-between align-items-center mb-4 pb-2 border-bottom">
+    <div class="d-flex flex-wrap justify-content-between align-items-center mb-3 pb-2 border-bottom gap-2">
       <div>
-        <h3 class="fw-bold mb-1 d-flex align-items-center">
-          <i class="bi bi-person-check-fill text-primary me-2"></i> Asistencia Diaria del Establecimiento
-          <span class="badge bg-primary-subtle text-primary border border-primary-subtle fs-6 ms-3">
-            Sincronización Sheets
+        <h3 class="fw-bold mb-1 d-flex align-items-center flex-wrap gap-2">
+          <span><i class="bi bi-person-check-fill text-primary me-1"></i> Asistencia Diaria</span>
+          <span class="badge bg-success-subtle text-success border border-success-subtle fs-6">
+            <i class="bi bi-database-check me-1"></i>Sistema Nativo
           </span>
         </h3>
         <p class="text-secondary small mb-0">
-          Supervisión de asistencia por curso en tiempo real y resumen automático de las 12:00 PM para docentes de primer bloque.
+          Registro oficial diario en plataforma, libro mensual permanente, resumen 12:00 PM a docentes Bloque 1 y exportación Excel / PDF.
         </p>
       </div>
 
-      <div class="d-flex flex-wrap gap-2 mt-3 mt-md-0 align-items-center">
-        <!-- Selector de Fecha -->
-        <div class="input-group input-group-sm" style="width: 170px;">
-          <span class="input-group-text bg-white"><i class="bi bi-calendar3"></i></span>
-          <input type="date" id="inputFecha" class="form-control" onchange="cargarAsistencia()">
-        </div>
-
-        <button class="btn btn-outline-secondary btn-sm" onclick="setFechaHoy()" title="Ir a hoy">
-          Hoy
-        </button>
-
-        <button class="btn btn-primary btn-sm fw-semibold shadow-sm" onclick="sincronizarGoogleSheets()" id="btnSincronizar" title="Descargar datos frescos de Google Sheets">
-          <i class="bi bi-cloud-arrow-down-fill me-1"></i> Sincronizar Sheets
-        </button>
-
-        <!-- Botones de Gestión (Admin) -->
-        <div class="dropdown d-none" id="dropdownAdmin">
-          <button class="btn btn-outline-dark btn-sm dropdown-toggle" type="button" data-bs-toggle="dropdown">
-            <i class="bi bi-gear-fill me-1"></i> Acciones
+      <div class="d-flex flex-wrap gap-2 align-items-center">
+        <a href="/tomar-asistencia.html" target="_blank" id="btnModoMovil" class="btn btn-success btn-sm fw-semibold d-none shadow-sm">
+          <i class="bi bi-phone-fill me-1"></i> Vista Móvil / Tablet
+        </a>
+        <div class="dropdown d-none" id="dropdownAccionesRapidas">
+          <button class="btn btn-outline-dark btn-sm dropdown-toggle fw-semibold" type="button" data-bs-toggle="dropdown">
+            <i class="bi bi-lightning-fill me-1"></i> Acciones
           </button>
           <ul class="dropdown-menu dropdown-menu-end shadow-sm">
             <li>
-              <a class="dropdown-item" href="#" onclick="probarEnvioCorreos(false); return false;">
-                <i class="bi bi-envelope-check text-primary me-2"></i> Enviar Correos Bloque 1 (Pendientes)
+              <a class="dropdown-item" href="#" onclick="probarEnvioBloque1(false); return false;">
+                <i class="bi bi-envelope-check text-primary me-2"></i> Enviar Resumen 12:00 PM (Pendientes)
               </a>
             </li>
             <li>
-              <a class="dropdown-item" href="#" onclick="probarEnvioCorreos(true); return false;">
-                <i class="bi bi-envelope-paper-heart text-warning me-2"></i> Forzar Reenvío a Todos (Prueba)
-              </a>
-            </li>
-            <li>
-              <a class="dropdown-item" href="#" onclick="abrirModalLogs(); return false;">
-                <i class="bi bi-clock-history text-secondary me-2"></i> Ver Historial de Envíos
+              <a class="dropdown-item" href="#" onclick="probarEnvioBloque1(true); return false;">
+                <i class="bi bi-envelope-paper-heart text-warning me-2"></i> Forzar Reenvío Bloque 1
               </a>
             </li>
             <li><hr class="dropdown-divider"></li>
             <li>
-              <a class="dropdown-item" href="#" onclick="abrirModalSubirArchivo(); return false;">
-                <i class="bi bi-file-earmark-excel text-success me-2"></i> Subir Archivo Excel/CSV Manual
-              </a>
-            </li>
-            <li>
-              <a class="dropdown-item" href="#" onclick="abrirModalConfig(); return false;">
-                <i class="bi bi-sliders text-dark me-2"></i> Configuración Hoja de Cálculo
+              <a class="dropdown-item" href="#" onclick="abrirModalImportarMigracion(); return false;">
+                <i class="bi bi-file-earmark-spreadsheet text-success me-2"></i> Migrar / Importar Excel Google Sheets
               </a>
             </li>
           </ul>
@@ -179,240 +378,575 @@
       </div>
     </div>
 
-    <!-- TARJETAS DE INDICADORES (KPIS) -->
-    <div class="row g-3 mb-4">
-      <div class="col-sm-6 col-lg-3">
-        <div class="kpi-card">
-          <div>
-            <div class="kpi-label">Asistencia Promedio</div>
-            <div class="kpi-num text-primary" id="kpiPorcentaje">0.0%</div>
-            <small class="text-muted" id="kpiFechaText">Cargando fecha...</small>
-          </div>
-          <div class="kpi-icon bg-primary-subtle text-primary">
-            <i class="bi bi-percent"></i>
-          </div>
-        </div>
-      </div>
+    <!-- PESTAÑAS DEL MÓDULO -->
+    <ul class="nav nav-tabs nav-tabs-custom mb-3" id="asistenciaTabs" role="tablist">
+      <li class="nav-item d-none" id="liTabToma" role="presentation">
+        <button class="nav-link" id="tab-toma-btn" data-bs-toggle="tab" data-bs-target="#pane-toma" type="button" role="tab">
+          📝 Tomar Asistencia
+        </button>
+      </li>
+      <li class="nav-item" role="presentation">
+        <button class="nav-link active" id="tab-resumen-btn" data-bs-toggle="tab" data-bs-target="#pane-resumen" type="button" role="tab">
+          📊 Resumen Diario
+        </button>
+      </li>
+      <li class="nav-item" role="presentation">
+        <button class="nav-link" id="tab-mensual-btn" data-bs-toggle="tab" data-bs-target="#pane-mensual" type="button" role="tab" onclick="asegurarPlanillaCargada()">
+          📅 Planilla Mensual (Libro)
+        </button>
+      </li>
+      <li class="nav-item d-none" id="liTabMatricula" role="presentation">
+        <button class="nav-link" id="tab-matricula-btn" data-bs-toggle="tab" data-bs-target="#pane-matricula" type="button" role="tab" onclick="asegurarMatriculaCargada()">
+          👥 Matrícula
+        </button>
+      </li>
+      <li class="nav-item d-none" id="liTabConfig" role="presentation">
+        <button class="nav-link" id="tab-config-btn" data-bs-toggle="tab" data-bs-target="#pane-config" type="button" role="tab" onclick="cargarTabConfig()">
+          ⚙️ Configuración y Feriados
+        </button>
+      </li>
+    </ul>
 
-      <div class="col-sm-6 col-lg-3">
-        <div class="kpi-card">
-          <div>
-            <div class="kpi-label">Alumnos Presentes</div>
-            <div class="kpi-num text-success" id="kpiPresentes">0</div>
-            <small class="text-muted" id="kpiMatriculaTotal">de 0 matriculados</small>
-          </div>
-          <div class="kpi-icon bg-success-subtle text-success">
-            <i class="bi bi-person-check"></i>
-          </div>
-        </div>
-      </div>
+    <div class="tab-content" id="asistenciaTabsContent">
 
-      <div class="col-sm-6 col-lg-3">
-        <div class="kpi-card">
-          <div>
-            <div class="kpi-label">Alumnos Ausentes</div>
-            <div class="kpi-num text-danger" id="kpiAusentes">0</div>
-            <small class="text-muted">Inasistencias hoy</small>
-          </div>
-          <div class="kpi-icon bg-danger-subtle text-danger">
-            <i class="bi bi-person-x"></i>
-          </div>
-        </div>
-      </div>
-
-      <div class="col-sm-6 col-lg-3">
-        <div class="kpi-card">
-          <div>
-            <div class="kpi-label">Cursos Reportados</div>
-            <div class="kpi-num text-dark" id="kpiCursos">0</div>
-            <small class="text-muted" id="kpiOrigenText">Fuente: Google Sheets</small>
-          </div>
-          <div class="kpi-icon bg-info-subtle text-info">
-            <i class="bi bi-mortarboard"></i>
-          </div>
-        </div>
-      </div>
-    </div>
-
-    <!-- SECCIÓN PERSONALIZADA PARA DOCENTE DE PRIMER BLOQUE -->
-    <div id="seccionDocenteBloque1" class="d-none">
-      <div class="card-docente-bloque1">
-        <div class="d-flex flex-wrap justify-content-between align-items-center mb-3">
-          <div class="d-flex align-items-center gap-2">
-            <span class="badge bg-primary fs-6"><i class="bi bi-alarm-fill me-1"></i> Primer Bloque (08:00 - 09:30)</span>
-            <h5 class="fw-bold text-dark mb-0">Tus Cursos Asignados Hoy</h5>
-          </div>
-          <span class="badge bg-info-subtle text-info border border-info-subtle" style="font-size: 0.8rem;">
-            <i class="bi bi-envelope-paper me-1"></i> Recibirás este resumen a las 12:00 PM a tu correo
-          </span>
-        </div>
-
-        <div class="row g-3" id="contenedorCursosDocente">
-          <!-- Tarjetas dinámicas inyectadas vía JS -->
-        </div>
-      </div>
-    </div>
-
-    <!-- TABLA GENERAL DE ASISTENCIA POR CURSO -->
-    <div class="card-custom overflow-hidden mb-4">
-      <div class="p-3 border-bottom bg-white d-flex flex-wrap justify-content-between align-items-center gap-3">
-        <div class="d-flex align-items-center gap-2">
-          <span class="fw-bold text-dark"><i class="bi bi-table text-primary me-1"></i> Detalle de Asistencia por Curso</span>
-          <span class="badge bg-light text-secondary border" id="badgeTotalTabla">0 cursos</span>
-        </div>
-
-        <div class="d-flex flex-wrap align-items-center gap-2">
-          <!-- Filtro rápido por texto -->
-          <div class="input-group input-group-sm" style="width: 220px;">
-            <span class="input-group-text bg-white"><i class="bi bi-search text-muted"></i></span>
-            <input type="text" id="filtroCurso" class="form-control" placeholder="Buscar curso..." oninput="filtrarTabla()">
+      <!-- ======================================================= -->
+      <!-- TAB 1: TOMAR ASISTENCIA                                 -->
+      <!-- ======================================================= -->
+      <div class="tab-pane fade" id="pane-toma" role="tabpanel">
+        <div class="card-custom p-3 mb-3">
+          <div class="d-flex flex-wrap justify-content-between align-items-center gap-2 mb-2">
+            <div class="d-flex align-items-center gap-2">
+              <span class="small fw-bold text-secondary text-uppercase">Seleccionar Curso:</span>
+              <span class="badge bg-light text-dark border" id="tomaProgresoBadge">0 / 26 tomados</span>
+            </div>
+            <div class="d-flex flex-wrap align-items-center gap-2">
+              <div class="input-group input-group-sm" style="width: 160px;">
+                <span class="input-group-text bg-white"><i class="bi bi-calendar3"></i></span>
+                <input type="date" id="tomaFechaInput" class="form-control" onchange="cambiarFechaToma()">
+              </div>
+              <button type="button" class="btn btn-danger btn-sm fw-semibold" onclick="abrirModalNovedad()">
+                💬 Reportar
+              </button>
+              <div class="btn-group btn-group-sm" role="group" aria-label="Tamaño letra">
+                <button type="button" class="btn btn-outline-secondary font-btn" data-size="small" onclick="setFontSize('small')">A-</button>
+                <button type="button" class="btn btn-outline-secondary font-btn active" data-size="medium" onclick="setFontSize('medium')">A</button>
+                <button type="button" class="btn btn-outline-secondary font-btn" data-size="large" onclick="setFontSize('large')">A+</button>
+              </div>
+            </div>
           </div>
 
-          <!-- Filtro por Nivel -->
-          <select id="filtroNivel" class="form-select form-select-sm" style="width: 160px;" onchange="filtrarTabla()">
-            <option value="todos">Todos los niveles</option>
-            <option value="basica">Enseñanza Básica</option>
-            <option value="media">Enseñanza Media</option>
-            <option value="critico">⚠️ Asistencia &lt; 85%</option>
-          </select>
-        </div>
-      </div>
+          <div id="tomaChipsCursos" class="chips-container">
+            <div class="chip-curso">Cargando cursos...</div>
+          </div>
 
-      <div class="table-responsive">
-        <table class="table table-hover align-middle mb-0" style="font-size: 0.9rem;">
-          <thead class="table-light text-secondary" style="font-size: 0.78rem; text-transform: uppercase; letter-spacing: 0.5px;">
-            <tr>
-              <th style="width: 220px;">Curso</th>
-              <th style="width: 110px;" class="text-center">Matrícula</th>
-              <th style="width: 110px;" class="text-center">Presentes</th>
-              <th style="width: 110px;" class="text-center">Ausentes</th>
-              <th style="width: 200px;">% Asistencia</th>
-              <th>Alumnos Ausentes (Detalle)</th>
-              <th style="width: 130px;" class="text-center">Actualizado</th>
-            </tr>
-          </thead>
-          <tbody id="tablaCursosBody">
-            <tr>
-              <td colspan="7" class="text-center py-5 text-secondary">
-                <div class="spinner-border text-primary spinner-border-sm me-2" role="status"></div>
-                Cargando datos de asistencia...
-              </td>
-            </tr>
-          </tbody>
-        </table>
-      </div>
-    </div>
-
-  </div>
-
-  <!-- MODAL CONFIGURACIÓN GOOGLE SHEETS -->
-  <div class="modal fade" id="modalConfig" tabindex="-1" aria-hidden="true">
-    <div class="modal-dialog modal-lg">
-      <div class="modal-content card-custom">
-        <div class="modal-header border-bottom py-3">
-          <h5 class="modal-title fw-bold text-dark d-flex align-items-center">
-            <i class="bi bi-file-earmark-spreadsheet-fill text-success me-2"></i> Configuración de Hoja Google Sheets y Envíos
-          </h5>
-          <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
-        </div>
-        <div class="modal-body p-4">
-          <div class="alert alert-info d-flex align-items-start gap-2 mb-3" style="font-size: 0.88rem;">
-            <i class="bi bi-info-circle-fill fs-5 mt-1"></i>
+          <div class="d-flex flex-wrap justify-content-between align-items-center mt-2 pt-2 border-top gap-2">
             <div>
-              <strong>Requisito de acceso en Google Sheets:</strong><br>
-              Para que la plataforma pueda descargar la asistencia sin credenciales externas, en Google Sheets haz clic en <strong>Compartir</strong> > <strong>Acceso general</strong> y cámbialo a <strong>"Cualquier persona que tenga el vínculo (Lector)"</strong> o selecciona <em>Archivo > Compartir > Publicar en la web</em>.
+              <h5 class="fw-bold mb-0 text-dark" id="tomaFechaLegible">Cargando fecha...</h5>
+              <small class="text-muted" id="tomaUltimoRegistroInfo">Sin registro previo para esta fecha.</small>
+            </div>
+            <div class="d-flex align-items-center gap-3 small">
+              <span>Matrícula: <strong id="tomaCountMatricula">0</strong></span>
+              <span class="text-success">Presentes: <strong id="tomaCountPresentes">0</strong></span>
+              <span class="text-danger">Ausentes: <strong id="tomaCountAusentes">0</strong></span>
             </div>
           </div>
+        </div>
 
-          <form id="formConfig" onsubmit="guardarConfig(event)">
-            <div class="mb-3">
-              <label class="form-label fw-semibold small">URL Completa de Google Sheets</label>
-              <input type="url" id="cfgUrl" class="form-control" required placeholder="https://docs.google.com/spreadsheets/d/.../edit#gid=...">
-              <small class="text-muted">Pega el link directo a la hoja de cálculo que usan diariamente.</small>
+        <div class="alert alert-danger py-2 px-3 d-flex justify-content-between align-items-center mb-3" id="tomaBannerAviso">
+          <span>⚠️ Selecciona <strong>SOLO</strong> a los alumnos ausentes tocando cada fila.</span>
+          <span class="badge bg-danger d-none" id="tomaUnsavedBadge">Cambios sin guardar</span>
+        </div>
+
+        <div id="listaTomaAlumnos">
+          <div class="text-center py-5 text-muted">
+            <div class="spinner-border text-primary spinner-border-sm me-2"></div>
+            Cargando listado de estudiantes...
+          </div>
+        </div>
+
+        <button class="btn-guardar-flotante d-none" id="btnGuardarToma" onclick="guardarAsistenciaToma()">
+          <span style="font-size: 22px; line-height: 1.1;">💾</span>
+          <span id="btnGuardarTomaTxt">Guardar</span>
+        </button>
+      </div>
+
+      <!-- ======================================================= -->
+      <!-- TAB 2: RESUMEN DIARIO                                   -->
+      <!-- ======================================================= -->
+      <div class="tab-pane fade show active" id="pane-resumen" role="tabpanel">
+        <div class="d-flex flex-wrap justify-content-between align-items-center mb-3 gap-2">
+          <div class="d-flex align-items-center gap-2">
+            <div class="input-group input-group-sm" style="width: 170px;">
+              <span class="input-group-text bg-white"><i class="bi bi-calendar3"></i></span>
+              <input type="date" id="resumenFechaInput" class="form-control" onchange="cargarResumenDiario()">
             </div>
+            <button class="btn btn-outline-secondary btn-sm" onclick="setResumenHoy()">Hoy</button>
+            <span class="badge bg-light text-dark border" id="resumenDiaBadge"></span>
+          </div>
+          <div id="resumenRegistradosBadge" class="small fw-semibold text-secondary"></div>
+        </div>
 
-            <div class="row g-3 mb-3">
-              <div class="col-md-6">
-                <label class="form-label fw-semibold small">GID de la Pestaña (Opcional)</label>
-                <input type="text" id="cfgGid" class="form-control" placeholder="1052336650">
-                <small class="text-muted">Si la URL ya incluye #gid=, se detectará automáticamente.</small>
+        <!-- KPIs -->
+        <div class="row g-3 mb-3">
+          <div class="col-sm-6 col-lg-3">
+            <div class="kpi-card">
+              <div>
+                <div class="kpi-label">Asistencia Promedio</div>
+                <div class="kpi-num text-primary" id="kpiPorcentaje">0.0%</div>
+                <small class="text-muted" id="kpiFechaText">-</small>
               </div>
-
-              <div class="col-md-6">
-                <label class="form-label fw-semibold small">Hora Programada de Envío de Resúmenes</label>
-                <input type="time" id="cfgHora" class="form-control" value="12:00">
-                <small class="text-muted">Hora local en Chile (por defecto 12:00 PM).</small>
+              <div class="kpi-icon bg-primary-subtle text-primary"><i class="bi bi-percent"></i></div>
+            </div>
+          </div>
+          <div class="col-sm-6 col-lg-3">
+            <div class="kpi-card">
+              <div>
+                <div class="kpi-label">Alumnos Presentes</div>
+                <div class="kpi-num text-success" id="kpiPresentes">0</div>
+                <small class="text-muted" id="kpiMatriculaTotal">de 0 reportados</small>
               </div>
+              <div class="kpi-icon bg-success-subtle text-success"><i class="bi bi-person-check"></i></div>
             </div>
-
-            <div class="form-check form-switch mb-4">
-              <input class="form-check-input" type="checkbox" id="cfgAuto" checked>
-              <label class="form-check-label fw-semibold" for="cfgAuto">
-                Activar envío automático diario a las 12:00 PM (Lunes a Viernes)
-              </label>
+          </div>
+          <div class="col-sm-6 col-lg-3">
+            <div class="kpi-card">
+              <div>
+                <div class="kpi-label">Alumnos Ausentes</div>
+                <div class="kpi-num text-danger" id="kpiAusentes">0</div>
+                <small class="text-muted">Inasistencias del día</small>
+              </div>
+              <div class="kpi-icon bg-danger-subtle text-danger"><i class="bi bi-person-x"></i></div>
             </div>
+          </div>
+          <div class="col-sm-6 col-lg-3">
+            <div class="kpi-card">
+              <div>
+                <div class="kpi-label">Cursos Tomados Hoy</div>
+                <div class="kpi-num text-dark" id="kpiCursos">0 / 26</div>
+                <small class="text-muted" id="kpiOrigenText">Registro nativo</small>
+              </div>
+              <div class="kpi-icon bg-info-subtle text-info"><i class="bi bi-mortarboard"></i></div>
+            </div>
+          </div>
+        </div>
 
-            <div class="d-flex justify-content-end gap-2">
-              <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">Cancelar</button>
-              <button type="submit" class="btn btn-primary" id="btnGuardarConfig">
-                <i class="bi bi-check2-circle me-1"></i> Guardar y Sincronizar
+        <!-- Alerta cursos pendientes -->
+        <div id="alertaCursosPendientes" class="alert alert-warning py-2 px-3 d-none mb-3">
+          <div class="d-flex flex-wrap justify-content-between align-items-center gap-2">
+            <div>
+              <strong><i class="bi bi-hourglass-split me-1"></i>Cursos pendientes de toma de asistencia:</strong>
+              <span id="listaCursosPendientesChips" class="ms-1"></span>
+            </div>
+          </div>
+        </div>
+
+        <!-- Tarjeta Personal Docente Bloque 1 -->
+        <div id="seccionDocenteBloque1" class="d-none">
+          <div class="card-docente-bloque1">
+            <div class="d-flex flex-wrap justify-content-between align-items-center mb-3 gap-2">
+              <div class="d-flex align-items-center gap-2">
+                <span class="badge bg-primary fs-6"><i class="bi bi-alarm-fill me-1"></i> Primer Bloque</span>
+                <h5 class="fw-bold text-dark mb-0">Tus Cursos Asignados Hoy</h5>
+              </div>
+              <span class="badge bg-info-subtle text-info border border-info-subtle">
+                <i class="bi bi-envelope-paper me-1"></i> Resumen automático a tu correo a las 12:00 PM
+              </span>
+            </div>
+            <div class="row g-3" id="contenedorCursosDocente"></div>
+          </div>
+        </div>
+
+        <!-- Novedades del día (solo gestores) -->
+        <div id="panelNovedadesDia" class="card-custom mb-3 d-none">
+          <div class="p-3 border-bottom d-flex justify-content-between align-items-center bg-light">
+            <span class="fw-bold text-danger"><i class="bi bi-chat-left-text-fill me-1"></i> Novedades Reportadas Hoy</span>
+            <span class="badge bg-danger" id="badgeCountNovedades">0</span>
+          </div>
+          <div id="listaNovedadesDiaBody" class="p-3"></div>
+        </div>
+
+        <!-- Tabla General -->
+        <div class="card-custom overflow-hidden mb-4">
+          <div class="p-3 border-bottom bg-white d-flex flex-wrap justify-content-between align-items-center gap-2">
+            <div class="d-flex align-items-center gap-2">
+              <span class="fw-bold text-dark"><i class="bi bi-table text-primary me-1"></i> Asistencia Registrada por Curso</span>
+              <span class="badge bg-light text-secondary border" id="badgeTotalTabla">0 cursos</span>
+            </div>
+            <div class="d-flex flex-wrap gap-2">
+              <div class="input-group input-group-sm" style="width: 210px;">
+                <span class="input-group-text bg-white"><i class="bi bi-search text-muted"></i></span>
+                <input type="text" id="filtroCurso" class="form-control" placeholder="Buscar curso..." oninput="filtrarTablaResumen()">
+              </div>
+              <select id="filtroNivel" class="form-select form-select-sm" style="width: 170px;" onchange="filtrarTablaResumen()">
+                <option value="todos">Todos los niveles</option>
+                <option value="basica">Enseñanza Básica / Kinder</option>
+                <option value="media">Enseñanza Media</option>
+                <option value="critico">⚠️ Asistencia &lt; 85%</option>
+              </select>
+            </div>
+          </div>
+          <div class="table-responsive">
+            <table class="table table-hover align-middle mb-0" style="font-size: 0.9rem;">
+              <thead class="table-light text-secondary" style="font-size: 0.78rem; text-transform: uppercase;">
+                <tr>
+                  <th style="width: 190px;">Curso</th>
+                  <th class="text-center" style="width: 90px;">Matrícula</th>
+                  <th class="text-center" style="width: 95px;">Presentes</th>
+                  <th class="text-center" style="width: 95px;">Ausentes</th>
+                  <th style="width: 185px;">% Asistencia</th>
+                  <th>Alumnos Ausentes</th>
+                  <th style="width: 150px;">Registrado por</th>
+                  <th class="text-end" style="width: 110px;">Acción</th>
+                </tr>
+              </thead>
+              <tbody id="tablaCursosBody"></tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+
+      <!-- ======================================================= -->
+      <!-- TAB 3: PLANILLA MENSUAL (LIBRO DE CLASES)               -->
+      <!-- ======================================================= -->
+      <div class="tab-pane fade" id="pane-mensual" role="tabpanel">
+        <div class="card-custom p-3 mb-3">
+          <div class="d-flex flex-wrap justify-content-between align-items-center gap-3">
+            <div class="d-flex flex-wrap align-items-center gap-2">
+              <label class="small fw-bold text-secondary">Curso:</label>
+              <select id="mensualCursoSelect" class="form-select form-select-sm" style="width: 180px;" onchange="cargarPlanillaMensual()"></select>
+
+              <label class="small fw-bold text-secondary ms-2">Mes:</label>
+              <input type="month" id="mensualMesInput" class="form-control form-control-sm" style="width: 165px;" onchange="cargarPlanillaMensual()">
+
+              <button class="btn btn-outline-primary btn-sm" onclick="cargarPlanillaMensual()">
+                <i class="bi bi-arrow-clockwise"></i> Actualizar
               </button>
             </div>
-          </form>
+
+            <div class="d-flex flex-wrap gap-2 d-none" id="mensualExportBtns">
+              <button class="btn btn-success btn-sm fw-semibold" onclick="descargarMensual('xlsx')">
+                <i class="bi bi-file-earmark-excel me-1"></i> Descargar Excel
+              </button>
+              <button class="btn btn-danger btn-sm fw-semibold" onclick="descargarMensual('pdf')">
+                <i class="bi bi-file-earmark-pdf me-1"></i> Descargar PDF
+              </button>
+              <button class="btn btn-primary btn-sm fw-semibold" onclick="enviarMensualCorreo()">
+                <i class="bi bi-envelope-paper me-1"></i> Enviar Reporte Mensual
+              </button>
+            </div>
+          </div>
+
+          <div class="mt-2 small text-muted" id="mensualHint">
+            Leyenda: <span class="badge bg-danger-subtle text-danger border">A</span> Ausente ·
+            <span class="text-success fw-bold">P</span> Presente ·
+            <span class="badge bg-secondary-subtle text-secondary">FER</span> Feriado.
+            <span id="mensualEditHint" class="d-none text-primary fw-semibold ms-2">Haz clic en cualquier celda de día para marcar/desmarcar ausencia.</span>
+          </div>
+        </div>
+
+        <div class="libro-table-wrap mb-4" id="contenedorLibroMensual">
+          <div class="text-center py-5 text-muted">Selecciona un curso y mes para visualizar el Libro de Clases.</div>
         </div>
       </div>
+
+      <!-- ======================================================= -->
+      <!-- TAB 4: MATRÍCULA Y MIGRACIÓN                            -->
+      <!-- ======================================================= -->
+      <div class="tab-pane fade" id="pane-matricula" role="tabpanel">
+        <div class="card-custom p-3 mb-3">
+          <div class="d-flex flex-wrap justify-content-between align-items-center gap-2">
+            <div class="d-flex flex-wrap align-items-center gap-2">
+              <select id="matFiltroCurso" class="form-select form-select-sm" style="width: 190px;" onchange="cargarMatricula()">
+                <option value="todos">Todos los cursos (26)</option>
+              </select>
+              <div class="input-group input-group-sm" style="width: 230px;">
+                <span class="input-group-text bg-white"><i class="bi bi-search"></i></span>
+                <input type="text" id="matBusqueda" class="form-control" placeholder="Buscar estudiante..." oninput="filtrarMatriculaLocal()">
+              </div>
+              <div class="form-check form-switch ms-2">
+                <input class="form-check-input" type="checkbox" id="matMostrarRetirados" onchange="cargarMatricula()">
+                <label class="form-check-label small" for="matMostrarRetirados">Mostrar retirados</label>
+              </div>
+            </div>
+
+            <div class="d-flex flex-wrap gap-2">
+              <button class="btn btn-outline-success btn-sm fw-semibold" onclick="abrirModalImportarMigracion()">
+                <i class="bi bi-cloud-upload me-1"></i> Migrar desde Google Sheets (.xlsx / .csv)
+              </button>
+              <button class="btn btn-primary btn-sm fw-semibold" onclick="abrirModalEstudiante()">
+                <i class="bi bi-person-plus-fill me-1"></i> Nuevo Estudiante
+              </button>
+            </div>
+          </div>
+          <div class="mt-2 small text-muted" id="matResumenConteo">Cargando matrícula...</div>
+        </div>
+
+        <div class="card-custom overflow-hidden mb-4">
+          <div class="table-responsive">
+            <table class="table table-hover align-middle mb-0" style="font-size: 0.88rem;">
+              <thead class="table-light text-secondary" style="font-size: 0.78rem; text-transform: uppercase;">
+                <tr>
+                  <th style="width: 60px;" class="text-center">N°</th>
+                  <th>Nombre del Estudiante</th>
+                  <th style="width: 160px;">Curso Asignado</th>
+                  <th style="width: 130px;" class="text-center">Estado</th>
+                  <th style="width: 210px;" class="text-end">Acciones</th>
+                </tr>
+              </thead>
+              <tbody id="tablaMatriculaBody"></tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+
+      <!-- ======================================================= -->
+      <!-- TAB 5: CONFIGURACIÓN, FERIADOS Y LOGS                   -->
+      <!-- ======================================================= -->
+      <div class="tab-pane fade" id="pane-config" role="tabpanel">
+        <div class="row g-3 mb-4">
+          <!-- Columna Izquierda: Config Envíos y Permisos -->
+          <div class="col-lg-6">
+            <div class="card-custom p-4 h-100">
+              <h5 class="fw-bold mb-3"><i class="bi bi-sliders text-primary me-2"></i>Envíos Automáticos y Permisos</h5>
+              <form id="formConfigNativa" onsubmit="guardarConfigNativa(event)">
+                <div class="border rounded p-3 mb-3 bg-light">
+                  <div class="form-check form-switch mb-2">
+                    <input class="form-check-input" type="checkbox" id="cfgEnvioDiarioActivo">
+                    <label class="form-check-label fw-bold" for="cfgEnvioDiarioActivo">
+                      Resumen Diario a Docentes de Primer Bloque
+                    </label>
+                  </div>
+                  <div class="row g-2 align-items-center">
+                    <div class="col-auto"><label class="small text-muted">Hora envío (Chile):</label></div>
+                    <div class="col-auto"><input type="time" id="cfgHoraDiaria" class="form-control form-control-sm" value="12:00"></div>
+                    <div class="col-auto">
+                      <button type="button" class="btn btn-outline-primary btn-sm" onclick="probarEnvioBloque1(false)">Probar envío ahora</button>
+                    </div>
+                  </div>
+                </div>
+
+                <div class="border rounded p-3 mb-3 bg-light">
+                  <div class="form-check form-switch mb-2">
+                    <input class="form-check-input" type="checkbox" id="cfgEnvioMensualActivo">
+                    <label class="form-check-label fw-bold" for="cfgEnvioMensualActivo">
+                      Reporte Mensual Automático (Excel + PDF) el 1er día hábil
+                    </label>
+                  </div>
+                  <div class="row g-2 align-items-center">
+                    <div class="col-auto"><label class="small text-muted">Hora envío:</label></div>
+                    <div class="col-auto"><input type="time" id="cfgHoraMensual" class="form-control form-control-sm" value="07:30"></div>
+                    <div class="col-auto">
+                      <button type="button" class="btn btn-outline-dark btn-sm" onclick="abrirModalLogsEnvios()">Historial Envíos</button>
+                    </div>
+                  </div>
+                </div>
+
+                <div class="mb-3">
+                  <label class="form-label fw-semibold small">Correos Destinatarios (Reportes Mensuales y Novedades "💬 Reportar")</label>
+                  <textarea id="cfgDestinatarios" rows="3" class="form-control form-control-sm font-monospace" placeholder="correo1@colegiocerrogrande.cl, correo2@colegiocerrogrande.cl"></textarea>
+                  <small class="text-muted">Separados por coma o salto de línea.</small>
+                </div>
+
+                <div class="mb-3">
+                  <label class="form-label fw-semibold small">Encargados Adicionales de Asistencia (Correos específicos con permiso completo)</label>
+                  <textarea id="cfgEncargados" rows="2" class="form-control form-control-sm font-monospace" placeholder="inspector1@colegiocerrogrande.cl"></textarea>
+                  <small class="text-muted">Además de los usuarios con rol <strong>Inspectoría</strong>, Administración y Coordinación.</small>
+                </div>
+
+                <div class="form-check form-switch mb-2">
+                  <input class="form-check-input" type="checkbox" id="cfgPermitirDocentes">
+                  <label class="form-check-label small fw-semibold" for="cfgPermitirDocentes">
+                    Permitir que todos los profesores tomen asistencia del día de hoy
+                  </label>
+                </div>
+
+                <div class="form-check form-switch mb-4">
+                  <input class="form-check-input" type="checkbox" id="cfgPermitirPasadoDocentes">
+                  <label class="form-check-label small" for="cfgPermitirPasadoDocentes">
+                    Permitir que profesores editen fechas pasadas (si está activo lo anterior)
+                  </label>
+                </div>
+
+                <button type="submit" class="btn btn-primary w-100 fw-semibold" id="btnGuardarCfgNativa">
+                  <i class="bi bi-check2-circle me-1"></i> Guardar Configuración
+                </button>
+              </form>
+            </div>
+          </div>
+
+          <!-- Columna Derecha: Feriados y Sábados Extra + Novedades -->
+          <div class="col-lg-6">
+            <div class="card-custom p-4 mb-3">
+              <div class="d-flex flex-wrap justify-content-between align-items-center mb-3 gap-2">
+                <h5 class="fw-bold mb-0"><i class="bi bi-calendar-x text-danger me-2"></i>Feriados y Sábados Extra</h5>
+                <button class="btn btn-outline-primary btn-sm" onclick="importarFeriadosCalendario()">
+                  <i class="bi bi-calendar-plus me-1"></i> Importar desde Calendario Académico
+                </button>
+              </div>
+
+              <form class="row g-2 mb-3" onsubmit="agregarDiaEspecial(event)">
+                <div class="col-sm-4">
+                  <input type="date" id="espFecha" class="form-control form-control-sm" required>
+                </div>
+                <div class="col-sm-4">
+                  <select id="espTipo" class="form-select form-select-sm">
+                    <option value="FERIADO">🚫 Feriado (Bloqueado)</option>
+                    <option value="CLASE_EXTRA">📅 Clase Extra (Sábado)</option>
+                  </select>
+                </div>
+                <div class="col-sm-4 d-flex gap-1">
+                  <input type="text" id="espDesc" class="form-control form-control-sm" placeholder="Motivo...">
+                  <button type="submit" class="btn btn-success btn-sm"><i class="bi bi-plus-lg"></i></button>
+                </div>
+              </form>
+
+              <div class="table-responsive" style="max-height: 260px; overflow-y: auto;">
+                <table class="table table-sm table-hover align-middle mb-0" style="font-size: 0.84rem;">
+                  <thead class="table-light">
+                    <tr>
+                      <th>Fecha</th>
+                      <th>Tipo</th>
+                      <th>Descripción</th>
+                      <th class="text-end">Quitar</th>
+                    </tr>
+                  </thead>
+                  <tbody id="tablaDiasEspecialesBody"></tbody>
+                </table>
+              </div>
+            </div>
+
+            <div class="card-custom p-4">
+              <div class="d-flex justify-content-between align-items-center mb-2">
+                <h6 class="fw-bold mb-0"><i class="bi bi-chat-left-dots text-danger me-2"></i>Últimas Novedades Reportadas</h6>
+                <button class="btn btn-outline-secondary btn-sm" onclick="cargarHistorialNovedades()">Actualizar</button>
+              </div>
+              <div id="listaTodasNovedadesBody" style="max-height: 220px; overflow-y: auto;"></div>
+            </div>
+          </div>
+        </div>
+      </div>
+
     </div>
   </div>
 
-  <!-- MODAL SUBIR ARCHIVO LOCAL MANUAL -->
-  <div class="modal fade" id="modalSubirArchivo" tabindex="-1" aria-hidden="true">
+  <!-- MODAL REPORTAR NOVEDAD -->
+  <div class="modal fade" id="modalNovedad" tabindex="-1" aria-hidden="true">
     <div class="modal-dialog">
       <div class="modal-content card-custom">
-        <div class="modal-header border-bottom py-3">
-          <h5 class="modal-title fw-bold text-dark d-flex align-items-center">
-            <i class="bi bi-upload text-primary me-2"></i> Carga Manual de Asistencia (Excel / CSV)
-          </h5>
-          <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+        <div class="modal-header bg-danger text-white">
+          <h5 class="modal-title fw-bold"><i class="bi bi-chat-left-text-fill me-2"></i>Reportar Novedad a Inspectoría</h5>
+          <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
         </div>
-        <div class="modal-body p-4">
-          <form id="formSubir" onsubmit="subirArchivoManual(event)">
-            <div class="mb-3">
-              <label class="form-label fw-semibold small">Fecha a la que corresponde la asistencia</label>
-              <input type="date" id="subirFecha" class="form-control" required>
-            </div>
-
-            <div class="mb-4">
-              <label class="form-label fw-semibold small">Selecciona el archivo (.xlsx o .csv)</label>
-              <input type="file" id="subirInputFile" class="form-control" accept=".xlsx, .xls, .csv" required>
-              <small class="text-muted">Admite formatos consolidados por curso o listas individuales.</small>
-            </div>
-
-            <div class="d-flex justify-content-end gap-2">
-              <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">Cancelar</button>
-              <button type="submit" class="btn btn-success" id="btnSubirArchivo">
-                <i class="bi bi-file-earmark-arrow-up me-1"></i> Cargar Datos
-              </button>
-            </div>
-          </form>
-        </div>
+        <form onsubmit="enviarNovedad(event)">
+          <div class="modal-body p-4">
+            <p class="small text-muted mb-2">Curso: <strong id="novCursoNombre" class="text-dark"></strong> · Fecha: <strong id="novFechaText" class="text-dark"></strong></p>
+            <textarea id="novMensaje" rows="4" class="form-control" required placeholder="Escribe aquí la observación o novedad para Inspectoría y Dirección..."></textarea>
+          </div>
+          <div class="modal-footer">
+            <button type="button" class="btn btn-outline-secondary btn-sm" data-bs-dismiss="modal">Cancelar</button>
+            <button type="submit" class="btn btn-danger btn-sm fw-bold" id="btnEnviarNovedad">Enviar Reporte</button>
+          </div>
+        </form>
       </div>
     </div>
   </div>
 
-  <!-- MODAL HISTORIAL DE ENVÍOS -->
+  <!-- MODAL ESTUDIANTE (CREAR / EDITAR) -->
+  <div class="modal fade" id="modalEstudiante" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog">
+      <div class="modal-content card-custom">
+        <div class="modal-header border-bottom">
+          <h5 class="modal-title fw-bold" id="modalEstTitulo">Nuevo Estudiante</h5>
+          <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+        </div>
+        <form onsubmit="guardarEstudiante(event)">
+          <div class="modal-body p-4">
+            <input type="hidden" id="estId">
+            <div class="mb-3">
+              <label class="form-label small fw-bold">Nombre Completo</label>
+              <input type="text" id="estNombre" class="form-control" required placeholder="APELLIDOS NOMBRES">
+            </div>
+            <div class="row g-2 mb-3">
+              <div class="col-8">
+                <label class="form-label small fw-bold">Curso Asignado</label>
+                <select id="estCurso" class="form-select" required></select>
+              </div>
+              <div class="col-4">
+                <label class="form-label small fw-bold">N° Lista</label>
+                <input type="number" id="estOrden" class="form-control" min="1" placeholder="Auto">
+              </div>
+            </div>
+            <div class="form-check form-switch d-none" id="estRetiradoWrap">
+              <input class="form-check-input" type="checkbox" id="estRetirado">
+              <label class="form-check-label small fw-bold text-danger" for="estRetirado">Marcar como estudiante retirado</label>
+            </div>
+          </div>
+          <div class="modal-footer">
+            <button type="button" class="btn btn-outline-secondary btn-sm" data-bs-dismiss="modal">Cancelar</button>
+            <button type="submit" class="btn btn-primary btn-sm fw-bold" id="btnGuardarEst">Guardar</button>
+          </div>
+        </form>
+      </div>
+    </div>
+  </div>
+
+  <!-- MODAL MIGRACIÓN 1-CLIC DESDE GOOGLE SHEETS (.xlsx / .csv) -->
+  <div class="modal fade" id="modalImportarMigracion" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-lg">
+      <div class="modal-content card-custom">
+        <div class="modal-header border-bottom">
+          <h5 class="modal-title fw-bold"><i class="bi bi-file-earmark-spreadsheet-fill text-success me-2"></i>Migración 1-Clic desde Google Sheets</h5>
+          <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+        </div>
+        <form onsubmit="ejecutarImportacionMigracion(event)">
+          <div class="modal-body p-4">
+            <div class="alert alert-info small mb-3">
+              <strong>¿Cómo migrar todos los alumnos y asistencia actual en un paso?</strong><br>
+              En tu planilla actual de Google Sheets ve a <strong>Archivo &gt; Descargar &gt; Microsoft Excel (.xlsx)</strong> y súbelo aquí (o sube un CSV exportado).<br>
+              Se importarán automáticamente los <strong>estudiantes activos/retirados por curso</strong>, los <strong>feriados</strong>, <strong>sábados extra</strong> y <strong>correos destinatarios</strong>.
+            </div>
+            <div class="mb-3">
+              <label class="form-label small fw-bold">Archivo Excel (.xlsx) o CSV de Google Sheets</label>
+              <input type="file" id="migArchivo" class="form-control" accept=".xlsx,.xls,.csv" required>
+            </div>
+            <div class="row g-3 align-items-center mb-2">
+              <div class="col-md-7">
+                <div class="form-check form-switch">
+                  <input class="form-check-input" type="checkbox" id="migIncluirMes" checked>
+                  <label class="form-check-label small fw-semibold" for="migIncluirMes">
+                    Importar también la asistencia ya marcada en las pestañas del mes
+                  </label>
+                </div>
+              </div>
+              <div class="col-md-5">
+                <label class="form-label small fw-bold mb-1">Mes al que corresponden las marcas</label>
+                <input type="month" id="migAnioMes" class="form-control form-control-sm">
+              </div>
+            </div>
+          </div>
+          <div class="modal-footer">
+            <button type="button" class="btn btn-outline-secondary btn-sm" data-bs-dismiss="modal">Cancelar</button>
+            <button type="submit" class="btn btn-success btn-sm fw-bold" id="btnEjecutarMigracion">
+              <i class="bi bi-cloud-arrow-up-fill me-1"></i> Iniciar Importación
+            </button>
+          </div>
+        </form>
+      </div>
+    </div>
+  </div>
+
+  <!-- MODAL HISTORIAL ENVÍOS BLOQUE 1 -->
   <div class="modal fade" id="modalLogs" tabindex="-1" aria-hidden="true">
     <div class="modal-dialog modal-lg">
       <div class="modal-content card-custom">
-        <div class="modal-header border-bottom py-3">
-          <h5 class="modal-title fw-bold text-dark d-flex align-items-center">
-            <i class="bi bi-clock-history text-secondary me-2"></i> Historial de Envíos de Resumen (12:00 PM)
-          </h5>
+        <div class="modal-header border-bottom">
+          <h5 class="modal-title fw-bold"><i class="bi bi-clock-history text-secondary me-2"></i>Historial de Envíos Bloque 1 (12:00 PM)</h5>
           <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
         </div>
-        <div class="modal-body p-4">
+        <div class="modal-body p-3">
           <div class="table-responsive">
-            <table class="table table-sm table-hover align-middle mb-0" style="font-size: 0.85rem;">
-              <thead class="table-light text-secondary">
+            <table class="table table-sm table-hover align-middle mb-0" style="font-size: 0.84rem;">
+              <thead class="table-light">
                 <tr>
                   <th>Fecha</th>
                   <th>Docente</th>
@@ -422,11 +956,7 @@
                   <th>Hora Envío</th>
                 </tr>
               </thead>
-              <tbody id="tablaLogsEnviosBody">
-                <tr>
-                  <td colspan="6" class="text-center py-3 text-muted">Cargando registros...</td>
-                </tr>
-              </tbody>
+              <tbody id="tablaLogsEnviosBody"></tbody>
             </table>
           </div>
         </div>
@@ -434,358 +964,917 @@
     </div>
   </div>
 
-  <!-- Scripts -->
   <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
-
   <script>
-    let asistenciaActual = null;
-    let modalConfigObj = null;
-    let modalSubirObj = null;
-    let modalLogsObj = null;
+    let permisosActuales = { esGestorAsistencia: false, puedeTomarAsistencia: false, puedeEditarPasado: false };
+    let cursosOficiales = [];
+    let cursoTomaActual = 'Kinder A';
+    let estadoCursosDia = [];
+    let tomaFormActual = null;
+    let tomaAusentesSet = new Set();
+    let tomaDirty = false;
+    let resumenActual = null;
+    let matriculaCache = [];
+    let planillaCargada = false;
+    let matriculaCargada = false;
 
-    document.addEventListener('DOMContentLoaded', () => {
-      modalConfigObj = new bootstrap.Modal(document.getElementById('modalConfig'));
-      modalSubirObj = new bootstrap.Modal(document.getElementById('modalSubirArchivo'));
-      modalLogsObj = new bootstrap.Modal(document.getElementById('modalLogs'));
+    let modalNovedadObj, modalEstudianteObj, modalMigracionObj, modalLogsObj;
 
-      setFechaHoy();
-    });
-
-    function setFechaHoy() {
-      const hoy = new Date();
-      // Formato YYYY-MM-DD
-      const yyyy = hoy.getFullYear();
-      const mm = String(hoy.getMonth() + 1).padStart(2, '0');
-      const dd = String(hoy.getDate()).padStart(2, '0');
-      const fechaStr = `${yyyy}-${mm}-${dd}`;
-      document.getElementById('inputFecha').value = fechaStr;
-      cargarAsistencia();
+    function escapeHtml(str) {
+      return String(str || '').replace(/[&<>"']/g, s => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[s]));
     }
 
-    async function cargarAsistencia() {
-      const fecha = document.getElementById('inputFecha').value;
-      if (!fecha) return;
+    function fechaHoyISO() {
+      const h = new Date();
+      return `${h.getFullYear()}-${String(h.getMonth() + 1).padStart(2, '0')}-${String(h.getDate()).padStart(2, '0')}`;
+    }
 
+    function mesActualISO() {
+      return fechaHoyISO().slice(0, 7);
+    }
+
+    // -------------------------------------------------------------
+    // Inicialización General
+    // -------------------------------------------------------------
+    document.addEventListener('DOMContentLoaded', async () => {
+      modalNovedadObj = new bootstrap.Modal(document.getElementById('modalNovedad'));
+      modalEstudianteObj = new bootstrap.Modal(document.getElementById('modalEstudiante'));
+      modalMigracionObj = new bootstrap.Modal(document.getElementById('modalImportarMigracion'));
+      modalLogsObj = new bootstrap.Modal(document.getElementById('modalLogs'));
+
+      cargarFontSize();
+
+      const hoy = fechaHoyISO();
+      const mesAct = mesActualISO();
+      document.getElementById('resumenFechaInput').value = hoy;
+      document.getElementById('tomaFechaInput').value = hoy;
+      document.getElementById('mensualMesInput').value = mesAct;
+      document.getElementById('migAnioMes').value = mesAct;
+      document.getElementById('espFecha').value = hoy;
+
+      await inicializarEstadoYPermisos();
+    });
+
+    async function inicializarEstadoYPermisos() {
+      try {
+        const resEstado = await fetch(`/api/asistencia/cursos-estado?fecha=${fechaHoyISO()}`);
+        if (resEstado.ok) {
+          const dataEstado = await resEstado.json();
+          cursosOficiales = dataEstado.cursos_oficiales || [];
+          estadoCursosDia = dataEstado.cursos || [];
+          permisosActuales = dataEstado.permisos || permisosActuales;
+          poblarSelectsCursos();
+        }
+      } catch (e) {
+        console.error('Error cargando permisos/cursos:', e);
+      }
+
+      aplicarPermisosUI();
+      await cargarResumenDiario();
+
+      if (permisosActuales.puedeTomarAsistencia) {
+        // Activar pestaña Tomar Asistencia por defecto para Inspectoría / autorizados
+        const tabBtn = new bootstrap.Tab(document.getElementById('tab-toma-btn'));
+        tabBtn.show();
+        await cargarTomaCursosEstado();
+        await cargarFormularioToma(cursoTomaActual);
+      }
+    }
+
+    function aplicarPermisosUI() {
+      const puedeTomar = !!permisosActuales.puedeTomarAsistencia;
+      const esGestor = !!permisosActuales.esGestorAsistencia;
+
+      document.getElementById('liTabToma').classList.toggle('d-none', !puedeTomar);
+      document.getElementById('btnModoMovil').classList.toggle('d-none', !puedeTomar);
+      document.getElementById('tomaFechaInput').disabled = !permisosActuales.puedeEditarPasado;
+
+      document.getElementById('liTabMatricula').classList.toggle('d-none', !esGestor);
+      document.getElementById('liTabConfig').classList.toggle('d-none', !esGestor);
+      document.getElementById('dropdownAccionesRapidas').classList.toggle('d-none', !esGestor);
+      document.getElementById('mensualExportBtns').classList.toggle('d-none', !esGestor);
+      document.getElementById('mensualEditHint').classList.toggle('d-none', !esGestor);
+    }
+
+    function poblarSelectsCursos() {
+      const opts = cursosOficiales.map(c => `<option value="${escapeHtml(c.legible)}">${escapeHtml(c.legible)}</option>`).join('');
+      document.getElementById('mensualCursoSelect').innerHTML = opts;
+      document.getElementById('estCurso').innerHTML = opts;
+      document.getElementById('matFiltroCurso').innerHTML = `<option value="todos">Todos los cursos (${cursosOficiales.length})</option>` + opts;
+    }
+
+    // -------------------------------------------------------------
+    // TAB 1: TOMA DE ASISTENCIA
+    // -------------------------------------------------------------
+    function setFontSize(size) {
+      document.body.classList.remove('font-small', 'font-medium', 'font-large');
+      document.body.classList.add('font-' + size);
+      document.querySelectorAll('.font-btn').forEach(b => {
+        b.classList.toggle('active', b.getAttribute('data-size') === size);
+      });
+      try { localStorage.setItem('preferencia-fuente', size); } catch (e) {}
+    }
+
+    function cargarFontSize() {
+      let s = 'medium';
+      try { s = localStorage.getItem('preferencia-fuente') || 'medium'; } catch (e) {}
+      setFontSize(s);
+    }
+
+    async function cargarTomaCursosEstado() {
+      const fecha = document.getElementById('tomaFechaInput').value || fechaHoyISO();
+      const res = await fetch(`/api/asistencia/cursos-estado?fecha=${fecha}`);
+      if (!res.ok) return;
+      const data = await res.json();
+      estadoCursosDia = data.cursos || [];
+      document.getElementById('tomaProgresoBadge').innerText = `${data.cursos_tomados || 0} / ${data.total_cursos || 26} tomados`;
+      renderTomaChips();
+    }
+
+    function renderTomaChips() {
+      const cont = document.getElementById('tomaChipsCursos');
+      cont.innerHTML = estadoCursosDia.map(c => {
+        const isActive = (c.curso === cursoTomaActual || c.curso_normalizado === cursoTomaActual);
+        const clsTomada = c.tomada ? 'tomada' : '';
+        const clsAct = isActive ? 'active' : '';
+        const icon = c.tomada ? '<i class="bi bi-check-circle-fill"></i>' : '<i class="bi bi-circle" style="font-size: 0.7rem;"></i>';
+        return `<button type="button" class="chip-curso ${clsTomada} ${clsAct}" onclick="seleccionarCursoToma('${escapeHtml(c.curso)}')">${icon} ${escapeHtml(c.curso)}</button>`;
+      }).join('');
+    }
+
+    async function seleccionarCursoToma(nombreCurso) {
+      if (tomaDirty && tomaFormActual && nombreCurso !== tomaFormActual.curso) {
+        const r = await Swal.fire({
+          title: 'Cambios sin guardar',
+          text: `Has modificado ausencias en ${tomaFormActual.curso}. ¿Deseas guardarlas antes de cambiar?`,
+          icon: 'warning',
+          showDenyButton: true,
+          showCancelButton: true,
+          confirmButtonText: 'Guardar y cambiar',
+          denyButtonText: 'Descartar cambios',
+          cancelButtonText: 'Cancelar'
+        });
+        if (r.isDismissed) return;
+        if (r.isConfirmed) {
+          const ok = await guardarAsistenciaToma(true);
+          if (!ok) return;
+        }
+      }
+      cursoTomaActual = nombreCurso;
+      renderTomaChips();
+      await cargarFormularioToma(nombreCurso);
+    }
+
+    async function cambiarFechaToma() {
+      tomaDirty = false;
+      document.getElementById('tomaUnsavedBadge').classList.add('d-none');
+      await cargarTomaCursosEstado();
+      await cargarFormularioToma(cursoTomaActual);
+    }
+
+    async function cargarFormularioToma(nombreCurso) {
+      const fecha = document.getElementById('tomaFechaInput').value || fechaHoyISO();
+      const cont = document.getElementById('listaTomaAlumnos');
+      const btnGuardar = document.getElementById('btnGuardarToma');
+      cont.innerHTML = '<div class="text-center py-5 text-muted"><div class="spinner-border text-primary spinner-border-sm me-2"></div>Cargando estudiantes...</div>';
+
+      try {
+        const res = await fetch(`/api/asistencia/curso/${encodeURIComponent(nombreCurso)}/lista?fecha=${fecha}`);
+        const data = await res.json();
+        if (!res.ok) throw new Error(data.error || 'Error cargando curso');
+
+        tomaFormActual = data;
+        cursoTomaActual = data.curso;
+        tomaDirty = false;
+        document.getElementById('tomaUnsavedBadge').classList.add('d-none');
+        document.getElementById('tomaFechaLegible').innerText = `${data.curso} · ${data.dia_info.fechaLegible}`;
+
+        if (data.tomada && data.registrado_nombre) {
+          document.getElementById('tomaUltimoRegistroInfo').innerText = `Último guardado por ${data.registrado_nombre} (${(data.actualizado_en || '').slice(11, 16)})`;
+        } else if (data.tomada) {
+          document.getElementById('tomaUltimoRegistroInfo').innerText = 'Asistencia ya registrada para esta fecha.';
+        } else {
+          document.getElementById('tomaUltimoRegistroInfo').innerText = 'Pendiente de registro para esta fecha.';
+        }
+
+        tomaAusentesSet = new Set(data.alumnos.filter(a => a.ausente).map(a => a.id));
+        actualizarContadoresToma();
+
+        if (!data.habil) {
+          btnGuardar.classList.add('d-none');
+          cont.innerHTML = `<div class="text-center py-5 px-3 text-secondary">
+            <i class="bi bi-calendar-x fs-1 text-danger d-block mb-2"></i>
+            <h5 class="fw-bold">${escapeHtml(data.motivoBloqueo || 'Día no laborable')}</h5>
+            <p class="mb-0 small">No se habilita toma de asistencia para esta fecha.</p>
+          </div>`;
+          return;
+        }
+
+        if (!data.alumnos || data.alumnos.length === 0) {
+          btnGuardar.classList.add('d-none');
+          cont.innerHTML = `<div class="text-center py-5 px-3 text-secondary">
+            <i class="bi bi-people fs-1 text-muted d-block mb-2"></i>
+            <h5 class="fw-bold">Sin estudiantes registrados en ${escapeHtml(data.curso)}</h5>
+            <p class="mb-2 small">Agrega estudiantes o importa tu Excel desde la pestaña <strong>Matrícula</strong>.</p>
+          </div>`;
+          return;
+        }
+
+        btnGuardar.classList.remove('d-none');
+        cont.innerHTML = data.alumnos.map(est => {
+          const aus = est.ausente ? 'ausente' : '';
+          return `
+            <div class="student-row ${aus}" data-id="${est.id}" onclick="toggleAlumnoToma(this, ${est.id})">
+              <span class="badge bg-light text-secondary border">${est.orden || '-'}</span>
+              <div class="student-row-main">
+                <span class="icon-ausente">🚫</span>
+                <label>${escapeHtml(est.nombre)}</label>
+              </div>
+              <span class="small fw-semibold ${est.ausente ? 'text-danger' : 'text-success'} estado-pill">${est.ausente ? 'Ausente' : 'Presente'}</span>
+            </div>
+          `;
+        }).join('');
+      } catch (e) {
+        btnGuardar.classList.add('d-none');
+        cont.innerHTML = `<div class="text-center py-4 text-danger">${escapeHtml(e.message)}</div>`;
+      }
+    }
+
+    function toggleAlumnoToma(el, id) {
+      if (tomaAusentesSet.has(id)) {
+        tomaAusentesSet.delete(id);
+        el.classList.remove('ausente');
+        const p = el.querySelector('.estado-pill');
+        if (p) { p.className = 'small fw-semibold text-success estado-pill'; p.innerText = 'Presente'; }
+      } else {
+        tomaAusentesSet.add(id);
+        el.classList.add('ausente');
+        const p = el.querySelector('.estado-pill');
+        if (p) { p.className = 'small fw-semibold text-danger estado-pill'; p.innerText = 'Ausente'; }
+      }
+      tomaDirty = true;
+      document.getElementById('tomaUnsavedBadge').classList.remove('d-none');
+      actualizarContadoresToma();
+    }
+
+    function actualizarContadoresToma() {
+      const total = tomaFormActual ? (tomaFormActual.alumnos || []).length : 0;
+      const aus = tomaAusentesSet.size;
+      const pres = Math.max(0, total - aus);
+      document.getElementById('tomaCountMatricula').innerText = total;
+      document.getElementById('tomaCountPresentes').innerText = pres;
+      document.getElementById('tomaCountAusentes').innerText = aus;
+    }
+
+    async function guardarAsistenciaToma(silencioso = false) {
+      if (!tomaFormActual) return false;
+      const btn = document.getElementById('btnGuardarToma');
+      const txt = document.getElementById('btnGuardarTomaTxt');
+      btn.disabled = true;
+      txt.innerText = '...';
+
+      const fecha = document.getElementById('tomaFechaInput').value || fechaHoyISO();
+      try {
+        const res = await fetch(`/api/asistencia/curso/${encodeURIComponent(tomaFormActual.curso)}/guardar`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ fecha, ausentesIds: Array.from(tomaAusentesSet) })
+        });
+        const data = await res.json();
+        if (!res.ok) throw new Error(data.error || 'Error guardando asistencia');
+
+        tomaDirty = false;
+        document.getElementById('tomaUnsavedBadge').classList.add('d-none');
+
+        btn.style.backgroundColor = '#4285F4';
+        txt.innerText = '¡LISTO! ✅';
+        setTimeout(() => {
+          btn.style.backgroundColor = '#188038';
+          txt.innerText = 'Guardar';
+          btn.disabled = false;
+        }, 1600);
+
+        await cargarTomaCursosEstado();
+        if (fecha === document.getElementById('resumenFechaInput').value) {
+          cargarResumenDiario();
+        }
+        return true;
+      } catch (e) {
+        btn.style.backgroundColor = '#EA4335';
+        txt.innerText = 'ERROR';
+        if (!silencioso) Swal.fire('No se pudo guardar', e.message, 'error');
+        setTimeout(() => {
+          btn.style.backgroundColor = '#188038';
+          txt.innerText = 'Guardar';
+          btn.disabled = false;
+        }, 2500);
+        return false;
+      }
+    }
+
+    function abrirModalNovedad() {
+      const fecha = document.getElementById('tomaFechaInput').value || fechaHoyISO();
+      document.getElementById('novCursoNombre').innerText = cursoTomaActual;
+      document.getElementById('novFechaText').innerText = fecha;
+      document.getElementById('novMensaje').value = '';
+      modalNovedadObj.show();
+    }
+
+    async function enviarNovedad(e) {
+      e.preventDefault();
+      const btn = document.getElementById('btnEnviarNovedad');
+      btn.disabled = true;
+      try {
+        const res = await fetch('/api/asistencia/novedad', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            curso: cursoTomaActual,
+            fecha: document.getElementById('tomaFechaInput').value || fechaHoyISO(),
+            mensaje: document.getElementById('novMensaje').value.trim()
+          })
+        });
+        const data = await res.json();
+        if (!res.ok) throw new Error(data.error || 'Error enviando reporte');
+        modalNovedadObj.hide();
+        Swal.fire('Reporte Enviado', `Novedad registrada y notificada a ${data.novedad.correos_encolados} destinatarios de Inspectoría y Dirección.`, 'success');
+        cargarResumenDiario();
+      } catch (err) {
+        Swal.fire('Error', err.message, 'error');
+      } finally {
+        btn.disabled = false;
+      }
+    }
+
+    // -------------------------------------------------------------
+    // TAB 2: RESUMEN DIARIO
+    // -------------------------------------------------------------
+    function setResumenHoy() {
+      document.getElementById('resumenFechaInput').value = fechaHoyISO();
+      cargarResumenDiario();
+    }
+
+    async function cargarResumenDiario() {
+      const fecha = document.getElementById('resumenFechaInput').value || fechaHoyISO();
       const tbody = document.getElementById('tablaCursosBody');
-      tbody.innerHTML = `
-        <tr>
-          <td colspan="7" class="text-center py-4 text-secondary">
-            <div class="spinner-border text-primary spinner-border-sm me-2" role="status"></div>
-            Cargando asistencia para el ${fecha}...
-          </td>
-        </tr>
-      `;
+      tbody.innerHTML = '<tr><td colspan="8" class="text-center py-4 text-secondary"><div class="spinner-border spinner-border-sm text-primary me-2"></div>Cargando...</td></tr>';
 
       try {
         const res = await fetch(`/api/asistencia/hoy?fecha=${fecha}`);
-        if (!res.ok) throw new Error('Error al obtener datos de asistencia.');
+        if (!res.ok) throw new Error('Error al cargar el resumen diario');
         const data = await res.json();
-        asistenciaActual = data;
+        resumenActual = data;
 
-        // Mostrar controles de admin si corresponde
-        if (data.usuario_actual && data.usuario_actual.esAdmin) {
-          document.getElementById('dropdownAdmin').classList.remove('d-none');
-        }
+        document.getElementById('kpiPorcentaje').innerText = `${data.porcentaje_global || 0}%`;
+        document.getElementById('kpiPresentes').innerText = Number(data.total_presentes || 0).toLocaleString('es-CL');
+        document.getElementById('kpiMatriculaTotal').innerText = `de ${Number(data.total_matricula || 0).toLocaleString('es-CL')} alumnos`;
+        document.getElementById('kpiAusentes').innerText = Number(data.total_ausentes || 0).toLocaleString('es-CL');
+        document.getElementById('kpiCursos').innerText = `${data.cursos_registrados || 0} / ${data.total_cursos_oficiales || 26}`;
+        document.getElementById('kpiFechaText').innerText = data.dia_info ? data.dia_info.fechaLegible : data.fecha;
+        document.getElementById('resumenDiaBadge').innerText = data.dia_info && !data.dia_info.habil ? `⚠️ ${data.dia_info.motivo}` : (data.dia_info ? data.dia_info.diaSemana : '');
 
-        renderizarKpis(data);
-        renderizarSeccionDocente(data);
-        renderizarTabla(data.cursos || []);
-      } catch (err) {
-        console.error(err);
-        tbody.innerHTML = `
-          <tr>
-            <td colspan="7" class="text-center py-4 text-danger">
-              <i class="bi bi-exclamation-triangle-fill fs-5 d-block mb-1"></i>
-              ${err.message}
-            </td>
-          </tr>
-        `;
+        renderizarPendientes(data.cursos_pendientes || []);
+        renderizarSeccionDocente(data.mis_cursos_bloque1 || []);
+        renderizarNovedadesDia(data.novedades_dia || []);
+        filtrarTablaResumen();
+      } catch (e) {
+        tbody.innerHTML = `<tr><td colspan="8" class="text-center py-4 text-danger">${escapeHtml(e.message)}</td></tr>`;
       }
     }
 
-    function renderizarKpis(data) {
-      document.getElementById('kpiPorcentaje').innerText = `${data.porcentaje_global || 0}%`;
-      document.getElementById('kpiPresentes').innerText = Number(data.total_presentes || 0).toLocaleString('es-CL');
-      document.getElementById('kpiMatriculaTotal').innerText = `de ${Number(data.total_matricula || 0).toLocaleString('es-CL')} matriculados`;
-      document.getElementById('kpiAusentes').innerText = Number(data.total_ausentes || 0).toLocaleString('es-CL');
-      document.getElementById('kpiCursos').innerText = data.total_cursos || 0;
-      document.getElementById('kpiFechaText').innerText = `Fecha: ${data.fecha} (${data.dia_semana || ''})`;
-      document.getElementById('badgeTotalTabla').innerText = `${data.total_cursos || 0} cursos`;
-    }
-
-    function renderizarSeccionDocente(data) {
-      const cont = document.getElementById('seccionDocenteBloque1');
-      const inner = document.getElementById('contenedorCursosDocente');
-
-      if (!data.mis_cursos_bloque1 || data.mis_cursos_bloque1.length === 0) {
-        cont.classList.add('d-none');
+    function renderizarPendientes(pendientes) {
+      const el = document.getElementById('alertaCursosPendientes');
+      const cont = document.getElementById('listaCursosPendientesChips');
+      if (!pendientes || pendientes.length === 0 || (resumenActual.dia_info && !resumenActual.dia_info.habil)) {
+        el.classList.add('d-none');
         return;
       }
-
-      cont.classList.remove('d-none');
-      let html = '';
-      data.mis_cursos_bloque1.forEach(c => {
-        const pct = c.porcentaje || 0;
-        const colorClase = pct >= 90 ? 'bg-success' : (pct >= 80 ? 'bg-warning text-dark' : 'bg-danger');
-        
-        let ausentesHtml = '';
-        if (c.alumnos_ausentes && c.alumnos_ausentes.length > 0) {
-          ausentesHtml = `
-            <div class="mt-2">
-              <span class="small text-danger fw-semibold d-block mb-1">
-                <i class="bi bi-person-x-fill me-1"></i>Ausentes (${c.alumnos_ausentes.length}):
-              </span>
-              <div>
-                ${c.alumnos_ausentes.map(a => `<span class="tag-ausente">${a}</span>`).join('')}
-              </div>
-            </div>
-          `;
-        } else {
-          ausentesHtml = `
-            <div class="mt-2 small text-success fw-semibold">
-              <i class="bi bi-check-circle-fill me-1"></i>Sin alumnos ausentes reportados
-            </div>
-          `;
+      el.classList.remove('d-none');
+      cont.innerHTML = pendientes.map(p => {
+        if (permisosActuales.puedeTomarAsistencia) {
+          return `<button class="btn btn-sm btn-outline-dark py-0 px-2 me-1 mb-1" onclick="irATomarCurso('${escapeHtml(p.curso)}')">${escapeHtml(p.curso)}</button>`;
         }
+        return `<span class="badge bg-warning-subtle text-dark border me-1 mb-1">${escapeHtml(p.curso)}</span>`;
+      }).join('');
+    }
 
-        html += `
+    function irATomarCurso(curso) {
+      const fResumen = document.getElementById('resumenFechaInput').value;
+      if (fResumen && (permisosActuales.puedeEditarPasado || fResumen === fechaHoyISO())) {
+        document.getElementById('tomaFechaInput').value = fResumen;
+      }
+      cursoTomaActual = curso;
+      const tabBtn = new bootstrap.Tab(document.getElementById('tab-toma-btn'));
+      tabBtn.show();
+      cargarTomaCursosEstado();
+      cargarFormularioToma(curso);
+    }
+
+    function renderizarSeccionDocente(cursosDoc) {
+      const sec = document.getElementById('seccionDocenteBloque1');
+      const cont = document.getElementById('contenedorCursosDocente');
+      if (!cursosDoc || cursosDoc.length === 0) {
+        sec.classList.add('d-none');
+        return;
+      }
+      sec.classList.remove('d-none');
+      cont.innerHTML = cursosDoc.map(c => {
+        const pct = c.porcentaje || 0;
+        const badgeCls = !c.tomada ? 'bg-warning text-dark' : (pct >= 90 ? 'bg-success' : (pct >= 80 ? 'bg-warning text-dark' : 'bg-danger'));
+        const statusTxt = !c.tomada ? 'Pendiente' : `${pct}% Asist.`;
+        const ausHtml = !c.tomada
+          ? '<div class="mt-2 small text-warning-emphasis"><i class="bi bi-hourglass-split me-1"></i>Aún sin registro de Inspectoría hoy</div>'
+          : ((c.alumnos_ausentes && c.alumnos_ausentes.length > 0)
+              ? `<div class="mt-2"><span class="small text-danger fw-semibold d-block mb-1">Ausentes (${c.alumnos_ausentes.length}):</span>${c.alumnos_ausentes.map(a => `<span class="tag-ausente">${escapeHtml(a)}</span>`).join('')}</div>`
+              : '<div class="mt-2 small text-success fw-semibold"><i class="bi bi-check-circle-fill me-1"></i>100% Asistencia</div>');
+
+        return `
           <div class="col-md-6 col-lg-4">
             <div class="bg-white border rounded p-3 h-100 shadow-sm">
-              <div class="d-flex justify-content-between align-items-center mb-2">
-                <strong class="text-primary fs-6">${c.curso}</strong>
-                <span class="badge ${colorClase}">${pct}% Asist.</span>
+              <div class="d-flex justify-content-between align-items-center mb-1">
+                <strong class="text-primary fs-6">${escapeHtml(c.curso)}</strong>
+                <span class="badge ${badgeCls}">${statusTxt}</span>
               </div>
-              <div class="small text-secondary mb-2">${c.asignatura || 'Primer Bloque'}</div>
+              <div class="small text-secondary mb-2">${escapeHtml(c.asignatura || 'Primer Bloque')}</div>
               <div class="d-flex justify-content-between small text-muted border-top pt-2">
                 <span>Matrícula: <strong>${c.matricula_total || 0}</strong></span>
                 <span class="text-success">Presentes: <strong>${c.presentes || 0}</strong></span>
                 <span class="text-danger">Ausentes: <strong>${c.ausentes || 0}</strong></span>
               </div>
-              ${ausentesHtml}
+              ${ausHtml}
             </div>
           </div>
         `;
-      });
-      inner.innerHTML = html;
+      }).join('');
     }
 
-    function renderizarTabla(cursos) {
-      const tbody = document.getElementById('tablaCursosBody');
-      if (!cursos || cursos.length === 0) {
-        tbody.innerHTML = `
-          <tr>
-            <td colspan="7" class="text-center py-5 text-secondary">
-              <i class="bi bi-folder-x fs-2 text-muted d-block mb-2"></i>
-              No se han registrado datos de asistencia para esta fecha.<br>
-              <small class="text-muted">Haz clic en <strong>Sincronizar Sheets</strong> o sube un archivo.</small>
-            </td>
-          </tr>
-        `;
+    function renderizarNovedadesDia(novedades) {
+      const panel = document.getElementById('panelNovedadesDia');
+      if (!permisosActuales.esGestorAsistencia || !novedades || novedades.length === 0) {
+        panel.classList.add('d-none');
         return;
       }
-
-      let html = '';
-      cursos.forEach(c => {
-        const pct = c.porcentaje || 0;
-        let badgeClase = 'badge-pct-green';
-        let barColor = '#16a34a';
-        if (pct < 80) { badgeClase = 'badge-pct-red'; barColor = '#dc2626'; }
-        else if (pct < 90) { badgeClase = 'badge-pct-yellow'; barColor = '#ca8a04'; }
-
-        // Renderizado de ausentes
-        let ausentesStr = '<span class="text-muted small">Ninguno</span>';
-        if (c.alumnos_ausentes && c.alumnos_ausentes.length > 0) {
-          const maxShow = 3;
-          const primeros = c.alumnos_ausentes.slice(0, maxShow).map(a => `<span class="tag-ausente">${a}</span>`).join('');
-          const resto = c.alumnos_ausentes.length > maxShow 
-            ? `<span class="badge bg-secondary-subtle text-secondary" title="${c.alumnos_ausentes.join(', ')}">+${c.alumnos_ausentes.length - maxShow} más</span>`
-            : '';
-          ausentesStr = `${primeros} ${resto}`;
-        }
-
-        const horaAct = c.actualizado_en ? c.actualizado_en.split(' ')[1] || '' : '';
-
-        html += `
-          <tr>
-            <td>
-              <strong class="text-dark">${c.curso}</strong>
-            </td>
-            <td class="text-center fw-semibold text-secondary">${c.matricula_total || 0}</td>
-            <td class="text-center fw-bold text-success">${c.presentes || 0}</td>
-            <td class="text-center fw-bold text-danger">${c.ausentes || 0}</td>
-            <td>
-              <div class="d-flex align-items-center gap-2">
-                <span class="badge ${badgeClase}" style="min-width: 48px;">${pct}%</span>
-                <div class="progress-bar-custom flex-grow-1">
-                  <div class="progress-bar-fill" style="width: ${pct}%; background-color: ${barColor};"></div>
-                </div>
-              </div>
-            </td>
-            <td>${ausentesStr}</td>
-            <td class="text-center small text-muted font-monospace">${horaAct}</td>
-          </tr>
-        `;
-      });
-
-      tbody.innerHTML = html;
+      panel.classList.remove('d-none');
+      document.getElementById('badgeCountNovedades').innerText = novedades.length;
+      document.getElementById('listaNovedadesDiaBody').innerHTML = novedades.map(n => `
+        <div class="border rounded p-2 mb-2 d-flex justify-content-between align-items-start gap-2 ${n.estado === 'Revisado' ? 'bg-light opacity-75' : 'bg-danger-subtle bg-opacity-25'}">
+          <div>
+            <span class="badge bg-dark me-1">${escapeHtml(n.curso)}</span>
+            <strong class="small">${escapeHtml(n.reportado_por_nombre || n.reportado_por_email)}</strong>
+            <div class="small mt-1">${escapeHtml(n.mensaje)}</div>
+          </div>
+          <div>
+            ${n.estado === 'Revisado'
+              ? '<span class="badge bg-success-subtle text-success">✓ Revisado</span>'
+              : `<button class="btn btn-sm btn-outline-success" onclick="revisarNovedad(${n.id})">Marcar Revisado</button>`
+            }
+          </div>
+        </div>
+      `).join('');
     }
 
-    function filtrarTabla() {
-      if (!asistenciaActual || !asistenciaActual.cursos) return;
+    async function revisarNovedad(id) {
+      await fetch(`/api/asistencia/novedades/${id}/revisar`, { method: 'PATCH' });
+      cargarResumenDiario();
+    }
+
+    function filtrarTablaResumen() {
+      if (!resumenActual || !resumenActual.cursos) return;
       const texto = document.getElementById('filtroCurso').value.toLowerCase().trim();
       const nivel = document.getElementById('filtroNivel').value;
 
-      const filtrados = asistenciaActual.cursos.filter(c => {
-        const matchTexto = c.curso.toLowerCase().includes(texto);
-        if (!matchTexto) return false;
-
-        if (nivel === 'basica') return c.curso.toLowerCase().includes('básico') || c.curso.toLowerCase().includes('basico') || c.curso.toLowerCase().includes('kinder');
+      const filtrados = resumenActual.cursos.filter(c => {
+        if (texto && !c.curso.toLowerCase().includes(texto)) return false;
+        if (nivel === 'basica') return c.curso.toLowerCase().includes('básico') || c.curso.toLowerCase().includes('kinder');
         if (nivel === 'media') return c.curso.toLowerCase().includes('medio');
         if (nivel === 'critico') return (c.porcentaje || 0) < 85;
         return true;
       });
 
-      renderizarTabla(filtrados);
       document.getElementById('badgeTotalTabla').innerText = `${filtrados.length} cursos`;
+      const tbody = document.getElementById('tablaCursosBody');
+      if (filtrados.length === 0) {
+        tbody.innerHTML = '<tr><td colspan="8" class="text-center py-4 text-muted">No hay cursos registrados con asistencia para los filtros aplicados.</td></tr>';
+        return;
+      }
+
+      tbody.innerHTML = filtrados.map(c => {
+        const pct = c.porcentaje || 0;
+        const cls = pct >= 90 ? 'badge-pct-green' : (pct >= 80 ? 'badge-pct-yellow' : 'badge-pct-red');
+        const col = pct >= 90 ? '#16a34a' : (pct >= 80 ? '#ca8a04' : '#dc2626');
+        const aus = (c.alumnos_ausentes && c.alumnos_ausentes.length > 0)
+          ? c.alumnos_ausentes.slice(0, 4).map(a => `<span class="tag-ausente">${escapeHtml(a)}</span>`).join('') +
+            (c.alumnos_ausentes.length > 4 ? `<span class="badge bg-secondary-subtle text-secondary" title="${escapeHtml(c.alumnos_ausentes.join(', '))}">+${c.alumnos_ausentes.length - 4} más</span>` : '')
+          : '<span class="text-success small">✓ Completa</span>';
+
+        const autor = c.registrado_nombre ? `<div class="small fw-semibold">${escapeHtml(c.registrado_nombre)}</div>` : '';
+        const hora = c.actualizado_en ? `<div class="text-muted font-monospace" style="font-size:0.75rem;">${escapeHtml(c.actualizado_en.slice(11, 16))}</div>` : '';
+
+        return `
+          <tr>
+            <td><strong>${escapeHtml(c.curso)}</strong></td>
+            <td class="text-center">${c.matricula_total || 0}</td>
+            <td class="text-center text-success fw-bold">${c.presentes || 0}</td>
+            <td class="text-center text-danger fw-bold">${c.ausentes || 0}</td>
+            <td>
+              <div class="d-flex align-items-center gap-2">
+                <span class="badge ${cls}" style="min-width:48px;">${pct}%</span>
+                <div class="progress-bar-custom flex-grow-1"><div class="progress-bar-fill" style="width:${pct}%;background:${col};"></div></div>
+              </div>
+            </td>
+            <td>${aus}</td>
+            <td>${autor}${hora}</td>
+            <td class="text-end">
+              ${permisosActuales.puedeTomarAsistencia
+                ? `<button class="btn btn-sm btn-outline-primary py-0 px-2" onclick="irATomarCurso('${escapeHtml(c.curso)}')"><i class="bi bi-pencil"></i> Lista</button>`
+                : `<button class="btn btn-sm btn-outline-secondary py-0 px-2" onclick="verCursoMensual('${escapeHtml(c.curso)}')">Libro</button>`
+              }
+            </td>
+          </tr>
+        `;
+      }).join('');
+    }
+
+    function verCursoMensual(curso) {
+      document.getElementById('mensualCursoSelect').value = curso;
+      const tabBtn = new bootstrap.Tab(document.getElementById('tab-mensual-btn'));
+      tabBtn.show();
+      cargarPlanillaMensual();
     }
 
     // -------------------------------------------------------------
-    // Sincronización en Vivo desde Google Sheets
+    // TAB 3: PLANILLA MENSUAL (LIBRO DE CLASES)
     // -------------------------------------------------------------
-    async function sincronizarGoogleSheets() {
-      const btn = document.getElementById('btnSincronizar');
-      btn.disabled = true;
-      btn.innerHTML = '<span class="spinner-border spinner-border-sm me-1"></span> Sincronizando...';
-
-      const fecha = document.getElementById('inputFecha').value;
-
-      try {
-        const res = await fetch('/api/asistencia/sincronizar', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ fecha })
-        });
-        const data = await res.json();
-
-        if (!res.ok) {
-          throw new Error(data.error || 'Fallo al sincronizar con Google Sheets.');
-        }
-
-        Swal.fire({
-          icon: 'success',
-          title: 'Sincronización Exitosa',
-          text: `Se descargaron y actualizaron los datos de ${data.cursos_procesados} cursos desde Google Sheets.`,
-          timer: 2500,
-          showConfirmButton: false
-        });
-
-        cargarAsistencia();
-      } catch (err) {
-        Swal.fire({
-          icon: 'error',
-          title: 'No se pudo sincronizar',
-          html: `<div style="text-align: left; font-size: 0.9rem;">
-                  <p>${err.message}</p>
-                  <p class="text-muted small mb-0">Verifica que la hoja esté configurada en Google Drive como <strong>"Cualquiera con el enlace puede ver"</strong> o publicada en la web.</p>
-                 </div>`
-        });
-      } finally {
-        btn.disabled = false;
-        btn.innerHTML = '<i class="bi bi-cloud-arrow-down-fill me-1"></i> Sincronizar Sheets';
+    function asegurarPlanillaCargada() {
+      if (!planillaCargada) {
+        planillaCargada = true;
+        cargarPlanillaMensual();
       }
     }
 
-    // -------------------------------------------------------------
-    // Envíos y Pruebas a Docentes de Bloque 1 (12:00 PM)
-    // -------------------------------------------------------------
-    async function probarEnvioCorreos(forzar = false) {
-      const fecha = document.getElementById('inputFecha').value;
-
-      const confirm = await Swal.fire({
-        title: forzar ? '¿Forzar reenvío de correos?' : '¿Enviar resumen a docentes de Bloque 1?',
-        html: `Esta acción enviará a los correos de los docentes que tuvieron clases en el primer bloque un reporte con la asistencia consolidada.<br><br><strong>Fecha de reporte:</strong> ${fecha}`,
-        icon: 'question',
-        showCancelButton: true,
-        confirmButtonText: 'Sí, enviar ahora',
-        cancelButtonText: 'Cancelar'
-      });
-
-      if (!confirm.isConfirmed) return;
-
-      Swal.fire({
-        title: 'Enviando correos...',
-        text: 'Generando reportes personalizados por docente...',
-        allowOutsideClick: false,
-        didOpen: () => Swal.showLoading()
-      });
+    async function cargarPlanillaMensual() {
+      const curso = document.getElementById('mensualCursoSelect').value || 'Kinder A';
+      const mes = document.getElementById('mensualMesInput').value || mesActualISO();
+      const cont = document.getElementById('contenedorLibroMensual');
+      cont.innerHTML = '<div class="text-center py-5 text-muted"><div class="spinner-border spinner-border-sm text-primary me-2"></div>Cargando libro mensual...</div>';
 
       try {
-        const res = await fetch('/api/asistencia/enviar-bloque1', {
-          method: 'POST',
+        const res = await fetch(`/api/asistencia/mensual/${encodeURIComponent(curso)}?mes=${mes}`);
+        const data = await res.json();
+        if (!res.ok) throw new Error(data.error || 'Error cargando planilla mensual');
+
+        if (!data.estudiantes || data.estudiantes.length === 0) {
+          cont.innerHTML = `<div class="text-center py-5 text-muted">No hay estudiantes registrados en <strong>${escapeHtml(data.curso)}</strong>.</div>`;
+          return;
+        }
+
+        const editable = !!data.puede_editar;
+        const dias = data.dias || [];
+
+        let thead = `
+          <tr>
+            <th class="libro-sticky-num" rowspan="2">N°</th>
+            <th class="libro-sticky-nom" rowspan="2">${escapeHtml(data.curso)} · ${escapeHtml(data.mes_nombre)} ${data.anio}</th>
+            ${dias.map(d => `<th class="${d.esFeriado ? 'celda-feriado' : ''}">${escapeHtml(d.diaCorto)}</th>`).join('')}
+            <th rowspan="2" style="min-width: 55px;">% Mes</th>
+          </tr>
+          <tr>
+            ${dias.map(d => `<th class="${d.esFeriado ? 'celda-feriado' : ''}" title="${escapeHtml(d.motivo || d.fecha)}">${d.dia}</th>`).join('')}
+          </tr>
+        `;
+
+        let tbody = data.estudiantes.map((est, idx) => {
+          const celdas = dias.map(d => {
+            if (d.esFeriado) return '<td class="celda-dia celda-feriado" title="Feriado">F</td>';
+            const tot = data.totales_por_dia[d.fecha];
+            const aus = Boolean(est.ausencias && est.ausencias[d.fecha]);
+            const inactivo = est.retirado && (!est.fecha_retiro || est.fecha_retiro <= d.fecha);
+            if (inactivo) return '<td class="celda-dia text-muted">-</td>';
+
+            const clsEdit = editable ? 'editable' : '';
+            const onclick = editable ? `onclick="toggleCeldaMensual(${est.id}, '${d.fecha}', ${!aus})"` : '';
+            if (aus) return `<td class="celda-dia celda-ausente ${clsEdit}" ${onclick}>A</td>`;
+            if (tot && tot.tomada) return `<td class="celda-dia celda-presente ${clsEdit}" ${onclick}>P</td>`;
+            return `<td class="celda-dia text-muted ${clsEdit}" ${onclick}>·</td>`;
+          }).join('');
+
+          const nomHtml = est.retirado
+            ? `<span class="text-decoration-line-through text-muted">${escapeHtml(est.nombre)}</span> <span class="badge bg-secondary-subtle text-secondary">Retirado</span>`
+            : escapeHtml(est.nombre);
+
+          return `
+            <tr>
+              <td class="libro-sticky-num">${est.numero || (idx + 1)}</td>
+              <td class="libro-sticky-nom" title="${escapeHtml(est.nombre)}">${nomHtml}</td>
+              ${celdas}
+              <td class="text-center fw-bold">${est.porcentaje}%</td>
+            </tr>
+          `;
+        }).join('');
+
+        // Filas resumen inferiores
+        const filasResumen = [
+          { titulo: 'TOTAL MATRÍCULA (Activos):', key: 'matricula', cls: 'table-light fw-bold' },
+          { titulo: 'Total Ausentes:', key: 'ausentes', cls: 'text-danger fw-bold' },
+          { titulo: 'Total Asistentes:', key: 'presentes', cls: 'text-success fw-bold' },
+          { titulo: 'Asistencia Completa:', key: 'completa', cls: 'fw-bold text-primary' }
+        ];
+
+        const tfoot = filasResumen.map(fr => `
+          <tr class="${fr.cls}">
+            <td class="libro-sticky-num"></td>
+            <td class="libro-sticky-nom text-end">${fr.titulo}</td>
+            ${dias.map(d => {
+              if (d.esFeriado) return '<td class="celda-dia celda-feriado">-</td>';
+              const tot = data.totales_por_dia[d.fecha];
+              if (!tot) return '<td class="celda-dia">-</td>';
+              if (fr.key === 'completa') return `<td class="celda-dia">${tot.tomada ? (tot.completa ? '✅' : '—') : ''}</td>`;
+              return `<td class="celda-dia">${tot[fr.key]}</td>`;
+            }).join('')}
+            <td></td>
+          </tr>
+        `).join('');
+
+        cont.innerHTML = `<table class="libro-table"><thead>${thead}</thead><tbody>${tbody}</tbody><tfoot>${tfoot}</tfoot></table>`;
+      } catch (e) {
+        cont.innerHTML = `<div class="text-center py-4 text-danger">${escapeHtml(e.message)}</div>`;
+      }
+    }
+
+    async function toggleCeldaMensual(estudianteId, fecha, nuevoAusente) {
+      try {
+        const res = await fetch('/api/asistencia/registro-celda', {
+          method: 'PATCH',
           headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ fecha, forzar })
+          body: JSON.stringify({ estudianteId, fecha, ausente: nuevoAusente })
         });
         const data = await res.json();
+        if (!res.ok) throw new Error(data.error || 'No se pudo actualizar');
+        await cargarPlanillaMensual();
+        if (fecha === document.getElementById('resumenFechaInput').value) cargarResumenDiario();
+      } catch (e) {
+        Swal.fire('Bloqueado', e.message, 'warning');
+      }
+    }
 
-        if (!res.ok) throw new Error(data.error || 'Error al procesar el envío.');
+    function descargarMensual(tipo) {
+      const mes = document.getElementById('mensualMesInput').value || mesActualISO();
+      window.location.href = `/api/asistencia/exportar-mensual/${tipo}?mes=${encodeURIComponent(mes)}`;
+    }
 
-        Swal.fire({
-          icon: 'success',
-          title: 'Envíos Completados',
-          html: `<div style="font-size: 0.95rem;">
-                   <p><strong>${data.enviados}</strong> correos enviados exitosamente.</p>
-                   ${data.omitidos > 0 ? `<p class="text-muted small">${data.omitidos} omitidos (ya enviados o sin correo).</p>` : ''}
-                   ${data.errores > 0 ? `<p class="text-danger small">${data.errores} fallidos.</p>` : ''}
-                 </div>`
+    async function enviarMensualCorreo() {
+      const mes = document.getElementById('mensualMesInput').value || mesActualISO();
+      const c = await Swal.fire({
+        title: '¿Enviar Reporte Mensual por Correo?',
+        text: `Se generará el Excel (.xlsx) y el PDF del mes ${mes} y se enviarán a todos los destinatarios configurados.`,
+        icon: 'question',
+        showCancelButton: true,
+        confirmButtonText: 'Enviar ahora',
+        cancelButtonText: 'Cancelar'
+      });
+      if (!c.isConfirmed) return;
+
+      Swal.fire({ title: 'Generando Excel y PDF...', allowOutsideClick: false, didOpen: () => Swal.showLoading() });
+      try {
+        const res = await fetch('/api/asistencia/enviar-mensual', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ mes, forzar: true })
         });
+        const data = await res.json();
+        if (!res.ok) throw new Error(data.error || 'Error enviando reporte mensual');
+        Swal.fire('Enviado', `Reporte mensual ${data.periodo} encolado para ${data.enviados} destinatarios.`, 'success');
       } catch (e) {
         Swal.fire('Error', e.message, 'error');
       }
     }
 
     // -------------------------------------------------------------
-    // Configuración de Hoja y Hora
+    // TAB 4: MATRÍCULA Y MIGRACIÓN
     // -------------------------------------------------------------
-    async function abrirModalConfig() {
-      try {
-        const res = await fetch('/api/asistencia/config');
-        const cfg = await res.json();
-
-        document.getElementById('cfgUrl').value = cfg.sheet_url || '';
-        document.getElementById('cfgGid').value = cfg.sheet_gid || '';
-        document.getElementById('cfgHora').value = cfg.hora_envio || '12:00';
-        document.getElementById('cfgAuto').checked = !!cfg.envio_automatico_activo;
-
-        modalConfigObj.show();
-      } catch (e) {
-        Swal.fire('Error', 'No se pudo cargar la configuración', 'error');
+    function asegurarMatriculaCargada() {
+      if (!matriculaCargada) {
+        matriculaCargada = true;
+        cargarMatricula();
       }
     }
 
-    async function guardarConfig(e) {
-      e.preventDefault();
-      const btn = document.getElementById('btnGuardarConfig');
-      btn.disabled = true;
-
-      const payload = {
-        sheet_url: document.getElementById('cfgUrl').value.trim(),
-        sheet_gid: document.getElementById('cfgGid').value.trim(),
-        hora_envio: document.getElementById('cfgHora').value,
-        envio_automatico_activo: document.getElementById('cfgAuto').checked
-      };
+    async function cargarMatricula() {
+      const curso = document.getElementById('matFiltroCurso').value || 'todos';
+      const retirados = document.getElementById('matMostrarRetirados').checked;
+      const tbody = document.getElementById('tablaMatriculaBody');
+      tbody.innerHTML = '<tr><td colspan="5" class="text-center py-4 text-muted">Cargando estudiantes...</td></tr>';
 
       try {
+        const res = await fetch(`/api/asistencia/estudiantes?curso=${encodeURIComponent(curso)}&retirados=${retirados ? '1' : '0'}`);
+        const data = await res.json();
+        if (!res.ok) throw new Error(data.error || 'Error');
+        matriculaCache = data;
+        filtrarMatriculaLocal();
+      } catch (e) {
+        tbody.innerHTML = `<tr><td colspan="5" class="text-center py-4 text-danger">${escapeHtml(e.message)}</td></tr>`;
+      }
+    }
+
+    function filtrarMatriculaLocal() {
+      const q = document.getElementById('matBusqueda').value.toLowerCase().trim();
+      const lista = matriculaCache.filter(e => !q || e.nombre.toLowerCase().includes(q) || e.curso.toLowerCase().includes(q));
+      const activos = lista.filter(e => !e.retirado).length;
+      const retirados = lista.filter(e => e.retirado).length;
+      document.getElementById('matResumenConteo').innerText = `Mostrando ${lista.length} estudiantes (${activos} activos, ${retirados} retirados).`;
+
+      const tbody = document.getElementById('tablaMatriculaBody');
+      if (lista.length === 0) {
+        tbody.innerHTML = '<tr><td colspan="5" class="text-center py-5 text-muted">Sin estudiantes en esta selección. Puedes usar "Migrar desde Google Sheets" para importar la matrícula completa.</td></tr>';
+        return;
+      }
+
+      tbody.innerHTML = lista.map(e => `
+        <tr class="${e.retirado ? 'table-secondary opacity-75' : ''}">
+          <td class="text-center">${e.orden || '-'}</td>
+          <td><strong>${escapeHtml(e.nombre)}</strong></td>
+          <td><span class="badge bg-primary-subtle text-primary border border-primary-subtle">${escapeHtml(e.curso)}</span></td>
+          <td class="text-center">
+            ${e.retirado
+              ? '<span class="badge bg-secondary">Retirado</span>'
+              : '<span class="badge bg-success-subtle text-success border border-success-subtle">Activo</span>'
+            }
+          </td>
+          <td class="text-end">
+            <button class="btn btn-sm btn-outline-primary py-0 px-2 me-1" onclick="abrirModalEditarEstudiante(${e.id})">Editar</button>
+            <button class="btn btn-sm ${e.retirado ? 'btn-outline-success' : 'btn-outline-danger'} py-0 px-2" onclick="toggleRetiroEstudiante(${e.id}, ${!e.retirado})">
+              ${e.retirado ? 'Reincorporar' : 'Retirar'}
+            </button>
+          </td>
+        </tr>
+      `).join('');
+    }
+
+    function abrirModalEstudiante() {
+      document.getElementById('modalEstTitulo').innerText = 'Agregar Nuevo Estudiante';
+      document.getElementById('estId').value = '';
+      document.getElementById('estNombre').value = '';
+      document.getElementById('estOrden').value = '';
+      document.getElementById('estRetiradoWrap').classList.add('d-none');
+      const filtro = document.getElementById('matFiltroCurso').value;
+      if (filtro && filtro !== 'todos') document.getElementById('estCurso').value = filtro;
+      modalEstudianteObj.show();
+    }
+
+    function abrirModalEditarEstudiante(id) {
+      const est = matriculaCache.find(x => x.id === id);
+      if (!est) return;
+      document.getElementById('modalEstTitulo').innerText = 'Editar Estudiante';
+      document.getElementById('estId').value = est.id;
+      document.getElementById('estNombre').value = est.nombre;
+      document.getElementById('estCurso').value = est.curso;
+      document.getElementById('estOrden').value = est.orden || '';
+      document.getElementById('estRetirado').checked = !!est.retirado;
+      document.getElementById('estRetiradoWrap').classList.remove('d-none');
+      modalEstudianteObj.show();
+    }
+
+    async function guardarEstudiante(e) {
+      e.preventDefault();
+      const id = document.getElementById('estId').value;
+      const payload = {
+        nombre: document.getElementById('estNombre').value.trim(),
+        curso: document.getElementById('estCurso').value,
+        orden: document.getElementById('estOrden').value ? parseInt(document.getElementById('estOrden').value, 10) : undefined
+      };
+      if (id) payload.retirado = document.getElementById('estRetirado').checked;
+
+      const url = id ? `/api/asistencia/estudiantes/${id}` : '/api/asistencia/estudiantes';
+      const method = id ? 'PUT' : 'POST';
+
+      const res = await fetch(url, {
+        method,
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(payload)
+      });
+      const data = await res.json();
+      if (!res.ok) return Swal.fire('Error', data.error || 'No se pudo guardar', 'error');
+
+      modalEstudianteObj.hide();
+      Swal.fire('Guardado', 'Estudiante actualizado en matrícula.', 'success');
+      cargarMatricula();
+      cargarTomaCursosEstado();
+    }
+
+    async function toggleRetiroEstudiante(id, retirar) {
+      const res = await fetch(`/api/asistencia/estudiantes/${id}/retirar`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ retirado: retirar })
+      });
+      const data = await res.json();
+      if (!res.ok) return Swal.fire('Error', data.error, 'error');
+      cargarMatricula();
+      cargarResumenDiario();
+    }
+
+    function abrirModalImportarMigracion() {
+      document.getElementById('migArchivo').value = '';
+      modalMigracionObj.show();
+    }
+
+    async function ejecutarImportacionMigracion(e) {
+      e.preventDefault();
+      const fileInput = document.getElementById('migArchivo');
+      if (!fileInput.files || !fileInput.files.length) return;
+
+      const fd = new FormData();
+      fd.append('archivo', fileInput.files[0]);
+      fd.append('importarAsistenciaMes', document.getElementById('migIncluirMes').checked ? 'true' : 'false');
+      fd.append('anioMes', document.getElementById('migAnioMes').value || mesActualISO());
+
+      const btn = document.getElementById('btnEjecutarMigracion');
+      btn.disabled = true;
+      btn.innerHTML = '<span class="spinner-border spinner-border-sm me-1"></span> Importando...';
+
+      try {
+        const res = await fetch('/api/asistencia/importar-migracion', { method: 'POST', body: fd });
+        const data = await res.json();
+        if (!res.ok) throw new Error(data.error || 'Error en migración');
+
+        modalMigracionObj.hide();
+        const s = data.stats;
+        const advHtml = (s.advertencias && s.advertencias.length > 0)
+          ? `<div class="mt-2 small text-warning-emphasis text-start" style="max-height:110px;overflow-y:auto;"><strong>Filas omitidas (${s.advertencias.length}):</strong><br>${s.advertencias.slice(0, 10).map(a => escapeHtml(a)).join('<br>')}</div>`
+          : '';
+
+        Swal.fire({
+          icon: 'success',
+          title: 'Migración Completada',
+          html: `<div class="text-start small">
+            <ul class="mb-2">
+              <li>Estudiantes creados: <strong>${s.estudiantes_creados}</strong></li>
+              <li>Estudiantes actualizados: <strong>${s.estudiantes_actualizados}</strong></li>
+              <li>Retirados marcados: <strong>${s.estudiantes_retirados}</strong></li>
+              <li>Feriados importados: <strong>${s.feriados_importados}</strong> | Clases extra: <strong>${s.extras_importados}</strong></li>
+              <li>Correos destinatarios: <strong>${s.correos_importados}</strong></li>
+              <li>Marcas de asistencia del mes: <strong>${s.registros_asistencia_importados}</strong></li>
+            </ul>
+            ${advHtml}
+          </div>`
+        });
+
+        planillaCargada = false;
+        matriculaCargada = false;
+        await cargarMatricula();
+        await cargarTomaCursosEstado();
+        await cargarResumenDiario();
+      } catch (err) {
+        Swal.fire('Error al importar', err.message, 'error');
+      } finally {
+        btn.disabled = false;
+        btn.innerHTML = '<i class="bi bi-cloud-arrow-up-fill me-1"></i> Iniciar Importación';
+      }
+    }
+
+    // -------------------------------------------------------------
+    // TAB 5: CONFIGURACIÓN, FERIADOS, NOVEDADES Y LOGS
+    // -------------------------------------------------------------
+    async function cargarTabConfig() {
+      try {
+        const res = await fetch('/api/asistencia/config');
+        const cfg = await res.json();
+        document.getElementById('cfgEnvioDiarioActivo').checked = !!cfg.envio_automatico_activo;
+        document.getElementById('cfgHoraDiaria').value = cfg.hora_envio || '12:00';
+        document.getElementById('cfgEnvioMensualActivo').checked = !!cfg.envio_mensual_activo;
+        document.getElementById('cfgHoraMensual').value = cfg.hora_envio_mensual || '07:30';
+        document.getElementById('cfgDestinatarios').value = (cfg.correos_destinatarios_reporte || []).join(', ');
+        document.getElementById('cfgEncargados').value = (cfg.encargados_asistencia || []).join(', ');
+        document.getElementById('cfgPermitirDocentes').checked = !!cfg.permitir_toma_docentes;
+        document.getElementById('cfgPermitirPasadoDocentes').checked = !!cfg.permitir_editar_pasado_docentes;
+      } catch (e) {}
+      cargarDiasEspeciales();
+      cargarHistorialNovedades();
+    }
+
+    async function guardarConfigNativa(e) {
+      e.preventDefault();
+      const btn = document.getElementById('btnGuardarCfgNativa');
+      btn.disabled = true;
+      try {
+        const payload = {
+          envio_automatico_activo: document.getElementById('cfgEnvioDiarioActivo').checked,
+          hora_envio: document.getElementById('cfgHoraDiaria').value,
+          envio_mensual_activo: document.getElementById('cfgEnvioMensualActivo').checked,
+          hora_envio_mensual: document.getElementById('cfgHoraMensual').value,
+          correos_destinatarios_reporte: document.getElementById('cfgDestinatarios').value,
+          encargados_asistencia: document.getElementById('cfgEncargados').value,
+          permitir_toma_docentes: document.getElementById('cfgPermitirDocentes').checked,
+          permitir_editar_pasado_docentes: document.getElementById('cfgPermitirPasadoDocentes').checked
+        };
         const res = await fetch('/api/asistencia/config', {
           method: 'PUT',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify(payload)
         });
         const data = await res.json();
-        if (!res.ok) throw new Error(data.error || 'Error al guardar.');
-
-        modalConfigObj.hide();
-        Swal.fire('Configuración Guardada', 'Se actualizó la configuración. Procediendo a sincronizar...', 'success');
-        sincronizarGoogleSheets();
+        if (!res.ok) throw new Error(data.error || 'Error guardando configuración');
+        Swal.fire('Guardado', 'Configuración de asistencia actualizada correctamente.', 'success');
       } catch (err) {
         Swal.fire('Error', err.message, 'error');
       } finally {
@@ -793,83 +1882,123 @@
       }
     }
 
-    // -------------------------------------------------------------
-    // Subir Archivo Manual
-    // -------------------------------------------------------------
-    function abrirModalSubirArchivo() {
-      document.getElementById('subirFecha').value = document.getElementById('inputFecha').value;
-      modalSubirObj.show();
+    async function cargarDiasEspeciales() {
+      const res = await fetch('/api/asistencia/dias-especiales');
+      const rows = await res.json();
+      const tbody = document.getElementById('tablaDiasEspecialesBody');
+      if (!rows || rows.length === 0) {
+        tbody.innerHTML = '<tr><td colspan="4" class="text-center py-3 text-muted">Sin feriados ni clases extra registrados.</td></tr>';
+        return;
+      }
+      tbody.innerHTML = rows.map(d => `
+        <tr>
+          <td class="font-monospace fw-bold">${escapeHtml(d.fecha)}</td>
+          <td>${d.tipo === 'FERIADO' ? '<span class="badge bg-danger-subtle text-danger">Feriado</span>' : '<span class="badge bg-success-subtle text-success">Clase Extra</span>'}</td>
+          <td>${escapeHtml(d.descripcion || '-')}</td>
+          <td class="text-end"><button class="btn btn-sm btn-outline-danger py-0 px-1" onclick="eliminarDiaEspecial(${d.id})"><i class="bi bi-trash"></i></button></td>
+        </tr>
+      `).join('');
     }
 
-    async function subirArchivoManual(e) {
+    async function agregarDiaEspecial(e) {
       e.preventDefault();
-      const fileInput = document.getElementById('subirInputFile');
-      if (!fileInput.files || fileInput.files.length === 0) return;
-
-      const formData = new FormData();
-      formData.append('archivo', fileInput.files[0]);
-      formData.append('fecha', document.getElementById('subirFecha').value);
-
-      const btn = document.getElementById('btnSubirArchivo');
-      btn.disabled = true;
-      btn.innerHTML = '<span class="spinner-border spinner-border-sm me-1"></span> Procesando...';
-
-      try {
-        const res = await fetch('/api/asistencia/subir', {
-          method: 'POST',
-          body: formData
-        });
-        const data = await res.json();
-        if (!res.ok) throw new Error(data.error || 'Error al procesar el archivo.');
-
-        modalSubirObj.hide();
-        Swal.fire('Carga Exitosa', `Se procesaron ${data.cursos_procesados} cursos correctamente.`, 'success');
-        cargarAsistencia();
-      } catch (err) {
-        Swal.fire('Error', err.message, 'error');
-      } finally {
-        btn.disabled = false;
-        btn.innerHTML = '<i class="bi bi-file-earmark-arrow-up me-1"></i> Cargar Datos';
-      }
+      const res = await fetch('/api/asistencia/dias-especiales', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          fecha: document.getElementById('espFecha').value,
+          tipo: document.getElementById('espTipo').value,
+          descripcion: document.getElementById('espDesc').value.trim()
+        })
+      });
+      const data = await res.json();
+      if (!res.ok) return Swal.fire('Error', data.error, 'error');
+      document.getElementById('espDesc').value = '';
+      cargarDiasEspeciales();
     }
 
-    // -------------------------------------------------------------
-    // Logs de Envíos
-    // -------------------------------------------------------------
-    async function abrirModalLogs() {
+    async function eliminarDiaEspecial(id) {
+      await fetch(`/api/asistencia/dias-especiales/${id}`, { method: 'DELETE' });
+      cargarDiasEspeciales();
+    }
+
+    async function importarFeriadosCalendario() {
+      const res = await fetch('/api/asistencia/dias-especiales/importar-calendario', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ anio: parseInt(fechaHoyISO().slice(0, 4), 10) })
+      });
+      const data = await res.json();
+      Swal.fire('Sincronizado', `Se importaron ${data.importados || 0} feriados desde el Calendario Académico.`, 'success');
+      cargarDiasEspeciales();
+    }
+
+    async function cargarHistorialNovedades() {
+      const res = await fetch('/api/asistencia/novedades?limit=25');
+      const rows = await res.json();
+      const cont = document.getElementById('listaTodasNovedadesBody');
+      if (!rows || rows.length === 0) {
+        cont.innerHTML = '<div class="text-muted small py-2">Aún no hay novedades reportadas.</div>';
+        return;
+      }
+      cont.innerHTML = rows.map(n => `
+        <div class="border-bottom py-2 small">
+          <div class="d-flex justify-content-between">
+            <span><strong>${escapeHtml(n.curso)}</strong> (${escapeHtml(n.fecha)}) · ${escapeHtml(n.reportado_por_nombre || n.reportado_por_email)}</span>
+            ${n.estado === 'Revisado' ? '<span class="badge bg-success-subtle text-success">Revisado</span>' : `<button class="btn btn-link btn-sm p-0" onclick="marcarNovCfg(${n.id})">Marcar revisado</button>`}
+          </div>
+          <div class="text-secondary mt-1">${escapeHtml(n.mensaje)}</div>
+        </div>
+      `).join('');
+    }
+
+    async function marcarNovCfg(id) {
+      await fetch(`/api/asistencia/novedades/${id}/revisar`, { method: 'PATCH' });
+      cargarHistorialNovedades();
+    }
+
+    async function probarEnvioBloque1(forzar = false) {
+      const fecha = document.getElementById('resumenFechaInput').value || fechaHoyISO();
+      const conf = await Swal.fire({
+        title: forzar ? '¿Forzar reenvío Bloque 1?' : '¿Enviar resumen Bloque 1 ahora?',
+        html: `Se enviará a cada docente con clases en el primer bloque el resumen de sus cursos para el <strong>${fecha}</strong>.`,
+        icon: 'question',
+        showCancelButton: true,
+        confirmButtonText: 'Enviar',
+        cancelButtonText: 'Cancelar'
+      });
+      if (!conf.isConfirmed) return;
+
+      Swal.fire({ title: 'Enviando...', allowOutsideClick: false, didOpen: () => Swal.showLoading() });
+      const res = await fetch('/api/asistencia/enviar-bloque1', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ fecha, forzar })
+      });
+      const data = await res.json();
+      Swal.fire('Envío Bloque 1', `Enviados: ${data.enviados || 0} | Omitidos: ${data.omitidos || 0} | Fallidos: ${data.errores || 0}`, 'success');
+    }
+
+    async function abrirModalLogsEnvios() {
       modalLogsObj.show();
       const tbody = document.getElementById('tablaLogsEnviosBody');
-      tbody.innerHTML = `<tr><td colspan="6" class="text-center py-3">Cargando historial...</td></tr>`;
-
-      try {
-        const res = await fetch('/api/asistencia/logs-envios');
-        const logs = await res.json();
-
-        if (!logs || logs.length === 0) {
-          tbody.innerHTML = `<tr><td colspan="6" class="text-center py-3 text-muted">Aún no hay registros de envíos.</td></tr>`;
-          return;
-        }
-
-        let html = '';
-        logs.forEach(l => {
-          const badge = l.estado === 'Enviado' 
-            ? '<span class="badge bg-success-subtle text-success">✓ Enviado</span>' 
-            : '<span class="badge bg-danger-subtle text-danger">✕ Fallido</span>';
-          html += `
-            <tr>
-              <td><strong>${l.fecha}</strong></td>
-              <td>${l.profesor_nombre || '-'}</td>
-              <td class="text-muted small">${l.profesor_email}</td>
-              <td class="small">${l.cursos || '-'}</td>
-              <td class="text-center">${badge}</td>
-              <td class="font-monospace small text-muted">${l.enviado_en || ''}</td>
-            </tr>
-          `;
-        });
-        tbody.innerHTML = html;
-      } catch (e) {
-        tbody.innerHTML = `<tr><td colspan="6" class="text-center py-3 text-danger">Error: ${e.message}</td></tr>`;
+      tbody.innerHTML = '<tr><td colspan="6" class="text-center py-3">Cargando...</td></tr>';
+      const res = await fetch('/api/asistencia/logs-envios');
+      const logs = await res.json();
+      if (!logs || logs.length === 0) {
+        tbody.innerHTML = '<tr><td colspan="6" class="text-center py-3 text-muted">Sin envíos registrados aún.</td></tr>';
+        return;
       }
+      tbody.innerHTML = logs.map(l => `
+        <tr>
+          <td><strong>${escapeHtml(l.fecha)}</strong></td>
+          <td>${escapeHtml(l.profesor_nombre || '-')}</td>
+          <td class="text-muted small">${escapeHtml(l.profesor_email)}</td>
+          <td class="small">${escapeHtml(l.cursos || '-')}</td>
+          <td class="text-center">${l.estado === 'Enviado' ? '<span class="badge bg-success-subtle text-success">✓ Enviado</span>' : '<span class="badge bg-danger-subtle text-danger">✕ Fallido</span>'}</td>
+          <td class="font-monospace small text-muted">${escapeHtml(l.enviado_en || '')}</td>
+        </tr>
+      `).join('');
     }
   </script>
 </body>

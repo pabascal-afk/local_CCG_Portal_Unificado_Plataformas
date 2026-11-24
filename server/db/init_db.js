@@ -376,6 +376,9 @@ db.serialize(() => {
     db.run("ALTER TABLE usuarios ADD COLUMN activo INTEGER DEFAULT 1", () => {});
     db.run("INSERT OR IGNORE INTO config_global (clave, valor) VALUES ('emails_activados', 'true')", () => {});
     db.run("INSERT OR IGNORE INTO config_global (clave, valor) VALUES ('anno_activo_predeterminado', '2026')", () => {});
+    db.run(`INSERT OR IGNORE INTO roles_config (nombre, permisos) VALUES ('Inspectoría', ?)`, [
+      JSON.stringify({ esAdminGeneral: false, puedeAgendarSinRestricciones: false, tomarAsistencia: true, gestionarAsistencia: true })
+    ], () => {});
     db.run(`INSERT OR IGNORE INTO annos_escolares 
       (anno, nombre, estado, fecha_inicio, fecha_fin, fecha_termino_primer_semestre, fecha_inicio_segundo_semestre, descripcion)
       VALUES 

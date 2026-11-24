@@ -1,6 +1,7 @@
 node_modules/
 .env
 server/db/colegio.db
+server/storage/
 .DS_Store
 *.log
 *.exe.old*

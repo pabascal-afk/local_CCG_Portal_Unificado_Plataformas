@@ -23,6 +23,7 @@
     "nodemailer": "^10.0.13",
     "passport": "^0.7.0",
     "passport-google-oauth20": "^2.0.0",
+    "pdfkit": "^0.21.0",
     "sqlite3": "^6.0.1",
     "systray2": "^2.1.4",
     "untun": "^0.2.2",
