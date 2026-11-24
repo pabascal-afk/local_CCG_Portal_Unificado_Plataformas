@@ -1463,8 +1463,7 @@
         const cls = pct >= 90 ? 'badge-pct-green' : (pct >= 80 ? 'badge-pct-yellow' : 'badge-pct-red');
         const col = pct >= 90 ? '#16a34a' : (pct >= 80 ? '#ca8a04' : '#dc2626');
         const aus = (c.alumnos_ausentes && c.alumnos_ausentes.length > 0)
-          ? c.alumnos_ausentes.slice(0, 4).map(a => `<span class="tag-ausente">${escapeHtml(a)}</span>`).join('') +
-            (c.alumnos_ausentes.length > 4 ? `<span class="badge bg-secondary-subtle text-secondary" title="${escapeHtml(c.alumnos_ausentes.join(', '))}">+${c.alumnos_ausentes.length - 4} más</span>` : '')
+          ? `<div class="d-flex flex-wrap">${c.alumnos_ausentes.map(a => `<span class="tag-ausente">${escapeHtml(a)}</span>`).join('')}</div>`
           : '<span class="text-success small">✓ Completa</span>';
 
         const autor = c.registrado_nombre ? `<div class="small fw-semibold">${escapeHtml(c.registrado_nombre)}</div>` : '';
@@ -1551,10 +1550,12 @@
             const inactivo = est.retirado && (!est.fecha_retiro || est.fecha_retiro <= d.fecha);
             if (inactivo) return '<td class="celda-dia text-muted">-</td>';
 
+            const diaTomado = Boolean(tot && tot.tomada);
+            const existeRegistroDia = diaTomado || aus;
             const clsEdit = editable ? 'editable' : '';
-            const onclick = editable ? `onclick="toggleCeldaMensual(${est.id}, '${d.fecha}', ${!aus})"` : '';
+            const onclick = editable ? `onclick="toggleCeldaMensual(${est.id}, '${d.fecha}', ${!aus}, ${existeRegistroDia})"` : '';
             if (aus) return `<td class="celda-dia celda-ausente ${clsEdit}" ${onclick}>A</td>`;
-            if (tot && tot.tomada) return `<td class="celda-dia celda-presente ${clsEdit}" ${onclick}>P</td>`;
+            if (diaTomado) return `<td class="celda-dia celda-presente ${clsEdit}" ${onclick}>P</td>`;
             return `<td class="celda-dia text-muted ${clsEdit}" ${onclick}>·</td>`;
           }).join('');
 
@@ -1601,7 +1602,21 @@
       }
     }
 
-    async function toggleCeldaMensual(estudianteId, fecha, nuevoAusente) {
+    async function toggleCeldaMensual(estudianteId, fecha, nuevoAusente, existeRegistroDia = true) {
+      if (!existeRegistroDia) {
+        const [yyyy, mm, dd] = String(fecha || '').split('-');
+        const fechaFmt = (dd && mm && yyyy) ? `${dd}/${mm}/${yyyy}` : fecha;
+        const conf = await Swal.fire({
+          title: `¿Desea agregar asistencia al día ${fechaFmt}?`,
+          text: 'Este día aún no tiene asistencia registrada para el curso. Al confirmar se habilitará el registro de esa fecha.',
+          icon: 'question',
+          showCancelButton: true,
+          confirmButtonText: 'Sí, agregar',
+          cancelButtonText: 'Cancelar'
+        });
+        if (!conf.isConfirmed) return;
+      }
+
       try {
         const res = await fetch('/api/asistencia/registro-celda', {
           method: 'PATCH',
@@ -1612,6 +1627,7 @@
         if (!res.ok) throw new Error(data.error || 'No se pudo actualizar');
         await cargarPlanillaMensual();
         if (fecha === document.getElementById('resumenFechaInput').value) cargarResumenDiario();
+        if (permisosActuales.puedeTomarAsistencia && fecha === document.getElementById('tomaFechaInput').value) cargarTomaCursosEstado();
       } catch (e) {
         Swal.fire('Bloqueado', e.message, 'warning');
       }
