@@ -444,10 +444,13 @@
               <h5 class="fw-bold mb-0 text-dark" id="tomaFechaLegible">Cargando fecha...</h5>
               <small class="text-muted" id="tomaUltimoRegistroInfo">Sin registro previo para esta fecha.</small>
             </div>
-            <div class="d-flex align-items-center gap-3 small">
+            <div class="d-flex flex-wrap align-items-center gap-3 small">
               <span>Matrícula: <strong id="tomaCountMatricula">0</strong></span>
               <span class="text-success">Presentes: <strong id="tomaCountPresentes">0</strong></span>
               <span class="text-danger">Ausentes: <strong id="tomaCountAusentes">0</strong></span>
+              <button type="button" class="btn btn-outline-danger btn-sm d-none" id="btnAnularTomaDia" onclick="anularRegistroCursoFecha(tomaFormActual && tomaFormActual.curso, tomaFormActual && tomaFormActual.fecha)">
+                <i class="bi bi-trash me-1"></i>Anular día
+              </button>
             </div>
           </div>
         </div>
@@ -1007,7 +1010,9 @@
       const hoy = fechaHoyISO();
       const mesAct = mesActualISO();
       document.getElementById('resumenFechaInput').value = hoy;
-      document.getElementById('tomaFechaInput').value = hoy;
+      const tomaFechaEl = document.getElementById('tomaFechaInput');
+      tomaFechaEl.value = hoy;
+      tomaFechaEl.max = hoy;
       document.getElementById('mensualMesInput').value = mesAct;
       document.getElementById('migAnioMes').value = mesAct;
       document.getElementById('espFecha').value = hoy;
@@ -1126,6 +1131,12 @@
     }
 
     async function cambiarFechaToma() {
+      const inp = document.getElementById('tomaFechaInput');
+      const hoy = fechaHoyISO();
+      if (inp.value && inp.value > hoy) {
+        inp.value = hoy;
+        await Swal.fire('Fecha futura no permitida', 'No se puede registrar asistencia en fechas posteriores a hoy.', 'warning');
+      }
       tomaDirty = false;
       document.getElementById('tomaUnsavedBadge').classList.add('d-none');
       await cargarTomaCursosEstado();
@@ -1136,6 +1147,8 @@
       const fecha = document.getElementById('tomaFechaInput').value || fechaHoyISO();
       const cont = document.getElementById('listaTomaAlumnos');
       const btnGuardar = document.getElementById('btnGuardarToma');
+      const btnAnular = document.getElementById('btnAnularTomaDia');
+      if (btnAnular) btnAnular.classList.add('d-none');
       cont.innerHTML = '<div class="text-center py-5 text-muted"><div class="spinner-border text-primary spinner-border-sm me-2"></div>Cargando estudiantes...</div>';
 
       try {
@@ -1148,6 +1161,10 @@
         tomaDirty = false;
         document.getElementById('tomaUnsavedBadge').classList.add('d-none');
         document.getElementById('tomaFechaLegible').innerText = `${data.curso} · ${data.dia_info.fechaLegible}`;
+
+        if (btnAnular) {
+          btnAnular.classList.toggle('d-none', !(permisosActuales.esGestorAsistencia && data.tomada));
+        }
 
         if (data.tomada && data.registrado_nombre) {
           document.getElementById('tomaUltimoRegistroInfo').innerText = `Último guardado por ${data.registrado_nombre} (${(data.actualizado_en || '').slice(11, 16)})`;
@@ -1245,6 +1262,9 @@
 
         tomaDirty = false;
         document.getElementById('tomaUnsavedBadge').classList.add('d-none');
+        if (tomaFormActual) tomaFormActual.tomada = true;
+        const btnAnular = document.getElementById('btnAnularTomaDia');
+        if (btnAnular && permisosActuales.esGestorAsistencia) btnAnular.classList.remove('d-none');
 
         btn.style.backgroundColor = '#4285F4';
         txt.innerText = '¡LISTO! ✅';
@@ -1483,10 +1503,14 @@
             </td>
             <td>${aus}</td>
             <td>${autor}${hora}</td>
-            <td class="text-end">
+            <td class="text-end text-nowrap">
               ${permisosActuales.puedeTomarAsistencia
                 ? `<button class="btn btn-sm btn-outline-primary py-0 px-2" onclick="irATomarCurso('${escapeHtml(c.curso)}')"><i class="bi bi-pencil"></i> Lista</button>`
                 : `<button class="btn btn-sm btn-outline-secondary py-0 px-2" onclick="verCursoMensual('${escapeHtml(c.curso)}')">Libro</button>`
+              }
+              ${permisosActuales.esGestorAsistencia
+                ? `<button class="btn btn-sm btn-outline-danger py-0 px-2 ms-1" title="Anular registro de este día" onclick="anularRegistroCursoFecha('${escapeHtml(c.curso)}', '${escapeHtml(resumenActual.fecha)}')"><i class="bi bi-trash"></i></button>`
+                : ''
               }
             </td>
           </tr>
@@ -1529,6 +1553,7 @@
 
         const editable = !!data.puede_editar;
         const dias = data.dias || [];
+        const hoyRef = data.hoy_chile || fechaHoyISO();
 
         let thead = `
           <tr>
@@ -1552,6 +1577,15 @@
 
             const diaTomado = Boolean(tot && tot.tomada);
             const existeRegistroDia = diaTomado || aus;
+            const esFuturo = d.fecha > hoyRef;
+
+            if (esFuturo && !existeRegistroDia) {
+              return '<td class="celda-dia text-muted bg-light opacity-50" title="Fecha futura no habilitada">·</td>';
+            }
+            if (esFuturo && existeRegistroDia) {
+              return `<td class="celda-dia ${aus ? 'celda-ausente' : 'celda-presente'}" title="Registro en fecha futura — usa el ícono de eliminar en el pie de columna para anular este día">${aus ? 'A' : 'P'}</td>`;
+            }
+
             const clsEdit = editable ? 'editable' : '';
             const onclick = editable ? `onclick="toggleCeldaMensual(${est.id}, '${d.fecha}', ${!aus}, ${existeRegistroDia})"` : '';
             if (aus) return `<td class="celda-dia celda-ausente ${clsEdit}" ${onclick}>A</td>`;
@@ -1596,7 +1630,23 @@
           </tr>
         `).join('');
 
-        cont.innerHTML = `<table class="libro-table"><thead>${thead}</thead><tbody>${tbody}</tbody><tfoot>${tfoot}</tfoot></table>`;
+        const filaAnular = editable ? `
+          <tr class="table-light">
+            <td class="libro-sticky-num"></td>
+            <td class="libro-sticky-nom text-end small text-danger fw-bold">Anular día:</td>
+            ${dias.map(d => {
+              if (d.esFeriado) return '<td class="celda-dia celda-feriado"></td>';
+              const tot = data.totales_por_dia[d.fecha];
+              if (!tot || !tot.tomada) return '<td class="celda-dia"></td>';
+              const [yy, mm, dd] = d.fecha.split('-');
+              const fFmt = `${dd}/${mm}/${yy}`;
+              return `<td class="celda-dia"><button type="button" class="btn btn-outline-danger btn-sm py-0 px-1" style="font-size:0.7rem;line-height:1.2;" title="Anular asistencia del día ${fFmt}" onclick="anularRegistroCursoFecha('${escapeHtml(data.curso)}', '${d.fecha}')"><i class="bi bi-trash"></i></button></td>`;
+            }).join('')}
+            <td></td>
+          </tr>
+        ` : '';
+
+        cont.innerHTML = `<table class="libro-table"><thead>${thead}</thead><tbody>${tbody}</tbody><tfoot>${tfoot}${filaAnular}</tfoot></table>`;
       } catch (e) {
         cont.innerHTML = `<div class="text-center py-4 text-danger">${escapeHtml(e.message)}</div>`;
       }
@@ -1630,6 +1680,42 @@
         if (permisosActuales.puedeTomarAsistencia && fecha === document.getElementById('tomaFechaInput').value) cargarTomaCursosEstado();
       } catch (e) {
         Swal.fire('Bloqueado', e.message, 'warning');
+      }
+    }
+
+    async function anularRegistroCursoFecha(curso, fecha) {
+      if (!curso || !fecha) return;
+      const [yyyy, mm, dd] = String(fecha || '').split('-');
+      const fechaFmt = (dd && mm && yyyy) ? `${dd}/${mm}/${yyyy}` : fecha;
+      const conf = await Swal.fire({
+        title: `¿Anular asistencia del día ${fechaFmt}?`,
+        text: `Se eliminará el registro de ${curso} para la fecha ${fechaFmt} y quedará nuevamente pendiente (·). Esta acción quedará registrada en auditoría.`,
+        icon: 'warning',
+        showCancelButton: true,
+        confirmButtonColor: '#dc2626',
+        confirmButtonText: 'Sí, anular registro',
+        cancelButtonText: 'Cancelar'
+      });
+      if (!conf.isConfirmed) return;
+
+      try {
+        const res = await fetch(`/api/asistencia/curso/${encodeURIComponent(curso)}/fecha/${encodeURIComponent(fecha)}`, {
+          method: 'DELETE'
+        });
+        const data = await res.json();
+        if (!res.ok) throw new Error(data.error || 'No se pudo anular el registro');
+
+        Swal.fire('Registro anulado', `La asistencia de ${curso} del ${fechaFmt} fue eliminada.`, 'success');
+        if (planillaCargada) await cargarPlanillaMensual();
+        await cargarResumenDiario();
+        if (permisosActuales.puedeTomarAsistencia) {
+          await cargarTomaCursosEstado();
+          if (tomaFormActual && tomaFormActual.curso === curso && document.getElementById('tomaFechaInput').value === fecha) {
+            await cargarFormularioToma(curso);
+          }
+        }
+      } catch (e) {
+        Swal.fire('Error', e.message, 'error');
       }
     }
 

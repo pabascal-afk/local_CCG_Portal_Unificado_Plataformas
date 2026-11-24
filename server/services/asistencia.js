@@ -1000,6 +1000,8 @@ async function obtenerFormularioCurso(curso, fechaStr = null, annoCustom = null)
     }
 
     const fechaFinal = fechaStr || obtenerFechaHoraChile().fecha;
+    const hoyChile = obtenerFechaHoraChile().fecha;
+    const esFuturo = fechaFinal > hoyChile;
     const parsed = parsearFechaLocal(fechaFinal);
     const anno = parseInt(annoCustom || (parsed ? parsed.anio : await obtenerAnnoActivoSistema()), 10);
     const diaInfo = await verificarDiaAsistencia(fechaFinal);
@@ -1029,16 +1031,21 @@ async function obtenerFormularioCurso(curso, fechaStr = null, annoCustom = null)
 
     const ausentesCount = alumnos.filter(a => a.ausente).length;
     const presentesCount = Math.max(0, alumnos.length - ausentesCount);
+    const habilFinal = diaInfo.habil && !esFuturo;
+    const motivoBloqueoFinal = esFuturo
+        ? 'No se puede registrar asistencia en fechas futuras.'
+        : (diaInfo.habil ? '' : diaInfo.motivo);
 
     return {
         curso: formatearCursoLegible(cursoNorm),
         curso_normalizado: cursoNorm,
         fecha: fechaFinal,
         dia_info: diaInfo,
+        esFuturo,
         esFeriado: diaInfo.esFeriado,
         esFinDeSemana: diaInfo.esFinDeSemana && !diaInfo.esExtra,
-        habil: diaInfo.habil,
-        motivoBloqueo: diaInfo.habil ? '' : diaInfo.motivo,
+        habil: habilFinal,
+        motivoBloqueo: motivoBloqueoFinal,
         tomada: Boolean(resumenDiario && resumenDiario.tomada !== 0),
         matricula_total: alumnos.length,
         presentes: presentesCount,
@@ -1056,6 +1063,10 @@ async function guardarAsistenciaCurso({ curso, fecha = null, ausentesIds = [], o
         throw new Error(`Curso no reconocido: ${curso}`);
     }
     const fechaFinal = fecha || obtenerFechaHoraChile().fecha;
+    const hoyChile = obtenerFechaHoraChile().fecha;
+    if (fechaFinal > hoyChile) {
+        throw new Error(`No se puede registrar asistencia en una fecha futura (${fechaFinal}).`);
+    }
     const diaInfo = await verificarDiaAsistencia(fechaFinal);
     if (!diaInfo.habil) {
         throw new Error(`No se puede registrar asistencia el ${fechaFinal}: ${diaInfo.motivo}.`);
@@ -1128,7 +1139,12 @@ async function guardarAsistenciaCurso({ curso, fecha = null, ausentesIds = [], o
 async function toggleCeldaAsistencia({ estudianteId, fecha, ausente, observacion = '', usuario = null }) {
     const est = await queryGet(`SELECT * FROM asistencia_estudiantes WHERE id = ?`, [estudianteId]);
     if (!est) throw new Error('Estudiante no encontrado.');
-    const diaInfo = await verificarDiaAsistencia(fecha);
+    const fechaFinal = String(fecha || '').trim();
+    const hoyChile = obtenerFechaHoraChile().fecha;
+    if (fechaFinal > hoyChile) {
+        throw new Error(`No se puede registrar asistencia en una fecha futura (${fechaFinal}).`);
+    }
+    const diaInfo = await verificarDiaAsistencia(fechaFinal);
     if (!diaInfo.habil) {
         throw new Error(`Día bloqueado (${diaInfo.motivo}). No se puede editar asistencia.`);
     }
@@ -1152,15 +1168,15 @@ async function toggleCeldaAsistencia({ estudianteId, fecha, ausente, observacion
                         registrado_por=excluded.registrado_por,
                         registrado_nombre=excluded.registrado_nombre,
                         actualizado_en=CURRENT_TIMESTAMP`,
-                    [fecha, est.id, est.curso_normalizado, esAus, obsClean, uEmail, uNombre]
+                    [fechaFinal, est.id, est.curso_normalizado, esAus, obsClean, uEmail, uNombre]
                 );
             } else {
                 await queryRun(
                     `DELETE FROM asistencia_registros WHERE fecha = ? AND estudiante_id = ?`,
-                    [fecha, est.id]
+                    [fechaFinal, est.id]
                 );
             }
-            const r = await recalcularResumenCursoFecha(est.curso_normalizado, fecha, {
+            const r = await recalcularResumenCursoFecha(est.curso_normalizado, fechaFinal, {
                 tomada: 1,
                 usuario,
                 origen: 'planilla_mensual'
@@ -1178,12 +1194,66 @@ async function toggleCeldaAsistencia({ estudianteId, fecha, ausente, observacion
         modulo: 'Asistencia',
         accion: 'Editar Celda Planilla Mensual',
         entidad: 'asistencia_registros',
-        entidad_id: `${fecha}_${est.id}`,
-        descripcion: `Celda editada en ${resumen.curso} (${fecha}) para ${est.nombre}: ${esAus ? 'Ausente' : 'Presente'}.`,
-        detalles: { estudiante: est.nombre, fecha, ausente: Boolean(esAus), curso: resumen.curso }
+        entidad_id: `${fechaFinal}_${est.id}`,
+        descripcion: `Celda editada en ${resumen.curso} (${fechaFinal}) para ${est.nombre}: ${esAus ? 'Ausente' : 'Presente'}.`,
+        detalles: { estudiante: est.nombre, fecha: fechaFinal, ausente: Boolean(esAus), curso: resumen.curso }
     });
 
     return resumen;
+}
+
+async function eliminarAsistenciaCursoFecha({ curso, fecha, usuario = null }) {
+    const cursoNorm = normalizarCurso(curso);
+    if (!esCursoValido(cursoNorm)) {
+        throw new Error(`Curso no reconocido: ${curso}`);
+    }
+    const fechaFinal = String(fecha || '').trim();
+    if (!parsearFechaLocal(fechaFinal)) {
+        throw new Error(`Formato de fecha inválido (${fecha}). Usa AAAA-MM-DD.`);
+    }
+    const cursoLegible = formatearCursoLegible(cursoNorm);
+
+    const conteos = await withWriteLock(async () => {
+        await queryRun('BEGIN TRANSACTION');
+        try {
+            const delReg = await queryRun(
+                `DELETE FROM asistencia_registros WHERE fecha = ? AND curso_normalizado = ?`,
+                [fechaFinal, cursoNorm]
+            );
+            const delDiario = await queryRun(
+                `DELETE FROM asistencia_diaria WHERE fecha = ? AND curso_normalizado = ?`,
+                [fechaFinal, cursoNorm]
+            );
+            await queryRun('COMMIT');
+            return {
+                registros_eliminados: delReg.changes || 0,
+                diarios_eliminados: delDiario.changes || 0
+            };
+        } catch (err) {
+            await queryRun('ROLLBACK').catch(() => {});
+            throw err;
+        }
+    });
+
+    const eliminado = conteos.registros_eliminados > 0 || conteos.diarios_eliminados > 0;
+
+    auditoria.registrarAuditoria({
+        usuario,
+        modulo: 'Asistencia',
+        accion: 'Anular Asistencia Diaria',
+        entidad: 'asistencia_diaria',
+        entidad_id: `${fechaFinal}_${cursoNorm}`,
+        descripcion: `Registro de asistencia anulado para ${cursoLegible} (${fechaFinal}): ${conteos.diarios_eliminados} resumen(es) y ${conteos.registros_eliminados} marca(s) eliminadas.`,
+        detalles: { curso: cursoLegible, curso_normalizado: cursoNorm, fecha: fechaFinal, ...conteos, eliminado }
+    });
+
+    return {
+        curso: cursoLegible,
+        curso_normalizado: cursoNorm,
+        fecha: fechaFinal,
+        ...conteos,
+        eliminado
+    };
 }
 
 // -------------------------------------------------------------
@@ -1380,6 +1450,7 @@ async function obtenerPlanillaMensual(curso, anio, mes, annoCustom = null) {
         anio: y,
         mes: m,
         mes_nombre: MESES_ES[m - 1] || '',
+        hoy_chile: obtenerFechaHoraChile().fecha,
         dias,
         estudiantes: estudiantesConMetricas,
         totales_por_dia: totalesPorDia
@@ -2675,6 +2746,7 @@ module.exports = {
     obtenerFormularioCurso,
     guardarAsistenciaCurso,
     toggleCeldaAsistencia,
+    eliminarAsistenciaCursoFecha,
     recalcularResumenCursoFecha,
     obtenerAsistenciaFecha,
     obtenerPlanillaMensual,

@@ -188,6 +188,12 @@ router.post('/curso/:curso/guardar', requireTomarAsistencia, async (req, res) =>
         const { fecha: hoyStr } = asistenciaService.obtenerFechaHoraChile();
         const fechaTarget = (req.body && req.body.fecha) ? String(req.body.fecha).trim() : hoyStr;
 
+        if (fechaTarget > hoyStr) {
+            return res.status(400).json({
+                error: 'No se puede registrar asistencia en una fecha futura.'
+            });
+        }
+
         if (fechaTarget !== hoyStr && !req.permisosAsistencia.puedeEditarPasado) {
             return res.status(403).json({
                 error: 'No tienes permisos para modificar asistencia de una fecha distinta a hoy.'
@@ -206,6 +212,22 @@ router.post('/curso/:curso/guardar', requireTomarAsistencia, async (req, res) =>
         });
 
         res.json({ success: true, registro: resultado });
+    } catch (e) {
+        res.status(400).json({ error: e.message });
+    }
+});
+
+router.delete('/curso/:curso/fecha/:fecha', requireGestorAsistencia, async (req, res) => {
+    try {
+        let cursoNombre = req.params.curso;
+        try { cursoNombre = decodeURIComponent(cursoNombre); } catch (e) {}
+        const fecha = String(req.params.fecha || '').trim();
+        const resultado = await asistenciaService.eliminarAsistenciaCursoFecha({
+            curso: cursoNombre,
+            fecha,
+            usuario: req.user
+        });
+        res.json({ success: true, resultado });
     } catch (e) {
         res.status(400).json({ error: e.message });
     }
@@ -268,6 +290,10 @@ router.patch('/registro-celda', requireGestorAsistencia, async (req, res) => {
         const { estudianteId, fecha, ausente, observacion } = req.body || {};
         if (!estudianteId || !fecha) {
             return res.status(400).json({ error: 'Se requiere estudianteId y fecha.' });
+        }
+        const { fecha: hoyStr } = asistenciaService.obtenerFechaHoraChile();
+        if (String(fecha).trim() > hoyStr) {
+            return res.status(400).json({ error: 'No se puede registrar asistencia en una fecha futura.' });
         }
         const registro = await asistenciaService.toggleCeldaAsistencia({
             estudianteId: parseInt(estudianteId, 10),
