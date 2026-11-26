@@ -559,6 +559,55 @@
     .print-only {
       display: none;
     }
+    /* Tutorial Guiado Interactivo ("Guíame en esta planificación") */
+    #guiaSpotlightBox {
+      position: fixed;
+      pointer-events: none;
+      z-index: 1086;
+      border: 3px solid #f59e0b;
+      border-radius: 10px;
+      box-shadow: 0 0 0 4px rgba(245, 158, 11, 0.30), 0 0 0 9999px rgba(15, 23, 42, 0.45);
+      transition: top 0.25s ease, left 0.25s ease, width 0.25s ease, height 0.25s ease;
+      display: none;
+    }
+    #guiaSpotlightBox.guia-sin-foco {
+      box-shadow: 0 0 0 3px rgba(245, 158, 11, 0.50);
+    }
+    #guiaPlanCard {
+      position: fixed;
+      z-index: 1090;
+      width: 390px;
+      max-width: calc(100vw - 24px);
+      background: #ffffff;
+      border: 1px solid #cbd5e1;
+      border-top: 4px solid #f59e0b;
+      border-radius: 12px;
+      box-shadow: 0 18px 40px rgba(15, 23, 42, 0.28);
+      display: none;
+      transition: top 0.25s ease, left 0.25s ease;
+    }
+    #guiaPillMinimizada {
+      position: fixed;
+      bottom: 20px;
+      right: 20px;
+      z-index: 1090;
+      display: none;
+    }
+    .guia-status-ok {
+      background-color: #dcfce7;
+      color: #166534;
+      border: 1px solid #86efac;
+    }
+    .guia-status-pending {
+      background-color: #fef3c7;
+      color: #92400e;
+      border: 1px solid #fde68a;
+    }
+    @media print {
+      #guiaSpotlightBox, #guiaPlanCard, #guiaPillMinimizada {
+        display: none !important;
+      }
+    }
   </style>
 </head>
 <body>
@@ -599,6 +648,10 @@
 
       <button class="btn btn-sm btn-outline-primary" onclick="recargarDatos()">
         <i class="bi bi-arrow-clockwise"></i> Actualizar
+      </button>
+
+      <button id="btnGuiaPlanificacionHeader" type="button" class="btn btn-sm btn-warning text-dark fw-semibold shadow-sm" onclick="iniciarGuiaPlanificacion('panel')" title="Activar recorrido guiado paso a paso">
+        <i class="bi bi-compass-fill me-1"></i> Guíame en esta planificación
       </button>
 
       <button id="btnPlanificarSemanaHeader" class="btn btn-sm btn-success fw-semibold shadow-sm" onclick="abrirModalPlanificarSemana()">
@@ -1034,6 +1087,9 @@
           </div>
 
           <div class="d-flex align-items-center gap-2" id="editorTopToolbar">
+            <button id="btnGuiaEnEditor" type="button" class="btn btn-sm btn-warning text-dark fw-bold" onclick="iniciarGuiaPlanificacion('editor')" data-bs-toggle="tooltip" data-bs-placement="bottom" title="Activar asistente paso a paso para completar esta planificación">
+              <i class="bi bi-compass-fill me-1"></i><span class="d-none d-md-inline">Guíame en esta planificación</span>
+            </button>
             <button class="btn btn-sm btn-outline-info" data-bs-toggle="tooltip" data-bs-placement="bottom" title="Gestionar Paralelos y Clonación" onclick="abrirModalClonarVincularActual()">
               <i class="bi bi-copy"></i>
             </button>
@@ -11533,6 +11589,539 @@
       }, 250);
     }
 
+  </script>
+  <!-- ============================================================== -->
+  <!-- ASISTENTE / TUTORIAL INTERACTIVO DE PLANIFICACIÓN (NO PRINT)   -->
+  <!-- ============================================================== -->
+  <div id="guiaSpotlightBox" class="no-print" aria-hidden="true"></div>
+
+  <div id="guiaPlanCard" class="no-print p-3" role="dialog" aria-label="Guía interactiva de planificación">
+    <div class="d-flex justify-content-between align-items-center mb-2 gap-2">
+      <div class="d-flex align-items-center gap-1 flex-wrap">
+        <span class="badge bg-warning text-dark fw-bold" id="guiaPasoBadge">Paso 1 de 8</span>
+        <span class="badge bg-light text-secondary border" id="guiaModoBadge">Editor</span>
+        <span class="badge guia-status-pending" id="guiaPasoEstado">Pendiente</span>
+      </div>
+      <div class="d-flex align-items-center gap-1">
+        <button type="button" class="btn btn-xs btn-outline-secondary py-0 px-2" id="btnGuiaToggleFoco" style="font-size: 0.72rem;" onclick="toggleFocoGuiaPlanificacion()" title="Alternar oscurecimiento de fondo para editar libremente">
+          <i class="bi bi-eye"></i> Foco
+        </button>
+        <button type="button" class="btn btn-xs btn-outline-secondary py-0 px-1" style="font-size: 0.75rem;" onclick="minimizarGuiaPlanificacion()" title="Minimizar guía">
+          <i class="bi bi-dash-lg"></i>
+        </button>
+        <button type="button" class="btn btn-xs btn-outline-danger py-0 px-1" style="font-size: 0.75rem;" onclick="cerrarGuiaPlanificacion()" title="Cerrar guía (Esc)">
+          <i class="bi bi-x-lg"></i>
+        </button>
+      </div>
+    </div>
+
+    <div class="progress mb-2" style="height: 5px;">
+      <div id="guiaProgresoBar" class="progress-bar bg-warning" role="progressbar" style="width: 12%;"></div>
+    </div>
+
+    <h6 class="fw-bold text-dark mb-1" id="guiaPasoTitulo">Título del paso</h6>
+    <p class="small text-secondary mb-2" style="line-height: 1.45;" id="guiaPasoTexto"></p>
+    <div class="small bg-light border rounded p-2 mb-2 text-dark" id="guiaPasoTip" style="font-size: 0.78rem;"></div>
+
+    <div id="guiaPasoAccionWrap" class="mb-2 d-none"></div>
+
+    <div class="d-flex justify-content-between align-items-center pt-2 border-top gap-2">
+      <button type="button" class="btn btn-sm btn-outline-secondary py-1 px-2" id="btnGuiaPrev" onclick="navegarPasoGuia(-1)">
+        <i class="bi bi-arrow-left me-1"></i>Anterior
+      </button>
+      <div class="d-flex gap-1 align-items-center" id="guiaStepDots"></div>
+      <button type="button" class="btn btn-sm btn-warning text-dark fw-bold py-1 px-3" id="btnGuiaNext" onclick="navegarPasoGuia(1)">
+        Siguiente<i class="bi bi-arrow-right ms-1"></i>
+      </button>
+    </div>
+  </div>
+
+  <button id="guiaPillMinimizada" type="button" class="btn btn-warning text-dark fw-bold shadow-lg rounded-pill px-3 py-2 no-print" onclick="restaurarGuiaPlanificacion()">
+    <i class="bi bi-compass-fill me-1"></i>
+    <span id="guiaPillTexto">Reanudar guía</span>
+  </button>
+
+  <script>
+    // -------------------------------------------------------------
+    // TUTORIAL INTERACTIVO ACTIVABLE ("Guíame en esta planificación")
+    // -------------------------------------------------------------
+    let guiaActiva = false;
+    let guiaModo = 'panel';
+    let guiaPasoIdx = 0;
+    let guiaMinimizada = false;
+    let guiaSinFoco = false;
+    let guiaPausadaPorSubmodal = false;
+    let guiaAccionActualFn = null;
+
+    function activarTabEditorGuia(targetSelector) {
+      const btn = document.querySelector(`#editorTabs button[data-bs-target="${targetSelector}"]`);
+      if (btn && window.bootstrap && bootstrap.Tab) {
+        bootstrap.Tab.getOrCreateInstance(btn).show();
+      }
+    }
+
+    function asegurarUnidadExpandidaGuia(idx = 0) {
+      const col = document.getElementById(`collapseUnidad${idx}`);
+      if (col && !col.classList.contains('show') && window.bootstrap && bootstrap.Collapse) {
+        bootstrap.Collapse.getOrCreateInstance(col, { toggle: false }).show();
+      }
+    }
+
+    function obtenerPasosGuiaPanel() {
+      return [
+        {
+          titulo: '1. Revisa tus cursos y carga horaria',
+          texto: 'Aquí aparecen tus asignaturas y cursos asignados para el año escolar activo. Desde cada tarjeta puedes abrir una planificación existente o iniciar una nueva en 1 clic.',
+          tip: '💡 Consejo: si ves una tarjeta en estado "Sin iniciar", haz clic en "Iniciar Planificación" para crearla preconfigurada.',
+          getTarget: () => document.getElementById('misCursosContainer') || document.getElementById('tab-mis-planes'),
+          verificarEstado: () => ({ ok: true, label: 'Vista lista' })
+        },
+        {
+          titulo: '2. Crea una nueva planificación manual',
+          texto: 'Si necesitas planificar un curso o asignatura que no aparezca en tus tarjetas automáticas, utiliza este botón para elegir Curso, Asignatura y Título inicial.',
+          tip: '💡 También puedes importar planificaciones masivamente desde Excel usando "Importar XLS".',
+          getTarget: () => document.getElementById('btnNuevaPlanificacionHeader') || document.getElementById('misCursosContainer'),
+          accionTexto: '✨ Abrir "Nueva Planificación"',
+          accionRapida: () => {
+            if (typeof abrirModalNuevaPlanificacion === 'function') abrirModalNuevaPlanificacion();
+          },
+          verificarEstado: () => ({ ok: true, label: 'Disponible' })
+        },
+        {
+          titulo: '3. Planificador rápido semanal',
+          texto: 'Este acceso abre tus clases de la semana actual en un solo panel, vinculadas directamente a las unidades de tus planificaciones anuales y al libro digital.',
+          tip: '💡 Úsalo semanalmente una vez que ya tengas tus unidades y semanas creadas.',
+          getTarget: () => document.getElementById('btnPlanificarSemanaHeader') || document.getElementById('btnGuiaPlanificacionHeader'),
+          accionTexto: '📅 Ver Planificador Semanal',
+          accionRapida: () => {
+            if (typeof abrirModalPlanificarSemana === 'function') abrirModalPlanificarSemana();
+          },
+          verificarEstado: () => ({ ok: true, label: 'Disponible' })
+        },
+        {
+          titulo: '4. Abre una planificación para el tutorial completo',
+          texto: 'Al entrar a editar cualquier curso se abrirá el Editor Completo. Haz clic en el botón amarillo "Guíame en esta planificación" de su barra superior para completar los 8 pasos con validación en vivo.',
+          tip: '🚀 Abre cualquier tarjeta de "Mis Cursos" para comenzar a construir tu planificación guiada.',
+          getTarget: () => document.querySelector('#misCursosContainer .card-custom button') || document.getElementById('misCursosContainer'),
+          verificarEstado: () => ({ ok: false, label: 'Abre un curso' })
+        }
+      ];
+    }
+
+    function obtenerPasosGuiaEditor() {
+      const unidades = (typeof planActivo !== 'undefined' && planActivo && Array.isArray(planActivo.unidades)) ? planActivo.unidades : [];
+      return [
+        {
+          titulo: '1. Datos Generales y Metas Anuales',
+          texto: 'Verifica el título, las horas anuales (puedes aplicar las sugeridas desde tu horario) y redacta las metas formativas generales de la asignatura.',
+          tip: '💡 Si trabajas con co-docente o PIE, agrégalo en "Docentes Colaboradores" para editar en equipo.',
+          preparar: () => activarTabEditorGuia('#edit-anual'),
+          getTarget: () => document.querySelector('#edit-anual .card-custom') || document.getElementById('edit-anual'),
+          verificarEstado: () => {
+            const tit = (document.getElementById('inputPlanTitulo')?.value || '').trim();
+            const met = (document.getElementById('inputPlanMetas')?.value || '').trim();
+            return (tit && met)
+              ? { ok: true, label: 'Completado ✓' }
+              : { ok: false, label: tit ? 'Falta meta anual' : 'Pendiente' };
+          }
+        },
+        {
+          titulo: '2. Estructura las Unidades del Año',
+          texto: 'En esta pestaña gestionas tus unidades. Si aún no tienes unidades o quieres traer el programa oficial MINEDUC, usa el botón de varita mágica para cargar las 4 unidades automáticamente.',
+          tip: '⚡ Puedes reordenar unidades arrastrándolas y luego volver a ejecutar este paso cuando quieras.',
+          preparar: () => activarTabEditorGuia('#edit-unidades'),
+          getTarget: () => document.querySelector('#edit-unidades .d-flex.gap-1') || document.getElementById('edit-unidades'),
+          accionTexto: unidades.length === 0 ? '🪄 Cargar Unidades Oficiales ahora' : '🪄 Precargar Unidades y OAs Oficiales',
+          accionRapida: async () => {
+            if (typeof cargarUnidadesOficialesPlanActual === 'function') {
+              await cargarUnidadesOficialesPlanActual();
+              setTimeout(() => { if (guiaActiva) renderizarPasoGuia(); }, 250);
+            }
+          },
+          verificarEstado: () => {
+            const total = (typeof planActivo !== 'undefined' && planActivo && Array.isArray(planActivo.unidades)) ? planActivo.unidades.length : 0;
+            return total > 0 ? { ok: true, label: `${total} unidad(es) ✓` } : { ok: false, label: 'Sin unidades aún' };
+          }
+        },
+        {
+          titulo: '3. Objetivos de Aprendizaje (OAs) y Fundamentos',
+          texto: 'Dentro de la Unidad 1 (subpestaña "2. Fundamentos Curriculares"), asigna los OAs oficiales. Con "Completar Base Unidad (1 Clic)" rellenas OAs, habilidades, actitudes e indicadores de una sola vez.',
+          tip: '💡 También puedes abrir "Seleccionar OAs MINEDUC" para elegir manualmente OA por OA.',
+          preparar: () => {
+            activarTabEditorGuia('#edit-unidades');
+            asegurarUnidadExpandidaGuia(0);
+            if (typeof cambiarSubtabUnidad === 'function') cambiarSubtabUnidad(0, 'fundamentos');
+          },
+          getTarget: () => document.querySelector('#subtab-fund-0 .plan-section-card') || document.getElementById('subtab-fund-0') || document.getElementById('unidadesAcordeonContainer'),
+          verificarEstado: () => {
+            const listaU = (typeof planActivo !== 'undefined' && planActivo && Array.isArray(planActivo.unidades)) ? planActivo.unidades : [];
+            const conOAs = listaU.some(u => Array.isArray(u.oas_seleccionados) && u.oas_seleccionados.length > 0);
+            return conOAs ? { ok: true, label: 'OAs asignados ✓' } : { ok: false, label: 'Faltan OAs' };
+          }
+        },
+        {
+          titulo: '4. Etiquetas DUA y Metodologías',
+          texto: 'Agrega etiquetas de Diseño Universal para el Aprendizaje (DUA), metodologías activas e instrumentos de evaluación para enriquecer los fundamentos de tu unidad.',
+          tip: '💡 Las etiquetas DUA y habilidades configuradas aquí alimentan el autocompletado semanal.',
+          preparar: () => {
+            activarTabEditorGuia('#edit-unidades');
+            asegurarUnidadExpandidaGuia(0);
+            if (typeof cambiarSubtabUnidad === 'function') cambiarSubtabUnidad(0, 'fundamentos');
+          },
+          getTarget: () => document.getElementById('tagsUnidad_0')?.closest('.plan-section-card') || document.getElementById('subtab-fund-0') || document.getElementById('unidadesAcordeonContainer'),
+          verificarEstado: () => {
+            const listaU = (typeof planActivo !== 'undefined' && planActivo && Array.isArray(planActivo.unidades)) ? planActivo.unidades : [];
+            const tieneTagsOInd = listaU.some(u => (Array.isArray(u.tags) && u.tags.length > 0) || (u.indicadores_evaluacion && u.indicadores_evaluacion.trim()));
+            return tieneTagsOInd ? { ok: true, label: 'Fundamentos listos ✓' } : { ok: false, label: 'Opcional / Pendiente' };
+          }
+        },
+        {
+          titulo: '5. Fechas y Calendario Escolar de Unidades',
+          texto: 'Define la fecha de inicio y término de cada unidad. Te recomendamos usar el Calendario Escolar interactivo, donde puedes distribuir el año de Marzo a Noviembre respetando vacaciones y feriados.',
+          tip: '📅 Un buen rango de fechas permite generar todas tus semanas automáticamente en el paso siguiente.',
+          preparar: () => {
+            activarTabEditorGuia('#edit-unidades');
+            asegurarUnidadExpandidaGuia(0);
+          },
+          getTarget: () => document.querySelector('#collapseUnidad0 .plan-section-card') || document.getElementById('unidadesAcordeonContainer'),
+          accionTexto: '📅 Abrir Calendario Escolar',
+          accionRapida: () => {
+            if (typeof abrirModalCalendarioUnidades === 'function') abrirModalCalendarioUnidades(0);
+          },
+          verificarEstado: () => {
+            const listaU = (typeof planActivo !== 'undefined' && planActivo && Array.isArray(planActivo.unidades)) ? planActivo.unidades : [];
+            const conFechas = listaU.some(u => u.fecha_inicio && u.fecha_fin);
+            return conFechas ? { ok: true, label: 'Fechas definidas ✓' } : { ok: false, label: 'Faltan fechas' };
+          }
+        },
+        {
+          titulo: '6. Generar Semanas y Auto-Distribuir OAs',
+          texto: 'En "1. Cronograma & Desglose Semanal", pulsa "Generar Semanas" para crear las filas Lun–Vie entre tus fechas y luego "Auto-Distribuir OAs" para repartir tus objetivos en las semanas.',
+          tip: '⚡ Usa "Recursos/DUA Base" para rellenar rápidamente recursos y estrategias en todas las semanas.',
+          preparar: () => {
+            activarTabEditorGuia('#edit-unidades');
+            asegurarUnidadExpandidaGuia(0);
+            if (typeof cambiarSubtabUnidad === 'function') cambiarSubtabUnidad(0, 'semanal');
+          },
+          getTarget: () => document.querySelector('#subtab-sem-0 .plan-section-card .d-flex.gap-1.flex-wrap') || document.getElementById('subtab-sem-0') || document.getElementById('unidadesAcordeonContainer'),
+          verificarEstado: () => {
+            const listaU = (typeof planActivo !== 'undefined' && planActivo && Array.isArray(planActivo.unidades)) ? planActivo.unidades : [];
+            const conSemanas = listaU.some(u => Array.isArray(u.desglose_semanal) && u.desglose_semanal.length > 0);
+            return conSemanas ? { ok: true, label: 'Semanas creadas ✓' } : { ok: false, label: 'Sin semanas aún' };
+          }
+        },
+        {
+          titulo: '7. Detalla Clases, Recursos e Hitos UTP',
+          texto: 'Completa el tema, recursos y adecuaciones DUA por semana (o abre "Desglose por Sesiones" clase a clase). Si aparecen banners de Hitos UTP arriba, revísalos y márcalos como planificados.',
+          tip: '💡 Usa las flechas de copiar semana para avanzar rápido entre semanas similares.',
+          preparar: () => {
+            activarTabEditorGuia('#edit-unidades');
+            asegurarUnidadExpandidaGuia(0);
+            if (typeof cambiarSubtabUnidad === 'function') cambiarSubtabUnidad(0, 'semanal');
+          },
+          getTarget: () => document.querySelector('#subtab-sem-0 .table-semanas-card') || document.getElementById('subtab-sem-0') || document.getElementById('unidadesAcordeonContainer'),
+          verificarEstado: () => {
+            const listaU = (typeof planActivo !== 'undefined' && planActivo && Array.isArray(planActivo.unidades)) ? planActivo.unidades : [];
+            const conDetalle = listaU.some(u => (u.desglose_semanal || []).some(s => (s.tema && s.tema.trim()) || (s.actividades && s.actividades.trim()) || (Array.isArray(s.clases) && s.clases.length > 0)));
+            return conDetalle ? { ok: true, label: 'Contenido ingresado ✓' } : { ok: false, label: 'Pendiente detalle' };
+          }
+        },
+        {
+          titulo: '8. Guardar Borrador, Checkpoint y Paralelos',
+          texto: 'Guarda tu borrador (💾) en todo momento, crea un Checkpoint de Versión (🌿) cuando cierres una etapa importante y, si enseñas paralelos (ej. A y B), compártelos o clónalos desde el ícono de copias.',
+          tip: '✅ Cuando esté lista, Coordinación/UTP podrá revisarla y visarla desde la Matriz del Colegio.',
+          preparar: () => {},
+          getTarget: () => document.getElementById('editorTopToolbar'),
+          accionTexto: '💾 Guardar borrador ahora',
+          accionRapida: async () => {
+            if (typeof guardarBorradorActual === 'function') {
+              await guardarBorradorActual(false);
+              setTimeout(() => { if (guiaActiva) renderizarPasoGuia(); }, 250);
+            }
+          },
+          verificarEstado: () => {
+            const idOk = (typeof planActivo !== 'undefined' && planActivo && planActivo.id);
+            return idOk ? { ok: true, label: 'Listo para guardar ✓' } : { ok: false, label: 'Sin plan activo' };
+          }
+        }
+      ];
+    }
+
+    function obtenerPasosGuiaActuales() {
+      return guiaModo === 'editor' ? obtenerPasosGuiaEditor() : obtenerPasosGuiaPanel();
+    }
+
+    function iniciarGuiaPlanificacion(modoPreferido = null) {
+      const editorAbierto = document.getElementById('modalEditorPlan')?.classList.contains('show');
+      if (modoPreferido === 'editor' || (!modoPreferido && editorAbierto)) {
+        guiaModo = (typeof planActivo !== 'undefined' && planActivo) ? 'editor' : 'panel';
+      } else {
+        guiaModo = editorAbierto && (typeof planActivo !== 'undefined' && planActivo) ? 'editor' : 'panel';
+      }
+
+      guiaActiva = true;
+      guiaMinimizada = false;
+      guiaPausadaPorSubmodal = false;
+      guiaPasoIdx = 0;
+
+      document.getElementById('guiaPillMinimizada').style.display = 'none';
+      renderizarPasoGuia();
+    }
+
+    function cerrarGuiaPlanificacion() {
+      guiaActiva = false;
+      guiaMinimizada = false;
+      guiaPausadaPorSubmodal = false;
+      guiaAccionActualFn = null;
+      document.getElementById('guiaSpotlightBox').style.display = 'none';
+      document.getElementById('guiaPlanCard').style.display = 'none';
+      document.getElementById('guiaPillMinimizada').style.display = 'none';
+    }
+
+    function minimizarGuiaPlanificacion() {
+      if (!guiaActiva) return;
+      guiaMinimizada = true;
+      document.getElementById('guiaSpotlightBox').style.display = 'none';
+      document.getElementById('guiaPlanCard').style.display = 'none';
+      const pasos = obtenerPasosGuiaActuales();
+      document.getElementById('guiaPillTexto').innerText = `Guía (Paso ${guiaPasoIdx + 1}/${pasos.length})`;
+      document.getElementById('guiaPillMinimizada').style.display = 'inline-flex';
+    }
+
+    function restaurarGuiaPlanificacion() {
+      if (!guiaActiva) return;
+      guiaMinimizada = false;
+      document.getElementById('guiaPillMinimizada').style.display = 'none';
+      renderizarPasoGuia();
+    }
+
+    function toggleFocoGuiaPlanificacion() {
+      guiaSinFoco = !guiaSinFoco;
+      const box = document.getElementById('guiaSpotlightBox');
+      const btn = document.getElementById('btnGuiaToggleFoco');
+      box.classList.toggle('guia-sin-foco', guiaSinFoco);
+      if (btn) {
+        btn.innerHTML = guiaSinFoco ? '<i class="bi bi-eye-slash"></i> Libre' : '<i class="bi bi-eye"></i> Foco';
+        btn.classList.toggle('btn-outline-secondary', !guiaSinFoco);
+        btn.classList.toggle('btn-warning', guiaSinFoco);
+      }
+    }
+
+    function navegarPasoGuia(delta) {
+      if (!guiaActiva) return;
+      const pasos = obtenerPasosGuiaActuales();
+      const nuevo = guiaPasoIdx + delta;
+      if (nuevo < 0) return;
+      if (nuevo >= pasos.length) {
+        cerrarGuiaPlanificacion();
+        if (window.Swal) {
+          Swal.fire({
+            toast: true,
+            position: 'top-end',
+            icon: 'success',
+            title: 'Recorrido completado. Puedes reactivar la guía cuando quieras.',
+            showConfirmButton: false,
+            timer: 2600
+          });
+        }
+        return;
+      }
+      guiaPasoIdx = nuevo;
+      renderizarPasoGuia();
+    }
+
+    function irAPasoGuia(idx) {
+      const pasos = obtenerPasosGuiaActuales();
+      if (idx >= 0 && idx < pasos.length) {
+        guiaPasoIdx = idx;
+        renderizarPasoGuia();
+      }
+    }
+
+    function renderizarPasoGuia() {
+      if (!guiaActiva || guiaMinimizada || guiaPausadaPorSubmodal) return;
+      const pasos = obtenerPasosGuiaActuales();
+      if (guiaPasoIdx >= pasos.length) guiaPasoIdx = pasos.length - 1;
+      const paso = pasos[guiaPasoIdx];
+
+      if (typeof paso.preparar === 'function') {
+        try { paso.preparar(); } catch (e) {}
+      }
+
+      document.getElementById('guiaPasoBadge').innerText = `Paso ${guiaPasoIdx + 1} de ${pasos.length}`;
+      document.getElementById('guiaModoBadge').innerText = guiaModo === 'editor' ? 'Editor' : 'Panel Principal';
+      document.getElementById('guiaProgresoBar').style.width = `${Math.round(((guiaPasoIdx + 1) / pasos.length) * 100)}%`;
+      document.getElementById('guiaPasoTitulo').innerText = paso.titulo;
+      document.getElementById('guiaPasoTexto').innerText = paso.texto;
+      document.getElementById('guiaPasoTip').innerText = paso.tip || '';
+
+      const estadoEl = document.getElementById('guiaPasoEstado');
+      const est = typeof paso.verificarEstado === 'function' ? paso.verificarEstado() : { ok: false, label: 'En curso' };
+      estadoEl.innerText = est.label;
+      estadoEl.className = `badge ${est.ok ? 'guia-status-ok' : 'guia-status-pending'}`;
+
+      const accionWrap = document.getElementById('guiaPasoAccionWrap');
+      if (paso.accionTexto && typeof paso.accionRapida === 'function') {
+        guiaAccionActualFn = paso.accionRapida;
+        accionWrap.classList.remove('d-none');
+        accionWrap.innerHTML = `<button type="button" class="btn btn-sm btn-outline-primary w-100 fw-semibold" onclick="if(guiaAccionActualFn) guiaAccionActualFn();">${escapeHtml(paso.accionTexto)}</button>`;
+      } else {
+        guiaAccionActualFn = null;
+        accionWrap.classList.add('d-none');
+        accionWrap.innerHTML = '';
+      }
+
+      const dotsEl = document.getElementById('guiaStepDots');
+      dotsEl.innerHTML = pasos.map((_, i) => `
+        <button type="button" onclick="irAPasoGuia(${i})" title="Ir al paso ${i + 1}"
+                style="width: ${i === guiaPasoIdx ? '16px' : '8px'}; height: 8px; border-radius: 99px; border: none; padding: 0; background: ${i === guiaPasoIdx ? '#f59e0b' : (i < guiaPasoIdx ? '#86efac' : '#cbd5e1')}; transition: all 0.2s;"></button>
+      `).join('');
+
+      document.getElementById('btnGuiaPrev').disabled = (guiaPasoIdx === 0);
+      document.getElementById('btnGuiaNext').innerHTML = (guiaPasoIdx === pasos.length - 1)
+        ? 'Finalizar<i class="bi bi-check-lg ms-1"></i>'
+        : 'Siguiente<i class="bi bi-arrow-right ms-1"></i>';
+
+      const card = document.getElementById('guiaPlanCard');
+      card.style.display = 'block';
+
+      // Esperar breve tick por si hubo cambio de pestaña o colapso Bootstrap antes de medir el target
+      setTimeout(() => {
+        if (!guiaActiva || guiaMinimizada || guiaPausadaPorSubmodal) return;
+        const target = typeof paso.getTarget === 'function' ? paso.getTarget() : null;
+        if (target && typeof target.scrollIntoView === 'function') {
+          try { target.scrollIntoView({ behavior: 'smooth', block: 'center', inline: 'nearest' }); } catch (e) {}
+        }
+        setTimeout(() => posicionarGuiaEnElemento(target), 120);
+      }, 90);
+    }
+
+    function reposicionarGuiaActiva() {
+      if (!guiaActiva || guiaMinimizada || guiaPausadaPorSubmodal) return;
+      const pasos = obtenerPasosGuiaActuales();
+      const paso = pasos[guiaPasoIdx];
+      if (!paso) return;
+      const target = typeof paso.getTarget === 'function' ? paso.getTarget() : null;
+      posicionarGuiaEnElemento(target);
+    }
+
+    function posicionarGuiaEnElemento(el) {
+      const box = document.getElementById('guiaSpotlightBox');
+      const card = document.getElementById('guiaPlanCard');
+      if (!card || guiaMinimizada || guiaPausadaPorSubmodal) return;
+
+      const vw = window.innerWidth;
+      const vh = window.innerHeight;
+      const margin = 12;
+      const cw = card.offsetWidth || 390;
+      const ch = card.offsetHeight || 260;
+
+      if (!el) {
+        box.style.display = 'none';
+        card.style.left = `${Math.max(margin, Math.round((vw - cw) / 2))}px`;
+        card.style.top = `${Math.max(margin, Math.round((vh - ch) / 2))}px`;
+        return;
+      }
+
+      const rect = el.getBoundingClientRect();
+      if (rect.width <= 0 || rect.height <= 0) {
+        box.style.display = 'none';
+        card.style.left = `${Math.max(margin, vw - cw - 20)}px`;
+        card.style.top = `${Math.max(margin, vh - ch - 20)}px`;
+        return;
+      }
+
+      const pad = 6;
+      const bx = Math.max(4, rect.left - pad);
+      const by = Math.max(4, rect.top - pad);
+      const bw = Math.min(vw - 8 - bx, rect.width + pad * 2);
+      const bh = Math.min(vh - 8 - by, rect.height + pad * 2);
+
+      box.style.left = `${bx}px`;
+      box.style.top = `${by}px`;
+      box.style.width = `${Math.max(24, bw)}px`;
+      box.style.height = `${Math.max(24, bh)}px`;
+      box.style.display = 'block';
+      box.classList.toggle('guia-sin-foco', guiaSinFoco);
+
+      let topPos = rect.bottom + 14;
+      let leftPos = rect.left;
+
+      if (topPos + ch + margin > vh) {
+        if (rect.top - ch - 14 >= margin) {
+          topPos = rect.top - ch - 14;
+        } else if (rect.right + cw + 18 <= vw) {
+          leftPos = rect.right + 14;
+          topPos = Math.max(margin, Math.min(rect.top, vh - ch - margin));
+        } else if (rect.left - cw - 18 >= margin) {
+          leftPos = rect.left - cw - 14;
+          topPos = Math.max(margin, Math.min(rect.top, vh - ch - margin));
+        } else {
+          topPos = vh - ch - margin;
+          leftPos = vw - cw - margin;
+        }
+      }
+
+      leftPos = Math.max(margin, Math.min(leftPos, vw - cw - margin));
+      topPos = Math.max(margin, Math.min(topPos, vh - ch - margin));
+
+      card.style.left = `${Math.round(leftPos)}px`;
+      card.style.top = `${Math.round(topPos)}px`;
+    }
+
+    (function inicializarEventosGuiaPlanificacion() {
+      window.addEventListener('resize', reposicionarGuiaActiva);
+      document.addEventListener('scroll', reposicionarGuiaActiva, true);
+
+      document.addEventListener('keydown', (e) => {
+        if (!guiaActiva || guiaMinimizada || guiaPausadaPorSubmodal) return;
+        const tag = (document.activeElement && document.activeElement.tagName) ? document.activeElement.tagName.toUpperCase() : '';
+        const isEditable = (tag === 'INPUT' || tag === 'TEXTAREA' || tag === 'SELECT' || (document.activeElement && document.activeElement.isContentEditable));
+        if (e.key === 'Escape') {
+          cerrarGuiaPlanificacion();
+        } else if (!isEditable && e.key === 'ArrowRight') {
+          e.preventDefault();
+          navegarPasoGuia(1);
+        } else if (!isEditable && e.key === 'ArrowLeft') {
+          e.preventDefault();
+          navegarPasoGuia(-1);
+        }
+      });
+
+      const modalEditorEl = document.getElementById('modalEditorPlan');
+      if (modalEditorEl) {
+        modalEditorEl.addEventListener('hidden.bs.modal', () => {
+          if (guiaActiva && guiaModo === 'editor') cerrarGuiaPlanificacion();
+        });
+      }
+
+      const submodalesIds = [
+        'modalCalendarioUnidades',
+        'modalSelectorOAs',
+        'modalSelectorTags',
+        'modalCheckpoint',
+        'modalClonarVincular',
+        'modalNuevaPlan',
+        'modalPlanificarSemana'
+      ];
+      submodalesIds.forEach(mId => {
+        const el = document.getElementById(mId);
+        if (!el) return;
+        el.addEventListener('show.bs.modal', () => {
+          if (guiaActiva && !guiaMinimizada) {
+            guiaPausadaPorSubmodal = true;
+            document.getElementById('guiaSpotlightBox').style.display = 'none';
+            document.getElementById('guiaPlanCard').style.display = 'none';
+          }
+        });
+        el.addEventListener('hidden.bs.modal', () => {
+          if (guiaActiva && guiaPausadaPorSubmodal) {
+            guiaPausadaPorSubmodal = false;
+            setTimeout(() => renderizarPasoGuia(), 180);
+          }
+        });
+      });
+    })();
   </script>
 </body>
 </html>
