@@ -381,7 +381,7 @@
     <!-- PESTAÑAS DEL MÓDULO -->
     <ul class="nav nav-tabs nav-tabs-custom mb-3" id="asistenciaTabs" role="tablist">
       <li class="nav-item d-none" id="liTabToma" role="presentation">
-        <button class="nav-link" id="tab-toma-btn" data-bs-toggle="tab" data-bs-target="#pane-toma" type="button" role="tab">
+        <button class="nav-link" id="tab-toma-btn" data-bs-toggle="tab" data-bs-target="#pane-toma" type="button" role="tab" onclick="if (!tomaDirty && tomaFormActual && tomaFormActual.fecha !== fechaHoyISO()) { cargarTomaCursosEstado(); cargarFormularioToma(cursoTomaActual); }">
           📝 Tomar Asistencia
         </button>
       </li>
@@ -420,10 +420,10 @@
               <span class="badge bg-light text-dark border" id="tomaProgresoBadge">0 / 26 tomados</span>
             </div>
             <div class="d-flex flex-wrap align-items-center gap-2">
-              <div class="input-group input-group-sm" style="width: 160px;">
-                <span class="input-group-text bg-white"><i class="bi bi-calendar3"></i></span>
-                <input type="date" id="tomaFechaInput" class="form-control" onchange="cambiarFechaToma()">
-              </div>
+              <span class="badge bg-primary-subtle text-primary border border-primary-subtle py-2 px-3 d-inline-flex align-items-center gap-1 fw-semibold" id="tomaFechaSoloHoyBadge" title="La toma de asistencia siempre corresponde al día de hoy">
+                <i class="bi bi-calendar-check-fill"></i>
+                <span>Hoy</span>
+              </span>
               <button type="button" class="btn btn-danger btn-sm fw-semibold" onclick="abrirModalNovedad()">
                 💬 Reportar
               </button>
@@ -972,6 +972,7 @@
     let permisosActuales = { esAdmin: false, esGestorAsistencia: false, puedeTomarAsistencia: false, puedeEditarPasado: false };
     let cursosOficiales = [];
     let cursoTomaActual = 'Kinder A';
+    let hoyTomaISO = '';
     let estadoCursosDia = [];
     let tomaFormActual = null;
     let tomaAusentesSet = new Set();
@@ -996,6 +997,14 @@
       return fechaHoyISO().slice(0, 7);
     }
 
+    function actualizarBadgeFechaHoyToma(isoFecha) {
+      const el = document.getElementById('tomaFechaSoloHoyBadge');
+      if (!el || !isoFecha) return;
+      const [yy, mm, dd] = String(isoFecha).split('-');
+      const fmt = (dd && mm && yy) ? `${dd}/${mm}/${yy}` : isoFecha;
+      el.innerHTML = `<i class="bi bi-calendar-check-fill"></i><span>Hoy · ${escapeHtml(fmt)}</span>`;
+    }
+
     // -------------------------------------------------------------
     // Inicialización General
     // -------------------------------------------------------------
@@ -1010,9 +1019,8 @@
       const hoy = fechaHoyISO();
       const mesAct = mesActualISO();
       document.getElementById('resumenFechaInput').value = hoy;
-      const tomaFechaEl = document.getElementById('tomaFechaInput');
-      tomaFechaEl.value = hoy;
-      tomaFechaEl.max = hoy;
+      hoyTomaISO = hoy;
+      actualizarBadgeFechaHoyToma(hoy);
       document.getElementById('mensualMesInput').value = mesAct;
       document.getElementById('migAnioMes').value = mesAct;
       document.getElementById('espFecha').value = hoy;
@@ -1022,12 +1030,16 @@
 
     async function inicializarEstadoYPermisos() {
       try {
-        const resEstado = await fetch(`/api/asistencia/cursos-estado?fecha=${fechaHoyISO()}`);
+        const resEstado = await fetch('/api/asistencia/cursos-estado');
         if (resEstado.ok) {
           const dataEstado = await resEstado.json();
           cursosOficiales = dataEstado.cursos_oficiales || [];
           estadoCursosDia = dataEstado.cursos || [];
           permisosActuales = dataEstado.permisos || permisosActuales;
+          if (dataEstado.fecha) {
+            hoyTomaISO = dataEstado.fecha;
+            actualizarBadgeFechaHoyToma(hoyTomaISO);
+          }
           poblarSelectsCursos();
         }
       } catch (e) {
@@ -1053,7 +1065,6 @@
 
       document.getElementById('liTabToma').classList.toggle('d-none', !puedeTomar);
       document.getElementById('btnModoMovil').classList.toggle('d-none', !puedeTomar);
-      document.getElementById('tomaFechaInput').disabled = !permisosActuales.puedeEditarPasado;
 
       document.getElementById('liTabMatricula').classList.toggle('d-none', !esAdmin);
       document.getElementById('liTabConfig').classList.toggle('d-none', !esAdmin);
@@ -1088,11 +1099,14 @@
     }
 
     async function cargarTomaCursosEstado() {
-      const fecha = document.getElementById('tomaFechaInput').value || fechaHoyISO();
-      const res = await fetch(`/api/asistencia/cursos-estado?fecha=${fecha}`);
+      const res = await fetch('/api/asistencia/cursos-estado');
       if (!res.ok) return;
       const data = await res.json();
       estadoCursosDia = data.cursos || [];
+      if (data.fecha) {
+        hoyTomaISO = data.fecha;
+        actualizarBadgeFechaHoyToma(hoyTomaISO);
+      }
       document.getElementById('tomaProgresoBadge').innerText = `${data.cursos_tomados || 0} / ${data.total_cursos || 26} tomados`;
       renderTomaChips();
     }
@@ -1131,21 +1145,7 @@
       await cargarFormularioToma(nombreCurso);
     }
 
-    async function cambiarFechaToma() {
-      const inp = document.getElementById('tomaFechaInput');
-      const hoy = fechaHoyISO();
-      if (inp.value && inp.value > hoy) {
-        inp.value = hoy;
-        await Swal.fire('Fecha futura no permitida', 'No se puede registrar asistencia en fechas posteriores a hoy.', 'warning');
-      }
-      tomaDirty = false;
-      document.getElementById('tomaUnsavedBadge').classList.add('d-none');
-      await cargarTomaCursosEstado();
-      await cargarFormularioToma(cursoTomaActual);
-    }
-
     async function cargarFormularioToma(nombreCurso) {
-      const fecha = document.getElementById('tomaFechaInput').value || fechaHoyISO();
       const cont = document.getElementById('listaTomaAlumnos');
       const btnGuardar = document.getElementById('btnGuardarToma');
       const btnAnular = document.getElementById('btnAnularTomaDia');
@@ -1153,12 +1153,16 @@
       cont.innerHTML = '<div class="text-center py-5 text-muted"><div class="spinner-border text-primary spinner-border-sm me-2"></div>Cargando estudiantes...</div>';
 
       try {
-        const res = await fetch(`/api/asistencia/curso/${encodeURIComponent(nombreCurso)}/lista?fecha=${fecha}`);
+        const res = await fetch(`/api/asistencia/curso/${encodeURIComponent(nombreCurso)}/lista`);
         const data = await res.json();
         if (!res.ok) throw new Error(data.error || 'Error cargando curso');
 
         tomaFormActual = data;
         cursoTomaActual = data.curso;
+        if (data.fecha) {
+          hoyTomaISO = data.fecha;
+          actualizarBadgeFechaHoyToma(hoyTomaISO);
+        }
         tomaDirty = false;
         document.getElementById('tomaUnsavedBadge').classList.add('d-none');
         document.getElementById('tomaFechaLegible').innerText = `${data.curso} · ${data.dia_info.fechaLegible}`;
@@ -1251,7 +1255,7 @@
       btn.disabled = true;
       txt.innerText = '...';
 
-      const fecha = document.getElementById('tomaFechaInput').value || fechaHoyISO();
+      const fecha = (tomaFormActual && tomaFormActual.fecha) || hoyTomaISO || fechaHoyISO();
       try {
         const res = await fetch(`/api/asistencia/curso/${encodeURIComponent(tomaFormActual.curso)}/guardar`, {
           method: 'POST',
@@ -1294,7 +1298,7 @@
     }
 
     function abrirModalNovedad() {
-      const fecha = document.getElementById('tomaFechaInput').value || fechaHoyISO();
+      const fecha = (tomaFormActual && tomaFormActual.fecha) || hoyTomaISO || fechaHoyISO();
       document.getElementById('novCursoNombre').innerText = cursoTomaActual;
       document.getElementById('novFechaText').innerText = fecha;
       document.getElementById('novMensaje').value = '';
@@ -1311,7 +1315,7 @@
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({
             curso: cursoTomaActual,
-            fecha: document.getElementById('tomaFechaInput').value || fechaHoyISO(),
+            fecha: (tomaFormActual && tomaFormActual.fecha) || hoyTomaISO || fechaHoyISO(),
             mensaje: document.getElementById('novMensaje').value.trim()
           })
         });
@@ -1371,19 +1375,19 @@
         return;
       }
       el.classList.remove('d-none');
+      const esHoyResumen = Boolean(resumenActual && resumenActual.fecha === (hoyTomaISO || fechaHoyISO()));
       cont.innerHTML = pendientes.map(p => {
-        if (permisosActuales.puedeTomarAsistencia) {
+        if (permisosActuales.puedeTomarAsistencia && esHoyResumen) {
           return `<button class="btn btn-sm btn-outline-dark py-0 px-2 me-1 mb-1" onclick="irATomarCurso('${escapeHtml(p.curso)}')">${escapeHtml(p.curso)}</button>`;
+        }
+        if (permisosActuales.esGestorAsistencia && resumenActual && resumenActual.fecha) {
+          return `<button class="btn btn-sm btn-outline-secondary py-0 px-2 me-1 mb-1" onclick="verCursoMensual('${escapeHtml(p.curso)}', '${escapeHtml(resumenActual.fecha.slice(0, 7))}')">${escapeHtml(p.curso)}</button>`;
         }
         return `<span class="badge bg-warning-subtle text-dark border me-1 mb-1">${escapeHtml(p.curso)}</span>`;
       }).join('');
     }
 
     function irATomarCurso(curso) {
-      const fResumen = document.getElementById('resumenFechaInput').value;
-      if (fResumen && (permisosActuales.puedeEditarPasado || fResumen === fechaHoyISO())) {
-        document.getElementById('tomaFechaInput').value = fResumen;
-      }
       cursoTomaActual = curso;
       const tabBtn = new bootstrap.Tab(document.getElementById('tab-toma-btn'));
       tabBtn.show();
@@ -1479,6 +1483,7 @@
         return;
       }
 
+      const esHoyResumen = Boolean(resumenActual && resumenActual.fecha === (hoyTomaISO || fechaHoyISO()));
       tbody.innerHTML = filtrados.map(c => {
         const pct = c.porcentaje || 0;
         const cls = pct >= 90 ? 'badge-pct-green' : (pct >= 80 ? 'badge-pct-yellow' : 'badge-pct-red');
@@ -1505,9 +1510,9 @@
             <td>${aus}</td>
             <td>${autor}${hora}</td>
             <td class="text-end text-nowrap">
-              ${permisosActuales.puedeTomarAsistencia
+              ${(permisosActuales.puedeTomarAsistencia && esHoyResumen)
                 ? `<button class="btn btn-sm btn-outline-primary py-0 px-2" onclick="irATomarCurso('${escapeHtml(c.curso)}')"><i class="bi bi-pencil"></i> Lista</button>`
-                : `<button class="btn btn-sm btn-outline-secondary py-0 px-2" onclick="verCursoMensual('${escapeHtml(c.curso)}')">Libro</button>`
+                : `<button class="btn btn-sm btn-outline-secondary py-0 px-2" onclick="verCursoMensual('${escapeHtml(c.curso)}', '${escapeHtml((resumenActual.fecha || '').slice(0, 7))}')">Libro</button>`
               }
               ${permisosActuales.esGestorAsistencia
                 ? `<button class="btn btn-sm btn-outline-danger py-0 px-2 ms-1" title="Anular registro de este día" onclick="anularRegistroCursoFecha('${escapeHtml(c.curso)}', '${escapeHtml(resumenActual.fecha)}')"><i class="bi bi-trash"></i></button>`
@@ -1519,10 +1524,12 @@
       }).join('');
     }
 
-    function verCursoMensual(curso) {
+    function verCursoMensual(curso, mesOpt = null) {
       document.getElementById('mensualCursoSelect').value = curso;
+      if (mesOpt) document.getElementById('mensualMesInput').value = mesOpt;
       const tabBtn = new bootstrap.Tab(document.getElementById('tab-mensual-btn'));
       tabBtn.show();
+      planillaCargada = true;
       cargarPlanillaMensual();
     }
 
@@ -1678,7 +1685,7 @@
         if (!res.ok) throw new Error(data.error || 'No se pudo actualizar');
         await cargarPlanillaMensual();
         if (fecha === document.getElementById('resumenFechaInput').value) cargarResumenDiario();
-        if (permisosActuales.puedeTomarAsistencia && fecha === document.getElementById('tomaFechaInput').value) cargarTomaCursosEstado();
+        if (permisosActuales.puedeTomarAsistencia && fecha === (hoyTomaISO || fechaHoyISO())) cargarTomaCursosEstado();
       } catch (e) {
         Swal.fire('Bloqueado', e.message, 'warning');
       }
@@ -1711,7 +1718,7 @@
         await cargarResumenDiario();
         if (permisosActuales.puedeTomarAsistencia) {
           await cargarTomaCursosEstado();
-          if (tomaFormActual && tomaFormActual.curso === curso && document.getElementById('tomaFechaInput').value === fecha) {
+          if (tomaFormActual && tomaFormActual.curso === curso && (hoyTomaISO || fechaHoyISO()) === fecha) {
             await cargarFormularioToma(curso);
           }
         }
