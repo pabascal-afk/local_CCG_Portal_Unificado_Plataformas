@@ -1169,7 +1169,7 @@ async function cargarUnidadesOficialesEnPlan(planId, opciones = {}, usuario) {
         if (existente) {
             await queryRun(`
                 UPDATE planificaciones_unidades
-                SET nombre_unidad = ?, oas_seleccionados = ?, indicadores_evaluacion = ?, actualizado_en = CURRENT_TIMESTAMP
+                SET nombre_unidad = ?, oas_seleccionados = ?, indicadores_evaluacion = ?
                 WHERE id = ?
             `, [
                 uOficial.nombre_unidad,
@@ -1204,7 +1204,7 @@ async function cargarUnidadesOficialesEnPlan(planId, opciones = {}, usuario) {
             if (existente) {
                 await queryRun(`
                     UPDATE planificaciones_unidades
-                    SET nombre_unidad = ?, semestre = ?, oas_seleccionados = ?, indicadores_evaluacion = ?, actualizado_en = CURRENT_TIMESTAMP
+                    SET nombre_unidad = ?, semestre = ?, oas_seleccionados = ?, indicadores_evaluacion = ?
                     WHERE id = ?
                 `, [
                     uOficial.nombre_unidad,
