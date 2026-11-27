@@ -96,6 +96,7 @@ namespace CCGServerManager
         private const string GAS_WEBHOOK_URL = "https://script.google.com/macros/s/AKfycbwzszh_oyXrFY8S5tQhg5_JkyXL7q97jVzYHgLnMn_K0-qVowwwel0hxhdZIIMi-YWD/exec?action=get_url";
 
         private List<ManagedService> services = new List<ManagedService>();
+        private ManagedService qrService;
         private string configFilePath;
         private string localIpAddress = "127.0.0.1";
         private bool allowExit = false;
@@ -107,6 +108,11 @@ namespace CCGServerManager
         private Dictionary<string, string> extraIniSettings = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase);
         private Label lblProxyStatus;
         private Button btnToggleProxy;
+        private Label lblQrStatus;
+        private Button btnToggleQr;
+        private Button btnUpdateQr;
+        private Button btnOpenQr;
+        private Button btnBrowseQr;
 
         private CheckBox chkStartup;
         private TabControl tabLogs;
@@ -132,7 +138,7 @@ namespace CCGServerManager
                 AppendLog(generalLogBox, "======================================================================");
                 AppendLog(generalLogBox, "  CENTRO DE CONTROL DE SERVIDORES - COLEGIO CERRO GRANDE");
                 AppendLog(generalLogBox, "  IP Red Local Detectada: " + localIpAddress);
-                AppendLog(generalLogBox, "  Proxy Web Nombres LAN (:80): http://pruebas.ccg | simce.ccg | portal.ccg | labdesk.ccg");
+                AppendLog(generalLogBox, "  Proxy Web Nombres LAN (:80): http://pruebas.ccg | simce.ccg | portal.ccg | labdesk.ccg | qr.ccg");
                 AppendLog(generalLogBox, "======================================================================");
 
                 RefreshAllGitCommits();
@@ -167,6 +173,7 @@ namespace CCGServerManager
             string defaultPruebas = AutoDetectFolder(baseDir, parentDir, new string[] { "PRUEBAS CCG", "PRUEBAS_CCG" }, true);
             string defaultUnified = AutoDetectFolder(baseDir, parentDir, new string[] { "UNIFIED PLATAFORM", "UNIFIED PLATFORM", "local_CCG_Portal_Unificado_Plataformas" }, false);
             string defaultLabdesk = AutoDetectFolder(baseDir, parentDir, new string[] { "labdesk", "LabDesk", "labmanager", "LabManager" }, false);
+            string defaultQr = AutoDetectFolder(baseDir, parentDir, new string[] { "QR local colegio", "local_CCG_QR_Eventos", "QR_Eventos" }, false);
 
             services.Add(new ManagedService
             {
@@ -235,6 +242,23 @@ namespace CCGServerManager
                 LastCommit = "Verificando...",
                 TunnelUrl = ""
             });
+
+            qrService = new ManagedService
+            {
+                Id = "QR",
+                Title = "QR Eventos CCG",
+                Subtitle = "Tablets LAN :3800  |  HTTPS :3843",
+                MainPort = 3800,
+                BackendPort = 0,
+                RepoUrl = "https://github.com/pabascal-afk/local_CCG_QR_Eventos.git",
+                GitBranch = "main",
+                IsNextJs = false,
+                EntryScript = "server.js",
+                FolderPath = defaultQr,
+                AccentColor = Color.FromArgb(14, 165, 233),
+                LastCommit = "Verificando...",
+                TunnelUrl = ""
+            };
         }
 
         private string AutoDetectFolder(string baseDir, string parentDir, string[] folderNames, bool isPruebas)
@@ -336,7 +360,7 @@ namespace CCGServerManager
                     }
 
                     bool matchedService = false;
-                    foreach (ManagedService s in services)
+                    foreach (ManagedService s in GetAllManagedServices())
                     {
                         if (string.Equals(key, s.Id + "_PATH", StringComparison.OrdinalIgnoreCase))
                         {
@@ -357,13 +381,20 @@ namespace CCGServerManager
             catch { }
         }
 
+        private List<ManagedService> GetAllManagedServices()
+        {
+            List<ManagedService> list = new List<ManagedService>(services);
+            if (qrService != null) list.Add(qrService);
+            return list;
+        }
+
         private void SaveConfig()
         {
             try
             {
                 StringBuilder sb = new StringBuilder();
                 sb.AppendLine("# Configuración de Rutas - Gestor de Servidores CCG");
-                foreach (ManagedService s in services)
+                foreach (ManagedService s in GetAllManagedServices())
                 {
                     sb.AppendLine(s.Id + "_PATH=" + s.FolderPath);
                 }
@@ -420,7 +451,7 @@ namespace CCGServerManager
 
             lblHeaderIp = new Label
             {
-                Text = string.Format("IP Servidor LAN: {0}   |   SIMCE (:3300) • PRUEBAS (:3600) • UNIFIED (:9000 + Túnel) • LABDESK (:3000) • PROXY (:80)", localIpAddress),
+                Text = string.Format("IP Servidor LAN: {0}   |   SIMCE (:3300) • PRUEBAS (:3600) • UNIFIED (:9000 + Túnel) • LABDESK (:3000) • QR (:3800) • PROXY (:80)", localIpAddress),
                 ForeColor = Color.FromArgb(148, 163, 184),
                 Font = new Font("Segoe UI", 8.8F, FontStyle.Regular),
                 AutoSize = true,
@@ -528,6 +559,57 @@ namespace CCGServerManager
             proxyBar.Controls.Add(proxyActions);
             proxyBar.Controls.Add(lblProxyStatus);
 
+            // 2.6 COMPACT BAR FOR QR EVENTOS (NO LARGE CARD)
+            Panel qrBar = new Panel
+            {
+                Dock = DockStyle.Top,
+                Height = 34,
+                BackColor = Color.FromArgb(240, 249, 255),
+                Padding = new Padding(18, 4, 18, 4)
+            };
+
+            lblQrStatus = new Label
+            {
+                Text = "⚪ QR Eventos (:3800): VERIFICANDO...",
+                Font = new Font("Segoe UI", 8.5F, FontStyle.Bold),
+                ForeColor = Color.FromArgb(30, 41, 59),
+                AutoSize = true,
+                Location = new Point(18, 8)
+            };
+
+            FlowLayoutPanel qrActions = new FlowLayoutPanel
+            {
+                Dock = DockStyle.Right,
+                AutoSize = true,
+                FlowDirection = FlowDirection.LeftToRight,
+                WrapContents = false,
+                Padding = new Padding(0, 1, 0, 0),
+                BackColor = Color.Transparent
+            };
+
+            btnToggleQr = CreateStyledButton("▶ Encender QR", Color.FromArgb(2, 132, 199), Color.White, 118, 24);
+            btnToggleQr.Font = new Font("Segoe UI", 7.8F, FontStyle.Bold);
+            btnToggleQr.Click += async (s, e) => await ToggleQrAsync();
+
+            btnUpdateQr = CreateStyledButton("⬇ Git", Color.FromArgb(37, 99, 235), Color.White, 64, 24);
+            btnUpdateQr.Font = new Font("Segoe UI", 7.8F, FontStyle.Bold);
+            btnUpdateQr.Click += async (s, e) => await UpdateServiceAsync(qrService);
+
+            btnOpenQr = CreateStyledButton("🌐 Abrir", Color.FromArgb(51, 65, 85), Color.White, 76, 24);
+            btnOpenQr.Font = new Font("Segoe UI", 7.8F, FontStyle.Bold);
+            btnOpenQr.Click += (s, e) => Process.Start(new ProcessStartInfo("http://localhost:3800") { UseShellExecute = true });
+
+            btnBrowseQr = CreateStyledButton("📁", Color.FromArgb(100, 116, 139), Color.White, 34, 24);
+            btnBrowseQr.Font = new Font("Segoe UI", 7.8F, FontStyle.Bold);
+            btnBrowseQr.Click += (s, e) => BrowseServiceFolder(qrService);
+
+            qrActions.Controls.Add(btnToggleQr);
+            qrActions.Controls.Add(btnUpdateQr);
+            qrActions.Controls.Add(btnOpenQr);
+            qrActions.Controls.Add(btnBrowseQr);
+            qrBar.Controls.Add(qrActions);
+            qrBar.Controls.Add(lblQrStatus);
+
             // 3. CARDS CONTAINER (4 COLUMNS)
             TableLayoutPanel cardsGrid = new TableLayoutPanel
             {
@@ -577,11 +659,20 @@ namespace CCGServerManager
                 tabLogs.TabPages.Add(tp);
             }
 
+            if (qrService != null)
+            {
+                TabPage tpQr = new TabPage("📱 Consola QR (:3800)");
+                qrService.LogBox = CreateTerminalBox();
+                tpQr.Controls.Add(qrService.LogBox);
+                tabLogs.TabPages.Add(tpQr);
+            }
+
             logsContainer.Controls.Add(tabLogs);
 
             // Add in docking order
             this.Controls.Add(logsContainer);
             this.Controls.Add(cardsGrid);
+            this.Controls.Add(qrBar);
             this.Controls.Add(proxyBar);
             this.Controls.Add(subHeader);
             this.Controls.Add(headerPanel);
@@ -953,6 +1044,7 @@ namespace CCGServerManager
             trayMenu.MenuItems.Add("🌐 Abrir Portal Unificado (:9000)", (s, e) => Process.Start("http://localhost:9000"));
             trayMenu.MenuItems.Add("🌐 Abrir LabDesk Dashboard (:3000)", (s, e) => Process.Start("http://localhost:3000"));
             trayMenu.MenuItems.Add("🎛️ Abrir LabDesk Botonera (:3000/botonera)", (s, e) => Process.Start("http://localhost:3000/botonera"));
+            trayMenu.MenuItems.Add("📱 Abrir QR Eventos (:3800)", (s, e) => Process.Start("http://localhost:3800"));
             trayMenu.MenuItems.Add("-");
             trayMenu.MenuItems.Add("❌ Apagar Todos los Servidores y Salir", async (s, e) =>
             {
@@ -1008,7 +1100,8 @@ namespace CCGServerManager
                 if (fbd.ShowDialog(this) == DialogResult.OK)
                 {
                     srv.FolderPath = fbd.SelectedPath;
-                    srv.PathLabel.Text = "Carpeta: " + srv.FolderPath;
+                    if (srv.PathLabel != null)
+                        srv.PathLabel.Text = "Carpeta: " + srv.FolderPath;
                     SaveConfig();
                     RefreshGitCommit(srv);
                     AppendLog(generalLogBox, string.Format("[CONFIG] Ruta de {0} actualizada a: {1}", srv.Id, srv.FolderPath));
@@ -1117,7 +1210,7 @@ namespace CCGServerManager
                     bool proxyUp = IsPortListening(80);
                     if (proxyUp)
                     {
-                        lblProxyStatus.Text = "🟢 Proxy Nombres LAN (:80) ACTIVO   •   http://pruebas.ccg   |   http://simce.ccg   |   http://portal.ccg   |   http://labdesk.ccg";
+                        lblProxyStatus.Text = "🟢 Proxy Nombres LAN (:80) ACTIVO   •   http://pruebas.ccg   |   http://simce.ccg   |   http://portal.ccg   |   http://labdesk.ccg   |   http://qr.ccg";
                         lblProxyStatus.ForeColor = Color.FromArgb(6, 95, 70);
                         btnToggleProxy.Text = "⏹ Detener Proxy :80";
                         btnToggleProxy.BackColor = Color.FromArgb(220, 38, 38);
@@ -1128,6 +1221,37 @@ namespace CCGServerManager
                         lblProxyStatus.ForeColor = Color.FromArgb(71, 85, 105);
                         btnToggleProxy.Text = "▶ Activar Proxy :80";
                         btnToggleProxy.BackColor = Color.FromArgb(79, 70, 229);
+                    }
+                }
+            }
+
+            if (qrService != null && lblQrStatus != null && btnToggleQr != null)
+            {
+                if (qrService.IsBusy)
+                {
+                    lblQrStatus.Text = "🟡 QR Eventos (:3800): " + (qrService.BusyText ?? "PROCESANDO...");
+                    lblQrStatus.ForeColor = Color.FromArgb(180, 83, 9);
+                    btnToggleQr.Enabled = false;
+                    if (btnUpdateQr != null) btnUpdateQr.Enabled = false;
+                }
+                else
+                {
+                    btnToggleQr.Enabled = true;
+                    if (btnUpdateQr != null) btnUpdateQr.Enabled = true;
+                    bool qrUp = IsPortListening(qrService.MainPort);
+                    if (qrUp)
+                    {
+                        lblQrStatus.Text = string.Format("🟢 QR Eventos (:3800) ENCENDIDO   •   http://{0}:3800   |   http://qr.ccg   •   {1}", localIpAddress, qrService.LastCommit);
+                        lblQrStatus.ForeColor = Color.FromArgb(6, 95, 70);
+                        btnToggleQr.Text = "⏹ Apagar QR";
+                        btnToggleQr.BackColor = Color.FromArgb(220, 38, 38);
+                    }
+                    else
+                    {
+                        lblQrStatus.Text = string.Format("🔴 QR Eventos (:3800) DETENIDO   •   Carpeta: {0}", qrService.FolderPath);
+                        lblQrStatus.ForeColor = Color.FromArgb(153, 27, 27);
+                        btnToggleQr.Text = "▶ Encender QR";
+                        btnToggleQr.BackColor = Color.FromArgb(2, 132, 199);
                     }
                 }
             }
@@ -1171,7 +1295,7 @@ namespace CCGServerManager
             {
                 await EnsureProxyStartedAsync();
             }
-            foreach (ManagedService srv in services)
+            foreach (ManagedService srv in GetAllManagedServices())
             {
                 if (!IsPortListening(srv.MainPort) && !srv.IsBusy)
                 {
@@ -1183,15 +1307,28 @@ namespace CCGServerManager
         private async Task StopAllServicesAsync()
         {
             await StopProxyAsync();
-            foreach (ManagedService srv in services)
+            foreach (ManagedService srv in GetAllManagedServices())
             {
                 await StopServiceAsync(srv);
             }
         }
 
+        private async Task ToggleQrAsync()
+        {
+            if (qrService == null || qrService.IsBusy) return;
+            if (IsPortListening(qrService.MainPort))
+            {
+                await StopServiceAsync(qrService);
+            }
+            else
+            {
+                await StartServiceAsync(qrService);
+            }
+        }
+
         private bool AnyServiceRunning()
         {
-            foreach (ManagedService srv in services)
+            foreach (ManagedService srv in GetAllManagedServices())
             {
                 if (IsPortListening(srv.MainPort)) return true;
             }
@@ -1371,12 +1508,14 @@ namespace CCGServerManager
                 "  • pruebas.<tu-sufijo>  ->  {0}   (Pruebas CCG :3600)\r\n" +
                 "  • simce.<tu-sufijo>    ->  {0}   (Ensayos SIMCE :3300)\r\n" +
                 "  • portal.<tu-sufijo>   ->  {0}   (Portal Unificado :9000)\r\n" +
-                "  • labdesk.<tu-sufijo>  ->  {0}   (LabDesk :3000)\r\n\r\n" +
+                "  • labdesk.<tu-sufijo>  ->  {0}   (LabDesk :3000)\r\n" +
+                "  • qr.<tu-sufijo>       ->  {0}   (QR Eventos :3800)\r\n\r\n" +
                 "Ejemplo si pones Domain Name = 'ccg' en DHCP de tu red UniFi:\r\n" +
                 "  pruebas.ccg  -> {0}  (también resuelve 'http://pruebas')\r\n" +
                 "  simce.ccg    -> {0}  (también resuelve 'http://simce')\r\n" +
                 "  portal.ccg   -> {0}  (también resuelve 'http://portal')\r\n" +
-                "  labdesk.ccg  -> {0}  (también resuelve 'http://labdesk')",
+                "  labdesk.ccg  -> {0}  (también resuelve 'http://labdesk')\r\n" +
+                "  qr.ccg       -> {0}  (también resuelve 'http://qr')",
                 localIpAddress
             );
 
@@ -1443,15 +1582,15 @@ namespace CCGServerManager
         {
             tabLogs.SelectedIndex = 0;
             AppendLog(generalLogBox, "======================================================================");
-            AppendLog(generalLogBox, "[ACTUALIZACIÓN GLOBAL] Iniciando actualización secuencial de las 4 plataformas...");
+            AppendLog(generalLogBox, "[ACTUALIZACIÓN GLOBAL] Iniciando actualización secuencial de las plataformas...");
             AppendLog(generalLogBox, "======================================================================");
 
-            foreach (ManagedService srv in services)
+            foreach (ManagedService srv in GetAllManagedServices())
             {
                 await UpdateServiceAsync(srv);
             }
 
-            AppendLog(generalLogBox, "🎉 [ACTUALIZACIÓN GLOBAL FINALIZADA] Las 4 plataformas están al día y en línea.");
+            AppendLog(generalLogBox, "🎉 [ACTUALIZACIÓN GLOBAL FINALIZADA] Todas las plataformas están al día y en línea.");
         }
 
         private bool ResolveServiceExecution(ManagedService srv, out string workingDir, out string fullScriptPath)
@@ -1866,7 +2005,14 @@ namespace CCGServerManager
                     this.BeginInvoke((Action)(() => ReloadAppIcon(srv.FolderPath)));
 
                     // 3. Build & Sync dependencies according to project type
-                    if (srv.Id == "LABDESK")
+                    if (srv.Id == "QR")
+                    {
+                        srv.BusyText = "VERIFICANDO QR EVENTOS...";
+                        this.BeginInvoke((Action)UpdateAllStatuses);
+                        AppendLog(generalLogBox, "[3/4] QR Eventos usa Node.js puro (sin dependencias externas).");
+                        AppendLog(generalLogBox, "[4/4] Listo para iniciar en puerto :3800.");
+                    }
+                    else if (srv.Id == "LABDESK")
                     {
                         srv.BusyText = "INSTALANDO DEPENDENCIAS LABDESK...";
                         this.BeginInvoke((Action)UpdateAllStatuses);
@@ -2132,7 +2278,7 @@ namespace CCGServerManager
 
         private void RefreshAllGitCommits()
         {
-            foreach (ManagedService srv in services)
+            foreach (ManagedService srv in GetAllManagedServices())
             {
                 RefreshGitCommit(srv);
             }

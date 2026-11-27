@@ -9,6 +9,7 @@ const DEFAULT_HOSTS = {
   SIMCE: ['simce', 'simce.ccg', 'simceccg', 'simce-ccg', 'ensayos', 'ensayo', 'ensayossimce', 'ensayos-simce'],
   LABDESK: ['labdesk', 'labdesk.ccg', 'labdeskccg', 'labdesk-ccg', 'aula', 'botonera', 'laboratorio'],
   UNIFIED: ['portal', 'portal.ccg', 'portalccg', 'portal-ccg', 'unificado', 'unified', 'ccg', 'inicio', 'plataforma'],
+  QR: ['qr', 'qr.ccg', 'qrccg', 'qr-ccg', 'eventos', 'invitaciones', 'licenciatura'],
 };
 
 const SERVICE_META = {
@@ -16,6 +17,7 @@ const SERVICE_META = {
   PRUEBAS: { id: 'PRUEBAS', title: 'Plataforma Pruebas CCG', defaultPort: 3600 },
   UNIFIED: { id: 'UNIFIED', title: 'Portal Unificado CCG', defaultPort: 9000 },
   LABDESK: { id: 'LABDESK', title: 'LabDesk (Control de Aula)', defaultPort: 3000 },
+  QR: { id: 'QR', title: 'QR Eventos CCG', defaultPort: 3800 },
 };
 
 function parseHostList(raw) {
@@ -78,6 +80,12 @@ function loadProxyConfig(configPathOverride) {
       port: parseInt(process.env.PROXY_LABDESK_PORT || ini.PROXY_LABDESK_PORT || '3000', 10) || 3000,
       customHosts: parseHostList(process.env.PROXY_LABDESK_HOSTS || ini.PROXY_LABDESK_HOSTS),
       defaultHosts: DEFAULT_HOSTS.LABDESK,
+    },
+    QR: {
+      ...SERVICE_META.QR,
+      port: parseInt(process.env.PROXY_QR_PORT || ini.PROXY_QR_PORT || '3800', 10) || 3800,
+      customHosts: parseHostList(process.env.PROXY_QR_HOSTS || ini.PROXY_QR_HOSTS),
+      defaultHosts: DEFAULT_HOSTS.QR,
     },
   };
 
@@ -154,6 +162,9 @@ function resolveRoute(hostHeader, config) {
   }
   if (firstLabel.startsWith('portal')) {
     return { ...config.services.UNIFIED, matchedBy: 'prefix', host: cleanHost };
+  }
+  if (firstLabel.startsWith('qr') || firstLabel.startsWith('evento') || firstLabel.startsWith('invitacion')) {
+    return { ...config.services.QR, matchedBy: 'prefix', host: cleanHost };
   }
 
   // 4. Fallback al servicio principal (Portal Unificado)
@@ -369,7 +380,7 @@ function startProxy(options = {}) {
     }
     console.log(`[PROXY :${actualPort}] Proxy inverso CCG escuchando en http://${listenHost}:${actualPort}`);
     console.log(
-      `[PROXY :${actualPort}] Rutas -> PRUEBAS (:${config.services.PRUEBAS.port}) | SIMCE (:${config.services.SIMCE.port}) | PORTAL (:${config.services.UNIFIED.port}) | LABDESK (:${config.services.LABDESK.port})`
+      `[PROXY :${actualPort}] Rutas -> PRUEBAS (:${config.services.PRUEBAS.port}) | SIMCE (:${config.services.SIMCE.port}) | PORTAL (:${config.services.UNIFIED.port}) | LABDESK (:${config.services.LABDESK.port}) | QR (:${config.services.QR.port})`
     );
   });
 
