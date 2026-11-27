@@ -2322,6 +2322,535 @@ async function generarReporteMensualArchivos(anio, mes) {
     };
 }
 
+function obtenerRangoSemanaDesdeFecha(fechaStr = null) {
+    const fechaBase = (fechaStr && String(fechaStr).trim()) ? String(fechaStr).trim() : obtenerFechaHoraChile().fecha;
+    const parsed = parsearFechaLocal(fechaBase);
+    if (!parsed) {
+        throw new Error(`Formato de fecha inválido (${fechaBase}). Usa AAAA-MM-DD.`);
+    }
+    const dtLunes = new Date(parsed.date.getTime());
+    const diffLunes = parsed.dayOfWeek === 0 ? -6 : -(parsed.dayOfWeek - 1);
+    dtLunes.setDate(dtLunes.getDate() + diffLunes);
+
+    const fechasBase = [];
+    for (let i = 0; i < 6; i++) {
+        const dt = new Date(dtLunes.getTime());
+        dt.setDate(dt.getDate() + i);
+        fechasBase.push({ offset: i, fecha: formatearFechaISO(dt) });
+    }
+    return { fechaBase, fechasBase };
+}
+
+async function recopilarResumenSemanalCompleto(fechaStr = null) {
+    const { fechasBase } = obtenerRangoSemanaDesdeFecha(fechaStr);
+
+    const dias = [];
+    const datosPorFecha = [];
+    for (const item of fechasBase) {
+        const infoDia = await verificarDiaAsistencia(item.fecha);
+        if (item.offset === 5 && !infoDia.esExtra) continue; // Incluir sábado solo si es CLASE_EXTRA
+        const asistDia = await obtenerAsistenciaFecha(item.fecha);
+        dias.push(infoDia);
+        datosPorFecha.push({ infoDia, asistDia });
+    }
+
+    const fechaInicio = dias[0] ? dias[0].fecha : fechasBase[0].fecha;
+    const fechaFin = dias[dias.length - 1] ? dias[dias.length - 1].fecha : fechasBase[4].fecha;
+    const fmtDDMMYYYY = (iso) => {
+        const p = String(iso || '').split('-');
+        return p.length === 3 ? `${p[2]}/${p[1]}/${p[0]}` : iso;
+    };
+    const rangoLegible = `Del ${fmtDDMMYYYY(fechaInicio)} al ${fmtDDMMYYYY(fechaFin)}`;
+
+    const novedades = await queryAll(
+        `SELECT * FROM asistencia_novedades WHERE fecha >= ? AND fecha <= ? ORDER BY fecha ASC, id ASC`,
+        [fechaInicio, fechaFin]
+    );
+
+    const resumenDias = datosPorFecha.map(({ infoDia, asistDia }) => ({
+        fecha: infoDia.fecha,
+        dia_corto: infoDia.diaSemanaCorto,
+        dia_semana: infoDia.diaSemana,
+        es_feriado: infoDia.esFeriado,
+        es_extra: infoDia.esExtra,
+        habil: infoDia.habil,
+        motivo: infoDia.motivo,
+        cursos_registrados: asistDia.cursos_registrados || 0,
+        total_cursos_oficiales: asistDia.total_cursos_oficiales || CURSOS_OFICIALES.length,
+        matricula_total: asistDia.total_matricula || 0,
+        presentes: asistDia.total_presentes || 0,
+        ausentes: asistDia.total_ausentes || 0,
+        porcentaje: asistDia.porcentaje_global || 0
+    }));
+
+    const mapasCursoPorFecha = new Map();
+    datosPorFecha.forEach(({ infoDia, asistDia }) => {
+        const m = new Map();
+        (asistDia.cursos || []).forEach(c => m.set(c.curso_normalizado, c));
+        mapasCursoPorFecha.set(infoDia.fecha, m);
+    });
+
+    let sumaPresentesGlobal = 0;
+    let sumaAusentesGlobal = 0;
+    let sumaEvaluadosGlobal = 0;
+
+    const resumenCursos = CURSOS_OFICIALES.map(c => {
+        const porDia = {};
+        let matriculaRef = 0;
+        let diasRegistrados = 0;
+        let asistenciasAcum = 0;
+        let ausenciasAcum = 0;
+        let dias100 = 0;
+
+        datosPorFecha.forEach(({ infoDia }) => {
+            const cData = mapasCursoPorFecha.get(infoDia.fecha)?.get(c.normalizado);
+            if (cData && cData.tomada) {
+                diasRegistrados++;
+                const mat = cData.matricula_total || 0;
+                const pres = cData.presentes || 0;
+                const aus = cData.ausentes || 0;
+                const pct = cData.porcentaje || 0;
+                if (mat > matriculaRef) matriculaRef = mat;
+                asistenciasAcum += pres;
+                ausenciasAcum += aus;
+                if (mat > 0 && aus === 0) dias100++;
+
+                porDia[infoDia.fecha] = {
+                    tomada: true,
+                    matricula: mat,
+                    presentes: pres,
+                    ausentes: aus,
+                    porcentaje: pct,
+                    alumnos_ausentes: cData.alumnos_ausentes || [],
+                    registrado_nombre: cData.registrado_nombre || ''
+                };
+            } else {
+                porDia[infoDia.fecha] = {
+                    tomada: false,
+                    matricula: 0,
+                    presentes: 0,
+                    ausentes: 0,
+                    porcentaje: 0,
+                    alumnos_ausentes: [],
+                    registrado_nombre: ''
+                };
+            }
+        });
+
+        const base = asistenciasAcum + ausenciasAcum;
+        const pctSem = base > 0 ? Math.round((asistenciasAcum / base) * 1000) / 10 : 0;
+        sumaPresentesGlobal += asistenciasAcum;
+        sumaAusentesGlobal += ausenciasAcum;
+        sumaEvaluadosGlobal += base;
+
+        return {
+            curso: c.legible,
+            curso_normalizado: c.normalizado,
+            matricula_ref: matriculaRef,
+            dias_registrados: diasRegistrados,
+            asistencias_acum: asistenciasAcum,
+            ausencias_acum: ausenciasAcum,
+            porcentaje: pctSem,
+            dias_100: dias100,
+            por_dia: porDia
+        };
+    });
+
+    const detalleAusentes = [];
+    datosPorFecha.forEach(({ infoDia, asistDia }) => {
+        (asistDia.cursos || []).forEach(c => {
+            if (c.tomada && (c.ausentes || 0) > 0) {
+                detalleAusentes.push({
+                    fecha: infoDia.fecha,
+                    dia_semana: infoDia.diaSemana,
+                    curso: c.curso,
+                    matricula_total: c.matricula_total || 0,
+                    presentes: c.presentes || 0,
+                    ausentes: c.ausentes || 0,
+                    porcentaje: c.porcentaje || 0,
+                    alumnos_ausentes: Array.isArray(c.alumnos_ausentes) ? c.alumnos_ausentes : [],
+                    registrado_nombre: c.registrado_nombre || ''
+                });
+            }
+        });
+    });
+
+    const diasHabiles = resumenDias.filter(d => d.habil).length;
+    const diasConRegistro = resumenDias.filter(d => d.cursos_registrados > 0).length;
+    const pctSemanal = sumaEvaluadosGlobal > 0
+        ? Math.round((sumaPresentesGlobal / sumaEvaluadosGlobal) * 1000) / 10
+        : 0;
+
+    return {
+        fecha_inicio: fechaInicio,
+        fecha_fin: fechaFin,
+        rango_legible: rangoLegible,
+        dias,
+        dias_habiles: diasHabiles,
+        dias_con_registro: diasConRegistro,
+        total_asistencias: sumaPresentesGlobal,
+        total_inasistencias: sumaAusentesGlobal,
+        porcentaje_semanal: pctSemanal,
+        resumen_dias: resumenDias,
+        resumen_cursos: resumenCursos,
+        detalle_ausentes: detalleAusentes,
+        novedades
+    };
+}
+
+async function generarExcelSemanal(datosSemana) {
+    const wb = xlsx.utils.book_new();
+    const fmtDDMM = (iso) => {
+        const p = String(iso || '').split('-');
+        return p.length === 3 ? `${p[2]}/${p[1]}` : iso;
+    };
+
+    // Hoja 1: Resumen Semanal + Matriz por Curso
+    const aoaRes = [
+        ['COLEGIO CERRO GRANDE - INFORME SEMANAL DE ASISTENCIA DIARIA'],
+        [`Semana: ${datosSemana.rango_legible}`, '', `Días hábiles: ${datosSemana.dias_habiles}`, `Días con registro: ${datosSemana.dias_con_registro}`, `Asistencia Semanal Establecimiento: ${datosSemana.porcentaje_semanal}%`],
+        [],
+        ['EVOLUCIÓN DIARIA DE LA SEMANA'],
+        ['Fecha', 'Día', 'Estado', 'Cursos Tomados', 'Matrícula Reportada', 'Presentes', 'Ausentes', '% Día']
+    ];
+
+    datosSemana.resumen_dias.forEach(d => {
+        const estado = d.es_feriado ? `Feriado (${d.motivo || 'Sin clases'})` : (d.es_extra ? 'Clase Extra' : (d.habil ? 'Hábil' : 'No hábil'));
+        aoaRes.push([
+            fmtDDMM(d.fecha),
+            d.dia_semana,
+            estado,
+            `${d.cursos_registrados} / ${d.total_cursos_oficiales}`,
+            d.matricula_total,
+            d.presentes,
+            d.ausentes,
+            d.cursos_registrados > 0 ? `${d.porcentaje}%` : '-'
+        ]);
+    });
+
+    aoaRes.push([]);
+    aoaRes.push(['DETALLE SEMANAL POR CURSO']);
+    aoaRes.push([
+        'Curso',
+        'Matrícula Ref.',
+        ...datosSemana.dias.map(d => `${d.diaSemanaCorto} ${fmtDDMM(d.fecha)}`),
+        'Total Presentes',
+        'Total Ausentes',
+        '% Semanal'
+    ]);
+
+    datosSemana.resumen_cursos.forEach(rc => {
+        const colsDias = datosSemana.dias.map(d => {
+            if (d.esFeriado) return 'FER';
+            const cel = rc.por_dia[d.fecha];
+            if (!cel || !cel.tomada) return '-';
+            return `${cel.presentes}/${cel.matricula} (${cel.porcentaje}%)`;
+        });
+        aoaRes.push([
+            rc.curso,
+            rc.matricula_ref || '-',
+            ...colsDias,
+            rc.asistencias_acum,
+            rc.ausencias_acum,
+            rc.dias_registrados > 0 ? `${rc.porcentaje}%` : '-'
+        ]);
+    });
+
+    aoaRes.push([
+        'TOTAL ESTABLECIMIENTO',
+        datosSemana.resumen_cursos.reduce((s, r) => s + (r.matricula_ref || 0), 0),
+        ...datosSemana.resumen_dias.map(d => d.es_feriado ? 'FER' : (d.cursos_registrados > 0 ? `${d.presentes}/${d.matricula_total} (${d.porcentaje}%)` : '-')),
+        datosSemana.total_asistencias,
+        datosSemana.total_inasistencias,
+        `${datosSemana.porcentaje_semanal}%`
+    ]);
+
+    const wsResumen = xlsx.utils.aoa_to_sheet(aoaRes);
+    wsResumen['!cols'] = [
+        { wch: 22 },
+        { wch: 15 },
+        ...datosSemana.dias.map(() => ({ wch: 16 })),
+        { wch: 15 },
+        { wch: 15 },
+        { wch: 13 }
+    ];
+    xlsx.utils.book_append_sheet(wb, wsResumen, 'Resumen Semanal');
+
+    // Hoja 2: Ausentes por Día (lista completa)
+    const aoaAus = [
+        ['Fecha', 'Día', 'Curso', 'Presentes', 'Ausentes', '% Asistencia', 'Alumnos Ausentes (Completo)', 'Registrado por']
+    ];
+    if (datosSemana.detalle_ausentes.length === 0) {
+        aoaAus.push([datosSemana.fecha_inicio, '', 'Sin ausencias registradas en los días tomados de esta semana', '', '', '', '', '']);
+    } else {
+        datosSemana.detalle_ausentes.forEach(item => {
+            aoaAus.push([
+                item.fecha,
+                item.dia_semana,
+                item.curso,
+                item.presentes,
+                item.ausentes,
+                `${item.porcentaje}%`,
+                item.alumnos_ausentes.join(', '),
+                item.registrado_nombre || '-'
+            ]);
+        });
+    }
+    const wsAus = xlsx.utils.aoa_to_sheet(aoaAus);
+    wsAus['!cols'] = [{ wch: 12 }, { wch: 12 }, { wch: 16 }, { wch: 11 }, { wch: 11 }, { wch: 13 }, { wch: 68 }, { wch: 22 }];
+    xlsx.utils.book_append_sheet(wb, wsAus, 'Ausentes por Día');
+
+    // Hoja 3: Novedades de la Semana
+    const aoaNov = [['Fecha', 'Curso', 'Reportado por', 'Estado', 'Mensaje']];
+    if (datosSemana.novedades.length === 0) {
+        aoaNov.push([datosSemana.fecha_inicio, '-', '-', '-', 'Sin novedades reportadas en esta semana']);
+    } else {
+        datosSemana.novedades.forEach(n => {
+            aoaNov.push([
+                n.fecha,
+                n.curso,
+                n.reportado_por_nombre || n.reportado_por_email || '-',
+                n.estado || 'Pendiente',
+                n.mensaje || ''
+            ]);
+        });
+    }
+    const wsNov = xlsx.utils.aoa_to_sheet(aoaNov);
+    wsNov['!cols'] = [{ wch: 12 }, { wch: 16 }, { wch: 24 }, { wch: 14 }, { wch: 60 }];
+    xlsx.utils.book_append_sheet(wb, wsNov, 'Novedades Semana');
+
+    return xlsx.write(wb, { type: 'buffer', bookType: 'xlsx' });
+}
+
+async function generarPdfSemanal(datosSemana) {
+    return await new Promise((resolve, reject) => {
+        const doc = new PDFDocument({ layout: 'landscape', size: 'LETTER', margin: 24, autoFirstPage: true });
+        const chunks = [];
+        doc.on('data', chunk => chunks.push(chunk));
+        doc.on('end', () => resolve(Buffer.concat(chunks)));
+        doc.on('error', reject);
+
+        const pageW = 792 - 48; // 744 pt útiles
+        const startX = 24;
+        const fmtDDMM = (iso) => {
+            const p = String(iso || '').split('-');
+            return p.length === 3 ? `${p[2]}/${p[1]}` : iso;
+        };
+
+        // --- PÁGINA 1: CABECERA, KPIs, EVOLUCIÓN DIARIA Y MATRIZ SEMANAL ---
+        doc.rect(startX, 24, pageW, 44).fill('#1e3a8a');
+        doc.fillColor('#ffffff').font('Helvetica-Bold').fontSize(14)
+            .text('COLEGIO CERRO GRANDE LA SERENA', startX + 14, 31);
+        doc.font('Helvetica').fontSize(9.5)
+            .text(`Informe Semanal de Asistencia Diaria · ${datosSemana.rango_legible}`, startX + 14, 49);
+
+        const kpiY = 76;
+        const kpis = [
+            { label: 'Días Hábiles', val: String(datosSemana.dias_habiles) },
+            { label: 'Días Registrados', val: String(datosSemana.dias_con_registro) },
+            { label: 'Asistencias Semana', val: String(datosSemana.total_asistencias) },
+            { label: 'Ausencias Semana', val: String(datosSemana.total_inasistencias) },
+            { label: '% Asistencia Semanal', val: `${datosSemana.porcentaje_semanal}%` }
+        ];
+        const boxW = (pageW - 32) / 5;
+        kpis.forEach((k, idx) => {
+            const x = startX + idx * (boxW + 8);
+            doc.rect(x, kpiY, boxW, 34).fillAndStroke('#f8fafc', '#cbd5e1');
+            doc.fillColor('#64748b').font('Helvetica').fontSize(7).text(k.label.toUpperCase(), x + 8, kpiY + 5, { width: boxW - 16 });
+            doc.fillColor('#0f172a').font('Helvetica-Bold').fontSize(12).text(k.val, x + 8, kpiY + 16, { width: boxW - 16 });
+        });
+
+        // Evolución diaria compacta
+        let curY = 118;
+        const colsDia = [
+            { txt: 'Día / Fecha', w: 140, align: 'left' },
+            { txt: 'Estado', w: 124, align: 'center' },
+            { txt: 'Cursos Tomados', w: 110, align: 'center' },
+            { txt: 'Matrícula Rep.', w: 95, align: 'center' },
+            { txt: 'Presentes', w: 95, align: 'center' },
+            { txt: 'Ausentes', w: 95, align: 'center' },
+            { txt: '% Día', w: 85, align: 'center' }
+        ];
+        doc.rect(startX, curY, pageW, 15).fill('#0f172a');
+        let cx = startX;
+        doc.fillColor('#ffffff').font('Helvetica-Bold').fontSize(7.5);
+        colsDia.forEach(c => {
+            doc.text(c.txt, cx + 4, curY + 4, { width: c.w - 8, align: c.align });
+            cx += c.w;
+        });
+        curY += 15;
+
+        datosSemana.resumen_dias.forEach((d, idx) => {
+            doc.rect(startX, curY, pageW, 13).fillAndStroke(idx % 2 === 0 ? '#ffffff' : '#f8fafc', '#e2e8f0');
+            cx = startX;
+            const estStr = d.es_feriado ? 'Feriado' : (d.es_extra ? 'Clase Extra' : (d.habil ? 'Hábil' : 'No hábil'));
+            const vals = [
+                `${d.dia_semana} ${fmtDDMM(d.fecha)}`,
+                estStr,
+                `${d.cursos_registrados} / ${d.total_cursos_oficiales}`,
+                String(d.matricula_total),
+                String(d.presentes),
+                String(d.ausentes),
+                d.cursos_registrados > 0 ? `${d.porcentaje}%` : '-'
+            ];
+            doc.fillColor('#1e293b').font('Helvetica').fontSize(7.5);
+            vals.forEach((v, i) => {
+                if (i === 0 || i === 6) doc.font('Helvetica-Bold'); else doc.font('Helvetica');
+                doc.text(v, cx + 4, curY + 3, { width: colsDia[i].w - 8, align: colsDia[i].align });
+                cx += colsDia[i].w;
+            });
+            curY += 13;
+        });
+
+        // Matriz semanal por curso
+        curY += 8;
+        const numDias = Math.max(datosSemana.dias.length, 1);
+        const wCurso = 134;
+        const wMat = 55;
+        const wPres = 58;
+        const wAus = 58;
+        const wPct = 64;
+        const wDiaCol = (pageW - wCurso - wMat - wPres - wAus - wPct) / numDias;
+
+        const dibujarCabeceraCursos = (yTop) => {
+            doc.rect(startX, yTop, pageW, 16).fill('#1e3a8a');
+            let x = startX;
+            doc.fillColor('#ffffff').font('Helvetica-Bold').fontSize(7.5);
+            doc.text('Curso', x + 4, yTop + 4, { width: wCurso - 8, align: 'left' }); x += wCurso;
+            doc.text('Matr.', x + 2, yTop + 4, { width: wMat - 4, align: 'center' }); x += wMat;
+            datosSemana.dias.forEach(d => {
+                doc.text(`${d.diaSemanaCorto} ${fmtDDMM(d.fecha)}`, x + 2, yTop + 4, { width: wDiaCol - 4, align: 'center' });
+                x += wDiaCol;
+            });
+            doc.text('Pres.', x + 2, yTop + 4, { width: wPres - 4, align: 'center' }); x += wPres;
+            doc.text('Aus.', x + 2, yTop + 4, { width: wAus - 4, align: 'center' }); x += wAus;
+            doc.text('% Sem.', x + 2, yTop + 4, { width: wPct - 4, align: 'center' });
+            return yTop + 16;
+        };
+
+        curY = dibujarCabeceraCursos(curY);
+        const rowH = 12.2;
+
+        datosSemana.resumen_cursos.forEach((rc, idx) => {
+            if (curY + rowH > 580) {
+                doc.addPage({ layout: 'landscape', size: 'LETTER', margin: 24 });
+                curY = dibujarCabeceraCursos(24);
+            }
+            doc.rect(startX, curY, pageW, rowH).fillAndStroke(idx % 2 === 0 ? '#ffffff' : '#f8fafc', '#e2e8f0');
+            let x = startX;
+            doc.fillColor('#0f172a').font('Helvetica-Bold').fontSize(7.2)
+                .text(rc.curso, x + 4, curY + 3, { width: wCurso - 8, lineBreak: false, ellipsis: true });
+            x += wCurso;
+            doc.font('Helvetica').fillColor('#334155')
+                .text(rc.matricula_ref ? String(rc.matricula_ref) : '-', x + 2, curY + 3, { width: wMat - 4, align: 'center' });
+            x += wMat;
+
+            datosSemana.dias.forEach(d => {
+                const cel = rc.por_dia[d.fecha];
+                const txt = d.esFeriado ? 'FER' : (cel && cel.tomada ? `${cel.porcentaje}% (${cel.ausentes}A)` : '-');
+                doc.fillColor(d.esFeriado ? '#64748b' : (cel && cel.tomada ? (cel.porcentaje < 85 ? '#b91c1c' : '#1e293b') : '#94a3b8'))
+                    .text(txt, x + 2, curY + 3, { width: wDiaCol - 4, align: 'center' });
+                x += wDiaCol;
+            });
+
+            doc.fillColor('#15803d').font('Helvetica-Bold')
+                .text(String(rc.asistencias_acum), x + 2, curY + 3, { width: wPres - 4, align: 'center' });
+            x += wPres;
+            doc.fillColor('#b91c1c')
+                .text(String(rc.ausencias_acum), x + 2, curY + 3, { width: wAus - 4, align: 'center' });
+            x += wAus;
+            doc.fillColor('#0f172a')
+                .text(rc.dias_registrados > 0 ? `${rc.porcentaje}%` : '-', x + 2, curY + 3, { width: wPct - 4, align: 'center' });
+            curY += rowH;
+        });
+
+        // --- PÁGINAS SIGUIENTES: DETALLE DE ALUMNOS AUSENTES POR DÍA Y CURSO ---
+        doc.addPage({ layout: 'landscape', size: 'LETTER', margin: 24 });
+        doc.rect(startX, 24, pageW, 28).fill('#1e3a8a');
+        doc.fillColor('#ffffff').font('Helvetica-Bold').fontSize(11)
+            .text(`Detalle de Alumnos Ausentes · ${datosSemana.rango_legible}`, startX + 10, 33);
+
+        let yDet = 60;
+        const dibujarHeaderDet = (yTop) => {
+            doc.rect(startX, yTop, pageW, 15).fill('#0f172a');
+            doc.fillColor('#ffffff').font('Helvetica-Bold').fontSize(7.5);
+            doc.text('Fecha / Día', startX + 4, yTop + 4, { width: 92 });
+            doc.text('Curso', startX + 100, yTop + 4, { width: 96 });
+            doc.text('Asist.', startX + 200, yTop + 4, { width: 58, align: 'center' });
+            doc.text('Alumnos Ausentes (Lista Completa)', startX + 264, yTop + 4, { width: pageW - 268 });
+            return yTop + 15;
+        };
+
+        yDet = dibujarHeaderDet(yDet);
+        if (datosSemana.detalle_ausentes.length === 0) {
+            doc.rect(startX, yDet, pageW, 22).fillAndStroke('#f0fdf4', '#bbf7d0');
+            doc.fillColor('#15803d').font('Helvetica-Bold').fontSize(8.5)
+                .text('Sin alumnos ausentes registrados durante los días tomados de esta semana.', startX + 10, yDet + 7);
+            yDet += 26;
+        } else {
+            datosSemana.detalle_ausentes.forEach((item, idx) => {
+                const listaTxt = item.alumnos_ausentes.join(', ') || '-';
+                doc.font('Helvetica').fontSize(7.5);
+                const hLista = doc.heightOfString(listaTxt, { width: pageW - 270 });
+                const hFila = Math.max(16, hLista + 7);
+                if (yDet + hFila > 578) {
+                    doc.addPage({ layout: 'landscape', size: 'LETTER', margin: 24 });
+                    yDet = dibujarHeaderDet(24);
+                }
+                doc.rect(startX, yDet, pageW, hFila).fillAndStroke(idx % 2 === 0 ? '#ffffff' : '#f8fafc', '#e2e8f0');
+                doc.fillColor('#0f172a').font('Helvetica-Bold').fontSize(7.5)
+                    .text(`${fmtDDMM(item.fecha)} (${item.dia_semana.slice(0, 3)})`, startX + 4, yDet + 4, { width: 92 });
+                doc.text(item.curso, startX + 100, yDet + 4, { width: 96 });
+                doc.fillColor('#b91c1c').text(`${item.presentes}/${item.matricula_total} (${item.ausentes}A)`, startX + 200, yDet + 4, { width: 58, align: 'center' });
+                doc.fillColor('#334155').font('Helvetica').text(listaTxt, startX + 264, yDet + 4, { width: pageW - 270 });
+                yDet += hFila;
+            });
+        }
+
+        if (datosSemana.novedades && datosSemana.novedades.length > 0) {
+            if (yDet + 45 > 578) {
+                doc.addPage({ layout: 'landscape', size: 'LETTER', margin: 24 });
+                yDet = 24;
+            } else {
+                yDet += 12;
+            }
+            doc.rect(startX, yDet, pageW, 18).fill('#b91c1c');
+            doc.fillColor('#ffffff').font('Helvetica-Bold').fontSize(9)
+                .text('Novedades Reportadas en la Semana', startX + 8, yDet + 5);
+            yDet += 18;
+            datosSemana.novedades.forEach((n, idx) => {
+                const msg = `[${n.fecha} · ${n.curso} · ${n.reportado_por_nombre || n.reportado_por_email || '-'}] ${n.mensaje || ''}`;
+                doc.font('Helvetica').fontSize(7.5);
+                const hMsg = Math.max(15, doc.heightOfString(msg, { width: pageW - 14 }) + 6);
+                if (yDet + hMsg > 578) {
+                    doc.addPage({ layout: 'landscape', size: 'LETTER', margin: 24 });
+                    yDet = 24;
+                }
+                doc.rect(startX, yDet, pageW, hMsg).fillAndStroke(idx % 2 === 0 ? '#ffffff' : '#fef2f2', '#fecaca');
+                doc.fillColor('#1e293b').text(msg, startX + 6, yDet + 4, { width: pageW - 14 });
+                yDet += hMsg;
+            });
+        }
+
+        doc.end();
+    });
+}
+
+async function generarReporteSemanalBuffers(fechaStr = null) {
+    const datosSemana = await recopilarResumenSemanalCompleto(fechaStr);
+    const xlsxFilename = `Asistencia_Semanal_CCG_${datosSemana.fecha_inicio}_a_${datosSemana.fecha_fin}.xlsx`;
+    const pdfFilename = `Asistencia_Semanal_CCG_${datosSemana.fecha_inicio}_a_${datosSemana.fecha_fin}.pdf`;
+    const xlsxBuffer = await generarExcelSemanal(datosSemana);
+    const pdfBuffer = await generarPdfSemanal(datosSemana);
+    return {
+        xlsxFilename,
+        pdfFilename,
+        xlsxBuffer,
+        pdfBuffer,
+        resumen: datosSemana
+    };
+}
+
 async function enviarReporteMensual({ anio = null, mes = null, forzar = false, usuarioTrigger = null } = {}) {
     const { anno: annoHoy, fecha } = obtenerFechaHoraChile();
     const mesActualNum = parseInt(fecha.slice(5, 7), 10);
@@ -2761,6 +3290,8 @@ module.exports = {
     listarNovedades,
     marcarNovedadRevisada,
     generarReporteMensualArchivos,
+    recopilarResumenSemanalCompleto,
+    generarReporteSemanalBuffers,
     enviarReporteMensual,
     obtenerCursosPrimerBloque,
     enviarResumenesBloque1,

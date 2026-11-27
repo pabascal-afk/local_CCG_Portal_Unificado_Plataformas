@@ -486,7 +486,27 @@
             <button class="btn btn-outline-secondary btn-sm" onclick="setResumenHoy()">Hoy</button>
             <span class="badge bg-light text-dark border" id="resumenDiaBadge"></span>
           </div>
-          <div id="resumenRegistradosBadge" class="small fw-semibold text-secondary"></div>
+          <div class="d-flex flex-wrap align-items-center gap-2">
+            <div id="resumenRegistradosBadge" class="small fw-semibold text-secondary"></div>
+            <div class="dropdown d-none" id="resumenExportSemanalGroup">
+              <button class="btn btn-outline-primary btn-sm dropdown-toggle fw-semibold" type="button" data-bs-toggle="dropdown" aria-expanded="false">
+                <i class="bi bi-file-earmark-bar-graph me-1"></i> Exportar Informe Semanal
+              </button>
+              <ul class="dropdown-menu dropdown-menu-end shadow-sm">
+                <li><h6 class="dropdown-header small" id="resumenSemanaRangoLabel">Semana actual</h6></li>
+                <li>
+                  <a class="dropdown-item" href="#" onclick="descargarSemanal('pdf'); return false;">
+                    <i class="bi bi-file-earmark-pdf text-danger me-2"></i> Informe Semanal en PDF (.pdf)
+                  </a>
+                </li>
+                <li>
+                  <a class="dropdown-item" href="#" onclick="descargarSemanal('xlsx'); return false;">
+                    <i class="bi bi-file-earmark-excel text-success me-2"></i> Informe Semanal en Excel (.xlsx)
+                  </a>
+                </li>
+              </ul>
+            </div>
+          </div>
         </div>
 
         <!-- KPIs -->
@@ -1069,6 +1089,7 @@
       document.getElementById('liTabMatricula').classList.toggle('d-none', !esAdmin);
       document.getElementById('liTabConfig').classList.toggle('d-none', !esAdmin);
       document.getElementById('dropdownAccionesRapidas').classList.toggle('d-none', !esAdmin);
+      document.getElementById('resumenExportSemanalGroup').classList.toggle('d-none', !esGestor);
       document.getElementById('mensualExportBtns').classList.toggle('d-none', !esGestor);
       document.getElementById('mensualEditHint').classList.toggle('d-none', !esGestor);
     }
@@ -1339,8 +1360,29 @@
       cargarResumenDiario();
     }
 
+    function actualizarEtiquetaSemanaResumen(fechaISO) {
+      const lbl = document.getElementById('resumenSemanaRangoLabel');
+      if (!lbl || !fechaISO || !/^\d{4}-\d{2}-\d{2}$/.test(fechaISO)) return;
+      const [y, m, d] = fechaISO.split('-').map(Number);
+      const dt = new Date(y, m - 1, d, 12, 0, 0);
+      const dow = dt.getDay();
+      const diffLunes = dow === 0 ? -6 : -(dow - 1);
+      const lun = new Date(dt.getTime());
+      lun.setDate(lun.getDate() + diffLunes);
+      const vie = new Date(lun.getTime());
+      vie.setDate(vie.getDate() + 4);
+      const fmtC = (o) => `${String(o.getDate()).padStart(2, '0')}/${String(o.getMonth() + 1).padStart(2, '0')}`;
+      lbl.innerText = `Semana del ${fmtC(lun)} al ${fmtC(vie)}/${vie.getFullYear()}`;
+    }
+
+    function descargarSemanal(tipo) {
+      const fecha = document.getElementById('resumenFechaInput').value || fechaHoyISO();
+      window.location.href = `/api/asistencia/exportar-semanal/${tipo}?fecha=${encodeURIComponent(fecha)}`;
+    }
+
     async function cargarResumenDiario() {
       const fecha = document.getElementById('resumenFechaInput').value || fechaHoyISO();
+      actualizarEtiquetaSemanaResumen(fecha);
       const tbody = document.getElementById('tablaCursosBody');
       tbody.innerHTML = '<tr><td colspan="8" class="text-center py-4 text-secondary"><div class="spinner-border spinner-border-sm text-primary me-2"></div>Cargando...</td></tr>';
 

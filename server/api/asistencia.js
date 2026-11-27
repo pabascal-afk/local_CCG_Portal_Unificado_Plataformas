@@ -341,6 +341,30 @@ router.get('/exportar-mensual/pdf', requireGestorAsistencia, async (req, res) =>
     }
 });
 
+router.get('/exportar-semanal/xlsx', requireGestorAsistencia, async (req, res) => {
+    try {
+        const fecha = req.query.fecha ? String(req.query.fecha).trim() : null;
+        const archivos = await asistenciaService.generarReporteSemanalBuffers(fecha);
+        res.setHeader('Content-Disposition', `attachment; filename="${archivos.xlsxFilename}"`);
+        res.setHeader('Content-Type', 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet');
+        res.send(archivos.xlsxBuffer);
+    } catch (e) {
+        res.status(e.message && e.message.includes('inválido') ? 400 : 500).json({ error: e.message });
+    }
+});
+
+router.get('/exportar-semanal/pdf', requireGestorAsistencia, async (req, res) => {
+    try {
+        const fecha = req.query.fecha ? String(req.query.fecha).trim() : null;
+        const archivos = await asistenciaService.generarReporteSemanalBuffers(fecha);
+        res.setHeader('Content-Disposition', `attachment; filename="${archivos.pdfFilename}"`);
+        res.setHeader('Content-Type', 'application/pdf');
+        res.send(archivos.pdfBuffer);
+    } catch (e) {
+        res.status(e.message && e.message.includes('inválido') ? 400 : 500).json({ error: e.message });
+    }
+});
+
 router.post('/enviar-mensual', requireGestorAsistencia, async (req, res) => {
     try {
         const { anio, mes } = parseAnioMesQuery(req.body && req.body.mes);
